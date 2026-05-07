@@ -1,0 +1,201 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header
+                    style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <a href="/attendance"
+                            style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back</a>
+                        <h1 style="margin-top: 10px;">Staff Attendance</h1>
+                        <p>Date: <strong>
+                                <%= date %>
+                            </strong></p>
+                    </div>
+                    <form action="/attendance/staff" method="GET"
+                        style="display: flex; gap: 10px; align-items: flex-end;">
+                        <div class="form-group" style="margin-bottom: 0;">
+                            <label style="font-size: 0.8rem;">Change Date</label>
+                            <input type="date" name="date" value="<%= date %>" class="form-control"
+                                style="padding: 5px 10px;">
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline">Go</button>
+                    </form>
+                </header>
+
+                <section class="card">
+                    <form id="staffAttendanceForm">
+                        <input type="hidden" name="date" value="<%= date %>">
+                        <input type="hidden" name="session" value="2025/2026">
+                        <input type="hidden" name="term" value="1st Term">
+
+                        <!-- Staff Attendance list: stacks as cards on mobile -->
+                        <div class="att-list">
+                            <% staff.forEach((member, index) => {
+                               const currentStatus = member.status || 'Present'; // Staff default usually present
+                            %>
+                            <div class="att-row">
+                                <!-- Hidden input that gets submitted -->
+                                <input type="hidden"
+                                    class="att-status-input"
+                                    name="attendance[<%= member.id %>]"
+                                    value="<%= currentStatus %>">
+
+                                <div class="att-student-info">
+                                    <span class="att-name"><%= member.first_name %> <%= member.last_name %></span>
+                                    <span class="att-id"><%= member.designation %></span>
+                                </div>
+
+                                <button type="button"
+                                    class="att-toggle-btn"
+                                    data-state="<%= currentStatus %>"
+                                    onclick="cycleAttendance(this)">
+                                    <i class="bi <%= currentStatus === 'Present' ? 'bi-check-circle-fill' : currentStatus === 'Late' ? 'bi-clock-fill' : currentStatus === 'Leave' ? 'bi-journal-check' : 'bi-x-circle-fill' %>"></i>
+                                    <%= currentStatus %>
+                                </button>
+                            </div>
+                            <% }); %>
+                        </div>
+
+                        <!-- Desktop save buttons -->
+                        <div class="att-footer no-sticky-on-mobile">
+                            <a href="/attendance" class="btn btn-outline">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Save Attendance
+                            </button>
+                        </div>
+                    </form>
+                </section>
+
+                <!-- Sticky Save Bar (mobile only) -->
+                <div class="sticky-save-bar">
+                    <a href="/attendance" class="btn btn-outline" style="flex:0; padding: 12px 16px;">
+                        <i class="bi bi-arrow-left"></i>
+                    </a>
+                    <button type="submit" form="staffAttendanceForm" class="btn btn-primary">
+                        <i class="bi bi-check-circle"></i> Save Attendance
+                    </button>
+                </div>
+            </main>
+    </div>
+
+    <style>
+        /* Attendance list layout (re-used from student attendance) */
+        .att-list { padding: 8px 0; }
+        .att-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; border-bottom: 1px solid var(--border-subtle); gap: 12px; }
+        .att-row:last-child { border-bottom: none; }
+        .att-student-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+        .att-name { font-weight: 700; font-size: 0.95rem; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .att-id { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+        .att-footer { display: flex; justify-content: flex-end; gap: 10px; padding: 16px 20px; border-top: 1px solid var(--border-subtle); background: #f8fafc; }
+        @media (max-width: 991px) { .att-footer.no-sticky-on-mobile { display: none; } }
+    </style>
+
+    <script>
+        const ATT_CYCLE = ['Present', 'Absent', 'Late', 'Leave']; // Start with Present for staff
+        const ATT_ICONS = {
+            'Absent':  'bi-x-circle-fill',
+            'Present': 'bi-check-circle-fill',
+            'Late':    'bi-clock-fill',
+            'Leave':   'bi-journal-check'
+        };
+
+        function cycleAttendance(btn) {
+            const current = btn.dataset.state;
+            const nextIndex = (ATT_CYCLE.indexOf(current) + 1) % ATT_CYCLE.length;
+            const next = ATT_CYCLE[nextIndex];
+
+            btn.dataset.state = next;
+            btn.querySelector('i').className = `bi ${ATT_ICONS[next]}`;
+            btn.childNodes[btn.childNodes.length - 1].textContent = ' ' + next;
+
+            // Update hidden input
+            const row = btn.closest('.att-row');
+            row.querySelector('.att-status-input').value = next;
+        }
+    </script>
+
+
+    <!-- Success Modal -->
+    <div id="successModal" class="modal-overlay" style="display: none;">
+        <div class="modal-card" style="text-align: center; max-width: 400px; padding: 40px;">
+            <div style="width: 80px; height: 80px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                <i class="bi bi-check-circle-fill" style="font-size: 3rem;"></i>
+            </div>
+            <h2 style="margin-bottom: 10px;">Saved Successfully!</h2>
+            <p class="text-muted" style="margin-bottom: 25px;">Staff attendance records for <%= date %> have been updated.</p>
+            <button class="btn btn-primary" style="width: 100%;" onclick="document.getElementById('successModal').style.display='none'">Dismiss</button>
+        </div>
+    </div>
+
+    <style>
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5); z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-card {
+            background: white; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+            animation: modalIn 0.3s ease-out;
+        }
+        @keyframes modalIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+
+    <script>
+        document.getElementById('staffAttendanceForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const saveBtn = e.target.querySelector('button[type="submit"]');
+            const stickyBtn = document.querySelector('.sticky-save-bar button');
+            
+            const originalHtml = saveBtn.innerHTML;
+            [saveBtn, stickyBtn].forEach(b => {
+                b.disabled = true;
+                b.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
+            });
+
+            const formData = new FormData(e.target);
+            const data = {
+                date: formData.get('date'),
+                session: formData.get('session'),
+                term: formData.get('term'),
+                attendance: {}
+            };
+
+            for (let [key, value] of formData.entries()) {
+                if (key.startsWith('attendance[')) {
+                    const id = key.match(/\[(\d+)\]/)[1];
+                    data.attendance[id] = value;
+                }
+            }
+
+            try {
+                const response = await fetch('/attendance/staff/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    document.getElementById('successModal').style.display = 'flex';
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred while saving.');
+            } finally {
+                [saveBtn, stickyBtn].forEach(b => {
+                    b.disabled = false;
+                    b.innerHTML = originalHtml;
+                });
+            }
+        });
+    </script>
+
+    <%- include('../partials/footer') %>

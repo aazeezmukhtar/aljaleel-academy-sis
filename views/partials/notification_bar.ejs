@@ -1,0 +1,277 @@
+<style>
+    .global-broadcast-bar {
+        background: linear-gradient(135deg, #6366f1, #a855f7);
+        color: white;
+        padding: 10px 40px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-align: center;
+        position: sticky;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 2000;
+        display: none;
+        box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        animation: slideDown 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+
+    @keyframes slideDown {
+        from { transform: translateY(-100%); }
+        to { transform: translateY(0); }
+    }
+
+    .broadcast-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .broadcast-badge {
+        background: rgba(255,255,255,0.25);
+        padding: 3px 10px;
+        border-radius: 20px;
+        font-size: 0.65rem;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        backdrop-filter: blur(4px);
+    }
+
+    .close-broadcast {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+    .close-broadcast:hover { opacity: 1; }
+
+    /* Notification Bell UI */
+    .notification-bell-container {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        border-radius: 12px;
+        transition: background 0.2s;
+    }
+    .notification-bell-container:hover { background: rgba(0,0,0,0.05); }
+
+    .notification-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: #ef4444;
+        color: white;
+        font-size: 0.6rem;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+        font-weight: 800;
+        display: none;
+        animation: pulseBadge 2s infinite;
+    }
+
+    @keyframes pulseBadge {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+        70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+        100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .notification-dropdown {
+        position: absolute;
+        top: calc(100% + 15px);
+        right: 0;
+        width: 350px;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        border: 1px solid #e2e8f0;
+        z-index: 1050;
+        display: none;
+        overflow: hidden;
+        animation: dropdownIn 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+    }
+
+    @keyframes dropdownIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .notification-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: #f8fafc;
+    }
+
+    .notification-list {
+        max-height: 450px;
+        overflow-y: auto;
+    }
+
+    .notification-item {
+        padding: 15px 20px;
+        border-bottom: 1px solid #f1f5f9;
+        transition: all 0.2s;
+        cursor: pointer;
+    }
+
+    .notification-item:hover { background: #f8fafc; }
+    .notification-item.unread { background: #eff6ff; border-left: 4px solid #3b82f6; }
+
+    .notification-item h4 { margin: 0 0 4px; font-size: 0.95rem; font-weight: 700; color: #1e293b; }
+    .notification-time { font-size: 0.7rem; color: #94a3b8; display: block; margin-top: 8px; }
+    
+    .event-countdown-badge {
+        display: inline-block;
+        margin-top: 6px;
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 700;
+    }
+
+    /* Mobile Responsive Hooks */
+    @media (max-width: 768px) {
+        .notification-dropdown {
+            position: fixed;
+            top: 70px;
+            left: 10px;
+            right: 10px;
+            width: auto;
+            max-height: 80vh;
+        }
+
+        .global-broadcast-bar {
+            padding: 12px 15px;
+            font-size: 0.8rem;
+            top: 56px; /* Below mobile topbar */
+            z-index: 940;
+        }
+
+        .close-broadcast {
+            right: 10px;
+        }
+    }
+</style>
+
+<div id="globalBroadcast" class="global-broadcast-bar">
+    <div class="broadcast-content">
+        <span class="broadcast-badge" id="broadcastTag">News</span>
+        <span id="broadcastText"></span>
+        <i class="bi bi-x-large close-broadcast" onclick="dismissBroadcast()"></i>
+    </div>
+</div>
+
+<script>
+    async function fetchNotifications() {
+        try {
+            const res = await fetch('/api/notifications/latest');
+            const data = await res.json();
+            
+            if (data.unreadCount > 0) {
+                // Update Badge
+                const badges = document.querySelectorAll('.notification-badge');
+                badges.forEach(b => {
+                    b.textContent = data.unreadCount;
+                    b.style.display = 'flex';
+                });
+
+                // Update Broadcast Bar if unread
+                const latest = data.notifications.find(n => !n.isRead);
+                if (latest) {
+                    document.getElementById('broadcastText').textContent = latest.title;
+                    document.getElementById('broadcastTag').textContent = latest.type || 'Update';
+                    document.getElementById('globalBroadcast').style.display = 'block';
+                }
+            }
+
+            // Populate Dropdowns
+            const lists = document.querySelectorAll('.notification-list');
+            lists.forEach(list => {
+                list.innerHTML = data.notifications.length ? '' : '<div style="padding: 20px; text-align: center; color: #94a3b8;">No new updates</div>';
+                data.notifications.forEach(n => {
+                    const item = document.createElement('div');
+                    item.className = `notification-item ${!n.isRead ? 'unread' : ''}`;
+                    
+                    let iconClass = 'bi-megaphone';
+                    let badgeStyle = 'background: #f1f5f9; color: #64748b;';
+                    
+                    if (n.type === 'Event') {
+                        iconClass = 'bi-calendar-event';
+                        badgeStyle = 'background: #fee2e2; color: #ef4444;';
+                    } else if (n.type === 'Assignment') {
+                        iconClass = 'bi-journal-check';
+                        badgeStyle = 'background: #dcfce7; color: #16a34a;';
+                    }
+
+                    item.onclick = (e) => {
+                        e.preventDefault();
+                        markAsRead(n.id, n.source_type, n.url);
+                    };
+                    
+                    item.innerHTML = `
+                        <a href="${n.url}" style="display: flex; gap: 10px; align-items: start; text-decoration: none; color: inherit; width: 100%;">
+                            <i class="bi ${iconClass}" style="margin-top: 3px; font-size: 1.1rem; color: #6366f1;"></i>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 2px;">${n.title}</h4>
+                                <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #94a3b8;">${n.type || 'Update'}</span>
+                                ${n.countdown ? `<br><span class="event-countdown-badge" style="${badgeStyle}">${n.countdown}</span>` : ''}
+                                <span class="notification-time">${new Date(n.created_at).toLocaleDateString()}</span>
+                            </div>
+                        </a>
+                    `;
+                    list.appendChild(item);
+                });
+            });
+
+        } catch (e) { console.error('Notify Error:', e); }
+    }
+
+    async function markAsRead(id, type, url) {
+        try {
+            await fetch('/api/notifications/mark-read', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_id: id, source_type: type })
+            });
+            if (url && url !== '#') {
+                window.location.href = url;
+            } else {
+                location.reload();
+            }
+        } catch (e) {
+            console.error('Mark Read Error:', e);
+            if (url && url !== '#') window.location.href = url;
+        }
+    }
+
+    function dismissBroadcast() {
+        document.getElementById('globalBroadcast').style.display = 'none';
+        // Optional: Mark as read here too? User might just want to hide it.
+    }
+
+    function toggleNotificationDropdown(e) {
+        e.stopPropagation();
+        const dropdown = e.currentTarget.querySelector('.notification-dropdown');
+        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+    }
+
+    document.addEventListener('DOMContentLoaded', fetchNotifications);
+    window.addEventListener('click', () => {
+        document.querySelectorAll('.notification-dropdown').forEach(d => d.style.display = 'none');
+    });
+</script>

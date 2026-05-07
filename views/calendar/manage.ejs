@@ -1,0 +1,107 @@
+<%- include('../partials/header') %>
+
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header class="content-header">
+            <div>
+                <h1>Manage Calendar</h1>
+                <p class="text-muted">Create and manage upcoming school events.</p>
+            </div>
+            <a href="/calendar" class="btn btn-outline">View Calendar</a>
+        </header>
+
+        <div class="dashboard-grid" style="grid-template-columns: 1fr 2fr; gap: 30px;">
+            <!-- Create Event Form -->
+            <div class="card">
+                <h3>Add New Event</h3>
+                <form action="/calendar/add" method="POST" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Event Title</label>
+                        <input type="text" name="title" required placeholder="e.g. Mid-Term Exams">
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" name="event_date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Type</label>
+                        <select name="type">
+                            <option value="Announcement">General Announcement</option>
+                            <option value="Exam">Exam / Test</option>
+                            <option value="Holiday">Holiday / Break</option>
+                            <option value="Deadline">Deadline / Fee Due</option>
+                        </select>
+                    </div>
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Session</label>
+                            <select name="session">
+                                <option value="2025/2026">2025/2026</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Term</label>
+                            <select name="term">
+                                <option value="1st Term">1st Term</option>
+                                <option value="2nd Term">2nd Term</option>
+                                <option value="3rd Term">3rd Term</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Description (Optional)</label>
+                        <textarea name="description" rows="3" placeholder="Brief details about the event..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Save Event</button>
+                </form>
+            </div>
+
+            <!-- Existing Events List -->
+            <div class="card">
+                <h3>Scheduled Events</h3>
+                <div class="table-container table-stack" style="margin-top: 20px;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Title</th>
+                                <th>Type</th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (events && events.length > 0) { %>
+                                <% events.forEach(event => { %>
+                                    <tr>
+                                        <td data-label="Date"><strong><%= new Date(event.event_date).toLocaleDateString() %></strong></td>
+                                        <td data-label="Title"><%= event.title %></td>
+                                        <td data-label="Type">
+                                            <span class="badge <%= event.type === 'Exam' ? 'badge-danger' : event.type === 'Holiday' ? 'badge-success' : 'badge-primary' %>" style="font-size: 0.7rem;">
+                                                <%= event.type %>
+                                            </span>
+                                        </td>
+                                        <td data-label="Action" style="text-align: right;">
+                                            <form action="/calendar/delete/<%= event.id %>" method="POST" onsubmit="return confirm('Delete this event?')">
+                                                <button type="submit" class="btn btn-sm" style="background: none; border: none; color: #ef4444; padding: 0;">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <% }); %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="4" style="text-align: center; padding: 40px; color: #94a3b8;">No events found.</td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<%- include('../partials/footer') %>

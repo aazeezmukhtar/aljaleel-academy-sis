@@ -1,0 +1,345 @@
+<%- include('partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('partials/sidebar') %>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <header class="content-header">
+                    <div>
+                        <h1>Welcome Back, Admin</h1>
+                        <p class="text-muted">Today is <%= new Date().toLocaleDateString('en-US', { weekday: 'long' ,
+                                year: 'numeric' , month: 'long' , day: 'numeric' }) %>
+                        </p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="notification-bell-container" onclick="toggleNotificationDropdown(event)" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; padding: 10px;">
+                            <i class="bi bi-bell-fill" style="color: #6366f1; font-size: 1.4rem;"></i>
+                            <span class="notification-badge">0</span>
+                            <div class="notification-dropdown">
+                                <div class="notification-header">
+                                    <strong>Notifications</strong>
+                                    <span class="text-muted">Recent Updates</span>
+                                </div>
+                                <div class="notification-list"></div>
+                            </div>
+                        </div>
+                        <span class="badge badge-primary">Admin</span>
+                    </div>
+                </header>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>
+                                <%= stats.totalStudents %>
+                            </h3>
+                            <p>Total Students</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <i class="bi bi-person-badge-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>
+                                <%= stats.activeStaff %>
+                            </h3>
+                            <p>Active Staff</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>
+                                <%= stats.attendance==='N/A' ? '0%' : stats.attendance %>
+                            </h3>
+                            <p>Attendance Today</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <i class="bi bi-wallet-fill"></i>
+                        </div>
+                        <div class="stat-content" style="width: 100%;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <h3 style="font-size: 1.5rem; margin: 0;">
+                                    <%= stats.revenuePercentage %>%
+                                </h3>
+                                <small class="text-muted">Collected</small>
+                            </div>
+                            <div style="height: 6px; background: rgba(16, 185, 129, 0.1); border-radius: 10px; overflow: hidden;">
+                                <div style="height: 100%; width: <%= stats.revenuePercentage %>%; background: #10b981; border-radius: 10px;"></div>
+                            </div>
+                            <p style="margin-top: 5px;">Revenue Collection</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                            <i class="bi bi-book-half"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>
+                                <%= stats.totalSubjects %>
+                            </h3>
+                            <p>Active Subjects</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                            <i class="bi bi-gender-ambiguous"></i>
+                        </div>
+                        <div class="stat-content">
+                            <div style="display: flex; gap: 10px; align-items: baseline;">
+                                <h3 title="Male">
+                                    <%= stats.genderSummary.Male %> M
+                                </h3>
+                                <h3 title="Female" style="font-size: 1.2rem; opacity: 0.8;">
+                                    <%= stats.genderSummary.Female %> F
+                                </h3>
+                            </div>
+                            <p>Students by Gender</p>
+                        </div>
+                    </div>
+                </div>
+
+                <section style="margin-bottom: 40px;">
+                    <h3 style="margin-bottom: 24px; font-size: 1.25rem;">Quick Actions</h3>
+                    <div class="grid-4">
+                        <a href="/attendance" class="card"
+                            style="padding: 24px; text-align: center; display: block; text-decoration: none;">
+                            <div
+                                style="width: 54px; height: 54px; background: #ecf3ff; color: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                                <i class="bi bi-calendar-check" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <span
+                                style="display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;">Mark
+                                Attendance</span>
+                            <small style="color: var(--text-muted);">Daily presence tracking</small>
+                        </a>
+                        <a href="/fees/manager" class="card"
+                            style="padding: 24px; text-align: center; display: block; text-decoration: none;">
+                            <div
+                                style="width: 54px; height: 54px; background: #fff7ed; color: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                                <i class="bi bi-wallet2" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <span
+                                style="display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;">Record
+                                Fees</span>
+                            <small style="color: var(--text-muted);">Manage student payments</small>
+                        </a>
+                        <a href="/students/enroll" class="card"
+                            style="padding: 24px; text-align: center; display: block; text-decoration: none;">
+                            <div
+                                style="width: 54px; height: 54px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                                <i class="bi bi-person-plus-fill" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <span
+                                style="display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;">New
+                                Admission</span>
+                            <small style="color: var(--text-muted);">Enroll new students</small>
+                        </a>
+                        <a href="/results" class="card"
+                            style="padding: 24px; text-align: center; display: block; text-decoration: none;">
+                            <div
+                                style="width: 54px; height: 54px; background: #fef2f2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+                                <i class="bi bi-file-earmark-bar-graph" style="font-size: 1.5rem;"></i>
+                            </div>
+                            <span
+                                style="display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;">Result
+                                Entry</span>
+                            <small style="color: var(--text-muted);">Input student scores</small>
+                        </a>
+                    </div>
+                </section>
+
+                <div class="grid-main-aside">
+                    <!-- Recent Activity -->
+                    <div class="card">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Recent Enrollments</h3>
+                            <a href="/students" style="font-size: 0.9rem; font-weight: 600; text-decoration: none;">View
+                                All</a>
+                        </div>
+
+                        <div class="feed">
+                            <% if (recentEnrollments && recentEnrollments.length> 0) { %>
+                                <% recentEnrollments.forEach(enrollment=> { %>
+                                    <div
+                                        style="padding: 15px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px;">
+                                        <div
+                                            style="width: 40px; height: 40px; background: #e0e7ff; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                            <i class="bi bi-person-plus-fill"></i>
+                                        </div>
+                                        <div>
+                                            <strong style="display: block;">
+                                                <%= enrollment.first_name %>
+                                                    <%= enrollment.last_name %>
+                                            </strong>
+                                            <small class="text-muted">
+                                                <%= enrollment.class_name || 'Unassigned' %> • <%= new
+                                                        Date(enrollment.admission_date).toLocaleDateString() %>
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <% }); %>
+                                        <% } else { %>
+                                            <div style="padding: 30px; text-align: center; color: var(--text-muted);">
+                                                <i class="bi bi-inbox"
+                                                    style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
+                                                No recent enrollments found.
+                                            </div>
+                                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- System Status -->
+                    <div style="display: flex; flex-direction: column; gap: 20px;">
+                        <div class="card">
+                            <h3>Financial Overview</h3>
+                            <div style="margin-top: 15px;">
+                                <a href="/fees/setup" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">
+                                    <i class="bi bi-gear-wide-connected"></i> Fee Setup
+                                </a>
+                                <a href="/fees/manager" class="btn btn-outline" style="width: 100%;">
+                                    <i class="bi bi-list-check"></i> View Balances
+                                </a>
+                            </div>
+                        </div>
+
+                        <!-- School Activity Feed (Cloned from Student Portal) -->
+                        <div class="card" style="border-top: 4px solid #6366f1;">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3><i class="bi bi-app-indicator" style="color: #6366f1;"></i> School Activity</h3>
+                                <a href="/announcements" class="btn btn-sm btn-outline">Manage</a>
+                            </div>
+                            <div class="list-group" id="adminActivityFeed">
+                                <% if (announcements && announcements.length > 0) { %>
+                                    <% announcements.forEach((post, index) => { %>
+                                        <a href="/announcements/view/<%= post.id %>" class="activity-item announcement-card <%= index >= 3 ? 'hidden' : '' %>" data-id="<%= post.id %>" style="display: block; text-decoration: none; margin-bottom: 15px; padding: 15px; border-radius: 12px; border: 1px solid #f1f5f9; transition: all 0.2s; background: white;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;"><%= new Date(post.created_at).toLocaleDateString() %></span>
+                                                <% if(post.type === 'Event') { %>
+                                                    <span style="font-size: 0.7rem; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 20px; font-weight: 800; letter-spacing: 0.05em;">EVENT</span>
+                                                <% } else { %>
+                                                    <span style="font-size: 0.7rem; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 20px; font-weight: 800; letter-spacing: 0.05em;">UPDATE</span>
+                                                <% } %>
+                                            </div>
+                                            <h4 class="post-title" style="margin: 0 0 8px; font-size: 1rem; color: #1e293b; transition: color 0.2s;"><%= post.title %></h4>
+                                            <p class="line-clamp-2 post-content" style="margin: 0; font-size: 0.85rem; color: #64748b; line-height: 1.5;"><%= post.content %></p>
+                                            <% if(post.type === 'Event' && post.event_date) { %>
+                                                <p style="margin-top: 10px; font-size: 0.75rem; color: #ef4444; font-weight: 600;">
+                                                    <i class="bi bi-clock-fill"></i> Scheduled: <%= new Date(post.event_date).toLocaleDateString() %>
+                                                </p>
+                                            <% } %>
+                                        </a>
+                                    <% }); %>
+                                    <% if (announcements.length > 3) { %>
+                                        <div class="view-more-container">
+                                            <button class="btn-view-more" onclick="toggleViewMore('adminActivityFeed', this)">View More</button>
+                                        </div>
+                                    <% } %>
+                                <% } else { %>
+                                    <p class="text-muted" style="padding: 20px; text-align: center;">No recent activities.</p>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <!-- Term Calendar Integration -->
+                        <div class="card" style="border-top: 4px solid #f59e0b;">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3><i class="bi bi-calendar-event" style="color: #f59e0b;"></i> Term Calendar</h3>
+                                <a href="/calendar" class="btn btn-sm btn-outline">View All</a>
+                            </div>
+                            <div class="list-group">
+                                <% if (locals.upcomingEvents && upcomingEvents.length > 0) { %>
+                                    <% upcomingEvents.forEach(event => { %>
+                                        <div class="event-item" style="display: flex; gap: 15px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dotted #e2e8f0;">
+                                            <div style="background: #fff7ed; color: #f59e0b; padding: 10px; border-radius: 10px; text-align: center; min-width: 60px;">
+                                                <span style="display: block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">
+                                                    <%= new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' }) %>
+                                                </span>
+                                                <span style="display: block; font-size: 1.2rem; font-weight: 900;">
+                                                    <%= new Date(event.event_date).getDate() %>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h4 style="margin: 0; font-size: 0.95rem; color: #1e293b;"><%= event.title %></h4>
+                                                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">
+                                                    <% if(event.type === 'Exam') { %>
+                                                        <i class="bi bi-pencil-square" style="color: #ef4444;"></i> Exam
+                                                    <% } else if(event.type === 'Holiday') { %>
+                                                        <i class="bi bi-sun" style="color: #10b981;"></i> Holiday
+                                                    <% } else if(event.type === 'Deadline') { %>
+                                                        <i class="bi bi-exclamation-circle" style="color: #f59e0b;"></i> Deadline
+                                                    <% } else { %>
+                                                        <i class="bi bi-info-circle" style="color: #3b82f6;"></i> Event
+                                                    <% } %>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                <% } else { %>
+                                    <p class="text-muted" style="text-align: center; padding: 20px;">No upcoming events scheduled.</p>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <style>
+        /* Seamless UX for Announcements */
+        .announcement-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -4px rgba(0,0,0,0.05);
+            border-color: #cbd5e1;
+            z-index: 10;
+        }
+        .announcement-card.read {
+            opacity: 0.6;
+            background: #f8fafc !important;
+            border-color: #f1f5f9;
+        }
+        .announcement-card.read .post-title {
+            color: #64748b !important;
+            font-weight: 500;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const readPosts = JSON.parse(localStorage.getItem('read_announcements') || '[]');
+            
+            document.querySelectorAll('.announcement-card').forEach(card => {
+                const postId = card.dataset.id;
+                
+                // Mark as read visually
+                if (readPosts.includes(postId)) {
+                    card.classList.add('read');
+                }
+                
+                // Save to read state on click
+                card.addEventListener('click', () => {
+                    if (!readPosts.includes(postId)) {
+                        readPosts.push(postId);
+                        localStorage.setItem('read_announcements', JSON.stringify(readPosts));
+                    }
+                });
+            });
+        });
+    </script>
+
+    <%- include('partials/footer') %>

@@ -1,0 +1,103 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header style="margin-bottom: 30px;">
+                    <a href="/attendance" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr;
+                        Back to Dashboard</a>
+                    <h1 style="margin-top: 10px;">Attendance Reports</h1>
+                    <p>View regularity statistics for classes and students.</p>
+                </header>
+
+                <section class="card" style="margin-bottom: 30px;">
+                    <form action="/attendance/report" method="GET"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; align-items: end;">
+                        <div class="form-group">
+                            <label>Class</label>
+                            <% if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                            <select name="class_id" required class="form-control">
+                                <option value="">-- Class --</option>
+                                <% classes.forEach(c=> { %>
+                                    <option value="<%= c.id %>" <%= (typeof filters !== 'undefined' && filters.class_id == c.id) ? 'selected' : '' %>><%= c.name %></option>
+                                <% }); %>
+                            </select>
+                            <% } else { %>
+                                <div style="color: #ef4444; font-size: 0.75rem; padding: 5px; border: 1px dashed #ef4444; border-radius: 6px;">No classes assigned</div>
+                            <% } %>
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" name="start_date" value="<%= filters.start_date %>" required
+                                class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="date" name="end_date"
+                                value="<%= filters.end_date || new Date().toISOString().split('T')[0] %>" required
+                                class="form-control">
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%;">Generate Report</button>
+                    </form>
+                </section>
+
+                <% if (reportData) { %>
+                    <section class="card">
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student Name</th>
+                                        <th style="text-align: center;">Total Days</th>
+                                        <th style="text-align: center; color: #2e7d32;">Present</th>
+                                        <th style="text-align: center; color: #f57c00;">Late</th>
+                                        <th style="text-align: center; color: #d32f2f;">Absent</th>
+                                        <th style="text-align: center; color: #6366f1;">Leave</th>
+                                        <th style="text-align: center;">Reg. Index (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% reportData.forEach(row=> { %>
+                                        <% const index=((row.present + (row.leave || 0) + (row.late * 0.5)) /
+                                            row.total_days * 100).toFixed(1); %>
+                                            <tr>
+                                                <td><strong>
+                                                        <%= row.first_name %> <%= row.last_name %>
+                                                    </strong></td>
+                                                <td style="text-align: center;">
+                                                    <%= row.total_days %>
+                                                </td>
+                                                <td style="text-align: center; color: #2e7d32;">
+                                                    <%= row.present %>
+                                                </td>
+                                                <td style="text-align: center; color: #f57c00;">
+                                                    <%= row.late %>
+                                                </td>
+                                                <td style="text-align: center; color: #d32f2f;">
+                                                    <%= row.absent %>
+                                                </td>
+                                                <td style="text-align: center; color: #6366f1;">
+                                                    <%= row.leave %>
+                                                </td>
+                                                <td style="text-align: center;">
+                                                    <div
+                                                        style="font-weight: bold; color: <%= index > 80 ? '#2e7d32' : index > 60 ? '#f57c00' : '#d32f2f' %>">
+                                                        <%= index %>%
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                            <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <% } else if (typeof filters !== 'undefined' && filters.class_id) { %>
+                        <div class="card" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            No records found for the selected criteria.
+                        </div>
+                        <% } %>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

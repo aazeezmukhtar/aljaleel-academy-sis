@@ -1,0 +1,151 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;"
+                    class="no-print">
+                    <a href="/fees/manager"
+                        style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to
+                        Manager</a>
+                    <button class="btn btn-outline" onclick="window.print()">Print Receipt</button>
+                </header>
+
+                <section class="card receipt-card"
+                    style="max-width: 800px; margin: 0 auto; padding: 60px; border: 2px solid #eee;">
+                    <div style="text-align: center; margin-bottom: 40px;">
+                        <h1 style="color: var(--primary); margin-bottom: 5px;">
+                            <%= school.school_name %>
+                        </h1>
+                        <p style="font-weight: 600;">
+                            <%= school.school_motto %>
+                        </p>
+                        <p style="font-size: 0.9rem; color: var(--text-muted);">
+                            <%= school.school_address %> | <%= school.school_email %>
+                        </p>
+                        <div
+                            style="width: 100%; height: 2px; background: var(--primary); margin: 30px 0; opacity: 0.2;">
+                        </div>
+                        <h2 style="text-transform: uppercase; letter-spacing: 2px;">Payment Receipt</h2>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-bottom: 40px;">
+                        <div>
+                            <h4
+                                style="color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; margin-bottom: 10px;">
+                                Student Details</h4>
+                            <p style="font-size: 1.1rem; font-weight: bold;">
+                                <%= payment.first_name %> <%= payment.last_name %>
+                            </p>
+                            <p>Adm No: <%= payment.admission_number %>
+                            </p>
+                        </div>
+                        <div style="text-align: right;">
+                            <h4
+                                style="color: var(--text-muted); text-transform: uppercase; font-size: 0.75rem; margin-bottom: 10px;">
+                                Payment Info</h4>
+                            <p>Date: <strong>
+                                    <%= new Date(payment.payment_date).toLocaleDateString() %>
+                                </strong></p>
+                            <p>Receipt #: <strong>
+                                    <%= payment.receipt_number %>
+                                </strong></p>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 40px;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 2px solid #333;">
+                                    <th style="padding: 15px 0; text-align: left;">Description</th>
+                                    <th style="padding: 15px 0; text-align: right;">Method</th>
+                                    <th style="padding: 15px 0; text-align: right;">Amount Paid</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr style="border-bottom: 1px solid #eee;">
+                                    <td style="padding: 20px 0;">
+                                        <%= payment.fee_name %>
+                                    </td>
+                                    <td style="padding: 20px 0; text-align: right;">
+                                        <%= payment.payment_method %>
+                                    </td>
+                                    <td
+                                        style="padding: 20px 0; text-align: right; font-weight: bold; font-size: 1.2rem;">
+                                        ₦<%= payment.amount_paid.toLocaleString() %>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div style="background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 60px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span>Total Fee Amount:</span>
+                            <span>₦<%= payment.total_amount.toLocaleString() %></span>
+                        </div>
+                        <div
+                            style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold; border-top: 1px solid #ddd; padding-top: 10px;">
+                            <span>Total Paid to Date:</span>
+                            <span style="color: #2e7d32;">₦<%= payment.total_paid_to_date.toLocaleString() %></span>
+                        </div>
+                        <% const balance=payment.total_amount - payment.total_paid_to_date; %>
+                            <div style="display: flex; justify-content: space-between; font-weight: bold;">
+                                <span>Outstanding Balance:</span>
+                                <span style="color: <%= balance > 0 ? '#d32f2f' : '#2e7d32' %>;">₦<%=
+                                        balance.toLocaleString() %></span>
+                            </div>
+                    </div>
+
+                    <div
+                        style="display: grid; grid-template-columns: 1fr 1fr; gap: 80px; text-align: center; margin-top: 40px;">
+                        <div>
+                            <div style="border-top: 1px solid #ccc; padding-top: 10px;">Bursar's Signature</div>
+                        </div>
+                        <div>
+                            <div style="border-top: 1px solid #ccc; padding-top: 10px;">Stamp & Date</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 60px; text-align: center; font-size: 0.8rem; color: var(--text-muted);">
+                        This is a computer-generated receipt. No signature is required unless requested.
+                    </div>
+                </section>
+            </main>
+    </div>
+
+    <style>
+        @media print {
+            .no-print {
+                display: none;
+            }
+
+            .main-content {
+                padding: 0;
+            }
+
+            .card {
+                box-shadow: none;
+                border: none;
+            }
+
+            .receipt-card {
+                border: 2px solid #333 !important;
+            }
+
+            body {
+                background: white;
+            }
+
+            .dashboard-container {
+                display: block;
+            }
+
+            .sidebar {
+                display: none;
+            }
+        }
+    </style>
+
+    <%- include('../partials/footer') %>

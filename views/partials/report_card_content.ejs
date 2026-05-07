@@ -1,0 +1,203 @@
+<% var getOrdinal=function(n) { var s=['th','st','nd','rd']; var v=n % 100; return n + (s[(v-20)%10] || s[v] || s[0]);
+    }; var getGradeColor=function(g) { return 'transparent'; }; var
+    getGradeRemark=function(t) { if (t>= 70) return 'Excellent';
+    if (t >= 60) return 'V. Good';
+    if (t >= 50) return 'Good';
+    if (t >= 40) return 'Fair';
+    return 'Fail';
+    };
+    var grandTotal = 0;
+    var subjectCount = results.length;
+    results.forEach(function(r) { grandTotal += (r.total || 0); });
+    var avg = subjectCount > 0 ? grandTotal / subjectCount : 0;
+    var maxPoints = subjectCount * 100;
+    var overallGrade = 'F';
+    if (avg >= 70) overallGrade = 'A';
+    else if (avg >= 60) overallGrade = 'B';
+    else if (avg >= 50) overallGrade = 'C';
+    else if (avg >= 40) overallGrade = 'D';
+    else if (avg >= 30) overallGrade = 'E';
+    %>
+
+    <div class="report-card <%= school.show_watermark === 'true' ? 'has-watermark' : '' %>">
+
+        <!-- HEADER -->
+        <div class="rc-header">
+            <div class="rc-logo">
+                <% if (school.school_logo) { %>
+                    <img src="<%= school.school_logo.startsWith('/') || school.school_logo.startsWith('http') ? school.school_logo : '/uploads/' + school.school_logo %>" alt="Logo">
+                <% } else { %>
+                    <div class="rc-logo-placeholder">LOGO</div>
+                <% } %>
+            </div>
+            <div class="rc-school-info">
+                <h1><%= school.school_name %></h1>
+                <p class="rc-motto"><%= school.school_motto || 'Igniting a Brighter Future' %></p>
+            </div>
+        </div>
+
+        <!-- TITLE BADGE -->
+        <div class="rc-title-badge">
+            <span>STUDENT PERFORMANCE REPORT</span>
+        </div>
+        <div class="rc-header-line"></div>
+
+        <!-- STUDENT INFO GRID -->
+        <div class="rc-bio-wrapper">
+            <div class="rc-passport">
+                <% if (student.passport_photo_path) { %>
+                    <img src="<%= student.passport_photo_path %>" alt="Photo">
+                    <% } else { %>
+                        <div class="rc-passport-placeholder">
+                            <%= student.first_name[0] %>
+                                <%= student.last_name[0] %>
+                        </div>
+                        <% } %>
+            </div>
+            <div class="rc-bio-grid">
+                <div class="rc-bio-row">
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Name:</span>
+                        <span class="rc-bio-value">
+                            <%= student.first_name.toUpperCase() %> <%= student.last_name.toUpperCase() %>
+                        </span>
+                    </div>
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Student ID:</span>
+                        <span class="rc-bio-value">
+                            <%= student.admission_number || 'N/A' %>
+                        </span>
+                    </div>
+                </div>
+                <div class="rc-bio-row">
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Class:</span>
+                        <span class="rc-bio-value">
+                            <%= student.class_name %>
+                        </span>
+                    </div>
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Session:</span>
+                        <span class="rc-bio-value">
+                            <%= session %>
+                        </span>
+                    </div>
+                </div>
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Next Term:</span>
+                        <span class="rc-bio-value">
+                            <%= school.next_term_start_date || 'TBA' %>
+                        </span>
+                    </div>
+            </div>
+        </div>
+
+        <!-- RESULTS TABLE -->
+        <table class="rc-table">
+            <thead>
+                <tr>
+                    <th class="rc-th-subject">Subject</th>
+                    <% for(let i = 1; i <= (typeof caCount !== 'undefined' ? caCount : 2); i++) { %>
+                    <th>CA<%= i %></th>
+                    <% } %>
+                    <th>Exam</th>
+                    <th>Total</th>
+                    <th>Rank</th>
+                    <th>Remark</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% results.forEach(function(row, idx) { %>
+                    <tr class="<%= idx % 2 === 0 ? 'rc-row-even' : '' %>">
+                        <td class="rc-td-subject">
+                            <%= row.subject_name %>
+                        </td>
+                        <% for(let i = 1; i <= (typeof caCount !== 'undefined' ? caCount : 2); i++) { %>
+                        <td class="rc-td-center">
+                            <%= row['ca' + i] || 0 %>
+                        </td>
+                        <% } %>
+                        <td class="rc-td-center">
+                            <%= row.exam || 0 %>
+                        </td>
+                        <td class="rc-td-center rc-td-bold">
+                            <%= row.total %>
+                        </td>
+                        <td class="rc-td-center">
+                            <%= getOrdinal(row.subject_rank || 1) %>
+                        </td>
+                        <td class="rc-td-remark">
+                            <%= getGradeRemark(row.total) %>
+                        </td>
+                    </tr>
+                    <% }); %>
+            </tbody>
+        </table>
+
+        <!-- BOTTOM SECTION -->
+        <div class="rc-bottom">
+            <!-- LEFT COLUMN (Summary & Position) -->
+            <div class="rc-summary-box" style="display: flex; flex-direction: column;">
+                <div class="rc-summary-grid" style="flex: 1;">
+                    <div class="rc-avg-display">
+                        <span class="rc-section-subtitle">ACADEMIC SUMMARY</span>
+                        <span class="rc-avg-number"><%= avg.toFixed(2) %></span>
+                        <span class="rc-avg-label">AVERAGE SCORE</span>
+                    </div>
+                    <div class="rc-points-display">
+                        <span class="rc-points-number"><%= grandTotal %> / <%= maxPoints %></span>
+                        <span class="rc-points-label">TOTAL POINTS</span>
+                    </div>
+                </div>
+                <div class="rc-position-box">
+                    <span class="rc-pos-label">CLASS POSITION:</span>
+                    <span class="rc-pos-value" style="color: <%= school.primary_color || '#6366f1' %>">
+                        <%= getOrdinal(position) %><span class="rc-pos-of">/ <%= classCount %></span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN (Analysis & Grading Scale) -->
+            <div class="rc-analysis-box" style="display: flex; flex-direction: column;">
+                <div class="rc-analysis-top" style="flex: 1; padding-bottom: 2mm; border-bottom: 2px solid #f1f5f9;">
+                    <span class="rc-section-subtitle">PERFORMANCE ANALYSIS</span>
+                    <ul class="rc-analysis-list" style="margin-top: 1mm; padding-left: 0; list-style-type: none; font-size: 8.5pt; color: #475569;">
+                        <% if (typeof marksAnalysis !== 'undefined' && marksAnalysis.length > 0) { %>
+                            <% marksAnalysis.forEach(function(analysis) { %>
+                                <li class="<%= analysis.includes('tied') ? 'text-highlight-purple' : '' %>" style="margin-bottom: 1.5mm; display: flex; align-items: flex-start; gap: 2mm;">
+                                    <span style="display: block; width: 4px; height: 4px; background-color: #94a3b8; border-radius: 50%; flex-shrink: 0; margin-top: 2mm;"></span>
+                                    <span class="<%= analysis.includes('tied') ? 'text-italic' : '' %>" style="<%= analysis.includes('tied') ? 'color: ' + (school.primary_color || '#6366f1') : '' %>"><%= analysis %></span>
+                                </li>
+                            <% }); %>
+                        <% } %>
+                    </ul>
+                </div>
+
+                <!-- GRADING SCALE -->
+                <div class="rc-grading-scale" style="margin-top: 0; padding-top: 2mm; border-top: none;">
+                    <% if (grading && grading.length> 0) { %>
+                        <% grading.forEach(function(g) { %>
+                            <div class="rc-grade-key">
+                                <span class="rc-gk-label">
+                                    <%= g.grade %>: <%= g.min_score %>-<%= g.max_score %>
+                                </span>
+                            </div>
+                        <% }); %>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIGNATURE SECTION -->
+        <div class="rc-signatures">
+            <div class="rc-sig-block">
+                <div class="rc-sig-line"></div>
+                <span>FORM TEACHER</span>
+            </div>
+            <div class="rc-sig-block">
+                <div class="rc-sig-line"></div>
+                <span>HEAD TEACHER</span>
+            </div>
+        </div>
+
+    </div>

@@ -1,0 +1,319 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header style="margin-bottom: 30px;">
+                    <a href="/staff" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back
+                        to Directory</a>
+                </header>
+
+                <div class="profile-header"
+                    style="background: white; padding: 40px; border-radius: var(--radius); box-shadow: var(--shadow); display: flex; align-items: center; gap: 30px; margin-bottom: 30px;">
+                    <div class="avatar-placeholder"
+                        style="width: 120px; height: 120px; background: var(--school-primary); border-radius: 24px; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white; overflow: hidden; box-shadow: 0 10px 20px rgba(0,0,0,0.1);">
+                        <%= member.first_name[0] %>
+                            <%= member.last_name[0] %>
+                    </div>
+                    <div class="profile-info" style="flex-grow: 1;">
+                        <div style="display: flex; align-items: center; gap: 15px;">
+                            <h1 style="margin: 0;">
+                                <%= member.first_name %> <%= member.last_name %>
+                            </h1>
+                            <span class="badge <%= member.status === 'active' ? 'badge-success' : 'badge-danger' %>"
+                                style="text-transform: uppercase;">
+                                <%= member.status %>
+                            </span>
+                        </div>
+                        <p style="font-size: 1.1rem; color: #64748b; margin-top: 5px;">
+                            <%= member.designation %>
+                        </p>
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <span class="badge"
+                                style="background: #f1f5f9; color: #475569; font-weight: 700; border: 1px solid #e2e8f0;">ID:
+                                <%= member.staff_id %>
+                            </span>
+                            <span class="badge"
+                                style="background: #e0f2fe; color: #0369a1; font-weight: 700; border: 1px solid #bae6fd;">
+                                <%= member.role %>
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="/staff/edit/<%= member.id %>" class="btn btn-primary">
+                            <i class="bi bi-pencil-square"></i> Edit Profile
+                        </a>
+                        <% if (user.role==='Admin' ) { %>
+                            <button onclick="deleteStaff('<%= member.id %>')" class="btn btn-danger"
+                                style="background: #ef4444; color: white;">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                            <% } %>
+                    </div>
+                </div>
+
+                <script>
+                    async function deleteStaff(id) {
+                        if (!confirm('Are you sure you want to PERMANENTLY delete this staff member? This will remove all their assignments.')) return;
+
+                        try {
+                            const response = await fetch(`/staff/delete/${id}`, { method: 'POST' });
+                            const result = await response.json();
+
+                            if (result.success) {
+                                alert(result.message);
+                                window.location.href = '/staff';
+                            } else {
+                                alert('Error: ' + result.message);
+                            }
+                        } catch (err) {
+                            console.error(err);
+                            alert('Network error occurred.');
+                        }
+                    }
+                </script>
+
+                <div class="grid-2">
+                    <!-- Academic Reach -->
+                    <div class="card">
+                        <div class="card-header"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Academic Reach (Subjects)</h3>
+                            <% if (user.role==='Admin' ) { %>
+                                <button class="btn btn-sm btn-outline" onclick="openSubjectAssignmentModal()">Assign Subjects</button>
+                                <% } %>
+                        </div>
+                        <div class="list-group">
+                            <% if (subjectAssignments && subjectAssignments.length> 0) { %>
+                                <% subjectAssignments.forEach(a=> { %>
+                                    <div class="list-item"
+                                        style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <strong style="color: #1e293b;">
+                                                <%= a.subject_name %>
+                                            </strong>
+                                            <p class="text-muted" style="font-size: 0.8rem; margin: 0;">
+                                                <%= a.class_name %>
+                                            </p>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <span class="badge"
+                                                style="background: #f8fafc; color: #64748b; border: 1px solid #e2e8f0;">
+                                                <%= a.session %>
+                                            </span>
+                                            <% if (user.role==='Admin' ) { %>
+                                                <form
+                                                    action="/staff/delete-assignment/<%= a.id %>?type=subject&staff_id=<%= member.id %>"
+                                                    method="POST"
+                                                    onsubmit="return confirm('Remove this subject assignment?')">
+                                                    <button type="submit" class="btn-text text-danger" title="Remove"><i
+                                                            class="bi bi-trash"></i></button>
+                                                </form>
+                                                <% } %>
+                                        </div>
+                                    </div>
+                                    <% }) %>
+                                        <% } else { %>
+                                            <p class="text-muted"
+                                                style="padding: 20px; text-align: center; font-style: italic;">No
+                                                subjects assigned yet.</p>
+                                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Administrative Scope -->
+                    <div class="card">
+                        <div class="card-header"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Administrative Scope (Classes)</h3>
+                            <% if (user.role==='Admin' ) { %>
+                                <button class="btn btn-sm btn-outline" onclick="openClassAssignmentModal()">Assign
+                                    Class</button>
+                                <% } %>
+                        </div>
+                        <div class="list-group">
+                            <% if (classAssignments && classAssignments.length> 0) { %>
+                                <% classAssignments.forEach(a=> { %>
+                                    <div class="list-item"
+                                        style="padding: 12px 0; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;">
+                                        <div>
+                                            <strong style="color: #1e293b;">
+                                                <%= a.class_name %>
+                                            </strong>
+                                            <p class="text-muted" style="font-size: 0.8rem; margin: 0;">
+                                            </p>
+                                        </div>
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <span class="badge"
+                                                style="background: #f0f9ff; color: #0369a1; border: 1px solid #bae6fd;">
+                                                <%= a.session %>
+                                            </span>
+                                            <% if (user.role==='Admin' ) { %>
+                                                <form
+                                                    action="/staff/delete-assignment/<%= a.id %>?type=class&staff_id=<%= member.id %>"
+                                                    method="POST"
+                                                    onsubmit="return confirm('Remove this class assignment?')">
+                                                    <button type="submit" class="btn-text text-danger" title="Remove"><i
+                                                            class="bi bi-trash"></i></button>
+                                                </form>
+                                                <% } %>
+                                        </div>
+                                    </div>
+                                    <% }) %>
+                                        <% } else { %>
+                                            <p class="text-muted"
+                                                style="padding: 20px; text-align: center; font-style: italic;">No
+                                                classes assigned for administration yet.</p>
+                                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <!-- Class Assignment Modal -->
+    <div id="classAssignmentModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content card" style="max-width: 500px; padding: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h3 style="margin: 0;">Assign Class to Staff</h3>
+                <button class="btn-text" onclick="closeClassAssignmentModal()">&times;</button>
+            </div>
+            <form action="/staff/assign-class" method="POST">
+                <input type="hidden" name="staff_id" value="<%= member.id %>">
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Select Class</label>
+                    <select name="class_id" id="modal_class_id" required class="form-control">
+                        <option value="">-- Choose Class --</option>
+                        <% allClasses.forEach(c=> { %>
+                            <option value="<%= c.id %>">
+                                <%= c.name %>
+                            </option>
+                            <% }) %>
+                    </select>
+                </div>
+
+
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label>Academic Session</label>
+                    <input type="text" name="session" placeholder="e.g. 2025/2026" required class="form-control">
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="closeClassAssignmentModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Subject Assignment Modal -->
+    <div id="subjectAssignmentModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content card" style="max-width: 500px; padding: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                <h3 style="margin: 0;">Assign Subject to Teacher</h3>
+                <button class="btn-text" onclick="closeSubjectAssignmentModal()">&times;</button>
+            </div>
+            <form action="/staff/assign-subject" method="POST">
+                <input type="hidden" name="staff_id" value="<%= member.id %>">
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Select Subject</label>
+                    <select name="subject_id" required class="form-control">
+                        <option value="">-- Choose Subject --</option>
+                        <% allSubjects.forEach(s=> { %>
+                            <option value="<%= s.id %>">
+                                <%= s.name %> (<%= s.code %>)
+                            </option>
+                            <% }) %>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Select Class</label>
+                    <select name="class_id" required class="form-control">
+                        <option value="">-- Choose Class --</option>
+                        <% allClasses.forEach(c=> { %>
+                            <option value="<%= c.id %>">
+                                <%= c.name %>
+                            </option>
+                            <% }) %>
+                    </select>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 25px;">
+                    <label>Academic Session</label>
+                    <input type="text" name="session" placeholder="e.g. 2025/2026" required class="form-control">
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-outline" onclick="closeSubjectAssignmentModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Assignment</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        .btn-text {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #64748b;
+            padding: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .text-danger {
+            color: #ef4444;
+        }
+
+        .text-danger:hover {
+            color: #dc2626;
+            transform: scale(1.1);
+        }
+    </style>
+
+    <script>
+        function openClassAssignmentModal() {
+            document.getElementById('classAssignmentModal').style.display = 'flex';
+        }
+        function closeClassAssignmentModal() {
+            document.getElementById('classAssignmentModal').style.display = 'none';
+        }
+        function openSubjectAssignmentModal() {
+            document.getElementById('subjectAssignmentModal').style.display = 'flex';
+        }
+        function closeSubjectAssignmentModal() {
+            document.getElementById('subjectAssignmentModal').style.display = 'none';
+        }
+    </script>
+
+    <%- include('../partials/footer') %>

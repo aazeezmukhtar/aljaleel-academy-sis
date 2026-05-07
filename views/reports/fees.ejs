@@ -1,0 +1,122 @@
+<%- include('../partials/header') %>
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+            <main class="main-content">
+                <header class="content-header">
+                    <h1>
+                        <%= title %>
+                    </h1>
+                    <p>Financial overview of fee collections and outstanding balances.</p>
+                </header>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <h3>Total Expected</h3>
+                        <div class="value" style="color: var(--text-dark);">₦<%= overall.expected ?
+                                overall.expected.toLocaleString() : '0' %>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Collected</h3>
+                        <div class="value" style="color: #10b981;">₦<%= overall.collected ?
+                                overall.collected.toLocaleString() : '0' %>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Outstanding</h3>
+                        <div class="value" style="color: #ef4444;">₦<%= overall.outstanding ?
+                                overall.outstanding.toLocaleString() : '0' %>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>Collection by Category</h3>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Fee Category</th>
+                                    <th>Expected</th>
+                                    <th>Collected</th>
+                                    <th>% Collected</th>
+                                    <th>Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (categories.length> 0) { %>
+                                    <% categories.forEach(c=> {
+                                        const p = c.expected > 0 ? (c.collected / c.expected) * 100 : 0;
+                                        %>
+                                        <tr>
+                                            <td>
+                                                <%= c.name %>
+                                            </td>
+                                            <td>₦<%= c.expected.toLocaleString() %>
+                                            </td>
+                                            <td>₦<%= c.collected.toLocaleString() %>
+                                            </td>
+                                            <td>
+                                                <%= p.toFixed(1) %>%
+                                            </td>
+                                            <td>
+                                                <div
+                                                    style="height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; width: 100%; max-width: 150px;">
+                                                    <div
+                                                        style="width: <%= p %>%; height: 100%; background: var(--primary);">
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="5" style="text-align: center;">No fee data available.
+                                                    </td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 30px;">
+                    <h3 style="margin-bottom: 20px;">Students with Outstanding Balances</h3>
+                    <% if (debtors && debtors.length > 0) { %>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Adm. No.</th>
+                                    <th>Class</th>
+                                    <th style="text-align:right;">Total Billed</th>
+                                    <th style="text-align:right;">Total Paid</th>
+                                    <th style="text-align:right; color: #ef4444;">Outstanding</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% debtors.forEach(d => { %>
+                                <tr>
+                                    <td><strong><%= d.first_name %> <%= d.last_name %></strong></td>
+                                    <td><code style="background:#f1f5f9; padding:2px 6px; border-radius:4px;"><%= d.admission_number || '—' %></code></td>
+                                    <td><%= d.class_name || '—' %></td>
+                                    <td style="text-align:right;">₦<%= d.total_owed.toLocaleString() %></td>
+                                    <td style="text-align:right; color:#10b981;">₦<%= d.total_paid.toLocaleString() %></td>
+                                    <td style="text-align:right; color:#ef4444; font-weight:bold;">₦<%= d.outstanding.toLocaleString() %></td>
+                                    <td><a href="/fees/student/<%= d.admission_number %>" class="btn btn-sm btn-outline">View</a></td>
+                                </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                    <% } else { %>
+                    <p style="text-align:center; padding: 30px; color: var(--text-muted);">
+                        🎉 No outstanding balances — all fees are settled!
+                    </p>
+                    <% } %>
+                </div>
+            </main>
+    </div>
+    <%- include('../partials/footer') %>

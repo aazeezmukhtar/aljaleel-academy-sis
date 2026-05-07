@@ -1,0 +1,269 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header">
+                    <div>
+                        <h1>Academic Management</h1>
+                        <p>Manage the school's structural entities: Classes and Subjects.</p>
+                    </div>
+                </header>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            <%= classes.length %>
+                        </div>
+                        <div class="stat-label">Total Classes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">
+                            <%= subjects.length %>
+                        </div>
+                        <div class="stat-label">Subjects Offered</div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid" style="grid-template-columns: 1fr; gap: 30px;">
+                    <!-- Classes Section -->
+                    <div class="activity-feed">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Classes</h3>
+                            <button class="btn btn-sm"
+                                onclick="document.getElementById('add-class-form').style.display='block'">+ Add
+                                Class</button>
+                        </div>
+
+                        <div id="add-class-form"
+                            style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                            <form action="/academics/classes/add" method="POST">
+                                <div class="form-group">
+                                    <label>Class Name (e.g., JSS 1)</label>
+                                    <input type="text" name="name" required placeholder="Enter class name">
+                                </div>
+                                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                    <button type="submit" class="btn">Save Class</button>
+                                    <button type="button" class="btn btn-outline"
+                                        onclick="this.parentElement.parentElement.parentElement.style.display='none'">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="table-container table-stack">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% classes.forEach(c=> { %>
+                                        <tr>
+                                            <td><strong>
+                                                    <%= c.name %>
+                                                </strong></td>
+                                            <td style="text-align: right;">
+                                                <form action="/academics/classes/delete/<%= c.id %>" method="POST"
+                                                    onsubmit="return confirm('Delete this class?')">
+                                                    <button type="submit"
+                                                        style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
+                    <!-- Subjects Section -->
+                    <div class="activity-feed">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Subjects</h3>
+                            <button class="btn btn-sm"
+                                onclick="document.getElementById('add-subject-form').style.display='block'">+ Add
+                                Subject</button>
+                        </div>
+
+                        <div id="add-subject-form"
+                            style="display: none; background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                            <form action="/academics/subjects/add" method="POST" class="grid-2">
+                                <div class="form-group">
+                                    <label>Subject Name</label>
+                                    <input type="text" name="name" required placeholder="e.g., Mathematics">
+                                </div>
+                                <div class="form-group">
+                                    <label>Subject Code</label>
+                                    <input type="text" name="code" required placeholder="e.g., MAT 101">
+                                </div>
+                                <div style="grid-column: span 2; display: flex; gap: 10px;">
+                                    <button type="submit" class="btn">Save Subject</button>
+                                    <button type="button" class="btn btn-outline"
+                                        onclick="document.getElementById('add-subject-form').style.display='none'">Cancel</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="table-container table-stack">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Code</th>
+                                        <th>Subject Name</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% subjects.forEach(s=> { %>
+                                        <tr>
+                                            <td><code
+                                                    style="background: var(--accent-soft); padding: 2px 6px; border-radius: 4px; font-weight: bold;"><%= s.code %></code>
+                                            </td>
+                                            <td><strong>
+                                                    <%= s.name %>
+                                                </strong></td>
+                                            <td
+                                                style="text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+                                                <a href="/academics/subjects/edit/<%= s.id %>"
+                                                    style="color: var(--primary); text-decoration: none; font-weight: 600;">Edit</a>
+                                                <form action="/academics/subjects/delete/<%= s.id %>" method="POST"
+                                                    onsubmit="return confirm('Delete this subject?')">
+                                                    <button type="submit"
+                                                        style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="dashboard-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
+                        <!-- Subject Assignments Section -->
+                        <div class="activity-feed">
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3>Subject Assignments</h3>
+                                <button class="btn btn-sm"
+                                    onclick="document.getElementById('add-assignment-form').style.display='block'">+
+                                    Assign Teacher</button>
+                            </div>
+
+                            <div id="add-assignment-form"
+                                style="display: none; background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                                <form action="/academics/assignments/add" method="POST" class="grid-4"
+                                    style="align-items: end;">
+                                    <div class="form-group">
+                                        <label>Select Teacher</label>
+                                        <select name="teacher_id" required>
+                                            <option value="">-- Choose Teacher --</option>
+                                            <% teachers.forEach(t=> { %>
+                                                <option value="<%= t.id %>">
+                                                    <%= t.first_name %> <%= t.last_name %>
+                                                </option>
+                                                <% }); %>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Select Subject</label>
+                                        <select name="subject_id" required>
+                                            <option value="">-- Choose Subject --</option>
+                                            <% subjects.forEach(s=> { %>
+                                                <option value="<%= s.id %>">
+                                                    <%= s.name %>
+                                                </option>
+                                                <% }); %>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Select Class</label>
+                                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                                        <select name="class_id" required>
+                                            <option value="">-- Choose Class --</option>
+                                            <% classes.forEach(c=> { %>
+                                                <option value="<%= c.id %>">
+                                                    <%= c.name %>
+                                                </option>
+                                                <% }); %>
+                                        </select>
+                                        <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                                        <input type="hidden" name="class_id" value="<%= classes[0].id %>">
+                                        <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
+                                        <% } %>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Session</label>
+                                        <select name="session" required>
+                                            <option value="2025/2026">2025/2026</option>
+                                        </select>
+                                    </div>
+                                    <div style="grid-column: span 4; display: flex; gap: 10px; margin-top: 10px;">
+                                        <button type="submit" class="btn">Save Assignment</button>
+                                        <button type="button" class="btn btn-outline"
+                                            onclick="document.getElementById('add-assignment-form').style.display='none'">Cancel</button>
+                                    </div>
+                                </form>
+                            </div>
+
+                            <div class="table-container table-stack">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Teacher</th>
+                                            <th>Subject</th>
+                                            <th>Class</th>
+                                            <th>Session</th>
+                                            <th style="text-align: right;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (assignments.length> 0) { %>
+                                            <% assignments.forEach(a=> { %>
+                                                <tr>
+                                                    <td><strong>
+                                                            <a href="/staff/edit/<%= a.teacher_id %>" style="color: var(--primary); text-decoration: underline;">
+                                                                <%= a.first_name %> <%= a.last_name %>
+                                                            </a>
+                                                        </strong></td>
+                                                    <td>
+                                                        <%= a.subject_name %>
+                                                    </td>
+                                                    <td>
+                                                        <%= a.class_name %>
+                                                    </td>
+                                                    <td>
+                                                        <%= a.session %>
+                                                    </td>
+                                                    <td style="text-align: right;">
+                                                        <form action="/academics/assignments/delete/<%= a.id %>"
+                                                            method="POST"
+                                                            onsubmit="return confirm('Remove this assignment?')">
+                                                            <button type="submit"
+                                                                style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Remove</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                                <% }); %>
+                                                    <% } else { %>
+                                                        <tr>
+                                                            <td colspan="5"
+                                                                style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                                                No assignments found.</td>
+                                                        </tr>
+                                                        <% } %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

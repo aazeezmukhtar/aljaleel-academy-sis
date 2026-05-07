@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <%= title %>
+    </title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        :root {
+            --school-primary: #6366f1;
+            --school-secondary: #a855f7;
+        }
+
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-dark);
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: var(--radius);
+            outline: none;
+            font-size: 1rem;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .btn-submit {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px 28px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            width: 100%;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <!-- Sidebar -->
+        <%- include('../partials/sidebar') %>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <header style="margin-bottom: 30px;">
+                    <a href="/students" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr;
+                        Back
+                        to Directory</a>
+                    <h1 style="margin-top: 10px;">Enroll New Student</h1>
+                    <p class="text-muted">Register a new student for the current academic session.</p>
+                </header>
+
+                <div class="card form-container">
+                    <form id="enrollmentForm">
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="first_name">First Name *</label>
+                                <input type="text" id="first_name" name="first_name" required placeholder="e.g. John">
+                            </div>
+                            <div class="form-group">
+                                <label for="last_name">Last Name *</label>
+                                <input type="text" id="last_name" name="last_name" required placeholder="e.g. Doe">
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="gender">Gender *</label>
+                                <select id="gender" name="gender" required>
+                                    <option value="">Select Gender</option>
+                                    <option value="Male">Male</option>
+                                    <option value="Female">Female</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="dob">Date of Birth *</label>
+                                <input type="date" id="dob" name="dob" required>
+                            </div>
+                        </div>
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="parent_phone">Parent Phone Number (Optional)</label>
+                                <input type="tel" id="parent_phone" name="parent_phone"
+                                    placeholder="e.g. +234 800 000 0000">
+                            </div>
+                            <div class="form-group">
+                                <label for="parent_address">Parent Address (Optional)</label>
+                                <input type="text" id="parent_address" name="parent_address"
+                                    placeholder="Residential Address">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="passport">Passport Photo (Optional)</label>
+                            <input type="file" id="passport" name="passport" accept="image/*">
+                        </div>
+
+
+
+                        <div class="grid-2">
+                            <div class="form-group">
+                                <label for="current_class_id">Class</label>
+                                <select id="current_class_id" name="current_class_id">
+                                    <option value="">Assign Later</option>
+                                    <% classes.forEach(cls=> { %>
+                                        <option value="<%= cls.id %>">
+                                            <%= cls.name %>
+                                        </option>
+                                        <% }); %>
+                                </select>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-submit">Submit Enrollment</button>
+                    </form>
+                </div>
+            </main>
+    </div>
+
+    <script>
+        document.getElementById('enrollmentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            // No need to convert to JSON object for file upload, send FormData directly
+
+            try {
+                const response = await fetch('/students/enroll', {
+                    method: 'POST',
+                    // headers: { 'Content-Type': 'multipart/form-data' }, // Do NOT set Content-Type manually with FormData!
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+                    window.location.href = '/students';
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (err) {
+                alert('An error occurred during enrollment.');
+            }
+        });
+    </script>
+</body>
+
+</html>

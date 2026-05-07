@@ -1,0 +1,319 @@
+/* ===== REPORT CARD CONTAINER ===== */
+.report-card {
+    background: var(--report-bg);
+    width: 210mm;
+    min-height: 297mm;
+    margin: 10mm auto;
+    padding: 12mm 15mm;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    position: relative;
+    box-sizing: border-box;
+    page-break-after: always;
+    font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
+}
+
+.report-card:last-child {
+    page-break-after: auto;
+}
+
+.report-card.has-watermark::after {
+    content: attr(data-watermark);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-45deg);
+    font-size: 60pt;
+    color: rgba(0, 0, 0, 0.02);
+    white-space: nowrap;
+    z-index: 0;
+    pointer-events: none;
+    font-weight: 800;
+}
+
+/* ===== HEADER ===== */
+.rc-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2mm;
+    padding-bottom: 2mm;
+    position: relative;
+    z-index: 1;
+}
+
+.rc-logo img {
+    height: 60px;
+    width: auto;
+    margin-bottom: 2mm;
+}
+
+.rc-school-info {
+    text-align: center;
+}
+
+.rc-school-info h1 {
+    margin: 0;
+    font-family: 'Outfit', sans-serif;
+    font-size: 24pt;
+    color: var(--primary);
+    letter-spacing: 0.5px;
+    font-weight: 800;
+}
+
+.rc-motto {
+    margin: 1mm 0 0 0;
+    font-size: 10pt;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+/* ===== TITLE BADGE ===== */
+.rc-title-badge {
+    text-align: center;
+    margin: 4mm 0;
+}
+
+.rc-title-badge span {
+    display: inline-block;
+    background: var(--primary); /* Dynamic bubble */
+    color: #fff;
+    font-size: 9pt;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 2mm 8mm;
+    border-radius: 50px;
+    text-transform: uppercase;
+}
+
+.rc-header-line {
+    height: 3px;
+    background: var(--primary);
+    margin-bottom: 5mm;
+}
+
+/* ===== STUDENT BIO ===== */
+.rc-bio-wrapper {
+    display: flex;
+    gap: 4mm;
+    margin: 4mm 0;
+    align-items: stretch;
+}
+
+.rc-passport {
+    width: 32mm;
+    height: 36mm;
+    border: 3px solid #f1f5f9;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.rc-passport img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* ensures full photo is shown without cropping */
+    background: #fff;
+}
+
+.rc-bio-grid {
+    flex: 1;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.rc-bio-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px dotted #e2e8f0;
+    flex: 1;
+}
+
+.rc-bio-row:last-child {
+    border-bottom: none;
+}
+
+.rc-bio-cell {
+    padding: 2.2mm 4mm;
+    display: flex;
+    align-items: center;
+    gap: 3mm;
+    border-right: 1px dotted #e2e8f0;
+}
+
+.rc-bio-cell:last-child {
+    border-right: none;
+}
+
+
+.rc-bio-label {
+    font-size: 8.5pt;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.rc-bio-value {
+    font-size: 9pt;
+    font-weight: 800;
+    color: #1e293b;
+}
+
+/* Grade Badges */
+.rc-grade-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 8.5pt;
+}
+
+.grade-A { background: #dcfce7; color: #166534; }
+.grade-B { background: #dbeafe; color: #1e40af; }
+.grade-C { background: #f1f5f9; color: #475569; }
+.grade-D { background: #fef9c3; color: #854d0e; }
+.grade-F { background: #fee2e2; color: #991b1b; }
+
+/* ===== RESULTS TABLE ===== */
+.rc-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    margin: 6mm 0 4mm;
+    font-size: 9.5pt;
+}
+
+.rc-table thead tr {
+    background: var(--primary);
+    color: #fff;
+}
+
+.rc-table th {
+    padding: 3mm 2mm;
+    font-size: 8.5pt;
+    font-weight: 700;
+    text-align: center;
+}
+
+.rc-th-subject { text-align: left !important; padding-left: 5mm !important; }
+
+.rc-table td {
+    padding: 3mm 2mm;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.rc-td-subject { font-weight: 700; color: #1e293b; padding-left: 5mm !important; }
+.rc-td-center { text-align: center; }
+.rc-td-bold { font-weight: 800; }
+.rc-td-remark { font-style: italic; color: #64748b; font-size: 8.5pt; }
+
+/* ===== BOTTOM CARDS ===== */
+.rc-bottom {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4mm;
+    margin-top: 2mm;
+}
+
+.rc-summary-box, .rc-analysis-box {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 2mm 3mm;
+    min-height: auto;
+}
+
+.rc-section-subtitle {
+    font-size: 7.5pt;
+    font-weight: 800;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 2mm;
+    display: block;
+}
+
+.rc-summary-grid {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: 2mm;
+    border-bottom: 2px solid #f1f5f9;
+}
+
+.rc-avg-display { display: flex; flex-direction: column; gap: 1mm; }
+.rc-avg-number { font-size: 20pt; font-weight: 800; color: var(--primary); line-height: 1; }
+.rc-avg-label { font-size: 7.5pt; font-weight: 700; color: #94a3b8; }
+
+.rc-points-display { text-align: right; display: flex; flex-direction: column; gap: 1mm; }
+.rc-points-number { font-size: 12pt; font-weight: 800; color: #1e293b; }
+.rc-points-label { font-size: 7.5pt; font-weight: 700; color: #94a3b8; }
+
+.rc-position-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding-top: 2mm;
+}
+
+.rc-pos-label { font-size: 9pt; font-weight: 800; color: #64748b; }
+.rc-pos-value { font-size: 16pt; font-weight: 800; color: var(--primary); }
+.rc-pos-of { font-size: 10pt; font-weight: 500; color: #94a3b8; }
+
+.text-highlight-purple { font-weight: 700; }
+.text-italic { font-style: italic; }
+
+/* Grading Scale inside Analysis */
+.rc-grading-scale {
+    margin-top: 2mm;
+    padding-top: 2mm;
+    border-top: 1px solid #f1f5f9;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2mm 4mm;
+}
+
+.rc-grade-key { font-size: 7pt; color: #94a3b8; }
+.rc-gk-label { font-weight: 600; }
+
+.rc-signatures {
+    display: flex;
+    justify-content: center;
+    gap: 30mm;
+    margin-top: 12mm;
+}
+
+.rc-sig-block { 
+    text-align: center; 
+    width: 60mm; 
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+}
+.rc-sig-line { border-top: 1px solid #1a1a1a; margin-bottom: 2mm; width: 100%; }
+.rc-sig-block span { font-size: 7.5pt; font-weight: 800; color: #64748b; text-transform: uppercase; }
+
+/* Traits & Attendance */
+.rc-traits-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8mm;
+    margin-top: 6mm;
+}
+
+.rc-traits-table { font-size: 8.5pt; width: 100%; border-collapse: collapse; }
+.rc-traits-table td { padding: 1.5mm 0; border-bottom: 1px dotted #e2e8f0; }
+
+.status-satisfactory { color: #16a34a; font-weight: 700; }
+.status-na { color: #dc2626; font-weight: 700; }
+
+@media print {
+    body { background: white; }
+    .report-card { margin: 0; box-shadow: none; }
+    .no-print { display: none; }
+}

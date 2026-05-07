@@ -1,0 +1,97 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <div>
+                        <h1>Fee Management</h1>
+                        <p>Monitor student payments and outstanding balances.</p>
+                    </div>
+                    <a href="/fees/setup" class="btn btn-outline">Setup Fee Structure</a>
+                </header>
+
+                <section class="card" style="margin-bottom: 30px;">
+                    <form action="/fees/manager" method="GET" class="grid-2" style="align-items: end;">
+                        <div class="form-group">
+                            <label>Class</label>
+                            <select name="class_id" required class="form-control">
+                                <option value="">-- Choose Class --</option>
+                                <% classes.forEach(c=> { %>
+                                    <option value="<%= c.id %>" <%=filters.class_id==c.id ? 'selected' : '' %>><%=
+                                            c.name %>
+                                    </option>
+                                    <% }); %>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn" style="width: 100%;">Load Students</button>
+                    </form>
+                </section>
+
+                <% if (students.length> 0) { %>
+                    <section class="card">
+                        <div class="table-container table-stack">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student ID</th>
+                                        <th>Student Name</th>
+                                        <th>Total Owed</th>
+                                        <th>Total Paid</th>
+                                        <th>Outstanding</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% students.forEach(s=> { %>
+                                        <% const balance=s.total_owed - s.total_paid; %>
+                                            <tr>
+                                                <td>
+                                                    <%= s.admission_number %>
+                                                </td>
+                                                <td>
+                                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                                        <div
+                                                            style="width: 32px; height: 32px; background: #f3f4f6; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
+                                                            <% if (s.passport_photo_path) { %>
+                                                                <img src="<%= s.passport_photo_path %>"
+                                                                    style="width: 100%; height: 100%; object-fit: cover;">
+                                                                <% } else { %>
+                                                                    <i class="bi bi-person-fill"
+                                                                        style="color: #6b7280; font-size: 0.9rem;"></i>
+                                                                    <% } %>
+                                                        </div>
+                                                        <strong>
+                                                            <%= s.last_name %>, <%= s.first_name %>
+                                                        </strong>
+                                                    </div>
+                                                </td>
+                                                <td>₦<%= s.total_owed.toLocaleString() %>
+                                                </td>
+                                                <td style="color: #2e7d32;">₦<%= s.total_paid.toLocaleString() %>
+                                                </td>
+                                                <td
+                                                    style="color: <%= balance > 0 ? '#d32f2f' : '#2e7d32' %>; font-weight: bold;">
+                                                    ₦<%= balance.toLocaleString() %>
+                                                </td>
+                                                <td style="text-align: right;">
+                                                    <a href="/fees/student/<%= s.id %>"
+                                                        class="btn btn-sm btn-outline">View Details</a>
+                                                </td>
+                                            </tr>
+                                            <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <% } else if (filters.class_id) { %>
+                        <div class="card" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                            No students found for the selected criteria.
+                        </div>
+                        <% } %>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

@@ -1,0 +1,317 @@
+<%- include('../partials/header') %>
+
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <!-- Sticky Header for Actions -->
+        <div class="sticky-attendance-header">
+            <div class="header-main">
+                <div class="breadcrumb-container">
+                    <a href="/attendance" class="back-link"><i class="bi bi-arrow-left"></i> Directory</a>
+                    <h1 style="font-size: 1.25rem; margin: 0;">Mark Attendance</h1>
+                </div>
+                <div class="action-buttons">
+                    <button type="submit" form="attendance-form" class="btn btn-primary">
+                        <i class="bi bi-cloud-check-fill"></i> Save Records
+                    </button>
+                </div>
+            </div>
+            <div class="header-meta">
+                <div style="display: flex; gap: 8px; flex: 1;">
+                    <span class="meta-pill"><i class="bi bi-door-open"></i> <%= clazz.name %></span>
+                    <span class="meta-pill"><i class="bi bi-calendar-event"></i> <%= new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+                </div>
+                <button type="button" class="btn btn-outline btn-xs" onclick="markAllPresent()">
+                    Mark All Present
+                </button>
+            </div>
+        </div>
+
+        <section class="attendance-container" style="margin-top: 15px;">
+            <p class="text-muted" style="margin-bottom: 15px; font-size: 0.85rem;"><%= students.length %> Students enrolled in this class.</p>
+
+            <form id="attendance-form" class="attendance-form">
+                <input type="hidden" name="class_id" value="<%= class_id %>">
+                <input type="hidden" name="date" value="<%= date %>">
+                <input type="hidden" name="session" value="<%= locals.currentSession || '' %>">
+                <input type="hidden" name="term" value="<%= locals.currentTerm || '' %>">
+
+                <div class="student-grid">
+                    <% students.forEach((student, index) => { 
+                        const currentStatus = student.status || 'Absent';
+                    %>
+                        <div class="student-row-card" data-student-id="<%= student.id %>">
+                            <input type="hidden" class="status-input" name="attendance[<%= student.id %>]" value="<%= currentStatus %>">
+                            
+                            <div class="row-info">
+                                <div style="width: 46px; height: 54px; flex-shrink: 0; background: #f3f4f6; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1;">
+                                    <% if (student.passport_photo_path) { %>
+                                        <img src="<%= student.passport_photo_path %>" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">
+                                    <% } else { %>
+                                        <i class="bi bi-person-fill" style="color: #9ca3af; font-size: 1.5rem;"></i>
+                                    <% } %>
+                                </div>
+                                <div class="row-bio">
+                                    <strong class="row-name"><%= student.first_name %> <%= student.last_name %></strong>
+                                    <div style="display: flex; gap: 10px; align-items: center; margin-top: 2px;">
+                                        <small class="row-index">SN : <%= index + 1 %></small>
+                                        <small class="row-id">REG : <%= student.admission_number || 'N/A' %></small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row-action">
+                                <button type="button" 
+                                        class="cycle-btn btn-status-<%= currentStatus.toLowerCase() %>" 
+                                        data-state="<%= currentStatus %>"
+                                        onclick="cycleStatus('<%= student.id %>')">
+                                    <i class="bi <%= currentStatus === 'Present' ? 'bi-check-circle-fill' : currentStatus === 'Late' ? 'bi-clock-fill' : currentStatus === 'Leave' ? 'bi-journal-text' : 'bi-x-circle-fill' %>"></i>
+                                    <span class="status-label"><%= currentStatus %></span>
+                                </button>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </form>
+        </section>
+
+        <!-- Feedback Modal -->
+        <div id="feedbackModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <div class="success-icon"><i class="bi bi-check-lg"></i></div>
+                <h2>Success!</h2>
+                <p>Attendance records have been updated successfully.</p>
+                <button class="btn btn-primary btn-block" onclick="window.location.href='/attendance'">Back to Dashboard</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<style>
+    /* New Sticky Header */
+    .sticky-attendance-header {
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        padding: 12px 0;
+        border-bottom: 1px solid #e2e8f0;
+        margin: -15px 0 15px;
+    }
+
+    .header-main {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .back-link { font-size: 0.75rem; text-decoration: none; color: var(--school-primary); font-weight: 700; display: block; margin-bottom: 2px; }
+
+    .header-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .meta-pill {
+        background: #f8fafc;
+        color: #64748b;
+        padding: 4px 10px;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .meta-pill i { color: var(--school-primary); }
+
+    /* Student Grid */
+    .student-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        margin-bottom: 60px;
+    }
+
+    .student-row-card {
+        background: white;
+        padding: 10px 15px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: 0.2s;
+        min-width: 0; /* Fix flex child overflow */
+        gap: 10px;
+    }
+
+    .row-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+    .row-index { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+    .row-bio { display: flex; flex-direction: column; min-width: 0; justify-content: center; flex: 1; }
+    .row-name { display: block; width: 100%; font-size: 0.95rem; color: #1e293b; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+    .row-id { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
+
+    /* Cycle Button */
+    .cycle-btn {
+        width: 75px;
+        padding: 6px 4px;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        font-weight: 800;
+        font-size: 0.65rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-transform: uppercase;
+    }
+
+    .btn-status-absent { background: #fef2f2; color: #ef4444; border-color: #fee2e2; }
+    .btn-status-present { background: #f0fdf4; color: #10b981; border-color: #dcfce7; }
+    .btn-status-leave { background: #eef2ff; color: #6366f1; border-color: #e0e7ff; }
+    .btn-status-late { background: #fffbeb; color: #f59e0b; border-color: #fef3c7; }
+
+    .cycle-btn i { font-size: 1.2rem; line-height: 1; }
+
+    .btn-xs { padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; font-weight: 700; }
+
+    @media (max-width: 991px) {
+        .student-row-card { padding: 8px 10px; }
+        .cycle-btn { width: 65px; padding: 5px 2px; font-size: 0.6rem; }
+        .cycle-btn i { font-size: 1.1rem; }
+        .sticky-attendance-header { margin: -10px -10px 15px; padding: 10px 15px; }
+    }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center; z-index: 9999;
+    }
+    .modal-content {
+        background: white; border-radius: 24px; padding: 30px;
+        text-align: center; max-width: 350px; width: 90%;
+    }
+    .success-icon {
+        width: 50px; height: 50px; background: #f0fdf4; color: #10b981;
+        border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-size: 1.8rem; margin: 0 auto 15px;
+    }
+</style>
+
+<script>
+    const STATUS_CYCLE = ['Absent', 'Present', 'Leave', 'Late'];
+    const STATUS_ICONS = {
+        'Absent': 'bi-x-circle-fill',
+        'Present': 'bi-check-circle-fill',
+        'Leave': 'bi-journal-text',
+        'Late': 'bi-clock-fill'
+    };
+
+    function cycleStatus(studentId) {
+        const card = document.querySelector(`.student-row-card[data-student-id="${studentId}"]`);
+        const btn = card.querySelector('.cycle-btn');
+        const input = card.querySelector('.status-input');
+        
+        const currentState = btn.dataset.state;
+        const nextIndex = (STATUS_CYCLE.indexOf(currentState) + 1) % STATUS_CYCLE.length;
+        const nextState = STATUS_CYCLE[nextIndex];
+
+        // Update data attributes and input
+        btn.dataset.state = nextState;
+        input.value = nextState;
+
+        // Update UI
+        btn.className = `cycle-btn btn-status-${nextState.toLowerCase()}`;
+        btn.querySelector('i').className = `bi ${STATUS_ICONS[nextState]}`;
+        btn.querySelector('.status-label').textContent = nextState;
+    }
+
+    function markAllPresent() {
+        document.querySelectorAll('.student-row-card').forEach(card => {
+            const studentId = card.dataset.studentId;
+            const btn = card.querySelector('.cycle-btn');
+            const input = card.querySelector('.status-input');
+            const nextState = 'Present';
+            btn.dataset.state = nextState;
+            input.value = nextState;
+            btn.className = `cycle-btn btn-status-${nextState.toLowerCase()}`;
+            btn.querySelector('i').className = `bi ${STATUS_ICONS[nextState]}`;
+            btn.querySelector('.status-label').textContent = nextState;
+        });
+    }
+
+    document.getElementById('attendance-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = document.querySelector('button[form="attendance-form"]');
+        const originalText = submitBtn.innerHTML;
+
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
+
+        const formData = new FormData(e.target);
+        const data = {
+            class_id: formData.get('class_id'),
+            date: formData.get('date'),
+            session: formData.get('session'),
+            term: formData.get('term'),
+            attendance: {}
+        };
+
+        for (let [key, value] of formData.entries()) {
+            if (key.startsWith('attendance[')) {
+                const id = key.match(/\[(\d+)\]/)[1];
+                data.attendance[id] = value;
+            }
+        }
+
+        try {
+            const res = await fetch('/attendance/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            // Check if we were redirected to login (session expired)
+            if (res.url.includes('/auth/login')) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/auth/login';
+                return;
+            }
+
+            const text = await res.text();
+            let result;
+            try {
+                result = JSON.parse(text);
+            } catch (e) {
+                console.error('Invalid JSON response:', text);
+                alert('System Error: Server returned invalid format.\n\nResponse preview: ' + text.substring(0, 200));
+                return;
+            }
+
+            if (result.success) {
+                document.getElementById('feedbackModal').style.display = 'flex';
+            } else {
+                alert('Server Error: ' + (result.message || 'Unknown error occurred'));
+            }
+        } catch (err) {
+            console.error('Fetch Error:', err);
+            alert('System Error: ' + err.message);
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }
+    });
+</script>
+
+<%- include('../partials/footer') %>

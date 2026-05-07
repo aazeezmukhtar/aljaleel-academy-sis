@@ -1,0 +1,158 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header no-print">
+                <div class="header-left">
+                    <a href="/reports/staff" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Staff Directory</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="staff_directory.csv">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print Directory
+                    </button>
+                </div>
+            </header>
+
+            <div class="card no-print settings-card">
+                <form action="/reports/staff/directory" method="GET" class="filter-form">
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select name="role">
+                            <option value="">All Roles</option>
+                            <option value="Admin" <%=query.role==='Admin' ? 'selected' : '' %>>Admin</option>
+                            <option value="Teacher" <%=query.role==='Teacher' ? 'selected' : '' %>>Teacher</option>
+                            <option value="Bursar" <%=query.role==='Bursar' ? 'selected' : '' %>>Bursar</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="align-self: flex-end;">
+                        <button type="submit" class="btn btn-primary">Filter</button>
+                    </div>
+                </form>
+            </div>
+
+            <% if (staffList.length> 0) { %>
+                <div class="report-paper">
+                    <div class="report-header">
+                        <h2>Staff Directory</h2>
+                        <p>Generated on <%= new Date().toLocaleDateString('en-GB') %>
+                        </p>
+                    </div>
+
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">S/N</th>
+                                <th>Staff ID</th>
+                                <th>Name</th>
+                                <th>Role</th>
+                                <th>Email</th>
+                                <th>Phone</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% staffList.forEach((staff, index)=> { %>
+                                <tr>
+                                    <td>
+                                        <%= index + 1 %>
+                                    </td>
+                                    <td>
+                                        <%= staff.staff_id %>
+                                    </td>
+                                    <td>
+                                        <%= staff.last_name.toUpperCase() %>, <%= staff.first_name %>
+                                    </td>
+                                    <td>
+                                        <%= staff.role %>
+                                    </td>
+                                    <td>
+                                        <%= staff.email %>
+                                    </td>
+                                    <td>
+                                        <%= staff.phone || '-' %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } else { %>
+                    <div class="empty-state">
+                        <i class="bi bi-person-x"></i>
+                        <p>No staff found matching the criteria.</p>
+                    </div>
+                    <% } %>
+        </main>
+
+        <style>
+            .filter-form {
+                display: flex;
+                gap: 20px;
+            }
+
+            .report-paper {
+                background: white;
+                padding: 40px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                max-width: 210mm;
+                margin: 0 auto;
+            }
+
+            .report-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.95rem;
+            }
+
+            .report-table th,
+            .report-table td {
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: left;
+            }
+
+            .report-table th {
+                background: #f8f9fa;
+            }
+
+            @media print {
+                @page {
+                    size: A4;
+                    margin: 10mm;
+                }
+
+                body * {
+                    visibility: hidden;
+                }
+
+                .report-paper,
+                .report-paper * {
+                    visibility: visible;
+                }
+
+                .report-paper {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    box-shadow: none;
+                    padding: 0;
+                    margin: 0;
+                }
+
+                .main-content {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                .no-print {
+                    display: none !important;
+                }
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

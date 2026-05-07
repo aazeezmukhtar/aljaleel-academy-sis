@@ -1,0 +1,110 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header no-print">
+                <div class="header-left">
+                    <a href="/reports/students" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Student Demographics</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="age_distribution.csv"
+                        data-target=".data-table">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export Age Data
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print Dashboard
+                    </button>
+                </div>
+            </header>
+
+            <div class="demographics-grid">
+                <!-- Gender Distribution -->
+                <div class="card">
+                    <h3>Gender Distribution</h3>
+                    <div class="chart-container">
+                        <% demographics.forEach(d=> { %>
+                            <div class="metric-row">
+                                <span class="label">
+                                    <%= d.gender %>
+                                </span>
+                                <div class="bar-container">
+                                    <div class="bar" style="width: <%= d.percentage %>%;"></div>
+                                </div>
+                                <span class="value">
+                                    <%= d.count %> (<%= d.percentage %>%)
+                                </span>
+                            </div>
+                            <% }) %>
+                    </div>
+                </div>
+
+                <!-- Age Distribution -->
+                <div class="card">
+                    <h3>Age Distribution</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Age Range</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% ageDistribution.forEach(a=> { %>
+                                <tr>
+                                    <td>
+                                        <%= a.age_range %>
+                                    </td>
+                                    <td>
+                                        <%= a.count %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <style>
+            .demographics-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+                gap: 30px;
+            }
+
+            .metric-row {
+                display: flex;
+                align-items: center;
+                margin-bottom: 15px;
+            }
+
+            .label {
+                width: 80px;
+                font-weight: 500;
+            }
+
+            .bar-container {
+                flex-grow: 1;
+                height: 20px;
+                background: #f1f5f9;
+                border-radius: 10px;
+                margin: 0 15px;
+                overflow: hidden;
+            }
+
+            .bar {
+                height: 100%;
+                background: var(--primary);
+                border-radius: 10px;
+            }
+
+            .value {
+                font-size: 0.9rem;
+                color: var(--text-muted);
+                width: 100px;
+                text-align: right;
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

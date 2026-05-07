@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            font-family: 'Inter', sans-serif;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: white;
+            padding: 50px 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+        }
+
+        .login-box h1 {
+            font-family: 'Playfair Display', serif;
+            color: var(--primary, #1e293b);
+            margin-bottom: 5px;
+            font-size: 2.2rem;
+        }
+
+        .login-box p {
+            color: #64748b;
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-box">
+    <div style="width: 70px; height: 70px; background: #e0f2fe; color: #0284c7; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2rem; margin: 0 auto 20px;">
+        <i class="bi bi-person-badge"></i>
+    </div>
+    
+    <h1>Student Portal</h1>
+    <p>Sign in to access your dashboard</p>
+
+    <% if (error) { %>
+        <div class="alert alert-danger" style="text-align: left; margin-bottom: 20px; padding: 12px; font-size: 0.9rem; border-radius: 8px;">
+            <%= error %>
+        </div>
+    <% } %>
+
+    <% if (success) { %>
+        <div class="alert alert-success" style="text-align: left; margin-bottom: 20px; padding: 12px; font-size: 0.9rem; border-radius: 8px;">
+            <%= success %>
+        </div>
+    <% } %>
+
+    <form action="/auth/student-login" method="POST" style="text-align: left;">
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label style="font-weight: 600; color: #475569; font-size: 0.9rem; margin-bottom: 8px; display: block;">Student ID</label>
+            <input type="text" name="admission_number" class="form-control" required placeholder="e.g. ADM/25/001" style="padding: 12px; font-size: 1rem; background: #f8fafc;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 30px;">
+            <label style="font-weight: 600; color: #475569; font-size: 0.9rem; margin-bottom: 8px; display: block;">Password</label>
+            <input type="password" name="password" class="form-control" required placeholder="Enter password (default is Adm No.)" style="padding: 12px; font-size: 1rem; background: #f8fafc;">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 600;">Secure Login</button>
+    </form>
+
+
+</div>
+
+</body>
+</html>

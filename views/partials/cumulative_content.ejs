@@ -1,0 +1,201 @@
+<% var getOrdinal=function(n) { var s=['th','st','nd','rd']; var v=n % 100; return n + (s[(v-20)%10] || s[v] || s[0]);
+    }; var getGradeRemark=function(t) { if (t>= 70) return 'Excellent';
+    if (t >= 60) return 'V. Good';
+    if (t >= 50) return 'Good';
+    if (t >= 40) return 'Fair';
+    return 'Fail';
+    };
+    var grandTotal = 0;
+    var subjectCount = subjects.length;
+    var termAverages = {'1st Term': 0, '2nd Term': 0, '3rd Term': 0};
+    var termCounts = {'1st Term': 0, '2nd Term': 0, '3rd Term': 0};
+
+    subjects.forEach(function(s) { 
+        var subjTotal = 0;
+        var termsPresent = 0;
+        if(s.terms['1st Term']) { subjTotal += s.terms['1st Term']; termAverages['1st Term'] += s.terms['1st Term']; termCounts['1st Term']++; }
+        if(s.terms['2nd Term']) { subjTotal += s.terms['2nd Term']; termAverages['2nd Term'] += s.terms['2nd Term']; termCounts['2nd Term']++; }
+        if(s.terms['3rd Term']) { subjTotal += s.terms['3rd Term']; termAverages['3rd Term'] += s.terms['3rd Term']; termCounts['3rd Term']++; }
+        
+        var subjAvg = (termsPresent = (s.terms['1st Term'] ? 1 : 0) + (s.terms['2nd Term'] ? 1 : 0) + (s.terms['3rd Term'] ? 1 : 0)) > 0 ? subjTotal / termsPresent : 0;
+        s.avg = subjAvg;
+        grandTotal += subjAvg; 
+    });
+
+    var overallAvg = subjectCount > 0 ? grandTotal / subjectCount : 0;
+    var overallGrade = 'F';
+    if (overallAvg >= 70) overallGrade = 'A';
+    else if (overallAvg >= 60) overallGrade = 'B';
+    else if (overallAvg >= 50) overallGrade = 'C';
+    else if (overallAvg >= 40) overallGrade = 'D';
+    else if (overallAvg >= 30) overallGrade = 'E';
+    %>
+
+    <div class="report-card <%= school.show_watermark === 'true' ? 'has-watermark' : '' %>">
+        <!-- HEADER -->
+        <div class="rc-header">
+            <div class="rc-logo">
+                <% if (school.school_logo) { %>
+                    <img src="<%= school.school_logo.startsWith('/') || school.school_logo.startsWith('http') ? school.school_logo : '/uploads/' + school.school_logo %>" alt="Logo">
+                <% } else { %>
+                    <div class="rc-logo-placeholder">LOGO</div>
+                <% } %>
+            </div>
+            <div class="rc-school-info">
+                <h1><%= school.school_name %></h1>
+                <p class="rc-motto"><%= school.school_motto || 'Igniting a Brighter Future' %></p>
+            </div>
+        </div>
+
+        <!-- TITLE BADGE -->
+        <div class="rc-title-badge">
+            <span>CUMULATIVE PERFORMANCE REPORT</span>
+        </div>
+        <div class="rc-header-line"></div>
+
+        <!-- STUDENT INFO GRID -->
+        <div class="rc-bio-wrapper">
+            <div class="rc-passport">
+                <% if (student.passport_photo_path) { %>
+                    <img src="<%= student.passport_photo_path %>" alt="Photo">
+                <% } else { %>
+                    <div class="rc-passport-placeholder">
+                        <%= student.first_name[0] %><%= student.last_name[0] %>
+                    </div>
+                <% } %>
+            </div>
+            <div class="rc-bio-grid">
+                <div class="rc-bio-row">
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Name:</span>
+                        <span class="rc-bio-value"><%= student.first_name.toUpperCase() %> <%= student.last_name.toUpperCase() %></span>
+                    </div>
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Student ID:</span>
+                        <span class="rc-bio-value"><%= student.admission_number || 'N/A' %></span>
+                    </div>
+                </div>
+                <div class="rc-bio-row">
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Class:</span>
+                        <span class="rc-bio-value"><%= student.class_name %></span>
+                    </div>
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Session:</span>
+                        <span class="rc-bio-value"><%= session %></span>
+                    </div>
+                </div>
+                <div class="rc-bio-row">
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Evaluation:</span>
+                        <span class="rc-bio-value" style="margin-right: 4mm;">SESSIONAL ANALYSIS</span>
+                    </div>
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Promoted To:</span>
+                        <span class="rc-bio-value">
+                            <%= overallAvg >= 50 ? 'Next Higher Class' : 'TBA' %>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULTS TABLE -->
+        <table class="rc-table">
+            <thead>
+                <tr>
+                    <th class="rc-th-subject">Subject</th>
+                    <th>1st Term</th>
+                    <th>2nd Term</th>
+                    <th>3rd Term</th>
+                    <th>Avg</th>
+                    <th>Remark</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% subjects.forEach(function(row, idx) { %>
+                    <tr class="<%= idx % 2 === 0 ? 'rc-row-even' : '' %>">
+                        <td class="rc-td-subject"><%= row.name %></td>
+                        <td class="rc-td-center"><%= row.terms['1st Term'] || '-' %></td>
+                        <td class="rc-td-center"><%= row.terms['2nd Term'] || '-' %></td>
+                        <td class="rc-td-center"><%= row.terms['3rd Term'] || '-' %></td>
+                        <td class="rc-td-center rc-td-bold"><%= row.avg.toFixed(1) %></td>
+                        <td class="rc-td-remark"><%= getGradeRemark(row.avg) %></td>
+                    </tr>
+                <% }); %>
+            </tbody>
+        </table>
+
+        <!-- BOTTOM SECTION -->
+        <div class="rc-bottom">
+            <!-- ACADEMIC SUMMARY -->
+                <div class="rc-summary-grid">
+                    <div class="rc-avg-display">
+                        <span class="rc-section-subtitle">SESSIONAL SUMMARY</span>
+                        <span class="rc-avg-number"><%= overallAvg.toFixed(2) %></span>
+                        <span class="rc-avg-label">CUMULATIVE AVG</span>
+                    </div>
+                    <div class="rc-points-display">
+                        <span class="rc-points-number"><%= grandTotal.toFixed(1) %> / <%= subjectCount * 100 %></span>
+                        <span class="rc-points-label">TOTAL POINTS</span>
+                    </div>
+                </div>
+                <div class="rc-position-box">
+                    <span class="rc-pos-label">SESSION CLASS RANK:</span>
+                    <span class="rc-pos-value" style="color: <%= school.primary_color || '#6366f1' %>">
+                        <%= getOrdinal(position) %><span class="rc-pos-of">/ <%= classCount %></span>
+                    </span>
+                </div>
+
+            <div class="rc-analysis-box">
+                <div class="rc-section-subtitle" style="margin-bottom: 3mm;">PERFORMANCE ANALYSIS</div>
+                <ul class="rc-analysis-list">
+                    <% if (typeof marksAnalysis !== 'undefined' && marksAnalysis.length > 0) { %>
+                        <% marksAnalysis.forEach(function(analysis) { %>
+                            <li class="<%= analysis.includes('tied') ? 'text-highlight-purple' : '' %>">
+                                <i class="bi bi-dot"></i> 
+                                <span class="<%= analysis.includes('tied') ? 'text-italic' : '' %>" style="<%= analysis.includes('tied') ? 'color: ' + (school.primary_color || '#6366f1') : '' %>"><%= analysis %></span>
+                            </li>
+                        <% }); %>
+                    <% } %>
+                    <li style="margin-top: 4mm; border-top: 1px dotted #ccc; padding-top: 3mm; font-weight: 700; color: #64748b;">
+                        RECOMMENDATION:
+                    </li>
+                    <li class="rc-recommendation-text">
+                        <% if (overallAvg >= 70) { %>
+                            Outstanding cumulative academic performance! Highly encouraged to keep up the momentum. Promoted.
+                        <% } else if (overallAvg >= 50) { %>
+                            Good overall session effort, though targeted improvement in weaker subjects is advised. Promoted.
+                        <% } else { %>
+                            Below average sessional performance. Remedial guidance required. Result Withheld/Advised.
+                        <% } %>
+                    </li>
+                </ul>
+
+                <!-- GRADING SCALE -->
+                <div class="rc-grading-scale">
+                    <% if (typeof grading !== 'undefined' && grading && grading.length > 0) { %>
+                        <% grading.forEach(function(g) { %>
+                            <div class="rc-grade-key">
+                                <span class="rc-gk-label">
+                                    <%= g.grade %>: <%= g.min_score %>-<%= g.max_score %>
+                                </span>
+                            </div>
+                        <% }); %>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+
+        <!-- SIGNATURE SECTION -->
+        <div class="rc-signatures" style="margin-top: 15mm">
+            <div class="rc-sig-block">
+                <div class="rc-sig-line"></div>
+                <span>FORM TEACHER</span>
+            </div>
+            <div class="rc-sig-block">
+                <div class="rc-sig-line"></div>
+                <span>HEAD TEACHER</span>
+            </div>
+        </div>
+    </div>

@@ -1,0 +1,84 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header"
+                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; margin-bottom: 30px;">
+                    <div>
+                        <h1>Staff Directory</h1>
+                        <p>Manage all school personnel and teachers.</p>
+                    </div>
+                    <a href="/staff/add" class="btn btn-primary">Register New Staff</a>
+                </header>
+
+                <section class="card">
+                    <div class="table-container table-stack">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Staff ID</th>
+                                    <th>Name</th>
+                                    <th>Designation</th>
+                                    <th>System Role</th>
+                                    <th>Status</th>
+                                    <th style="text-align: right;">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (staff.length> 0) { %>
+                                    <% staff.forEach(member=> { %>
+                                        <tr>
+                                            <td data-label="Staff ID"><code
+                                                    style="background: #f1f5f9; padding: 4px 8px; border-radius: 4px; color: var(--school-primary); font-weight: 700;"><%= member.staff_id %></code>
+                                            </td>
+                                            <td data-label="Name">
+                                                <strong>
+                                                    <%= member.first_name %> <%= member.last_name %>
+                                                </strong>
+                                            </td>
+                                            <td data-label="Designation">
+                                                <%= member.designation %>
+                                            </td>
+                                            <td data-label="System Role">
+                                                <% if (member.role==='Admin' ) { %>
+                                                    <span class="badge"
+                                                        style="background: #fee2e2; color: #b91c1c;">Admin</span>
+                                                    <% } else if (member.role==='Teacher' ) { %>
+                                                        <span class="badge"
+                                                            style="background: #dcfce7; color: #15803d;">Teacher</span>
+                                                        <% } else { %>
+                                                            <span class="badge"
+                                                                style="background: #f1f5f9; color: #64748b;">Staff</span>
+                                                            <% } %>
+                                            </td>
+                                            <td data-label="Status">
+                                                <span
+                                                    class="badge <%= member.status === 'active' ? 'badge-success' : 'badge-danger' %>">
+                                                    <%= member.status %>
+                                                </span>
+                                            </td>
+                                            <td data-label="Action" style="text-align: right;">
+                                                <a href="/staff/view/<%= member.id %>"
+                                                    class="btn btn-sm btn-outline">Profile & Assignments</a>
+                                            </td>
+                                        </tr>
+                                        <% }); %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="6"
+                                                        style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                                        No staff members found. <a href="/staff/add">Register the first
+                                                            one</a>.
+                                                    </td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

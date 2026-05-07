@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --school-primary: <%= school.primary_color || '#6366f1' %>;
+        }
+        body {
+            background: #f1f5f9;
+            color: #1e293b;
+            font-family: 'Inter', sans-serif;
+            margin: 0; padding: 0;
+        }
+
+        .portal-nav {
+            background: var(--school-primary);
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .portal-nav h2 { margin: 0; font-family: 'Playfair Display', serif; font-size: 1.4rem; }
+
+        .portal-main {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .dashboard-header {
+            margin-bottom: 30px;
+        }
+
+        .welcome-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 5px;
+        }
+
+        .date-subtitle {
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        .portal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .p-card {
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            flex-direction: column;
+            height: fit-content;
+        }
+
+        .p-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .p-card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #334155;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 0;
+        }
+
+        .p-card-title i {
+            font-size: 1.2rem;
+            color: var(--school-primary);
+        }
+
+        .btn-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            background: var(--school-primary);
+            color: white;
+        }
+
+        .item-row {
+            display: flex;
+            gap: 15px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f1f5f9;
+            align-items: center;
+        }
+
+        .item-row:last-child { border-bottom: none; }
+
+        .item-icon {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        .item-content { flex: 1; min-width: 0; }
+        .item-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 2px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .item-meta { font-size: 0.8rem; color: #94a3b8; display: block; }
+
+        .session-info {
+            background: linear-gradient(135deg, var(--school-primary), #4f46e5);
+            color: white;
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .session-details { display: flex; gap: 40px; }
+        .session-stat span { display: block; font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .session-stat strong { font-size: 1.2rem; font-weight: 800; }
+
+        @media (max-width: 768px) {
+            .session-info { flex-direction: column; text-align: center; gap: 20px; }
+            .session-details { gap: 20px; }
+            .portal-nav { padding: 15px 20px; }
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/notification_bar') %>
+
+    <nav class="portal-nav">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <h2>Nexus Scholar</h2>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="/portal/calendar" style="color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px;">
+                <i class="bi bi-calendar3"></i> Calendar
+            </a>
+            <div class="notification-bell-container" onclick="toggleNotificationDropdown(event)">
+                <i class="bi bi-bell-fill" style="color: white; font-size: 1.2rem;"></i>
+                <span class="notification-badge">0</span>
+                <div class="notification-dropdown" style="color: #1e293b; text-align: left;">
+                    <div class="notification-header"><strong>Notifications</strong></div>
+                    <div class="notification-list"></div>
+                </div>
+            </div>
+            <a href="/auth/student-logout" style="color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <main class="portal-main">
+        <header class="dashboard-header">
+            <h1 class="welcome-title">Welcome Back, <%= student.first_name %></h1>
+            <p class="date-subtitle"><%= new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+        </header>
+
+        <section class="session-info">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="width: 60px; height: 60px; background: rgba(255,255,255,0.2); border-radius: 15px; display: flex; align-items: center; justify-content: center; font-size: 2rem;">
+                    🎓
+                </div>
+                <div>
+                    <h2 style="margin: 0; font-size: 1.4rem;"><%= student.first_name %> <%= student.last_name %></h2>
+                    <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;">ID: <%= student.admission_number %></p>
+                </div>
+            </div>
+            <div class="session-details">
+                <div class="session-stat">
+                    <span>Class</span>
+                    <strong><%= student.class_name %></strong>
+                </div>
+                <div class="session-stat">
+                    <span>Session</span>
+                    <strong><%= currentSession %></strong>
+                </div>
+                <div class="session-stat">
+                    <span>Term</span>
+                    <strong><%= currentTerm %></strong>
+                </div>
+            </div>
+        </section>
+
+        <div class="portal-grid">
+            <!-- Announcements -->
+            <div class="p-card">
+                <div class="p-card-header">
+                    <h3 class="p-card-title"><i class="bi bi-megaphone"></i> Announcements</h3>
+                </div>
+                <div class="p-card-body">
+                    <% if (announcements && announcements.length > 0) { %>
+                        <% announcements.forEach(post => { %>
+                            <a href="/portal/announcement/<%= post.id %>" class="item-row announcement-card" data-id="<%= post.id %>" style="text-decoration: none; color: inherit; transition: all 0.2s; padding: 12px 10px; border-radius: 12px; border-bottom: 1px solid #f1f5f9;">
+                                <div class="item-icon" style="background: #eff6ff; color: #2563eb;">
+                                    <i class="bi bi-info-circle"></i>
+                                </div>
+                                <div class="item-content">
+                                    <span class="item-title post-title"><%= post.title %></span>
+                                    <span class="item-meta"><%= new Date(post.created_at).toLocaleDateString() %></span>
+                                </div>
+                            </a>
+                        <% }) %>
+                    <% } else { %>
+                        <p class="text-muted" style="text-align: center; padding: 20px;">No new announcements.</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Class Board -->
+            <div class="p-card">
+                <div class="p-card-header">
+                    <h3 class="p-card-title"><i class="bi bi-journal-text"></i> Class Board</h3>
+                </div>
+                <div class="p-card-body">
+                    <% if (classPosts && classPosts.length > 0) { %>
+                        <% classPosts.forEach(post => { %>
+                            <div class="item-row">
+                                <div class="item-icon" style="background: <%= post.post_type === 'Assignment' ? '#fef2f2' : '#f0fdf4' %>; color: <%= post.post_type === 'Assignment' ? '#ef4444' : '#16a34a' %>;">
+                                    <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-chat-left-text' %>"></i>
+                                </div>
+                                <div class="item-content">
+                                    <span class="item-title"><%= post.title %></span>
+                                    <span class="item-meta">
+                                        <% if(post.due_date) { %>
+                                            Due: <%= new Date(post.due_date).toLocaleDateString() %>
+                                        <% } else { %>
+                                            Posted by Tr. <%= post.last_name %>
+                                        <% } %>
+                                    </span>
+                                </div>
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <p class="text-muted" style="text-align: center; padding: 20px;">Class board is empty.</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- School Fees Card Removed -->
+
+            <!-- Report Cards -->
+            <div class="p-card" style="background: #fafafa; border: 1px solid #e2e8f0;">
+                <div class="p-card-header">
+                    <h3 class="p-card-title"><i class="bi bi-file-earmark-bar-graph"></i> Report Cards</h3>
+                </div>
+                <div class="p-card-body">
+                    <% if (results && results.length > 0) { %>
+                        <% results.forEach(result => { %>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <strong style="display: block; font-size: 0.9rem;"><%= result.term %></strong>
+                                    <span style="font-size: 0.75rem; color: #64748b;"><%= result.session %></span>
+                                </div>
+                                <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>" target="_blank" class="btn-icon">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        <% }) %>
+                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>" target="_blank" style="display: block; text-align: center; padding: 10px; background: var(--school-primary); color: white; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.85rem; margin-top: 10px;">
+                            VIEW SESSIONAL CUMULATIVE
+                        </a>
+                    <% } else { %>
+                        <p class="text-muted" style="text-align: center; padding: 20px;">No reports published yet.</p>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Term Calendar -->
+            <div class="p-card">
+                <div class="p-card-header">
+                    <h3 class="p-card-title"><i class="bi bi-calendar3"></i> Term Calendar</h3>
+                    <a href="/portal/calendar" class="btn-icon"><i class="bi bi-eye"></i></a>
+                </div>
+                <div class="p-card-body">
+                    <% if (locals.upcomingEvents && upcomingEvents.length > 0) { %>
+                        <% upcomingEvents.forEach(event => { %>
+                            <div class="item-row">
+                                <div style="background: #f8fafc; padding: 5px 10px; border-radius: 8px; text-align: center; min-width: 50px;">
+                                    <span style="display: block; font-size: 0.65rem; font-weight: 800; color: var(--school-primary);"><%= new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' }) %></span>
+                                    <span style="display: block; font-size: 1rem; font-weight: 900; color: #1e293b;"><%= new Date(event.event_date).getDate() %></span>
+                                </div>
+                                <div class="item-content" style="padding-left: 5px;">
+                                    <span class="item-title"><%= event.title %></span>
+                                    <span class="item-meta"><%= event.type %></span>
+                                </div>
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <p class="text-muted" style="text-align: center; padding: 20px;">No upcoming events.</p>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <%- include('../partials/footer') %>
+
+    <style>
+        /* Seamless UX for Announcements */
+        .announcement-card:hover {
+            transform: translateY(-2px);
+            background: white;
+            box-shadow: 0 8px 20px -4px rgba(0,0,0,0.05);
+            border-color: #cbd5e1 !important;
+            z-index: 10;
+        }
+        .announcement-card.read {
+            opacity: 0.6;
+            background: #f8fafc !important;
+            border-color: transparent !important;
+            filter: grayscale(100%);
+        }
+        .announcement-card.read .post-title {
+            color: #64748b !important;
+            font-weight: 500;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const readPosts = JSON.parse(localStorage.getItem('read_announcements') || '[]');
+            
+            document.querySelectorAll('.announcement-card').forEach(card => {
+                const postId = card.dataset.id;
+                
+                if (readPosts.includes(postId)) {
+                    card.classList.add('read');
+                }
+                
+                card.addEventListener('click', () => {
+                    if (!readPosts.includes(postId)) {
+                        readPosts.push(postId);
+                        localStorage.setItem('read_announcements', JSON.stringify(readPosts));
+                    }
+                });
+            });
+        });
+
+        async function fetchNotifications() {
+            try {
+                const res = await fetch('/api/notifications');
+                const data = await res.json();
+                const badge = document.querySelector('.notification-badge');
+                if (data.unreadCount > 0) {
+                    badge.textContent = data.unreadCount;
+                    badge.style.display = 'flex';
+                } else {
+                    badge.style.display = 'none';
+                }
+            } catch (e) { console.error(e); }
+        }
+        fetchNotifications();
+    </script>
+</body>
+</html>

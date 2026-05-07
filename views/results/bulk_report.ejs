@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <%= title %>
+    </title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/report.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --school-primary: <%=school.primary_color || '#1e293b' %>;
+            --primary: var(--school-primary);
+            --report-bg: #fff;
+            --report-text: #1a1a1a;
+            --accent-soft: #f8fafc;
+            --gold: #d4a843;
+        }
+
+        body {
+            background: #cbd5e0;
+            color: var(--report-text);
+            font-family: 'Sassoon Infant', 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* ===== REPORT CARD CONTAINER ===== */
+        .report-card {
+            background: var(--report-bg);
+            width: 210mm;
+            min-height: 297mm;
+            margin: 10mm auto;
+            padding: 12mm 15mm;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            position: relative;
+            box-sizing: border-box;
+            page-break-after: always;
+        }
+
+        .report-card.has-watermark::after {
+            content: '<%= school.school_name %>';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 60pt;
+            color: rgba(0, 0, 0, 0.02);
+            white-space: nowrap;
+            z-index: 0;
+            pointer-events: none;
+            font-weight: 800;
+        }
+
+        /* ===== HEADER ===== */
+        .rc-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5mm;
+            padding-bottom: 4mm;
+            border-bottom: 3px solid var(--primary);
+            position: relative;
+            z-index: 1;
+        }
+
+        .rc-header img {
+            height: 55px;
+            width: auto;
+        }
+
+        .rc-logo-placeholder {
+            width: 55px;
+            height: 55px;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--primary);
+            font-size: 0.7rem;
+        }
+
+        .rc-school-info {
+            text-align: center;
+        }
+
+        .rc-school-info h1 {
+            margin: 0;
+            font-family: 'Playfair Display', serif;
+            font-size: 22pt;
+            color: var(--primary);
+            letter-spacing: 0.5px;
+        }
+
+        .rc-motto {
+            margin: 1mm 0 0 0;
+            font-size: 8.5pt;
+            font-style: italic;
+            color: #666;
+        }
+
+        /* ===== TITLE BADGE ===== */
+        .rc-title-badge {
+            text-align: center;
+            margin: 4mm 0;
+        }
+
+        .rc-title-badge span {
+            display: inline-block;
+            background: var(--primary);
+            color: #fff;
+            font-size: 8pt;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            padding: 2mm 6mm;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        /* ===== STUDENT BIO ===== */
+        .rc-bio-wrapper {
+            display: flex;
+            gap: 4mm;
+            margin: 4mm 0;
+            align-items: stretch;
+        }
+
+        .rc-passport {
+            width: 28mm;
+            min-height: 32mm;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .rc-passport img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .rc-passport-placeholder {
+            width: 100%;
+            height: 100%;
+            background: #f0f4f8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: #94a3b8;
+            font-weight: 700;
+        }
+
+        .rc-bio-grid {
+            flex: 1;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .rc-bio-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .rc-bio-row:last-child {
+            border-bottom: none;
+        }
+
+        .rc-bio-cell {
+            padding: 2mm 3mm;
+            display: flex;
+            align-items: center;
+            gap: 2mm;
+            border-right: 1px solid #e2e8f0;
+        }
+
+        .rc-bio-cell:last-child {
+            border-right: none;
+        }
+
+        .rc-bio-label {
+            font-size: 7.5pt;
+            color: #64748b;
+            white-space: nowrap;
+        }
+
+        .rc-bio-value {
+            font-size: 9pt;
+            font-weight: 700;
+            color: var(--report-text);
+        }
+
+        .rc-grade-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 22px;
+            height: 22px;
+            border-radius: 4px;
+            color: #fff;
+            font-weight: 800;
+            font-size: 9pt;
+        }
+
+        /* ===== RESULTS TABLE ===== */
+        .rc-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin: 4mm 0 3mm;
+            font-size: 8.5pt;
+        }
+
+        .rc-table thead tr {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .rc-table th {
+            padding: 2.5mm 2mm;
+            font-size: 7.5pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        .rc-th-subject {
+            text-align: left !important;
+            width: 28%;
+            padding-left: 3mm !important;
+        }
+
+        .rc-table th:first-child {
+            border-top-left-radius: 5px;
+        }
+
+        .rc-table th:last-child {
+            border-top-right-radius: 5px;
+        }
+
+        .rc-table td {
+            padding: 2mm;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .rc-td-subject {
+            font-weight: 600;
+            padding-left: 3mm !important;
+            color: #1e293b;
+        }
+
+        .rc-td-center {
+            text-align: center;
+        }
+
+        .rc-td-bold {
+            font-weight: 800;
+            font-size: 9pt;
+        }
+
+        .rc-td-remark {
+            text-align: center;
+            font-size: 7.5pt;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .rc-row-even {
+            background: #fafafc;
+        }
+
+        /* Grade dot */
+        .rc-grade-dot {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            color: #fff;
+            font-weight: 800;
+            font-size: 7.5pt;
+        }
+
+        /* ===== BOTTOM SECTION ===== */
+        .rc-bottom {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4mm;
+            margin: 3mm 0;
+        }
+
+        .rc-summary-box,
+        .rc-analysis-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 3mm 4mm;
+        }
+
+        .rc-section-title {
+            font-size: 7pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #64748b;
+            margin: 0 0 2mm 0;
+        }
+
+        /* Academic Summary */
+        .rc-avg-display {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .rc-avg-number {
+            font-size: 22pt;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+        }
+
+        .rc-avg-label {
+            font-size: 6.5pt;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .rc-points-display {
+            display: flex;
+            flex-direction: column;
+            text-align: right;
+        }
+
+        .rc-points-number {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #475569;
+        }
+
+        .rc-points-label {
+            font-size: 6.5pt;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+        }
+
+        .rc-position-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+        }
+
+        .rc-pos-label {
+            font-size: 7pt;
+            font-weight: 700;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+
+        .rc-pos-value {
+            font-size: 14pt;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .rc-pos-of {
+            font-size: 8pt;
+            font-weight: 500;
+            color: #94a3b8;
+            margin-left: 1mm;
+        }
+
+        /* Performance Analysis */
+        .rc-analysis-list {
+            margin: 0 0 3mm 0;
+            padding-left: 4mm;
+            font-size: 7.5pt;
+            color: #475569;
+            line-height: 1.8;
+        }
+
+        .rc-analysis-list li {
+            margin-bottom: 0.5mm;
+        }
+
+        .rc-grading-scale {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5mm 4mm;
+            padding-top: 2mm;
+            border-top: 1px dotted #ccc;
+        }
+
+        .rc-grade-key {
+            font-size: 6.5pt;
+            color: #64748b;
+            background: #f1f5f9;
+            padding: 0.5mm 2mm;
+            border-radius: 3px;
+        }
+
+        .rc-gk-label {
+            font-weight: 600;
+        }
+
+        /* ===== SIGNATURES ===== */
+        .rc-signatures {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 6mm;
+            padding: 0 10mm;
+        }
+
+        .rc-sig-block {
+            text-align: center;
+            width: 55mm;
+        }
+
+        .rc-sig-line {
+            border-top: 1px solid #1e293b;
+            margin-bottom: 1.5mm;
+        }
+
+        .rc-sig-block span {
+            font-size: 7pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #475569;
+        }
+
+        /* ===== NEXT TERM ===== */
+        .rc-next-term {
+            text-align: center;
+            margin-top: 4mm;
+            font-size: 7pt;
+            color: #94a3b8;
+        }
+
+        .rc-next-term strong {
+            color: #475569;
+        }
+
+        /* ===== PRINT ===== */
+        .no-print .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            text-decoration: none;
+            font-size: 9pt;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .no-print .btn-outline {
+            background: white;
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .no-print .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        @media print {
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .report-card {
+                box-shadow: none;
+                margin: 0;
+                border: none;
+            }
+
+            .no-print {
+                display: none;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 100; display: flex; gap: 10px;">
+        <a href="/results/bulk" class="btn btn-outline" style="background: white;">Back</a>
+        <button onclick="window.print()" class="btn">Print All Sheets</button>
+    </div>
+
+    <% studentsData.forEach(item=> { %>
+        <%- include('../partials/report_card_content', { student: item.student, results: item.results, term: term,
+            session: session, school: school, position: item.position, classCount: classCount, grading: grading, caCount: caCount, marksAnalysis: item.marksAnalysis, traits: item.traits, attendance: item.attendance })
+            %>
+            <% }) %>
+</body>
+
+</html>

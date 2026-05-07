@@ -1,0 +1,229 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header no-print">
+                <div class="header-left">
+                    <a href="/reports/academic" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Top Performers</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="top_performers.csv">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print List
+                    </button>
+                </div>
+            </header>
+
+            <div class="card no-print settings-card">
+                <form action="/reports/academic/top" method="GET" class="filter-form">
+                    <div class="form-group">
+                        <label>Class</label>
+                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                        <select name="class_id" required>
+                            <option value="">Select Class</option>
+                            <% classes.forEach(c=> { %>
+                                <option value="<%= c.id %>" <%=query.class_id==c.id ? 'selected' : '' %>><%= c.name %>
+                                </option>
+                                <% }) %>
+                        </select>
+                        <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                        <input type="hidden" name="class_id" value="<%= classes[0].id %>">
+                        <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
+                        <% } %>
+                    </div>
+                    <div class="form-group">
+                        <label>Term</label>
+                        <select name="term" required>
+                            <option value="1st Term" <%=query.term==='1st Term' ? 'selected' : '' %>>1st Term</option>
+                            <option value="2nd Term" <%=query.term==='2nd Term' ? 'selected' : '' %>>2nd Term</option>
+                            <option value="3rd Term" <%=query.term==='3rd Term' ? 'selected' : '' %>>3rd Term</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Session</label>
+                        <select name="session" required>
+                            <option value="2024/2025" <%=query.session==='2024/2025' ? 'selected' : '' %>>2024/2025
+                            </option>
+                            <option value="2025/2026" <%=query.session==='2025/2026' ? 'selected' : '' %>>2025/2026
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Limit</label>
+                        <select name="limit">
+                            <option value="3" <%=query.limit==3 ? 'selected' : '' %>>Top 3</option>
+                            <option value="5" <%=query.limit==5 ? 'selected' : '' %>>Top 5</option>
+                            <option value="10" <%=query.limit==10 ? 'selected' : '' %>>Top 10</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Reveal</button>
+                </form>
+            </div>
+
+            <% if (topStudents.length> 0) { %>
+                <div class="report-paper">
+                    <div class="report-header">
+                        <h2>Top <%= query.limit %> Academic Performers</h2>
+                        <p>
+                            <%= topStudents[0].class_name %> - <%= query.term %>, <%= query.session %>
+                        </p>
+                    </div>
+
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">Rank</th>
+                                <th>Student Name</th>
+                                <th>Student ID.</th>
+                                <th>Subjects Sat</th>
+                                <th>Total Score</th>
+                                <th>Average</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% topStudents.forEach((student, index)=> { %>
+                                <tr class="<%= index < 3 ? 'top-rank rank-' + (index+1) : '' %>">
+                                    <td>
+                                        <div class="rank-badge">
+                                            <%= index + 1 %>
+                                        </div>
+                                    </td>
+                                    <td style="font-weight: 500;">
+                                        <%= student.last_name.toUpperCase() %>, <%= student.first_name %>
+                                    </td>
+                                    <td>
+                                        <%= student.admission_number %>
+                                    </td>
+                                    <td>
+                                        <%= student.subjects_sat %>
+                                    </td>
+                                    <td>
+                                        <%= student.total_score %>
+                                    </td>
+                                    <td><strong>
+                                            <%= student.average_score.toFixed(2) %>%
+                                        </strong></td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } else if (query.class_id) { %>
+                    <div class="empty-state">
+                        <i class="bi bi-trophy"></i>
+                        <p>No results available for this criteria.</p>
+                    </div>
+                    <% } %>
+        </main>
+
+        <style>
+            .filter-form {
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+
+            .report-paper {
+                background: white;
+                padding: 40px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                max-width: 210mm;
+                margin: 0 auto;
+            }
+
+            .report-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.95rem;
+            }
+
+            .report-table th,
+            .report-table td {
+                border: 1px solid #ddd;
+                padding: 12px;
+                text-align: left;
+            }
+
+            .report-table th {
+                background: #f8f9fa;
+            }
+
+            .rank-badge {
+                width: 30px;
+                height: 30px;
+                border-radius: 50%;
+                background: #f1f5f9;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                color: #64748b;
+            }
+
+            .top-rank .rank-badge {
+                color: white;
+            }
+
+            .rank-1 .rank-badge {
+                background: #eab308;
+                box-shadow: 0 2px 5px rgba(234, 179, 8, 0.3);
+            }
+
+            /* Gold */
+            .rank-2 .rank-badge {
+                background: #94a3b8;
+            }
+
+            /* Silver */
+            .rank-3 .rank-badge {
+                background: #b45309;
+            }
+
+            /* Bronze */
+
+            @media print {
+                @page {
+                    size: A4;
+                    margin: 10mm;
+                }
+
+                body * {
+                    visibility: hidden;
+                }
+
+                .report-paper,
+                .report-paper * {
+                    visibility: visible;
+                }
+
+                .report-paper {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    box-shadow: none;
+                    padding: 0;
+                    margin: 0;
+                }
+
+                .main-content {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                .no-print {
+                    display: none !important;
+                }
+
+                .rank-badge {
+                    -webkit-print-color-adjust: exact;
+                    print-color-adjust: exact;
+                }
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

@@ -1,0 +1,94 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <a href="/reports/students" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Profile Audit</h1>
+                    <p>Students with incomplete profile information.</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="profile_audit.csv"
+                        data-target=".data-table">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print Report
+                    </button>
+                </div>
+            </header>
+
+            <% if (students.length> 0) { %>
+                <div class="card">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Adm No.</th>
+                                <th>Name</th>
+                                <th>Missing Photo</th>
+                                <th>Missing Phone</th>
+                                <th>Missing DOB</th>
+                                <th>Missing Address</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% students.forEach(s=> { %>
+                                <tr>
+                                    <td>
+                                        <%= s.admission_number %>
+                                    </td>
+                                    <td>
+                                        <%= s.last_name %>, <%= s.first_name %>
+                                    </td>
+                                    <td>
+                                        <% if (s.missing_photo) { %><span class="badge badge-error">Missing</span>
+                                            <% } else { %><span class="badge badge-success">OK</span>
+                                                <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (s.missing_phone) { %><span class="badge badge-error">Missing</span>
+                                            <% } else { %><span class="badge badge-success">OK</span>
+                                                <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (s.missing_dob) { %><span class="badge badge-error">Missing</span>
+                                            <% } else { %><span class="badge badge-success">OK</span>
+                                                <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (s.missing_address) { %><span class="badge badge-error">Missing</span>
+                                            <% } else { %><span class="badge badge-success">OK</span>
+                                                <% } %>
+                                    </td>
+                                    <td>
+                                        <a href="/students/edit/<%= s.id %>" class="btn btn-sm btn-secondary">Update</a>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } else { %>
+                    <div class="empty-state">
+                        <i class="bi bi-check-circle-fill" style="color: var(--success);"></i>
+                        <h3>All Good!</h3>
+                        <p>Every active student has a complete profile.</p>
+                    </div>
+                    <% } %>
+        </main>
+
+        <style>
+            .badge-error {
+                background: #fee2e2;
+                color: #dc2626;
+            }
+
+            .badge-success {
+                background: #dcfce7;
+                color: #16a34a;
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

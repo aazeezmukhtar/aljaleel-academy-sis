@@ -1,0 +1,556 @@
+<%- include('../partials/header') %>
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+            <main class="main-content">
+                <header class="content-header">
+                    <div>
+                        <h1>Result Entry</h1>
+                        <p>Record and manage student performance.</p>
+                    </div>
+                </header>
+
+                <!-- Filters -->
+                <% if (!filters.class_id || !filters.subject_id) { %>
+                <div class="card" style="margin-bottom: 20px;">
+                    <form action="/results/manage" method="GET" class="filter-grid">
+                        <div class="form-group">
+                            <label>Session</label>
+                            <select name="session" class="form-control" required>
+                                <option value="2025/2026" <%=filters.session==='2025/2026' ? 'selected' : '' %>
+                                    >2025/2026</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Term</label>
+                            <select name="term" class="form-control" required>
+                                <option value="1st Term" <%=filters.term==='1st Term' ? 'selected' : '' %>>1st Term
+                                </option>
+                                <option value="2nd Term" <%=filters.term==='2nd Term' ? 'selected' : '' %>>2nd Term
+                                </option>
+                                <option value="3rd Term" <%=filters.term==='3rd Term' ? 'selected' : '' %>>3rd Term
+                                </option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Class</label>
+                            <select name="class_id" class="form-control" required>
+                                <option value="">-- Select Class --</option>
+                                <% classes.forEach(c=> { %>
+                                    <option value="<%= c.id %>" <%=filters.class_id==c.id ? 'selected' : '' %>><%=
+                                            c.name %>
+                                    </option>
+                                    <% }) %>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <select name="subject_id" class="form-control" required>
+                                <option value="">-- Select Subject --</option>
+                                <% subjects.forEach(s=> { %>
+                                    <option value="<%= s.id %>" <%=filters.subject_id==s.id ? 'selected' : '' %>><%=
+                                            s.name %>
+                                    </option>
+                                    <% }) %>
+                            </select>
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: flex-end;">
+                            <button type="submit" class="btn btn-primary" style="width: 100%;">Load Sheet</button>
+                        </div>
+                    </form>
+                </div>
+                <% } else { %>
+                    <!-- Active Selection Summary -->
+                    <% 
+                        const selClass = classes.find(c => String(c.id) === String(filters.class_id))?.name || 'Unknown Class';
+                        const selSubj = subjects.find(s => String(s.id) === String(filters.subject_id))?.name || 'Unknown Subject';
+                    %>
+                    <input type="hidden" name="session" value="<%= filters.session %>">
+                    <input type="hidden" name="term" value="<%= filters.term %>">
+                    <input type="hidden" name="class_id" value="<%= filters.class_id %>">
+                    <input type="hidden" name="subject_id" value="<%= filters.subject_id %>">
+                    <div class="card" style="margin-bottom: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--school-primary);">
+                        <div>
+                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Editing Results For</div>
+                            <div style="font-size: 1.1rem; font-weight: 800; color: #1e293b; line-height: 1.2;">
+                                <%= selClass %> <span style="color: #cbd5e1; margin: 0 6px;">•</span> <span style="color: var(--school-primary);"><%= selSubj %></span>
+                            </div>
+                        </div>
+                        <a href="/results/manage" class="btn btn-outline btn-sm" style="flex-shrink: 0;">
+                            <i class="bi bi-pencil-square"></i> Change
+                        </a>
+                    </div>
+                <% } %>
+
+                <% if (students && students.length> 0) { %>
+                    <div class="card">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3 style="margin: 0;">
+                                Grade Sheet
+                                <span class="badge badge-info" style="font-size: 0.8rem; vertical-align: middle;">
+                                    <%= students[0].status || 'New / Draft' %>
+                                </span>
+                            </h3>
+                            <div class="result-actions-group">
+                                <span class="text-muted result-config-info">
+                                    <i class="bi bi-info-circle"></i> Max: CA1=<%= school.ca1_max || 20 %>, CA2=<%= school.ca2_max || 20 %>, Exam=<%= school.exam_max || 60 %>
+                                </span>
+
+                                <div class="button-stack">
+                                    <button type="button" class="btn btn-outline"
+                                        onclick="saveResults('draft', event)">
+                                        <i class="bi bi-save"></i> Save Draft
+                                    </button>
+                                    <button type="button" class="btn btn-primary"
+                                        onclick="saveResults('submitted', event)">
+                                        <i class="bi bi-check-circle"></i> Submit Results
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container table-responsive result-grid-wrapper mobile-cards">
+                            <table class="data-table result-grid" id="resultGrid">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th style="width: 250px;">Student Name</th>
+                                        <th style="width: 100px;">CA 1 (<%= school.ca1_max || 20 %>)</th>
+                                        <% if (school.ca_count !=1) { %>
+                                            <th style="width: 100px;">CA 2 (<%= school.ca2_max || 20 %>)</th>
+                                            <% } %>
+                                                <th style="width: 100px;">Exam (<%= school.exam_max || 60 %>)</th>
+                                                <th style="width: 80px;">Total</th>
+                                                <th style="width: 80px;">Grade</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% students.forEach((s, index)=> { %>
+                                        <% 
+                                            const isLocked = s.status === 'locked' || s.status === 'published' || s.status === 'approved';
+                                        %>
+                                        <tr data-student="<%= s.id %>">
+                                            <td data-label="#">
+                                                <%= index + 1 %>
+                                            </td>
+                                            <td data-label="Student">
+                                                <div class="row-info" style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+                                                    <div style="width: 42px; height: 50px; flex-shrink: 0; background: #f3f4f6; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1;">
+                                                        <% if (s.passport_photo_path) { %>
+                                                            <img src="<%= s.passport_photo_path %>" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">
+                                                        <% } else { %>
+                                                            <i class="bi bi-person-fill" style="color: #9ca3af; font-size: 1.5rem;"></i>
+                                                        <% } %>
+                                                    </div>
+                                                    <div class="row-bio" style="display: flex; flex-direction: column; min-width: 0; flex: 1; justify-content: center;">
+                                                        <strong class="row-name" style="display: block; width: 100%; font-size: 0.9rem; color: #1e293b; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase;">
+                                                            <%= s.first_name %> <%= s.last_name %>
+                                                        </strong>
+                                                        <div style="display: flex; gap: 8px; align-items: center; margin-top: 2px;">
+                                                            <small class="row-index" style="font-size: 0.7rem; color: #64748b; font-weight: 600;">SN: <%= index + 1 %></small>
+                                                            <small class="row-id" style="font-size: 0.7rem; color: #64748b; font-weight: 600;">REG: <%= s.admission_number || 'N/A' %></small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td data-label="CA 1">
+                                                <input type="number" class="form-control score-input ca1"
+                                                    value="<%= s.ca1 %>" min="0" max="<%= school.ca1_max || 20 %>"
+                                                    <%= isLocked ? 'disabled' : '' %>>
+                                            </td>
+                                            <% if (school.ca_count !=1) { %>
+                                                <td data-label="CA 2">
+                                                    <input type="number" class="form-control score-input ca2"
+                                                        value="<%= s.ca2 %>" min="0" max="<%= school.ca2_max || 20 %>"
+                                                        <%= isLocked ? 'disabled' : '' %>>
+                                                </td>
+                                                <% } else { %>
+                                                    <input type="hidden" class="form-control score-input ca2" value="0">
+                                                    <% } %>
+                                                        <td data-label="Exam">
+                                                            <input type="number" class="form-control score-input exam"
+                                                                value="<%= s.exam %>" min="0"
+                                                                max="<%= school.exam_max || 60 %>"
+                                                                <%= isLocked ? 'disabled' : '' %>>
+                                                        </td>
+                                                        <td data-label="Total" class="total fw-bold"><%= s.total || 0 %></td>
+                                                        <td data-label="Grade" class="grade fw-bold"><%= s.grade || '-' %></td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Sticky Save Bar (mobile only) -->
+                    <div class="sticky-save-bar">
+                        <div class="sticky-save-inner">
+                            <button type="button" class="btn btn-outline" onclick="saveResults('draft', event)">
+                                <i class="bi bi-save"></i> Draft
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="saveResults('submitted', event)">
+                                <i class="bi bi-check-circle"></i> Submit
+                            </button>
+                        </div>
+                    </div>
+
+                    <% } else if (filters.class_id && filters.subject_id) { %>
+                        <div class="emp-state">
+                            <i class="bi bi-people" style="font-size: 3rem; color: #cbd5e1;"></i>
+                            <h3>No Students Found</h3>
+                            <p>There are no active students in this class.</p>
+                        </div>
+                        <% } %>
+
+            </main>
+    </div>
+
+    <!-- Constants for JS -->
+    <script>
+        const CONFIG = {
+            CA1_MAX: <%- school.ca1_max || 20 %>,
+            CA2_MAX: <%- school.ca2_max || 20 %>,
+            EXAM_MAX: <%- school.exam_max || 60 %>
+        };
+
+        // Grading System from Backend
+        const GRADING = <%- JSON.stringify(grading || []) %>;
+    </script>
+
+    <style>
+        .result-actions-group {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .button-stack {
+            display: flex;
+            gap: 10px;
+        }
+
+        .result-config-info {
+            font-size: 0.9rem;
+            align-self: center;
+            margin-right: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .result-actions-group {
+                flex-direction: column;
+                align-items: stretch;
+                width: 100%;
+                gap: 10px;
+            }
+            .button-stack {
+                display: none; /* Hide on mobile in favor of sticky bar */
+            }
+            .result-config-info {
+                margin: 0;
+                font-size: 0.8rem;
+                text-align: center;
+            }
+            .card-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 15px;
+            }
+        }
+
+        .sticky-save-bar {
+            display: none;
+            position: fixed;
+            bottom: 60px; /* Above bottom nav */
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 12px 16px;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.1);
+            z-index: 900;
+        }
+
+        .sticky-save-inner {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        @media (max-width: 991px) {
+            .sticky-save-bar {
+                display: block;
+            }
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .score-input {
+            text-align: center;
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .score-input:focus {
+            background: #f0f9ff;
+            border-color: var(--primary);
+        }
+
+        .score-input.error {
+            border-color: #ef4444;
+            background: #fee2e2;
+        }
+
+        .total {
+            text-align: center;
+            font-size: 1.1em;
+        }
+
+        .grade {
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .grade[data-grade^="A"] {
+            color: #16a34a;
+        }
+
+        .grade[data-grade^="F"] {
+            color: #dc2626;
+        }
+
+        .total, .grade {
+            min-width: 60px;
+            display: inline-block;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-cards table,
+            .mobile-cards tbody {
+                display: block !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            .mobile-cards thead {
+                display: none !important;
+            }
+
+            .mobile-cards tr {
+                display: flex;
+                flex-wrap: nowrap;
+                align-items: center;
+                padding: 8px 10px;
+                gap: 5px;
+                margin-bottom: 10px;
+                background: white;
+                border: 1px solid #e2e8f0;
+                border-radius: 12px;
+                box-shadow: none;
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+
+            .mobile-cards td {
+                display: block !important;
+                padding: 0 !important;
+                border: none !important;
+                background: none !important;
+                box-sizing: border-box !important;
+            }
+
+            /* Hide unwanted fields on mobile */
+            .mobile-cards td[data-label="#"], 
+            .mobile-cards td[data-label="Total"], 
+            .mobile-cards td[data-label="Grade"] {
+                display: none !important;
+            }
+
+            .mobile-cards td:before {
+                display: none !important;
+            }
+
+            /* Student name flex container */
+            .mobile-cards td[data-label="Student"] {
+                flex: 1;
+                min-width: 0;
+            }
+
+            /* Score fields compacted beside */
+            .mobile-cards td[data-label^="CA"], 
+            .mobile-cards td[data-label="Exam"] {
+                flex: 0 0 auto;
+                padding: 0 !important;
+            }
+
+            .score-input {
+                width: 44px !important;
+                font-size: 0.9rem !important;
+                padding: 4px !important;
+                height: 40px !important;
+                border-radius: 6px !important;
+                text-align: center;
+                max-width: none !important;
+                font-weight: 700;
+            }
+        }
+    </style>
+
+    <script>
+        // Logic: Auto-Calculate totals and grades on input
+        const grid = document.getElementById('resultGrid');
+        if (grid) {
+            grid.addEventListener('input', (e) => {
+                if (e.target.classList.contains('score-input')) {
+                    const row = e.target.closest('tr');
+                    calculateRow(row);
+                    validateInput(e.target);
+                }
+            });
+        }
+
+        function validateInput(input) {
+            let max = 100;
+            if (input.classList.contains('ca1')) max = CONFIG.CA1_MAX;
+            if (input.classList.contains('ca2')) max = CONFIG.CA2_MAX;
+            if (input.classList.contains('exam')) max = CONFIG.EXAM_MAX;
+
+            const val = parseFloat(input.value);
+            if (val > max) {
+                input.classList.add('error');
+                // Optional: Tooltip or toast?
+            } else {
+                input.classList.remove('error');
+            }
+        }
+
+        function calculateRow(row) {
+            const ca1 = parseFloat(row.querySelector('.ca1').value) || 0;
+            const ca2 = parseFloat(row.querySelector('.ca2').value) || 0;
+            const exam = parseFloat(row.querySelector('.exam').value) || 0;
+
+            const total = (ca1 + ca2 + exam).toFixed(1);
+            const totalCell = row.querySelector('.total');
+            const gradeCell = row.querySelector('.grade');
+
+            totalCell.textContent = total;
+
+            // Determine Grade
+            if (typeof GRADING !== 'undefined' && GRADING.length > 0) {
+                const gradeObj = GRADING.find(g => total >= g.min_score && total <= g.max_score);
+                if (gradeObj) {
+                    gradeCell.textContent = gradeObj.grade;
+                } else {
+                    gradeCell.textContent = '-';
+                }
+            }
+        }
+
+        async function saveResults(status, event) {
+            const rows = document.querySelectorAll('#resultGrid tbody tr');
+            const results = [];
+            let hasError = false;
+
+            rows.forEach(row => {
+                const ca1 = row.querySelector('.ca1');
+                const ca2 = row.querySelector('.ca2');
+                const exam = row.querySelector('.exam');
+
+                // Check for validation errors
+                if (ca1.classList.contains('error') || ca2.classList.contains('error') || exam.classList.contains('error')) {
+                    hasError = true;
+                }
+
+                results.push({
+                    student_id: row.dataset.student,
+                    ca1: ca1.value,
+                    ca2: ca2.value,
+                    exam: exam.value,
+                    total: row.querySelector('.total').innerText.trim(),
+                    grade: row.querySelector('.grade').innerText.trim(),
+                    remark: ''
+                });
+            });
+
+            if (hasError) {
+                alert('Please fix highlight errors (scores exceeding limits) before saving.');
+                return;
+            }
+
+            const term = document.querySelector('[name="term"]').value;
+            const session = document.querySelector('[name="session"]').value;
+            const class_id = document.querySelector('[name="class_id"]').value;
+            const subject_id = document.querySelector('[name="subject_id"]').value;
+
+            if (!term || !session || !class_id || !subject_id) {
+                alert('Missing session/term/class/subject identifiers. Please reload the page.');
+                return;
+            }
+
+            const payload = {
+                results,
+                term,
+                session,
+                class_id,
+                subject_id,
+                status
+            };
+
+            try {
+                const btn = event.currentTarget || event.target;
+                const oldText = btn.innerHTML;
+                btn.innerHTML = 'Saving...';
+                btn.disabled = true;
+
+                const res = await fetch('/results/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    alert(data.message);
+                    if (status === 'submitted') location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+
+                btn.innerHTML = oldText;
+                btn.disabled = false;
+
+            } catch (err) {
+                console.error(err);
+                alert('Network Error');
+            }
+        }
+
+        async function updateStatus(type) {
+            if (!confirm(`Are you sure you want to ${type.toUpperCase()} these results?`)) return;
+
+            const payload = {
+                term: document.querySelector('[name="term"]').value,
+                session: document.querySelector('[name="session"]').value,
+                class_id: document.querySelector('[name="class_id"]').value,
+                subject_id: document.querySelector('[name="subject_id"]').value
+            };
+
+            try {
+                const res = await fetch(`/results/${type}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                alert(data.message);
+                if (data.success) location.reload();
+            } catch (err) { alert('Action failed'); }
+        }
+    </script>
+    <%- include('../partials/footer') %>

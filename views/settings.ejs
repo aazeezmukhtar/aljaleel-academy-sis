@@ -1,0 +1,200 @@
+<%- include('partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header"
+                    style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
+                    <div>
+                        <h1>School Settings</h1>
+                        <p>Manage your school's branding and key details.</p>
+                    </div>
+                </header>
+
+                <% if (success) { %>
+                    <div class="alert alert-success"
+                        style="padding: 15px; background: #d4edda; color: #155724; border-radius: 8px; margin-bottom: 20px;">
+                        <%= success %>
+                    </div>
+                    <% } %>
+
+                        <% if (error) { %>
+                            <div class="alert alert-danger"
+                                style="padding: 15px; background: #f8d7da; color: #721c24; border-radius: 8px; margin-bottom: 20px;">
+                                <%= error %>
+                            </div>
+                            <% } %>
+
+                                <div class="settings-grid"
+                                    style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+
+                                    <!-- School Identity Form -->
+                                    <section class="card">
+                                        <h3>School Identity</h3>
+                                        <form action="/settings/update" method="POST" enctype="multipart/form-data"
+                                            class="settings-form">
+
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <label>School Name</label>
+                                                <input type="text" name="school_name"
+                                                    value="<%= settings.school_name %>" required class="form-control">
+                                            </div>
+
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <label>Motto / Slogan</label>
+                                                <input type="text" name="school_motto"
+                                                    value="<%= settings.school_motto %>" class="form-control">
+                                            </div>
+
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <label>School Logo</label>
+                                                <div
+                                                    style="display: flex; align-items: center; gap: 20px; margin-top: 10px;">
+                                                    <% if (settings.school_logo) { %>
+                                                        <img src="<%= settings.school_logo %>" alt="Current Logo"
+                                                            style="height: 60px; border-radius: 8px; border: 1px solid #ddd;">
+                                                        <% } %>
+                                                            <input type="file" name="school_logo" accept="image/*"
+                                                                class="form-control-file">
+                                                </div>
+                                                <small class="text-muted">Recommended: PNG or JPG, square aspect
+                                                    ratio.</small>
+                                            </div>
+
+                                            <h4 style="margin-top: 30px; margin-bottom: 15px;">Branding Colors</h4>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                                <div class="form-group">
+                                                    <label>Primary Color</label>
+                                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                                        <input type="color" name="primary_color"
+                                                            value="<%= settings.primary_color %>"
+                                                            style="height: 40px; width: 60px; border: none; padding: 0;">
+                                                        <input type="text" value="<%= settings.primary_color %>"
+                                                            readonly
+                                                            style="width: 100px; border: none; background: transparent;">
+                                                    </div>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Secondary Color</label>
+                                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                                        <input type="color" name="secondary_color"
+                                                            value="<%= settings.secondary_color %>"
+                                                            style="height: 40px; width: 60px; border: none; padding: 0;">
+                                                        <input type="text" value="<%= settings.secondary_color %>"
+                                                            readonly
+                                                            style="width: 100px; border: none; background: transparent;">
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <h4 style="margin-top: 30px; margin-bottom: 15px;">Contact Details</h4>
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <label>Address</label>
+                                                <textarea name="address" rows="3"
+                                                    class="form-control"><%= settings.address %></textarea>
+                                            </div>
+
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <label>Phone Number(s)</label>
+                                                <input type="text" name="phone" value="<%= settings.phone %>"
+                                                    class="form-control">
+                                            </div>
+
+                                            <h4 style="margin-top: 30px; margin-bottom: 15px;">Report Settings</h4>
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <label>Next Term Starts</label>
+                                                <input type="text" name="next_term_start_date"
+                                                    value="<%= settings.next_term_start_date %>" class="form-control"
+                                                    placeholder="e.g. 15th Sept, 2026">
+                                            </div>
+
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <label
+                                                    style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                                    <input type="checkbox" name="show_watermark" value="true"
+                                                        <%=settings.show_watermark==='true' ? 'checked' : '' %>>
+                                                    Show School Name Watermark on Reports
+                                                </label>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary"
+                                                style="width: 100%; margin-top: 20px;">Save Changes</button>
+                                        </form>
+                                    </section>
+
+                                    <!-- Preview Card (Helpful for users to see impact) -->
+                                    <section class="card" style="background: #f8f9fa; border: none;">
+                                        <h3>Preview</h3>
+                                        <p>This is how your branding might look on a report card header.</p>
+
+                                        <style>
+                                            .preview-box {
+                                                background: white;
+                                                padding: 30px;
+                                                border-radius: 8px;
+                                                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+                                                text-align: center;
+                                                border-top: 5px solid var(--preview-primary);
+                                                margin-top: 20px;
+                                            }
+
+                                            .color-box {
+                                                width: 80px;
+                                                height: 80px;
+                                                border-radius: 12px;
+                                                margin-bottom: 10px;
+                                                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                                            }
+                                        </style>
+
+                                        <div class="preview-box"
+                                            style="--preview-primary: <%= settings.primary_color %>;">
+                                            <div
+                                                style="display: flex; align-items: center; justify-content: center; gap: 20px; margin-bottom: 10px;">
+                                                <% if (settings.school_logo) { %>
+                                                    <img src="<%= settings.school_logo %>" style="height: 60px;">
+                                                    <% } else { %>
+                                                        <div
+                                                            style="height: 60px; width: 60px; background: #eee; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                                            LOGO</div>
+                                                        <% } %>
+                                                            <div style="text-align: left;">
+                                                                <h2
+                                                                    style="margin: 0; color: <%= settings.primary_color %>; font-size: 24px;">
+                                                                    <%= settings.school_name || 'School Name' %>
+                                                                </h2>
+                                                                <p
+                                                                    style="margin: 5px 0 0; color: #666; font-size: 14px;">
+                                                                    <%= settings.address || 'Address Line 1' %>
+                                                                </p>
+                                                                <p style="margin: 0; color: #666; font-size: 14px;">
+                                                                    <%= settings.phone || 'Phone Number' %>
+                                                                </p>
+                                                            </div>
+                                            </div>
+                                        </div>
+
+                                        <div style="margin-top: 40px;">
+                                            <h4>System Colors</h4>
+                                            <div style="display: flex; gap: 20px; margin-top: 10px;">
+                                                <div style="text-align: center;">
+                                                    <div class="color-box"
+                                                        style="background: <%= settings.primary_color %>;">
+                                                    </div>
+                                                    <span style="font-size: 12px; color: #666;">Primary</span>
+                                                </div>
+                                                <div style="text-align: center;">
+                                                    <div class="color-box"
+                                                        style="background: <%= settings.secondary_color %>;">
+                                                    </div>
+                                                    <span style="font-size: 12px; color: #666;">Secondary</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+            </main>
+    </div>
+
+    <%- include('partials/footer') %>

@@ -1,0 +1,178 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header style="margin-bottom: 30px;">
+                    <a href="/results" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr;
+                        Back to Dashboard</a>
+                    <h1 style="margin-top: 20px;">Bulk Result Import</h1>
+                    <p class="text-muted">Upload an Excel file to register multiple student scores at once.</p>
+                </header>
+
+                <section class="grid-2">
+                    <section class="grid-2">
+                        <div class="card">
+                            <h3>1. Generate Template</h3>
+                            <p>Select Class and Subject to generate a pre-filled Excel sheet.</p>
+                            <p class="text-muted" style="font-size: 0.85rem;"><i class="bi bi-info-circle"></i> The
+                                template matches your current grading configuration (e.g. Number of CAs).</p>
+                            <form id="templateForm" style="margin-top: 15px;">
+                                <div class="form-group">
+                                    <label>Class</label>
+                                    <select id="templateClass" class="form-control" required style="width: 100%;">
+                                        <option value="">-- Select Class --</option>
+                                        <% classes.forEach(c=> { %> <option value="<%= c.id %>">
+                                                <%= c.name %>
+                                            </option>
+                                            <% }) %>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Subject</label>
+                                    <select id="templateSubject" class="form-control" required style="width: 100%;">
+                                        <option value="">-- Select Subject --</option>
+                                        <% subjects.forEach(s=> { %> <option value="<%= s.id %>">
+                                                <%= s.name %>
+                                            </option>
+                                            <% }) %>
+                                    </select>
+                                </div>
+                                <button type="button" class="btn btn-outline" style="width: 100%; margin-top: 10px;"
+                                    onclick="downloadClassTemplate()">
+                                    <i class="bi bi-download"></i> Download Template
+                                </button>
+                            </form>
+                        </div>
+
+                        <div class="card">
+                            <h3>2. Upload Results</h3>
+                            <p>Upload the filled Excel sheet.</p>
+                            <form id="importForm" class="enroll-form" style="margin-top: 20px;">
+                                <input type="hidden" name="class_id" id="hiddenClass">
+                                <input type="hidden" name="subject_id" id="hiddenSubject">
+
+                                <div class="grid-2">
+                                    <div class="form-group">
+                                        <label>Term</label>
+                                        <select name="term" required>
+                                            <option value="1st Term">1st Term</option>
+                                            <option value="2nd Term">2nd Term</option>
+                                            <option value="3rd Term">3rd Term</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Session</label>
+                                        <select name="session" required>
+                                            <option value="2025/2026">2025/2026</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-info" id="selectionInfo"
+                                    style="display: none; font-size: 0.85rem; padding: 10px;">
+                                    Uploading for: <strong id="selText"></strong>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Excel File (.xlsx)</label>
+                                    <input type="file" name="resultFile" accept=".xlsx" required
+                                        style="padding: 10px; background: #fff; border: 1px dashed #ccc; width: 100%;">
+                                </div>
+
+                                <button type="submit" class="btn" style="width: 100%; margin-top: 20px;">Process Bulk
+                                    Import</button>
+                            </form>
+                        </div>
+                    </section>
+
+                    <div id="statusMessage" style="margin-top:30px; display:none;" class="card">
+                        <h4 id="statusTitle">Importing...</h4>
+                        <div id="statusContent" style="margin-top:10px;"></div>
+                    </div>
+            </main>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        function downloadClassTemplate() {
+            const classId = document.getElementById('templateClass').value;
+            const subjectId = document.getElementById('templateSubject').value;
+
+            if (!classId || !subjectId) {
+                alert('Please select both Class and Subject first.');
+                return;
+            }
+
+            window.location.href = `/results/bulk-import/template?class_id=${classId}&subject_id=${subjectId}`;
+
+            // Sync to Upload Form
+            syncSelection();
+        }
+
+        const classSel = document.getElementById('templateClass');
+        const subjSel = document.getElementById('templateSubject');
+
+        function syncSelection() {
+            const cText = classSel.options[classSel.selectedIndex].text;
+            const sText = subjSel.options[subjSel.selectedIndex].text;
+
+            document.getElementById('hiddenClass').value = classSel.value;
+            document.getElementById('hiddenSubject').value = subjSel.value;
+
+            if (classSel.value && subjSel.value) {
+                document.getElementById('selText').innerText = `${cText} - ${sText}`;
+                document.getElementById('selectionInfo').style.display = 'block';
+            }
+        }
+
+        classSel.addEventListener('change', syncSelection);
+        subjSel.addEventListener('change', syncSelection);
+
+        document.getElementById('importForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const statusBox = document.getElementById('statusMessage');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusContent = document.getElementById('statusContent');
+
+            statusBox.style.display = 'block';
+            statusBox.style.borderColor = '#3498db';
+            statusTitle.innerText = 'Processing...';
+            statusContent.innerHTML = '<div class="spinner"></div>';
+
+            try {
+                const response = await fetch('/results/bulk-import', {
+                    method: 'POST',
+                    body: formData
+                });
+                const res = await response.json();
+
+                if (res.success) {
+                    statusBox.style.borderColor = '#2ecc71';
+                    statusTitle.innerText = 'Success!';
+                    statusTitle.style.color = '#27ae60';
+                    statusContent.innerHTML = `<p>${res.message}</p><a href="/results" class="btn btn-sm">Go to Manager</a>`;
+                } else {
+                    statusBox.style.borderColor = '#e74c3c';
+                    statusTitle.innerText = 'Import Failed';
+                    statusTitle.style.color = '#c0392b';
+
+                    if (res.errors) {
+                        let errHtml = '<ul style="color: #c0392b; font-size: 0.9rem;">';
+                        res.errors.forEach(err => errHtml += `<li>${err}</li>`);
+                        errHtml += '</ul>';
+                        statusContent.innerHTML = errHtml;
+                    } else {
+                        statusContent.innerHTML = `<p>${res.message}</p>`;
+                    }
+                }
+            } catch (err) {
+                statusTitle.innerText = 'Network Error';
+                statusContent.innerHTML = '<p>Could not connect to the server.</p>';
+            }
+        };
+    </script>
+
+    <%- include('../partials/footer') %>

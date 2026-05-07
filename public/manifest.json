@@ -1,0 +1,17 @@
+{
+  "name": "Nexus School Information System",
+  "short_name": "Nexus SIS",
+  "description": "Premium, Offline-First School Information System",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "icons": [
+    {
+      "src": "/img/logo-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

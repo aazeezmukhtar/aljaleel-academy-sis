@@ -1,0 +1,246 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header no-print">
+                <div class="header-left">
+                    <a href="/reports/academic" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Master Broadsheet</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="broadsheet.csv">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print Sheet
+                    </button>
+                </div>
+            </header>
+
+            <div class="card no-print settings-card">
+                <form action="/reports/academic/broadsheet" method="GET" class="filter-form">
+                    <div class="form-group">
+                        <label>Class</label>
+                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                        <select name="class_id" required>
+                            <option value="">Select Class</option>
+                            <% classes.forEach(c=> { %>
+                                <option value="<%= c.id %>" <%=query.class_id==c.id ? 'selected' : '' %>><%= c.name %>
+                                </option>
+                                <% }) %>
+                        </select>
+                        <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                        <input type="hidden" name="class_id" value="<%= classes[0].id %>">
+                        <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
+                        <% } %>
+                    </div>
+                    <div class="form-group">
+                        <label>Term</label>
+                        <select name="term" required>
+                            <option value="1st Term" <%=query.term==='1st Term' ? 'selected' : '' %>>1st Term</option>
+                            <option value="2nd Term" <%=query.term==='2nd Term' ? 'selected' : '' %>>2nd Term</option>
+                            <option value="3rd Term" <%=query.term==='3rd Term' ? 'selected' : '' %>>3rd Term</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Session</label>
+                        <select name="session" required>
+                            <option value="2024/2025" <%=query.session==='2024/2025' ? 'selected' : '' %>>2024/2025
+                            </option>
+                            <option value="2025/2026" <%=query.session==='2025/2026' ? 'selected' : '' %>>2025/2026
+                            </option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Generate</button>
+                </form>
+            </div>
+
+            <% if (reportData) { %>
+                <div class="report-paper landscape">
+                    <div class="report-header">
+                        <h2>
+                            <%= reportData.class_name %> - Master Broadsheet
+                        </h2>
+                        <p>
+                            <%= reportData.term %>, <%= reportData.session %> Session
+                        </p>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="report-table broadsheet-table">
+                            <thead>
+                                <tr>
+                                    <th class="sticky-col">S/N</th>
+                                    <th class="sticky-col name-col">Student Name</th>
+                                    <% subjects.forEach(sub=> { %>
+                                        <th class="rotate-header">
+                                            <div><span>
+                                                    <%= sub.name.substring(0, 15) %>
+                                                </span></div>
+                                        </th>
+                                        <% }) %>
+                                            <th class="summary-col">Total</th>
+                                            <th class="summary-col">Avg</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% reportData.students.forEach((student, index)=> { %>
+                                    <tr>
+                                        <td class="sticky-col">
+                                            <%= index + 1 %>
+                                        </td>
+                                        <td class="sticky-col name-col">
+                                            <%= student.last_name.toUpperCase() %>, <%= student.first_name %>
+                                        </td>
+                                        <% subjects.forEach(sub=> { %>
+                                            <% const result=student.results[sub.id]; %>
+                                                <td class="<%= result ? (result.total < 40 ? 'fail' : '') : 'empty' %>">
+                                                    <%= result ? result.total : '-' %>
+                                                </td>
+                                                <% }) %>
+                                                    <td class="summary-col"><strong>
+                                                            <%= student.total_score %>
+                                                        </strong></td>
+                                                    <td class="summary-col"><strong>
+                                                            <%= student.average %>
+                                                        </strong></td>
+                                    </tr>
+                                    <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <% } %>
+        </main>
+
+        <style>
+            .filter-form {
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+
+            .report-paper {
+                background: white;
+                padding: 40px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                margin: 0 auto;
+                overflow-x: auto;
+            }
+
+            .report-header {
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #eee;
+                padding-bottom: 20px;
+            }
+
+            .broadsheet-table {
+                font-size: 0.85rem;
+                border-collapse: collapse;
+                width: 100%;
+                min-width: 1000px;
+            }
+
+            .broadsheet-table th,
+            .broadsheet-table td {
+                border: 1px solid #ddd;
+                padding: 5px;
+                text-align: center;
+            }
+
+            .broadsheet-table th.name-col,
+            .broadsheet-table td.name-col {
+                text-align: left;
+                min-width: 150px;
+                font-weight: 500;
+                background: #fff;
+            }
+
+            .rotate-header {
+                height: 120px;
+                white-space: nowrap;
+                vertical-align: bottom;
+                padding: 0;
+                position: relative;
+            }
+
+            .rotate-header>div {
+                transform: translate(0px, 0px) rotate(270deg);
+                width: 30px;
+                position: absolute;
+                bottom: 10px;
+                left: 50%;
+                transform-origin: center bottom;
+            }
+
+            .rotate-header>div>span {
+                padding: 5px 10px;
+            }
+
+            .fail {
+                color: red;
+                background: #fff5f5;
+            }
+
+            .empty {
+                background: #f9f9f9;
+                color: #ccc;
+            }
+
+            .summary-col {
+                background: #f0f9ff;
+                font-weight: bold;
+                border-left: 2px solid #ddd;
+            }
+
+            /* Print Styles */
+            @media print {
+                @page {
+                    size: A4 landscape;
+                    margin: 10mm;
+                }
+
+                body * {
+                    visibility: hidden;
+                }
+
+                .report-paper,
+                .report-paper * {
+                    visibility: visible;
+                }
+
+                .report-paper {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    box-shadow: none;
+                    padding: 0;
+                    margin: 0;
+                }
+
+                .main-content {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                .no-print {
+                    display: none !important;
+                }
+
+                .rotate-header {
+                    height: auto;
+                }
+
+                .rotate-header>div {
+                    transform: none;
+                    position: static;
+                    width: auto;
+                    font-size: 0.7rem;
+                }
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

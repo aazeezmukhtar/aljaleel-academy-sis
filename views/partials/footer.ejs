@@ -1,0 +1,27 @@
+<script>
+    function toggleViewMore(containerId, btn) {
+        const container = document.getElementById(containerId);
+        const hiddenItems = container.querySelectorAll('.activity-item.hidden');
+        const isExpanding = btn.textContent === 'View More';
+        
+        if (isExpanding) {
+            hiddenItems.forEach(item => {
+                item.classList.remove('hidden');
+                item.classList.add('was-hidden');
+            });
+            btn.textContent = 'Show Less';
+        } else {
+            container.querySelectorAll('.activity-item.was-hidden').forEach(item => {
+                item.classList.add('hidden');
+                item.classList.remove('was-hidden');
+            });
+            btn.textContent = 'View More';
+        }
+    }
+</script>
+<script src="/js/table-export.js"></script>
+<!-- Spacer so content clears the fixed bottom nav on mobile -->
+<div class="bottom-nav-spacer"></div>
+</body>
+
+</html>

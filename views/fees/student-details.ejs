@@ -1,0 +1,103 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header style="margin-bottom: 30px;">
+                    <a href="/fees/manager"
+                        style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to
+                        Manager</a>
+                    <h1 style="margin-top: 10px;">Fee Details: <%= student.first_name %>
+                            <%= student.last_name %>
+                    </h1>
+                </header>
+
+                <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; gap: 30px;">
+                    <div class="card">
+                        <h3>Assigned Fees</h3>
+                        <div class="table-container" style="margin-top: 20px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fee Type</th>
+                                        <th>Amount</th>
+                                        <th>Paid</th>
+                                        <th>Balance</th>
+                                        <th>Status</th>
+                                        <th style="text-align: right;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (fees.length> 0) { %>
+                                        <% fees.forEach(f=> { %>
+                                            <% const balance=f.total_amount - f.paid_amount; %>
+                                                <tr>
+                                                    <td><strong>
+                                                            <%= f.fee_name %>
+                                                        </strong></td>
+                                                    <td>₦<%= f.total_amount.toLocaleString() %>
+                                                    </td>
+                                                    <td style="color: #2e7d32;">₦<%= f.paid_amount.toLocaleString() %>
+                                                    </td>
+                                                    <td style="color: <%= balance > 0 ? '#d32f2f' : '#2e7d32' %>;">₦<%=
+                                                            balance.toLocaleString() %>
+                                                    </td>
+                                                    <td>
+                                                        <span class="badge"
+                                                            style="background: <%= f.status === 'Paid' ? '#e8f5e9' : f.status === 'Partial' ? '#fff3e0' : '#ffebee' %>; color: <%= f.status === 'Paid' ? '#2e7d32' : f.status === 'Partial' ? '#ef6c00' : '#c62828' %>;">
+                                                            <%= f.status %>
+                                                        </span>
+                                                    </td>
+                                                    <td style="text-align: right;">
+                                                        <% if (balance> 0) { %>
+                                                            <a href="/fees/pay/<%= f.id %>" class="btn btn-sm">Record
+                                                                Payment</a>
+                                                            <% } else { %>
+                                                                <span style="color: #2e7d32; font-weight: bold;">✓
+                                                                    CLEARED</span>
+                                                                <% } %>
+                                                    </td>
+                                                </tr>
+                                                <% }); %>
+                                                    <% } else { %>
+                                                        <tr>
+                                                            <td colspan="6"
+                                                                style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                                                No fees assigned to this student.</td>
+                                                        </tr>
+                                                        <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Assign New Fee</h3>
+                        <form action="/fees/student/assign" method="POST" class="enroll-form" style="margin-top: 20px;">
+                            <input type="hidden" name="student_id" value="<%= student.id %>">
+                            <div class="form-group">
+                                <label>Available Fees</label>
+                                <select name="fee_category_id" required>
+                                    <option value="">-- Select Fee --</option>
+                                    <% availableFees.forEach(af=> { %>
+                                        <option value="<%= af.id %>">
+                                            <%= af.name %> (₦<%= af.amount.toLocaleString() %>)
+                                        </option>
+                                        <% }); %>
+                                </select>
+                            </div>
+                            <% if (availableFees.length> 0) { %>
+                                <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">Assign
+                                    Fee</button>
+                                <% } else { %>
+                                    <p style="color: var(--text-muted); font-style: italic; font-size: 0.9rem;">No more
+                                        applicable fees found.</p>
+                                    <% } %>
+                        </form>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

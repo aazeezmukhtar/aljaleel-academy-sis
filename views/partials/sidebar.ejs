@@ -1,0 +1,264 @@
+<!-- mobile-toggle button removed -->
+<div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+<aside class="sidebar" id="main-sidebar">
+    <div class="brand">
+        <div class="brand-logo">
+            <% if (school.school_logo && school.school_logo !=='/img/logo.png' ) { %>
+                <img src="<%= school.school_logo %>" alt="Logo">
+                <% } else { %>
+                    <i class="bi bi-mortarboard-fill"></i>
+                    <% } %>
+        </div>
+        <div class="brand-text">
+            <span>
+                <%= school.school_name %>
+            </span>
+            <small>
+                <%= school.school_motto || 'Excellence in Learning' %>
+            </small>
+        </div>
+    </div>
+    <div style="height: 1px; background: rgba(255,255,255,0.1); margin: 0 12px 24px;"></div>
+
+    <nav>
+        <a href="/" class="<%= title.includes('Dashboard') ? 'active' : '' %>">
+            <i class="bi bi-grid-fill"></i> Dashboard
+        </a>
+        <a href="/students" class="<%= title.includes('Student') ? 'active' : '' %>">
+            <i class="bi bi-people-fill"></i> Students
+        </a>
+
+        <% if (user && user.role==='Admin' ) { %>
+            <a href="/staff" class="<%= title.includes('Staff') ? 'active' : '' %>">
+                <i class="bi bi-person-badge-fill"></i> Staff
+            </a>
+            <% } %>
+
+        <% if (user && user.role==='Teacher' ) { %>
+            <a href="/staff/board" class="<%= title.includes('Class Board') ? 'active' : '' %>">
+                <i class="bi bi-chat-square-text-fill"></i> Class Board
+            </a>
+        <% } %>
+
+                <a href="/attendance" class="<%= title.includes('Attendance') ? 'active' : '' %>">
+                    <i class="bi bi-calendar-check-fill"></i> Attendance
+                </a>
+
+                <% if (user && user.role==='Admin' ) { %>
+                    <a href="/fees/manager" class="<%= title.includes('Fee') ? 'active' : '' %>">
+                        <i class="bi bi-wallet-fill"></i> Fees
+                    </a>
+                    <a href="/academics" class="<%= title.includes('Academic') ? 'active' : '' %>">
+                        <i class="bi bi-book-half"></i> Academics
+                    </a>
+                    <% } %>
+
+                        <!-- Results -->
+                        <a href="/results" class="<%= title.includes('Result') ? 'active' : '' %>">
+                            <i class="bi bi-file-earmark-bar-graph-fill"></i> Results
+                        </a>
+
+                        <a href="/calendar" class="<%= title.includes('Calendar') ? 'active' : '' %>">
+                            <i class="bi bi-calendar3"></i> Term Calendar
+                        </a>
+
+                        <div class="nav-label"
+                            style="font-size: 0.65rem; text-transform: uppercase; color: rgba(255,255,255,0.4); padding: 15px 12px 5px; font-weight: 700;">
+                            Reporting</div>
+                        <a href="/reports" class="<%= title === 'Report Center' ? 'active' : '' %>">
+                            <i class="bi bi-grid-1x2-fill"></i> Report Center
+                        </a>
+
+                        <div style="flex-grow: 1;"></div>
+
+                        <% if (user) { %>
+                            <div class="user-profile-nav"
+                                style="flex-direction: column; align-items: flex-start; gap: 10px;">
+                                <div
+                                    style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                                    <div class="user-info">
+                                        <span class="user-name">
+                                            <%= user.first_name %>
+                                                <%= user.last_name %>
+                                        </span>
+                                        <span class="user-role">
+                                            <%= user.role %>
+                                        </span>
+                                    </div>
+                                    <a href="/auth/logout" class="logout-link" title="Logout">
+                                        <i class="bi bi-box-arrow-right"></i>
+                                    </a>
+                                </div>
+                                <div
+                                    style="width: 100%; height: 1px; background: rgba(255,255,255,0.1); margin: 5px 0;">
+                                </div>
+                                <a href="/auth/change-password"
+                                    style="font-size: 0.75rem; color: rgba(255,255,255,0.7); display: flex; align-items: center; gap: 8px; padding: 0 !important; border: none !important; background: none !important;">
+                                    <i class="bi bi-shield-lock"></i> Change Password
+                                </a>
+                            </div>
+                            <% } %>
+
+                    <!-- Settings (Admin Only) -->
+        <% if (user && user.role === 'Admin') { %>
+            <div class="nav-section">
+                <a href="/settings" class="nav-link <%= typeof path !== 'undefined' && path === '/settings' ? 'active' : '' %>">
+                    <i class="bi bi-gear-fill"></i>
+                    <span>School Settings</span>
+                </a>
+                <a href="/announcements" class="nav-link <%= typeof path !== 'undefined' && path === '/announcements' ? 'active' : '' %>">
+                    <i class="bi bi-megaphone-fill"></i>
+                    <span>General Announcements</span>
+                </a>
+            </div>
+        <% } %>
+    </nav>
+</aside>
+
+<style>
+    .user-profile-nav {
+        margin: 20px 0;
+        padding: 15px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .user-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .user-name {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: white;
+    }
+
+    .user-role {
+        font-size: 0.75rem;
+        opacity: 0.8;
+    }
+
+    .logout-link {
+        padding: 8px !important;
+        background: rgba(255, 255, 255, 0.15) !important;
+        border-radius: 8px !important;
+        width: auto !important;
+        margin: 0 !important;
+        color: white !important;
+    }
+
+    .logout-link:hover {
+        background: #ef4444 !important;
+        color: white !important;
+    }
+
+    .logout-link:hover {
+        background: #ef4444 !important;
+        color: white !important;
+    }
+
+    /* Submenu Styles */
+    .nav-submenu {
+        display: none;
+        list-style: none;
+        padding-left: 20px;
+        margin: 5px 0;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    .nav-submenu.show {
+        display: block;
+    }
+
+    .nav-submenu li a {
+        display: block;
+        padding: 8px 15px;
+        font-size: 0.8rem;
+        color: rgba(255, 255, 255, 0.6);
+        text-decoration: none;
+        transition: 0.2s;
+    }
+
+    .nav-submenu li a:hover,
+    .nav-submenu li a.active {
+        color: white;
+        background: rgba(255, 255, 255, 0.05);
+    }
+
+    .submenu-arrow {
+        font-size: 0.7rem;
+        transition: 0.3s;
+    }
+
+    .nav-link {
+        display: flex !important;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        border-radius: 8px;
+        color: rgba(255, 255, 255, 0.7) !important;
+        text-decoration: none;
+        transition: 0.2s;
+    }
+
+    .nav-link:hover,
+    .nav-link.active {
+        background: rgba(255, 255, 255, 0.1);
+        color: white !important;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const sidebar = document.getElementById('main-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+
+        window.toggleSidebar = function() {
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
+
+        if (overlay) {
+            overlay.addEventListener('click', toggleSidebar);
+        }
+    });
+
+    function toggleSubmenu(id) {
+        const submenu = document.getElementById(id);
+        const arrow = submenu.previousElementSibling.querySelector('.submenu-arrow');
+        submenu.classList.toggle('show');
+        if (arrow) arrow.style.transform = submenu.classList.contains('show') ? 'rotate(180deg)' : 'rotate(0deg)';
+    }
+</script>
+
+<!-- Bottom Navigation Bar (mobile only, < 992px) -->
+<nav class="bottom-nav" id="bottom-nav" aria-label="Mobile Navigation">
+    <div class="bottom-nav-inner">
+        <a href="/" class="bottom-nav-item <%= title.includes('Dashboard') ? 'active' : '' %>">
+            <i class="bi bi-grid-fill"></i>
+            <span>Home</span>
+        </a>
+        <a href="/students" class="bottom-nav-item <%= title.includes('Student') ? 'active' : '' %>">
+            <i class="bi bi-people-fill"></i>
+            <span>Students</span>
+        </a>
+        <a href="/results" class="bottom-nav-item <%= title.includes('Result') ? 'active' : '' %>">
+            <i class="bi bi-file-earmark-bar-graph-fill"></i>
+            <span>Results</span>
+        </a>
+        <a href="/attendance" class="bottom-nav-item <%= title.includes('Attendance') ? 'active' : '' %>">
+            <i class="bi bi-calendar-check-fill"></i>
+            <span>Attend.</span>
+        </a>
+        <button class="bottom-nav-item" onclick="toggleSidebar()" aria-label="More menu">
+            <i class="bi bi-grid-3x3-gap-fill"></i>
+            <span>More</span>
+        </button>
+    </div>
+</nav>

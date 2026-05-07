@@ -1,0 +1,112 @@
+<% if (user && (user.role === 'Admin' || user.role === 'Teacher' || user.role === 'Staff')) { %>
+    <%- include('../partials/header') %>
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+        <main class="main-content">
+<% } else { %>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title><%= title %></title>
+        <link rel="stylesheet" href="/css/main.css">
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+        <style>
+            :root { --school-primary: <%= school.primary_color || '#6366f1' %>; }
+            body { background: #f1f5f9; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+            .portal-nav { background: var(--school-primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; }
+            .portal-main { max-width: 900px; margin: 40px auto; padding: 0 20px; }
+            .back-link { display: inline-flex; align-items: center; gap: 8px; color: #64748b; text-decoration: none; font-weight: 600; margin-bottom: 20px; transition: 0.2s; }
+            .back-link:hover { color: var(--school-primary); }
+        </style>
+    </head>
+    <body>
+        <nav class="portal-nav">
+            <h2 style="margin:0; font-size: 1.4rem;">School Calendar</h2>
+            <a href="/portal" style="color: white; text-decoration: none; font-weight: 600;">Back to Portal</a>
+        </nav>
+        <main class="portal-main">
+            <a href="/portal" class="back-link"><i class="bi bi-arrow-left"></i> Dashboard</a>
+<% } %>
+        <header class="content-header">
+            <div>
+                <h1>School Calendar</h1>
+                <p class="text-muted">Stay updated with upcoming term events, exams, and holidays.</p>
+            </div>
+            <% if (user && user.role === 'Admin') { %>
+                <a href="/calendar/manage" class="btn btn-primary">Manage Calendar</a>
+            <% } %>
+        </header>
+
+        <div class="calendar-list-container" style="max-width: 800px; margin: 0 auto;">
+            <% if (events && events.length > 0) { %>
+                <% 
+                    // Group events by month
+                    const months = {};
+                    events.forEach(event => {
+                        const monthYear = new Date(event.event_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                        if (!months[monthYear]) months[monthYear] = [];
+                        months[monthYear].push(event);
+                    });
+                %>
+
+                <% Object.keys(months).forEach(month => { %>
+                    <div class="month-group" style="margin-bottom: 40px;">
+                        <h3 style="margin-bottom: 20px; color: var(--primary); font-size: 1.5rem; border-bottom: 2px solid var(--accent-soft); padding-bottom: 8px;">
+                            <%= month %>
+                        </h3>
+                        
+                        <div style="display: flex; flex-direction: column; gap: 15px;">
+                            <% months[month].forEach(event => { %>
+                                <div class="card event-card" style="display: flex; gap: 20px; padding: 20px; transition: transform 0.2s;">
+                                    <div class="event-date-box" style="background: var(--accent-soft); color: var(--primary); padding: 15px; border-radius: 12px; text-align: center; min-width: 70px;">
+                                        <span style="display: block; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">
+                                            <%= new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' }) %>
+                                        </span>
+                                        <span style="display: block; font-size: 1.5rem; font-weight: 900;">
+                                            <%= new Date(event.event_date).getDate() %>
+                                        </span>
+                                    </div>
+                                    <div class="event-details" style="flex: 1;">
+                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);"><%= event.title %></h4>
+                                            <% 
+                                                let badgeClass = 'badge-primary';
+                                                if(event.type === 'Exam') badgeClass = 'badge-danger';
+                                                if(event.type === 'Holiday') badgeClass = 'badge-success';
+                                                if(event.type === 'Deadline') badgeClass = 'badge-warning';
+                                            %>
+                                            <span class="badge <%= badgeClass %>" style="font-size: 0.7rem; letter-spacing: 0.05em;"><%= event.type.toUpperCase() %></span>
+                                        </div>
+                                        <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 0;"><%= event.description || 'No additional details.' %></p>
+                                        <div style="margin-top: 10px; font-size: 0.75rem; color: #94a3b8; font-weight: 600;">
+                                            <i class="bi bi-clock"></i> <%= event.term %> • <%= event.session %>
+                                        </div>
+                                    </div>
+                                </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                <% }); %>
+            <% } else { %>
+                <div class="card" style="padding: 60px; text-align: center;">
+                    <div style="width: 80px; height: 80px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 20px;">
+                        <i class="bi bi-calendar-x" style="font-size: 2.5rem; color: #94a3b8;"></i>
+                    </div>
+                    <h3>No Events Scheduled</h3>
+                    <p class="text-muted">The school calendar is currently empty for this session.</p>
+                </div>
+            <% } %>
+        </div>
+<% if (user && (user.role === 'Admin' || user.role === 'Teacher' || user.role === 'Staff')) { %>
+    </main>
+</div>
+<%- include('../partials/footer') %>
+<% } else { %>
+    </main>
+    <%- include('../partials/footer') %>
+    </body>
+    </html>
+<% } %>

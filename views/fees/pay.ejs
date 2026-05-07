@@ -1,0 +1,66 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header style="margin-bottom: 30px;">
+                    <a href="/fees/student/<%= fee.student_id %>"
+                        style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to
+                        Details</a>
+                    <h1 style="margin-top: 10px;">Record Payment</h1>
+                    <p>For: <strong>
+                            <%= fee.last_name %>, <%= fee.first_name %>
+                        </strong> | Fee: <strong>
+                            <%= fee.fee_name %>
+                        </strong></p>
+                </header>
+
+                <section class="card" style="max-width: 600px;">
+                    <div
+                        style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between;">
+                        <div>
+                            <label style="display: block; font-size: 0.8rem; color: var(--text-muted);">Total
+                                Fee</label>
+                            <span style="font-weight: bold; font-size: 1.2rem;">₦<%= fee.total_amount.toLocaleString()
+                                    %></span>
+                        </div>
+                        <div style="text-align: right;">
+                            <label style="display: block; font-size: 0.8rem; color: var(--text-muted);">Current
+                                Balance</label>
+                            <span style="font-weight: bold; font-size: 1.2rem; color: #d32f2f;">₦<%= (fee.total_amount -
+                                    fee.paid_amount).toLocaleString() %></span>
+                        </div>
+                    </div>
+
+                    <form action="/fees/pay" method="POST" class="enroll-form">
+                        <input type="hidden" name="student_fee_id" value="<%= fee.id %>">
+
+                        <div class="form-group">
+                            <label>Amount to Pay (₦)</label>
+                            <input type="number" name="amount_paid" max="<%= fee.total_amount - fee.paid_amount %>"
+                                min="1" step="0.01" required placeholder="Enter amount">
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">Cannot exceed
+                                outstanding balance.</p>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Payment Method</label>
+                            <select name="payment_method" required>
+                                <option value="Cash">Cash</option>
+                                <option value="Bank Transfer">Bank Transfer</option>
+                                <option value="POS">POS</option>
+                                <option value="Cheque">Cheque</option>
+                            </select>
+                        </div>
+
+                        <div style="margin-top: 30px; display: flex; gap: 10px;">
+                            <button type="submit" class="btn">Confirm Payment</button>
+                            <a href="/fees/student/<%= fee.student_id %>" class="btn btn-outline">Cancel</a>
+                        </div>
+                    </form>
+                </section>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

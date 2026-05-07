@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>
+        <%= title %>
+    </title>
+    <link rel="stylesheet" href="/css/main.css">
+    <style>
+        :root {
+            --school-primary: #6366f1;
+            --school-secondary: #a855f7;
+        }
+
+        .profile-header {
+            background: white;
+            padding: 40px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .avatar-placeholder {
+            width: 120px;
+            height: 120px;
+            background: #f0f2f5;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #bdc3c7;
+            text-transform: uppercase;
+        }
+
+        .profile-info h1 {
+            margin: 0;
+            font-size: 2rem;
+        }
+
+        .profile-info p {
+            margin: 5px 0 0;
+            color: var(--text-muted);
+        }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 24px;
+        }
+
+        .detail-item {
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-item strong {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Sidebar -->
+        <!-- Sidebar -->
+        <%- include('../partials/sidebar') %>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <header style="margin-bottom: 30px;">
+                    <a href="/students" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr;
+                        Back
+                        to Directory</a>
+                </header>
+
+                <% if (typeof success !=='undefined' && success) { %>
+                    <div class="alert alert-success"
+                        style="margin-bottom: 20px; padding: 12px; border-radius: 8px; background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;">
+                        <i class="bi bi-check-circle-fill"></i>
+                        <%= success %>
+                    </div>
+                    <% } %>
+
+                        <% if (typeof error !=='undefined' && error) { %>
+                            <div class="alert alert-danger"
+                                style="margin-bottom: 20px; padding: 12px; border-radius: 8px; background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;">
+                                <i class="bi bi-exclamation-triangle-fill"></i>
+                                <%= error %>
+                            </div>
+                            <% } %>
+
+                                <div class="profile-header">
+                                    <% if (student.passport_photo_path) { %>
+                                        <img src="<%= student.passport_photo_path %>" alt="Student Photo"
+                                            style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                                        <% } else { %>
+                                            <div class="avatar-placeholder">
+                                                <%= student.first_name[0] %>
+                                                    <%= student.last_name[0] %>
+                                            </div>
+                                            <% } %>
+                                                <div class="profile-info" style="flex-grow: 1;">
+                                                    <h1>
+                                                        <%= student.first_name %> <%= student.last_name %>
+                                                    </h1>
+                                                    <p>
+                                                        <%= student.admission_number || 'Admission Pending' %>
+                                                    </p>
+                                                    <div style="margin-top: 15px;">
+                                                        <span class="badge badge-<%= student.status %>">
+                                                            <%= student.status.toUpperCase() %>
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <a href="/students/edit/<%= student.id %>" class="btn btn-primary">
+                                                        <i class="bi bi-pencil-square"></i> Edit Profile
+                                                    </a>
+                                                </div>
+                                </div>
+
+                                <div class="grid-2" style="margin-top: 30px;">
+                                    <div class="card">
+                                        <h3>Personal Information</h3>
+                                        <div class="detail-grid" style="margin-top: 20px;">
+                                            <div class="detail-item">
+                                                <strong>Gender</strong>
+                                                <span>
+                                                    <%= student.gender %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Date of Birth</strong>
+                                                <span>
+                                                    <%= new Date(student.dob).toLocaleDateString() %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Class</strong>
+                                                <span>
+                                                    <%= student.class_name %>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card">
+                                        <h3>Parent / Guardian</h3>
+                                        <div class="detail-grid" style="margin-top: 20px;">
+                                            <div class="detail-item">
+                                                <strong>Contact Phone</strong>
+                                                <span>
+                                                    <%= student.parent_phone || 'Not Provided' %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Home Address</strong>
+                                                <span>
+                                                    <%= student.parent_address || 'Not Provided' %>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid-2" style="margin-top: 30px;">
+                                    <div class="card">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                            <h3 style="margin: 0;">Financial Summary</h3>
+                                            <a href="/fees/student/<%= student.id %>"
+                                                class="btn btn-sm btn-outline">View History</a>
+                                        </div>
+                                        <div class="detail-grid">
+                                            <div class="detail-item">
+                                                <strong>Total Fees</strong>
+                                                <span style="font-weight: bold;">₦<%= fees.total_owed.toLocaleString()
+                                                        %></span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Total Paid</strong>
+                                                <span style="color: #15803d; font-weight: bold;">₦<%=
+                                                        fees.total_paid.toLocaleString() %></span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <% const balance=fees.total_owed - fees.total_paid; %>
+                                                    <strong>Outstanding</strong>
+                                                    <span
+                                                        style="color: <%= balance > 0 ? '#b91c1c' : '#15803d' %>; font-weight: bold;">
+                                                        ₦<%= balance.toLocaleString() %>
+                                                    </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="card">
+                                        <div
+                                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                            <h3 style="margin: 0;">Health & Wellness</h3>
+                                            <button class="btn btn-sm btn-outline" onclick="openHealthModal()">Update
+                                                Record</button>
+                                        </div>
+                                        <div class="detail-grid">
+                                            <div class="detail-item">
+                                                <strong>Blood Group</strong>
+                                                <span>
+                                                    <%= health.blood_group || 'Not Specified' %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Genotype</strong>
+                                                <span>
+                                                    <%= health.genotype || 'Not Specified' %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Allergies</strong>
+                                                <span class="text-muted">
+                                                    <%= health.allergies || 'None Recorded' %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Conditions</strong>
+                                                <span class="text-muted">
+                                                    <%= health.medical_conditions || 'None Recorded' %>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px dashed #eee;">
+                                            <p style="font-size: 0.8rem; margin: 0;"><strong>Emergency:</strong>
+                                                <%= health.emergency_contact_name || 'N/A' %> (<%=
+                                                        health.emergency_contact_phone || 'N/A' %>)
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid-2" style="margin-top: 30px;">
+                                    <div class="card" style="grid-column: 1 / -1;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                            <h3 style="margin: 0;">Academic Records</h3>
+                                        </div>
+                                        
+                                        <% if (typeof academicTerms !== 'undefined' && academicTerms.length > 0) { %>
+                                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                                <% 
+                                                const sessions = [...new Set(academicTerms.map(t => t.session))];
+                                                sessions.forEach(sess => { 
+                                                %>
+                                                <div style="border: 1px solid #eee; padding: 15px; border-radius: 8px; background: #fafafa;">
+                                                    <h4 style="margin: 0 0 10px 0; color: var(--text-dark);"><%= sess %> Session</h4>
+                                                    <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                                                        <% academicTerms.filter(t => t.session === sess).forEach(term => { %>
+                                                            <a href="/results/report/<%= student.id %>?term=<%= term.term %>&session=<%= encodeURIComponent(sess) %>" class="btn btn-sm btn-outline" target="_blank">
+                                                                <i class="bi bi-file-earmark-text"></i> <%= term.term %>
+                                                            </a>
+                                                        <% }) %>
+                                                        <a href="/results/cumulative/<%= student.id %>?session=<%= encodeURIComponent(sess) %>" class="btn btn-sm" style="background: var(--primary); color: white;" target="_blank">
+                                                            <i class="bi bi-file-earmark-bar-graph"></i> Cumulative Report
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <% }) %>
+                                            </div>
+                                        <% } else { %>
+                                            <div class="text-muted" style="padding: 20px; background: #f9fafb; border-radius: 8px; text-align: center;">
+                                                <i class="bi bi-folder-x" style="font-size: 2rem; color: #cbd5e1; display: block; margin-bottom: 10px;"></i>
+                                                No academic results published for this student yet.
+                                            </div>
+                                        <% } %>
+                                    </div>
+                                </div>
+
+                                <!-- Health Modal -->
+                                <div id="healthModal" class="modal"
+                                    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                                    <div class="card" style="width: 500px; max-height: 90vh; overflow-y: auto;">
+                                        <h3>Update Health Record</h3>
+                                        <form action="/students/health" method="POST" style="margin-top: 20px;">
+                                            <input type="hidden" name="student_id" value="<%= student.id %>">
+                                            <div class="grid-2">
+                                                <div class="form-group">
+                                                    <label>Blood Group</label>
+                                                    <select name="blood_group" class="form-control">
+                                                        <option value="">-- Select --</option>
+                                                        <% ['A+', 'A-' , 'B+' , 'B-' , 'AB+' , 'AB-' , 'O+' , 'O-'
+                                                            ].forEach(bg=> { %>
+                                                            <option value="<%= bg %>" <%=health.blood_group===bg
+                                                                ? 'selected' : '' %>>
+                                                                <%= bg %>
+                                                            </option>
+                                                            <% }) %>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Genotype</label>
+                                                    <select name="genotype" class="form-control">
+                                                        <option value="">-- Select --</option>
+                                                        <% ['AA', 'AS' , 'AC' , 'SS' , 'SC' ].forEach(gt=> { %>
+                                                            <option value="<%= gt %>" <%=health.genotype===gt
+                                                                ? 'selected' : '' %>><%= gt %>
+                                                            </option>
+                                                            <% }) %>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Allergies</label>
+                                                <textarea name="allergies" class="form-control"
+                                                    rows="2"><%= health.allergies %></textarea>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Medical Conditions</label>
+                                                <textarea name="medical_conditions" class="form-control"
+                                                    rows="2"><%= health.medical_conditions %></textarea>
+                                            </div>
+                                            <hr style="margin: 20px 0;">
+                                            <div class="grid-2">
+                                                <div class="form-group">
+                                                    <label>Emergency Name</label>
+                                                    <input type="text" name="emergency_contact_name"
+                                                        class="form-control"
+                                                        value="<%= health.emergency_contact_name %>">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Emergency Phone</label>
+                                                    <input type="text" name="emergency_contact_phone"
+                                                        class="form-control"
+                                                        value="<%= health.emergency_contact_phone %>">
+                                                </div>
+                                            </div>
+                                            <div style="display: flex; gap: 10px; margin-top: 30px;">
+                                                <button type="submit" class="btn btn-primary" style="flex: 1;">Save
+                                                    Changes</button>
+                                                <button type="button" class="btn btn-outline" style="flex: 1;"
+                                                    onclick="closeHealthModal()">Cancel</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <script>
+                                    function openHealthModal() { document.getElementById('healthModal').style.display = 'flex'; }
+                                    function closeHealthModal() { document.getElementById('healthModal').style.display = 'none'; }
+                                </script>
+    </div>
+
+    </main>
+    </div>
+</body>
+
+</html>

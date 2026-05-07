@@ -1,0 +1,196 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h1>Bulk Student Import</h1>
+                        <p class="text-muted">Import multiple students from an Excel spreadsheet.</p>
+                    </div>
+                    <a href="/students" class="btn btn-outline" style="border: none;">
+                        <i class="bi bi-arrow-left"></i> Back to Students
+                    </a>
+                </header>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 30px;">
+
+                    <section class="card">
+                        <form id="importForm" class="enroll-form">
+                            <h3 style="margin-bottom: 20px;">Upload Data</h3>
+
+                            <div class="form-row"
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                                <div class="form-group">
+                                    <label>Default Class</label>
+                                    <select name="default_class_id" id="defaultClass" class="form-control">
+                                        <option value="">-- Select Default Class --</option>
+                                        <% classes.forEach(c=> { %>
+                                            <option value="<%= c.id %>">
+                                                <%= c.name %>
+                                            </option>
+                                            <% }); %>
+                                    </select>
+                                    <small class="text-muted"
+                                        style="display: block; margin-top: 5px; font-size: 0.8rem;">
+                                        Assigned if Class ID is missing in file
+                                    </small>
+                                </div>
+
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 30px;">
+                                <label>Upload Excel File (.xlsx)</label>
+                                <div
+                                    style="position: relative; height: 120px; border: 2px dashed #d1d5db; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f9fafb; transition: all 0.2s ease;">
+                                    <i class="bi bi-cloud-arrow-up"
+                                        style="font-size: 2rem; color: #9ca3af; margin-bottom: 10px;"></i>
+                                    <span style="color: #6b7280; font-weight: 500;">Click to upload file</span>
+                                    <input type="file" name="studentFile" id="studentFile" accept=".xlsx,.xls" required
+                                        style="position: absolute; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" style="width: 100%; height: 48px;">
+                                <i class="bi bi-upload"></i> Import Students
+                            </button>
+                        </form>
+
+                        <!-- Status Section (Hidden by default) -->
+                        <div id="statusSection"
+                            style="margin-top: 30px; display: none; padding-top: 20px; border-top: 1px solid #eee;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <div id="statusIcon" style="font-size: 1.5rem;"></div>
+                                <h4 id="statusTitle" style="margin: 0;">Processing...</h4>
+                            </div>
+                            <div id="statusMessage"></div>
+
+                            <div id="errorList"
+                                style="margin-top: 15px; background: #fef2f2; padding: 15px; border-radius: 8px; display: none;">
+                            </div>
+                            <div id="duplicateList"
+                                style="margin-top: 15px; background: #fff7ed; padding: 15px; border-radius: 8px; display: none;">
+                            </div>
+                        </div>
+                    </section>
+
+                    <aside>
+                        <div class="card" style="background: #f8fafc; border: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                                <i class="bi bi-info-circle-fill" style="color: var(--primary); font-size: 1.2rem;"></i>
+                                <h3 style="margin: 0; font-size: 1.1rem;">Instructions</h3>
+                            </div>
+                            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 15px;">
+                                Prepare an Excel file (.xlsx) with the following columns:
+                            </p>
+                            <ul
+                                style="margin: 0; padding-left: 20px; font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6;">
+                                <li><strong>First Name</strong> (Required)</li>
+                                <li><strong>Last Name</strong> (Required)</li>
+                                <li><strong>Gender</strong> (Required) - Male/Female</li>
+                                <li><strong>Date of Birth</strong> (Optional)</li>
+                                <li><strong>Class ID</strong> (Optional)</li>
+                                <li><strong>Admission Number</strong> (Optional - Auto-generated if missing)</li>
+                            </ul>
+                            <div
+                                style="margin-top: 20px; padding: 10px; background: #e0e7ff; border-radius: 6px; font-size: 0.85rem; color: #4338ca;">
+                                <i class="bi bi-lightbulb-fill" style="margin-right: 5px;"></i>
+                                <strong>Tip:</strong> The system automatically checks for duplicate Admission Numbers to
+                                prevent conflicts. Admission numbers are auto-generated if you leave them blank.
+                            </div>
+                        </div>
+                    </aside>
+                </div>
+            </main>
+    </div>
+
+    <script>
+        document.getElementById('importForm').onsubmit = async (e) => {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+
+            const statusSection = document.getElementById('statusSection');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusMessage = document.getElementById('statusMessage');
+            const errorList = document.getElementById('errorList');
+            const duplicateList = document.getElementById('duplicateList');
+            const submitBtn = document.querySelector('button[type="submit"]');
+
+            statusSection.style.display = 'block';
+            statusIcon.innerHTML = '<div class="spinner-border" style="width: 24px; height: 24px; border: 3px solid #ddd; border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite;"></div>';
+            statusTitle.innerText = 'Importing...';
+            statusMessage.innerHTML = '<p class="text-muted">Please wait while we process your file...</p>';
+            errorList.style.display = 'none';
+            duplicateList.style.display = 'none';
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+
+            // Add spinner css if not exists
+            if (!document.getElementById('spinner-style')) {
+                const style = document.createElement('style');
+                style.id = 'spinner-style';
+                style.innerHTML = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
+            }
+
+            try {
+                const response = await fetch('/students/bulk-import', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    statusIcon.innerHTML = '<i class="bi bi-check-circle-fill" style="color: var(--success);"></i>';
+                    statusTitle.innerText = 'Import Successful';
+                    statusTitle.style.color = 'var(--success)';
+                    statusMessage.innerHTML = `<p style="color: var(--success); font-weight: 600;">${result.message}</p>`;
+
+                    document.getElementById('importForm').reset();
+                    submitBtn.innerHTML = '<i class="bi bi-check"></i> Done';
+
+                    setTimeout(() => {
+                        window.location.href = '/students';
+                    }, 2000);
+                } else {
+                    statusIcon.innerHTML = '<i class="bi bi-x-circle-fill" style="color: var(--danger);"></i>';
+                    statusTitle.innerText = 'Import Failed';
+                    statusTitle.style.color = 'var(--danger)';
+                    statusMessage.innerHTML = `<p style="color: var(--danger); font-weight: 600;">${result.message}</p>`;
+
+                    if (result.errors && result.errors.length > 0) {
+                        errorList.style.display = 'block';
+                        errorList.innerHTML = '<h5 style="color: var(--danger); margin-bottom: 10px;">Validation Errors:</h5><ul style="color: var(--danger); margin: 0; padding-left: 20px;">';
+                        result.errors.forEach(err => {
+                            errorList.innerHTML += `<li>${err}</li>`;
+                        });
+                        errorList.innerHTML += '</ul>';
+                    }
+
+                    if (result.duplicates && result.duplicates.length > 0) {
+                        duplicateList.style.display = 'block';
+                        duplicateList.innerHTML = '<h5 style="color: #c2410c; margin-bottom: 10px;">Duplicate Student IDs:</h5><ul style="color: #c2410c; margin: 0; padding-left: 20px;">';
+                        result.duplicates.forEach(dup => {
+                            duplicateList.innerHTML += `<li>Row ${dup.row}: ${dup.message}</li>`;
+                        });
+                        duplicateList.innerHTML += '</ul>';
+                    }
+
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Try Again';
+                }
+            } catch (err) {
+                console.error(err);
+                statusIcon.innerHTML = '<i class="bi bi-exclamation-triangle-fill" style="color: var(--danger);"></i>';
+                statusTitle.innerText = 'Network Error';
+                statusMessage.innerHTML = '<p style="color: var(--danger);">A network error occurred. Please try again.</p>';
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-arrow-repeat"></i> Try Again';
+            }
+        };
+    </script>

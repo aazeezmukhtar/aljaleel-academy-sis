@@ -1,0 +1,172 @@
+<%- include('../partials/header') %>
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+            <main class="main-content">
+                <header class="content-header">
+                    <div>
+                        <h1>Result Management Center</h1>
+                        <p>Configure grading systems, record scores, and generate reports.</p>
+                    </div>
+                </header>
+
+                <section class="grid-3 animate-up" style="margin-top: 20px;">
+                    <!-- Result Entry -->
+                    <a href="/results/manage" class="report-card-link">
+                        <div class="card stat-card">
+                            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.1); color: #3b82f6;">
+                                <i class="bi bi-pencil-square"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Result Entry</h3>
+                                <p>Enter and submit student scores for assigned subjects.</p>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Broadsheets -->
+                    <a href="/results/bulk" class="report-card-link">
+                        <div class="card stat-card">
+                            <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                                <i class="bi bi-table"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Master Broadsheets</h3>
+                                <p>View consolidated class results and performance analysis.</p>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Cumulative Reports -->
+                    <a href="/results/bulk?term=Cumulative" class="report-card-link">
+                        <div class="card stat-card">
+                            <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1); color: #0ea5e9;">
+                                <i class="bi bi-layers"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Cumulative Reports</h3>
+                                <p>Generate session-wide aggregated report cards.</p>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- Traits & Skills -->
+                    <a href="/results/traits" class="report-card-link">
+                        <div class="card stat-card">
+                            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #f59e0b;">
+                                <i class="bi bi-person-check"></i>
+                            </div>
+                            <div class="stat-info">
+                                <h3>Traits & Skills</h3>
+                                <p>Record affective and psychomotor domain assessments.</p>
+                            </div>
+                        </div>
+                    </a>
+
+                    <% if (user.role==='Admin' ) { %>
+                        <!-- Publish Results -->
+                        <a href="/results/bulk" class="report-card-link">
+                            <div class="card stat-card" style="border: 2px solid #16a34a;">
+                                <div class="stat-icon" style="background: rgba(22, 163, 74, 0.12); color: #16a34a;">
+                                    <i class="bi bi-check-all"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h3 style="color: #16a34a;">Publish Results</h3>
+                                    <p>Approve &amp; publish results so they appear on students' portals.</p>
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- Configuration -->
+                        <a href="/results/setup" class="report-card-link">
+                            <div class="card stat-card">
+                                <div class="stat-icon" style="background: rgba(139, 92, 246, 0.1); color: #8b5cf6;">
+                                    <i class="bi bi-gear-fill"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h3>Result Setup</h3>
+                                    <p>Configure assessment weights (CA1, CA2, Exam).</p>
+                                </div>
+                            </div>
+                        </a>
+
+                        <!-- Bulk Import -->
+                        <a href="/results/bulk-import" class="report-card-link">
+                            <div class="card stat-card">
+                                <div class="stat-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">
+                                    <i class="bi bi-file-earmark-excel"></i>
+                                </div>
+                                <div class="stat-info">
+                                    <h3>Bulk Import</h3>
+                                    <p>Upload results using pre-populated Excel templates.</p>
+                                </div>
+                            </div>
+                        </a>
+                        <% } %>
+                </section>
+
+                <!-- Quick Stats / Status -->
+                <div class="grid-2" style="margin-top: 30px;">
+                    <div class="card">
+                        <h3>Academic Context</h3>
+                        <div style="margin-top: 15px;">
+                            <p><strong>Current Session:</strong> 2025/2026</p>
+                            <p><strong>Active Term:</strong> 1st Term</p>
+                            <hr style="margin: 15px 0; opacity: 0.1;">
+                            <p class="text-muted" style="font-size: 0.85rem;">
+                                <i class="bi bi-info-circle"></i> Results entered here are subject to administrator
+                                approval before they appear on student report cards.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <style>
+        .report-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .report-card-link {
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s;
+        }
+
+        .report-card-link:hover {
+            transform: translateY(-3px);
+        }
+
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            padding: 25px !important;
+        }
+
+        .stat-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+        }
+
+        .stat-info h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1rem;
+        }
+
+        .stat-info p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+    </style>
+
+    <%- include('../partials/footer') %>

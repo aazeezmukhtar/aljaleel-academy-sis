@@ -1,8 +1,6 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, '../database.sqlite'));
+const db = require('../utils/db');
 
-exports.getLatestNotifications = (req, res) => {
+exports.getLatestNotifications = async (req, res) => {
     try {
         const userId = req.session.user ? req.session.user.id : (req.session.student ? req.session.student.id : null);
         const userType = req.session.user ? 'staff' : 'student';
@@ -28,28 +26,28 @@ exports.getLatestNotifications = (req, res) => {
             params.push(targetRole);
         }
 
-        announcements = db.prepare(announcementQuery).all(params);
+        announcements = await db.all(announcementQuery, params);
 
         // Fetch Assignments/Class Posts
         if (req.session.student) {
             const classId = req.session.student.class_id;
             if (classId) {
-                assignments = db.prepare(`
+                assignments = await db.all(`
                     SELECT id, title, post_type as type, due_date as date, created_at, 'class_post' as source_type
                     FROM class_posts WHERE class_id = ?
-                `).all(classId);
+                `, [classId]);
             }
         } else if (req.session.user && req.session.user.role === 'Admin') {
             // Admin should NOT see assignments in notification bell as requested
             assignments = []; 
         } else if (req.session.user) {
             // Teachers see posts for classes they are assigned to
-            assignments = db.prepare(`
+            assignments = await db.all(`
                 SELECT cp.id, cp.title, cp.post_type as type, cp.due_date as date, cp.created_at, 'class_post' as source_type
                 FROM class_posts cp
                 JOIN class_assignments ca ON cp.class_id = ca.class_id
                 WHERE ca.staff_id = ?
-            `).all(userId);
+            `, [userId]);
         }
 
         // 2. Merge and Sort
@@ -58,10 +56,10 @@ exports.getLatestNotifications = (req, res) => {
             .slice(0, 15);
 
         // 3. Fetch read statuses
-        const reads = db.prepare(`
+        const reads = await db.all(`
             SELECT source_id, source_type FROM notification_reads 
             WHERE user_id = ? AND user_type = ?
-        `).all(userId, userType);
+        `, [userId, userType]);
 
         const readSet = new Set(reads.map(r => `${r.source_type}_${r.source_id}`));
 
@@ -115,7 +113,7 @@ exports.getLatestNotifications = (req, res) => {
     }
 };
 
-exports.markAsRead = (req, res) => {
+exports.markAsRead = async (req, res) => {
     try {
         const { source_id, source_type } = req.body;
         const userId = req.session.user ? req.session.user.id : (req.session.student ? req.session.student.id : null);
@@ -123,10 +121,11 @@ exports.markAsRead = (req, res) => {
 
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-        db.prepare(`
-            INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
-            VALUES (?, ?, ?, ?)
-        `).run(userId, userType, source_id, source_type);
+        const sql = db.DB_TYPE === 'postgres' 
+            ? `INSERT INTO notification_reads (user_id, user_type, source_id, source_type) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING`
+            : `INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type) VALUES (?, ?, ?, ?)`;
+
+        await db.run(sql, [userId, userType, source_id, source_type]);
 
         res.json({ success: true });
     } catch (e) {

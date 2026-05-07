@@ -1,5 +1,4 @@
 const { Pool } = require('pg');
-const Database = require('better-sqlite3');
 const path = require('path');
 require('dotenv').config();
 
@@ -15,6 +14,7 @@ if (DB_TYPE === 'postgres') {
         }
     });
 } else {
+    const Database = require('better-sqlite3');
     sqliteDb = new Database(path.join(__dirname, '../', process.env.DB_PATH || 'database.sqlite'));
 }
 
@@ -25,7 +25,9 @@ if (DB_TYPE === 'postgres') {
  */
 async function all(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+        let count = 0;
+        const pgSql = sql.replace(/\?/g, () => `$${++count}`);
+        const result = await pool.query(pgSql, params);
         return result.rows;
     } else {
         return sqliteDb.prepare(sql).all(params);
@@ -39,7 +41,9 @@ async function all(sql, params = []) {
  */
 async function get(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+        let count = 0;
+        const pgSql = sql.replace(/\?/g, () => `$${++count}`);
+        const result = await pool.query(pgSql, params);
         return result.rows[0];
     } else {
         return sqliteDb.prepare(sql).get(params);
@@ -53,8 +57,10 @@ async function get(sql, params = []) {
  */
 async function run(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
-        return { changes: result.rowCount, lastInsertRowid: null }; // rowCount is equivalent to changes
+        let count = 0;
+        const pgSql = sql.replace(/\?/g, () => `$${++count}`);
+        const result = await pool.query(pgSql, params);
+        return { changes: result.rowCount, lastInsertRowid: null }; 
     } else {
         const info = sqliteDb.prepare(sql).run(params);
         return { changes: info.changes, lastInsertRowid: info.lastInsertRowid };

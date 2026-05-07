@@ -1,22 +1,19 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, '../database.sqlite'));
+const db = require('../utils/db');
 
-const settingsMiddleware = (req, res, next) => {
+const settingsMiddleware = async (req, res, next) => {
     try {
-        const rows = db.prepare('SELECT key, value FROM settings').all();
+        const rows = await db.all('SELECT key, value FROM settings');
         const settings = {};
         rows.forEach(row => {
             settings[row.key] = row.value;
         });
         
-        // Inject into res.locals for ejs access
         res.locals.school = settings;
         next();
     } catch (err) {
         console.error('Error fetching settings:', err);
         res.locals.school = {
-            school_name: 'Nexus SIS',
+            school_name: 'Al-Jaleel Academy',
             primary_color: '#2c3e50'
         };
         next();

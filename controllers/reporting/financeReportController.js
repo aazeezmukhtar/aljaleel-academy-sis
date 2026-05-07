@@ -1,33 +1,28 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, '../../database.sqlite'));
+const db = require('../../utils/db');
 
-const getFinanceDashboard = (req, res) => {
+const getFinanceDashboard = async (req, res) => {
     const user = req.session.staff;
     if (user.role !== 'Admin' && user.role !== 'Bursar') return res.status(403).send('Access Denied');
 
-    // Simple stats calculation
-    // Assuming 'payments' table exists or 'fees_payments'. Based on previous context, tables were 'fees', 'student_fees'.
-    // Let's assume a simplified structure for now or query based on existing 'fees' controller logic.
-    // If exact tables aren't known, I'll use a safe placeholder query based on standard patterns or check previous file reads.
-    // Checking previous 'feeController.js' read would be ideal but I'll assume standard 'student_fees' tracking.
-
-    // Using a safe query structure assuming 'payments' table tracks collections
     const stats = {
-        total_payment_today: db.prepare("SELECT SUM(amount) as total FROM payments WHERE date = DATE('now')").get()?.total || 0,
-        outstanding_fees: 0, // Would need complex query on student_fees vs payments
-        total_collected_session: 0 // Placeholder
+        total_payment_today: 0,
+        outstanding_fees: 0, 
+        total_collected_session: 0 
     };
 
-    // Better query based on assumed 'student_fees' (students linked to fee_structures) and 'payments'
     try {
-        const result = db.prepare(`
-            SELECT 
-                SUM(p.amount) as total_collected
-            FROM payments p
-        `).get();
-        stats.total_collected_session = result.total_collected || 0;
-    } catch (e) { console.log('Finance stats error', e.message); }
+        const dateSql = db.DB_TYPE === 'postgres' 
+            ? "SELECT SUM(amount_paid) as total FROM payments WHERE payment_date = CURRENT_DATE"
+            : "SELECT SUM(amount_paid) as total FROM payments WHERE payment_date = DATE('now')";
+            
+        const todayResult = await db.get(dateSql);
+        stats.total_payment_today = todayResult?.total || 0;
+
+        const collectionResult = await db.get("SELECT SUM(amount_paid) as total_collected FROM payments");
+        stats.total_collected_session = collectionResult?.total_collected || 0;
+    } catch (e) { 
+        console.log('Finance stats error', e.message); 
+    }
 
     res.render('reports/finance/index', {
         title: 'Finance Reports',
@@ -36,31 +31,26 @@ const getFinanceDashboard = (req, res) => {
     });
 };
 
-const getFeeStatusReport = (req, res) => {
+const getFeeStatusReport = async (req, res) => {
     const { class_id, status } = req.query; // status: 'Paid', 'Partial', 'Unpaid'
     const user = req.session.staff;
     if (user.role !== 'Admin' && user.role !== 'Bursar') return res.status(403).send('Access Denied');
 
-    let classes = db.prepare('SELECT * FROM classes').all();
-    let students = [];
+    try {
+        let classes = await db.all('SELECT * FROM classes');
+        let students = [];
 
-    if (class_id) {
-        // This requires a robust Fee Management schema. 
-        // Assuming: students have a 'balance' field or we calculate it on the fly.
-        // For this reporting implementation, I'll query assuming a view or calculation exists.
-        // Let's try to query students and join with payments.
+        if (class_id) {
+            const query = `
+                SELECT s.id, s.first_name, s.last_name, s.admission_number, c.name as class_name,
+                    (SELECT COALESCE(SUM(amount_paid), 0) FROM payments WHERE student_id = s.id) as paid_amount,
+                    (SELECT COALESCE(SUM(total_amount), 0) FROM student_fees WHERE student_id = s.id) as total_payable
+                FROM students s
+                JOIN classes c ON s.current_class_id = c.id
+                WHERE s.current_class_id = ? AND s.status = 'active'
+            `;
 
-        const query = `
-            SELECT s.id, s.first_name, s.last_name, s.admission_number, c.name as class_name,
-                   (SELECT IFNULL(SUM(amount), 0) FROM payments WHERE student_id = s.id) as paid_amount,
-                   (SELECT IFNULL(SUM(amount), 0) FROM student_fees WHERE student_id = s.id) as total_payable
-            FROM students s
-            JOIN classes c ON s.current_class_id = c.id
-            WHERE s.current_class_id = ? AND s.status = 'active'
-        `;
-
-        try {
-            const rawStudents = db.prepare(query).all(class_id);
+            const rawStudents = await db.all(query, [class_id]);
             students = rawStudents.map(s => {
                 s.balance = s.total_payable - s.paid_amount;
                 s.status = s.balance <= 0 ? 'Paid' : (s.paid_amount > 0 ? 'Partial' : 'Unpaid');
@@ -70,53 +60,74 @@ const getFeeStatusReport = (req, res) => {
             if (status) {
                 students = students.filter(s => s.status === status);
             }
-        } catch (e) {
-            console.error('Fee Status Report Error:', e.message);
-            // Fallback for demo if tables missing
-            students = [];
         }
-    }
 
-    res.render('reports/finance/status', {
-        title: 'Fee Status Report',
-        classes,
-        students,
-        query: { class_id, status }
-    });
+        res.render('reports/finance/status', {
+            title: 'Fee Status Report',
+            classes,
+            students,
+            user,
+            query: { class_id, status }
+        });
+    } catch (err) {
+        console.error('Fee Status Report Error:', err);
+        res.status(500).send('Database Error');
+    }
 };
 
-const getDebtorsList = (req, res) => {
+const getDebtorsList = async (req, res) => {
     const { min_debt } = req.query;
     const user = req.session.staff;
     if (user.role !== 'Admin' && user.role !== 'Bursar') return res.status(403).send('Access Denied');
 
     const threshold = min_debt || 1;
 
-    let debtors = [];
     try {
         // Find students where total_payable > paid_amount
-        debtors = db.prepare(`
+        const debtors = await db.all(`
             SELECT 
                 s.first_name, s.last_name, s.admission_number, c.name as class_name,
-                (SELECT IFNULL(SUM(amount), 0) FROM student_fees WHERE student_id = s.id) as payable,
-                (SELECT IFNULL(SUM(amount), 0) FROM payments WHERE student_id = s.id) as paid
+                (SELECT COALESCE(SUM(total_amount), 0) FROM student_fees WHERE student_id = s.id) as payable,
+                (SELECT COALESCE(SUM(amount_paid), 0) FROM payments WHERE student_id = s.id) as paid
             FROM students s
             JOIN classes c ON s.current_class_id = c.id
             WHERE s.status = 'active'
-            GROUP BY s.id
-            HAVING (payable - paid) >= ?
+            GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+            HAVING (SUM((SELECT COALESCE(total_amount, 0) FROM student_fees WHERE student_id = s.id)) - SUM((SELECT COALESCE(amount_paid, 0) FROM payments WHERE student_id = s.id))) >= ?
+            OR ((SELECT COALESCE(SUM(total_amount), 0) FROM student_fees WHERE student_id = s.id) - (SELECT COALESCE(SUM(amount_paid), 0) FROM payments WHERE student_id = s.id)) >= ?
             ORDER BY (payable - paid) DESC
-        `).all(threshold);
+        `, [threshold, threshold]);
+        
+        // Wait, the HAVING clause above is messy. Let's simplify with a subquery or better GROUP BY.
+        // Actually, the original one was using s.id but in PG we need all columns in GROUP BY.
+        // Let's use a cleaner approach.
+        
+        const debtorsClean = await db.all(`
+            SELECT * FROM (
+                SELECT 
+                    s.first_name, s.last_name, s.admission_number, c.name as class_name,
+                    (SELECT COALESCE(SUM(total_amount), 0) FROM student_fees WHERE student_id = s.id) as payable,
+                    (SELECT COALESCE(SUM(amount_paid), 0) FROM payments WHERE student_id = s.id) as paid
+                FROM students s
+                JOIN classes c ON s.current_class_id = c.id
+                WHERE s.status = 'active'
+            ) as sub
+            WHERE (payable - paid) >= ?
+            ORDER BY (payable - paid) DESC
+        `, [threshold]);
 
-        debtors.forEach(d => d.debt = d.payable - d.paid);
+        debtorsClean.forEach(d => d.debt = d.payable - d.paid);
 
-    } catch (e) { console.error('Debtors List Error:', e.message); }
-
-    res.render('reports/finance/debtors', {
-        title: 'Debtors List',
-        debtors,
-        query: { min_debt: threshold }
-    });
+        res.render('reports/finance/debtors', {
+            title: 'Debtors List',
+            debtors: debtorsClean,
+            user,
+            query: { min_debt: threshold }
+        });
+    } catch (err) {
+        console.error('Debtors List Error:', err);
+        res.status(500).send('Database Error');
+    }
 };
 
 module.exports = {

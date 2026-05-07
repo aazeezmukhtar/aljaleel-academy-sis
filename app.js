@@ -13,7 +13,6 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const { isAuthenticated, injectUser } = require('./middleware/authMiddleware');
 
 const app = express();
@@ -31,9 +30,14 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Session Middleware
-const sessionStore = process.env.DB_TYPE === 'postgres' 
-    ? new (require('connect-pg-simple')(session))({ conString: process.env.DATABASE_URL })
-    : new SQLiteStore({ db: 'database.sqlite', dir: '.' });
+let sessionStore;
+if (process.env.DB_TYPE === 'postgres') {
+    const PostgresStore = require('connect-pg-simple')(session);
+    sessionStore = new PostgresStore({ conString: process.env.DATABASE_URL });
+} else {
+    const SQLiteStore = require('connect-sqlite3')(session);
+    sessionStore = new SQLiteStore({ db: 'database.sqlite', dir: '.' });
+}
 
 app.use(session({
     store: sessionStore,
@@ -78,7 +82,11 @@ app.use('/calendar', require('./routes/calendarRoutes'));
 app.use(injectStudent);
 app.use('/portal', isStudentAuthenticated, portalRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
-    console.log(`Mode: LAN Access Only`);
-});
+if (process.env.NODE_ENV !== 'production' || process.env.VITE_DEV_SERVER) {
+    app.listen(PORT, () => {
+        console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
+        console.log(`Mode: ${process.env.DB_TYPE === 'postgres' ? 'Cloud' : 'Local'} Database`);
+    });
+}
+
+module.exports = app;

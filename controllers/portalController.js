@@ -54,12 +54,11 @@ exports.getDashboard = async (req, res) => {
     `, [studentId]);
     const feeProgress = feeStats.expected > 0 ? Math.round((feeStats.collected / feeStats.expected) * 100) : 0;
     const feeBalance = (feeStats.expected || 0) - (feeStats.collected || 0);
-    // Fetch upcoming events
-    const upcomingEvents = await db.all(`
-        SELECT * FROM term_events 
-        WHERE event_date >= date('now') 
-        ORDER BY event_date ASC LIMIT 5
-    `);
+    const eventsSql = db.DB_TYPE === 'postgres' 
+        ? "SELECT * FROM term_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC LIMIT 5"
+        : "SELECT * FROM term_events WHERE event_date >= date('now') ORDER BY event_date ASC LIMIT 5";
+        
+    const upcomingEvents = await db.all(eventsSql);
 
     const studentObj = await db.get('SELECT s.*, c.name as class_name FROM students s LEFT JOIN classes c ON s.current_class_id = c.id WHERE s.id = ?', [studentId]);
 

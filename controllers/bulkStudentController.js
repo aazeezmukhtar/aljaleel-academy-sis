@@ -108,7 +108,7 @@ const processBulkImport = async (req, res) => {
 
         // Check for duplicates in database
         if (admissionNumbers.length > 0) {
-            const placeholders = admissionNumbers.map((_, i) => `$${i + 1}`).join(',');
+            const placeholders = admissionNumbers.map(() => '?').join(',');
             const existingAdmissions = await db.all(
                 `SELECT admission_number FROM students WHERE admission_number IN (${placeholders})`,
                 admissionNumbers.map(a => a.number)

@@ -30,13 +30,23 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Session Middleware
+const DB_TYPE = process.env.DB_TYPE || (process.env.DATABASE_URL ? 'postgres' : 'sqlite');
 let sessionStore;
-if (process.env.DB_TYPE === 'postgres') {
+
+if (DB_TYPE === 'postgres') {
     const PostgresStore = require('connect-pg-simple')(session);
-    sessionStore = new PostgresStore({ conString: process.env.DATABASE_URL });
+    sessionStore = new PostgresStore({ 
+        conString: process.env.DATABASE_URL,
+        createTableIfMissing: true
+    });
+    console.log('[Session] Using PostgreSQL Store');
 } else {
     const SQLiteStore = require('connect-sqlite3')(session);
-    sessionStore = new SQLiteStore({ db: 'database.sqlite', dir: '.' });
+    sessionStore = new SQLiteStore({ 
+        db: process.env.DB_PATH || 'database.sqlite', 
+        dir: '.' 
+    });
+    console.log('[Session] Using SQLite Store');
 }
 
 app.use(session({
@@ -85,7 +95,7 @@ app.use('/portal', isStudentAuthenticated, portalRoutes);
 if (process.env.NODE_ENV !== 'production' || process.env.VITE_DEV_SERVER) {
     app.listen(PORT, () => {
         console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
-        console.log(`Mode: ${process.env.DB_TYPE === 'postgres' ? 'Cloud' : 'Local'} Database`);
+        console.log(`Mode: ${DB_TYPE === 'postgres' ? 'Cloud' : 'Local'} Database`);
     });
 }
 

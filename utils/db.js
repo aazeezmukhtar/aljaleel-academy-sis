@@ -2,20 +2,45 @@ const { Pool } = require('pg');
 const path = require('path');
 require('dotenv').config();
 
-const DB_TYPE = process.env.DB_TYPE || 'sqlite';
+const DB_TYPE = process.env.DB_TYPE || (process.env.DATABASE_URL ? 'postgres' : 'sqlite');
+const isVercel = process.env.VERCEL === '1' || process.env.NOW_REGION;
+
 let pool = null;
 let sqliteDb = null;
 
+console.log(`[Database] Initializing with type: ${DB_TYPE}`);
+
 if (DB_TYPE === 'postgres') {
-    pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-            rejectUnauthorized: false
+    if (!process.env.DATABASE_URL) {
+        console.error('[Database] ERROR: DATABASE_URL is required for postgres mode.');
+    } else {
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.DATABASE_URL.includes('localhost') ? false : {
+                rejectUnauthorized: false
+            }
+        });
+        console.log('[Database] PostgreSQL pool initialized.');
+    }
+} else if (DB_TYPE === 'sqlite') {
+    if (isVercel) {
+        console.warn('[Database] WARNING: SQLite is not recommended on Vercel. Attempting to open read-only.');
+    }
+    
+    try {
+        const Database = require('better-sqlite3');
+        const dbPath = path.join(__dirname, '../', process.env.DB_PATH || 'database.sqlite');
+        sqliteDb = new Database(dbPath, { 
+            readonly: isVercel, // Try read-only on Vercel
+            fileMustExist: isVercel // On Vercel, don't try to create it
+        });
+        console.log(`[Database] SQLite initialized at: ${dbPath}`);
+    } catch (err) {
+        console.error('[Database] Failed to initialize SQLite:', err.message);
+        if (isVercel) {
+            console.error('[Database] CRITICAL: Database file missing or inaccessible on Vercel. Please set DB_TYPE=postgres and provide DATABASE_URL.');
         }
-    });
-} else {
-    const Database = require('better-sqlite3');
-    sqliteDb = new Database(path.join(__dirname, '../', process.env.DB_PATH || 'database.sqlite'));
+    }
 }
 
 /**

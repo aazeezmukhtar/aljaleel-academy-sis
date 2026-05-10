@@ -36,7 +36,10 @@ const isPostgres = process.env.DB_TYPE === 'postgres' || !!process.env.DATABASE_
 const sessionStore = isPostgres
     ? new (require('connect-pg-simple')(session))({ 
         conString: process.env.DATABASE_URL,
-        createTableIfMissing: true 
+        createTableIfMissing: true,
+        pgOptions: {
+            ssl: { rejectUnauthorized: false }
+        }
     })
     : new SQLiteStore({ db: 'database.sqlite', dir: '.' });
 
@@ -83,7 +86,11 @@ app.use('/calendar', require('./routes/calendarRoutes'));
 app.use(injectStudent);
 app.use('/portal', isStudentAuthenticated, portalRoutes);
 
-app.listen(PORT, () => {
-    console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
-    console.log(`Mode: LAN Access Only`);
-});
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
+        console.log(`Mode: LAN Access Only`);
+    });
+}
+
+module.exports = app;

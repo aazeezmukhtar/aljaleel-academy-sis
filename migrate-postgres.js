@@ -51,7 +51,12 @@ CREATE TABLE IF NOT EXISTS staff (
 );
 
 -- Update classes with form_teacher_id reference
-ALTER TABLE classes ADD CONSTRAINT classes_form_teacher_id_fkey FOREIGN KEY (form_teacher_id) REFERENCES staff(id);
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'classes_form_teacher_id_fkey') THEN
+        ALTER TABLE classes ADD CONSTRAINT classes_form_teacher_id_fkey FOREIGN KEY (form_teacher_id) REFERENCES staff(id);
+    END IF;
+END $$;
 
 -- 5. Students
 CREATE TABLE IF NOT EXISTS students (
@@ -299,13 +304,12 @@ CREATE TABLE IF NOT EXISTS grading_systems (
 
 -- Session table for connect-pg-simple
 CREATE TABLE IF NOT EXISTS "session" (
-  "sid" varchar NOT NULL COLLATE "default",
+  "sid" varchar PRIMARY KEY NOT NULL COLLATE "default",
   "sess" json NOT NULL,
   "expire" timestamp(6) NOT NULL
 )
 WITH (OIDS=FALSE);
-ALTER TABLE "session" ADD CONSTRAINT "session_pkey" PRIMARY KEY ("sid") NOT DEFERRABLE INITIALLY IMMEDIATE;
-CREATE INDEX "IDX_session_expire" ON "session" ("expire");
+CREATE INDEX IF NOT EXISTS "IDX_session_expire" ON "session" ("expire");
 `;
 
 async function migrate() {

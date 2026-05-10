@@ -1,0 +1,251 @@
+<%- include('partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('partials/sidebar') %>
+
+            <!-- Main Content -->
+            <main class="main-content">
+                <header class="content-header">
+                    <div>
+                        <h1>Welcome, <%= user.first_name %>
+                        </h1>
+                        <p class="text-muted">Staff Dashboard | <%= new Date().toLocaleDateString('en-US', {
+                                weekday: 'long' , year: 'numeric' , month: 'long' , day: 'numeric' }) %>
+                        </p>
+                    </div>
+                    <div class="header-actions">
+                        <div class="notification-bell-container" onclick="toggleNotificationDropdown(event)" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; padding: 10px;">
+                            <i class="bi bi-bell-fill" style="color: #6366f1; font-size: 1.4rem;"></i>
+                            <span class="notification-badge">0</span>
+                            <div class="notification-dropdown">
+                                <div class="notification-header">
+                                    <strong>Notifications</strong>
+                                    <span class="text-muted">Recent Updates</span>
+                                </div>
+                                <div class="notification-list"></div>
+                            </div>
+                        </div>
+                        <span class="badge badge-primary">
+                            <%= user.role %>
+                        </span>
+                    </div>
+                </header>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
+                            <i class="bi bi-door-open-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>
+                                <%= stats.assignedClasses %>
+                            </h3>
+                            <p>Assigned Classes</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
+                            <i class="bi bi-book-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>
+                                <%= stats.assignedSubjects %>
+                            </h3>
+                            <p>Assigned Subjects</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>
+                                <%= stats.myStudents %>
+                            </h3>
+                            <p>Total Students</p>
+                        </div>
+                    </div>
+
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #ec4899, #db2777);">
+                            <i class="bi bi-calendar-check-fill"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>
+                                <%= stats.attendanceToday %>
+                            </h3>
+                            <p>Attendance Today</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="grid-3" style="margin-top: 40px;">
+                    <!-- Assigned Classes -->
+                    <div class="card">
+                        <div class="card-header"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>My Classes</h3>
+                            <a href="/attendance" class="btn btn-sm btn-outline">Take Attendance</a>
+                        </div>
+                        <div class="list-group">
+                            <% if (assignedClasses && assignedClasses.length> 0) { %>
+                                <% assignedClasses.forEach(cls=> { %>
+                                    <div class="list-item"
+                                        style="padding: 15px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;">
+                                        <div>
+                                            <strong style="font-size: 1.1rem;">
+                                                <%= cls.name %>
+                                            </strong>
+                                            <p class="text-muted" style="font-size: 0.85rem; margin: 0;">Class Teacher
+                                            </p>
+                                        </div>
+                                        <i class="bi bi-chevron-right text-muted"></i>
+                                    </div>
+                                    <% }); %>
+                                        <% } else { %>
+                                            <p class="text-muted" style="padding: 20px; text-align: center;">No classes
+                                                assigned yet.</p>
+                                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Assigned Subjects -->
+                    <div class="card">
+                        <div class="card-header"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>My Subjects</h3>
+                            <a href="/results" class="btn btn-sm btn-outline">Enter Results</a>
+                        </div>
+                        <div class="list-group">
+                            <% if (assignedSubjects && assignedSubjects.length> 0) { %>
+                                <% assignedSubjects.forEach(sub=> { %>
+                                    <div class="list-item"
+                                        style="padding: 15px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;">
+                                        <div>
+                                            <strong style="font-size: 1.1rem;">
+                                                <%= sub.name %>
+                                            </strong>
+                                            <p class="text-muted" style="font-size: 0.85rem; margin: 0;">
+                                                <%= sub.class_name %>
+                                            </p>
+                                        </div>
+                                        <i class="bi bi-chevron-right text-muted"></i>
+                                    </div>
+                                    <% }); %>
+                                        <% } else { %>
+                                            <p class="text-muted" style="padding: 20px; text-align: center;">No subjects
+                                                assigned yet.</p>
+                                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- School Activity Feed (Cloned from Student Portal) -->
+                    <div class="card" style="border-top: 4px solid #6366f1;">
+                        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3><i class="bi bi-app-indicator" style="color: #6366f1;"></i> School Activity</h3>
+                        </div>
+                        <div class="list-group" id="activityFeed">
+                            <% if (locals.announcements && announcements.length > 0) { %>
+                                <% announcements.forEach((post, index) => { %>
+                                    <a href="/announcements/view/<%= post.id %>" class="activity-item announcement-card <%= index >= 3 ? 'hidden' : '' %>" data-id="<%= post.id %>" style="display: block; text-decoration: none; margin-bottom: 15px; padding: 15px; border-radius: 12px; border: 1px solid #f1f5f9; transition: all 0.2s; background: white;">
+                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                            <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;"><%= new Date(post.created_at).toLocaleDateString() %></span>
+                                            <% if(post.type === 'Event') { %>
+                                                <span style="font-size: 0.7rem; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 20px; font-weight: 800; letter-spacing: 0.05em;">EVENT</span>
+                                            <% } else { %>
+                                                <span style="font-size: 0.7rem; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 20px; font-weight: 800; letter-spacing: 0.05em;">UPDATE</span>
+                                            <% } %>
+                                        </div>
+                                        <h4 class="post-title" style="margin: 0 0 8px; font-size: 1rem; color: #1e293b; transition: color 0.2s;"><%= post.title %></h4>
+                                        <p class="line-clamp-2 post-content" style="margin: 0; font-size: 0.85rem; color: #64748b; line-height: 1.5;"><%= post.content %></p>
+                                        <% if(post.type === 'Event' && post.event_date) { %>
+                                            <p style="margin-top: 10px; font-size: 0.75rem; color: #ef4444; font-weight: 600;">
+                                                <i class="bi bi-clock-fill"></i> Scheduled: <%= new Date(post.event_date).toLocaleDateString() %>
+                                            </p>
+                                        <% } %>
+                                    </a>
+                                <% }); %>
+                                <% if (announcements.length > 3) { %>
+                                    <div class="view-more-container">
+                                        <button class="btn-view-more" onclick="toggleViewMore('activityFeed', this)">View More</button>
+                                    </div>
+                                <% } %>
+                            <% } else { %>
+                                <p class="text-muted" style="padding: 20px; text-align: center;">No recent school activities.</p>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+
+                <section style="margin-top: 40px;">
+                    <h3 style="margin-bottom: 20px;"><i class="bi bi-megaphone-fill"></i> General Announcements</h3>
+                    <div class="card">
+                        <% if (locals.announcements && announcements.length > 0) { %>
+                            <% announcements.forEach(post => { %>
+                                <a href="/announcements/view/<%= post.id %>" class="announcement-card" data-id="<%= post.id %>" style="display: block; text-decoration: none; padding: 20px; border-bottom: 1px solid #f1f5f9; position: relative; transition: all 0.2s; background: white;">
+                                    <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+                                        <h4 class="post-title" style="margin: 0; color: #1e293b; transition: color 0.2s;"><%= post.title %></h4>
+                                        <span class="text-muted" style="font-size: 0.8rem;"><%= new Date(post.created_at).toLocaleDateString() %></span>
+                                    </div>
+                                    <p class="post-content" style="margin: 0; color: #64748b; line-height: 1.6; font-size: 0.95rem; white-space: pre-wrap;"><%= post.content %></p>
+                                    <% if (post.image_path) { %>
+                                        <img src="/uploads/<%= post.image_path %>" style="margin-top: 15px; border-radius: 8px; max-height: 200px; width: auto; max-width: 100%; display: block;">
+                                    <% } %>
+                                </a>
+                            <% }) %>
+                        <% } else { %>
+                            <div style="padding: 40px; text-align: center; color: #94a3b8;">
+                                <i class="bi bi-megaphone" style="font-size: 3rem; display: block; margin-bottom: 10px;"></i>
+                                <p>No new general announcements.</p>
+                            </div>
+                        <% } %>
+                    </div>
+                </section>
+            </main>
+    </div>
+
+    <style>
+        /* Seamless UX for Announcements */
+        .announcement-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -4px rgba(0,0,0,0.05);
+            border-color: #cbd5e1;
+            z-index: 10;
+        }
+        .announcement-card.read {
+            opacity: 0.6;
+            background: #f8fafc !important;
+            border-color: #f1f5f9;
+        }
+        .announcement-card.read .post-title {
+            color: #64748b !important;
+            font-weight: 500;
+        }
+    </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const readPosts = JSON.parse(localStorage.getItem('read_announcements') || '[]');
+            
+            document.querySelectorAll('.announcement-card').forEach(card => {
+                const postId = card.dataset.id;
+                
+                // Mark as read visually
+                if (readPosts.includes(postId)) {
+                    card.classList.add('read');
+                }
+                
+                // Save to read state on click
+                card.addEventListener('click', () => {
+                    if (!readPosts.includes(postId)) {
+                        readPosts.push(postId);
+                        localStorage.setItem('read_announcements', JSON.stringify(readPosts));
+                    }
+                });
+            });
+        });
+    </script>
+
+    <%- include('partials/footer') %>

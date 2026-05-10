@@ -1,0 +1,104 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <div>
+                        <h1>Fee Structure Setup</h1>
+                        <p>Define the fees applicable for each class and term.</p>
+                    </div>
+                    <a href="/fees/manager" class="btn btn-outline">Back to Fee Manager</a>
+                </header>
+
+                <div class="dashboard-grid" style="grid-template-columns: 1fr 2fr; gap: 30px;">
+                    <div class="card">
+                        <h3>Add New Fee Category</h3>
+                        <form action="/fees/setup/add" method="POST" class="enroll-form" style="margin-top: 20px;">
+                            <div class="form-group">
+                                <label>Fee Name</label>
+                                <input type="text" name="name" placeholder="e.g., 1st Term Tuition" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Amount (₦)</label>
+                                <input type="number" name="amount" placeholder="50000" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Target Class</label>
+                                <select name="class_id" required>
+                                    <option value="0">All Classes</option>
+                                    <% classes.forEach(c=> { %>
+                                        <option value="<%= c.id %>">
+                                            <%= c.name %>
+                                        </option>
+                                        <% }); %>
+                                </select>
+                            </div>
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label>Session</label>
+                                    <select name="session" required>
+                                        <option value="2025/2026">2025/2026</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Term</label>
+                                    <select name="term" required>
+                                        <option value="1st Term">1st Term</option>
+                                        <option value="2nd Term">2nd Term</option>
+                                        <option value="3rd Term">3rd Term</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">Create Fee
+                                Category</button>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h3>Existing Fee Structures</h3>
+                        <div class="table-container" style="margin-top: 20px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Class</th>
+                                        <th>Session/Term</th>
+                                        <th>Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (feeCategories.length> 0) { %>
+                                        <% feeCategories.forEach(fc=> { %>
+                                            <tr>
+                                                <td><strong>
+                                                        <%= fc.name %>
+                                                    </strong></td>
+                                                <td>
+                                                    <%= fc.class_id==0 ? 'All Classes' : fc.class_name %>
+                                                </td>
+                                                <td>
+                                                    <%= fc.session %> - <%= fc.term %>
+                                                </td>
+                                                <td>₦<%= fc.amount.toLocaleString() %>
+                                                </td>
+                                            </tr>
+                                            <% }); %>
+                                                <% } else { %>
+                                                    <tr>
+                                                        <td colspan="4"
+                                                            style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                                            No fee categories defined yet.</td>
+                                                    </tr>
+                                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

@@ -1,0 +1,33 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header style="margin-bottom: 30px;">
+                    <a href="/academics" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr;
+                        Back to Academics</a>
+                    <h1 style="margin-top: 20px;">Edit Subject</h1>
+                </header>
+
+                <section class="card" style="max-width: 600px;">
+                    <form action="/academics/subjects/update/<%= subject.id %>" method="POST" class="enroll-form">
+                        <div class="form-group">
+                            <label>Subject Name</label>
+                            <input type="text" name="name" value="<%= subject.name %>" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Subject Code</label>
+                            <input type="text" name="code" value="<%= subject.code %>" required>
+                        </div>
+
+                        <div style="margin-top: 30px; display: flex; gap: 10px;">
+                            <button type="submit" class="btn">Update Subject</button>
+                            <a href="/academics" class="btn btn-outline">Cancel</a>
+                        </div>
+                    </form>
+                </section>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

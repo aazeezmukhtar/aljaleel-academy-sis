@@ -1,0 +1,68 @@
+<%- include('../partials/header') %>
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+            <main class="main-content">
+                <header class="content-header">
+                    <h1>
+                        <%= title %>
+                    </h1>
+                    <p>Student emergency contacts and health information.</p>
+                </header>
+
+                <div class="card">
+                    <h3>Emergency Contact List</h3>
+                    <p class="text-muted" style="margin-bottom: 20px;">Use this list for quick access to parent contacts
+                        in case of emergency.</p>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Student Name</th>
+                                    <th>Class</th>
+                                    <th>Parent/Guardian Phone</th>
+                                    <th>Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (students.length> 0) { %>
+                                    <% students.forEach(s=> { %>
+                                        <tr>
+                                            <td>
+                                                <%= s.admission_number %>
+                                            </td>
+                                            <td>
+                                                <%= s.first_name %>
+                                                    <%= s.last_name %>
+                                            </td>
+                                            <td>
+                                                <%= s.class_name || 'N/A' %>
+                                            </td>
+                                            <td>
+                                                <% if (s.parent_phone) { %>
+                                                    <a href="tel:<%= s.parent_phone %>"
+                                                        style="color: var(--primary); text-decoration: none; font-weight: 500;">
+                                                        <i class="bi bi-telephone-fill"></i>
+                                                        <%= s.parent_phone %>
+                                                    </a>
+                                                    <% } else { %>
+                                                        <span class="text-muted">Not Recorded</span>
+                                                        <% } %>
+                                            </td>
+                                            <td>
+                                                <%= s.parent_address || 'Not Recorded' %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="5" style="text-align: center;">No students found.</td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+    </div>
+    <%- include('../partials/footer') %>

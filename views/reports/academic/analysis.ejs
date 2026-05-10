@@ -1,0 +1,194 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header no-print">
+                <div class="header-left">
+                    <a href="/reports/academic" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Subject Analysis</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="subject_analysis.csv">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print Report
+                    </button>
+                </div>
+            </header>
+
+            <div class="card no-print settings-card">
+                <form action="/reports/academic/analysis" method="GET" class="filter-form">
+                    <div class="form-group">
+                        <label>Term</label>
+                        <select name="term" required>
+                            <option value="1st Term" <%=query.term==='1st Term' ? 'selected' : '' %>>1st Term</option>
+                            <option value="2nd Term" <%=query.term==='2nd Term' ? 'selected' : '' %>>2nd Term</option>
+                            <option value="3rd Term" <%=query.term==='3rd Term' ? 'selected' : '' %>>3rd Term</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Session</label>
+                        <select name="session" required>
+                            <option value="2024/2025" <%=query.session==='2024/2025' ? 'selected' : '' %>>2024/2025
+                            </option>
+                            <option value="2025/2026" <%=query.session==='2025/2026' ? 'selected' : '' %>>2025/2026
+                            </option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Analyze</button>
+                </form>
+            </div>
+
+            <% if (analysis && analysis.length> 0) { %>
+                <div class="report-paper">
+                    <div class="report-header">
+                        <h2>Subject Performance Analysis</h2>
+                        <p>
+                            <%= query.term %>, <%= query.session %> Session
+                        </p>
+                    </div>
+
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Class</th>
+                                <th>Students</th>
+                                <th>Average</th>
+                                <th>Highest</th>
+                                <th>Lowest</th>
+                                <th>Pass Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% analysis.forEach(record=> { %>
+                                <tr>
+                                    <td>
+                                        <%= record.subject_name %>
+                                    </td>
+                                    <td>
+                                        <%= record.class_name %>
+                                    </td>
+                                    <td>
+                                        <%= record.students_count %>
+                                    </td>
+                                    <td>
+                                        <%= Number(record.average_score).toFixed(1) %>
+                                    </td>
+                                    <td class="text-success">
+                                        <%= record.highest_score %>
+                                    </td>
+                                    <td class="text-danger">
+                                        <%= record.lowest_score %>
+                                    </td>
+                                    <td style="width: 150px;">
+                                        <% const passRate=(record.pass_count / record.students_count) * 100; const
+                                            color=passRate>= 70 ? '#16a34a' : (passRate >= 50 ? '#ca8a04' : '#dc2626');
+                                            %>
+                                            <div style="display: flex; align-items: center; gap: 10px;">
+                                                <div
+                                                    style="flex-grow: 1; height: 6px; background: #eee; border-radius: 3px;">
+                                                    <div
+                                                        style="width: <%= passRate %>%; height: 100%; background-color: <%= color %>; border-radius: 3px;">
+                                                    </div>
+                                                </div>
+                                                <span
+                                                    style="font-size: 0.8rem; font-weight: bold; color: <%= color %>;">
+                                                    <%= passRate.toFixed(0) %>%
+                                                </span>
+                                            </div>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } else if (typeof analysis !=='undefined' ) { %>
+                    <div class="empty-state">
+                        <i class="bi bi-bar-chart"></i>
+                        <p>No results found for the selected criteria.</p>
+                    </div>
+                    <% } %>
+        </main>
+
+        <style>
+            .filter-form {
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+
+            .report-paper {
+                background: white;
+                padding: 40px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                max-width: 210mm;
+                margin: 0 auto;
+            }
+
+            .report-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.9rem;
+            }
+
+            .report-table th,
+            .report-table td {
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: left;
+            }
+
+            .report-table th {
+                background: #f8f9fa;
+            }
+
+            .text-success {
+                color: #16a34a;
+                font-weight: 500;
+            }
+
+            .text-danger {
+                color: #dc2626;
+                font-weight: 500;
+            }
+
+            @media print {
+                @page {
+                    size: A4;
+                    margin: 10mm;
+                }
+
+                body * {
+                    visibility: hidden;
+                }
+
+                .report-paper,
+                .report-paper * {
+                    visibility: visible;
+                }
+
+                .report-paper {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    box-shadow: none;
+                    padding: 0;
+                    margin: 0;
+                }
+
+                .main-content {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                .no-print {
+                    display: none !important;
+                }
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

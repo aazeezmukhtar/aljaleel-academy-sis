@@ -1,0 +1,98 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header">
+                <div class="header-left">
+                    <a href="/reports/staff" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Staff Activity Logs</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="activity_log.csv"
+                        data-target=".data-table">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                </div>
+            </header>
+
+            <div class="card settings-card">
+                <form action="/reports/staff/activity" method="GET" class="filter-form">
+                    <div class="form-group">
+                        <label>Select Staff</label>
+                        <select name="staff_id" required>
+                            <option value="">Choose Staff Member</option>
+                            <% allStaff.forEach(s=> { %>
+                                <option value="<%= s.id %>" <%=query.staff_id==s.id ? 'selected' : '' %>><%= s.last_name
+                                        %>, <%= s.first_name %>
+                                </option>
+                                <% }) %>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">View logs</button>
+                </form>
+            </div>
+
+            <% if (logs && logs.length> 0) { %>
+                <div class="card">
+                    <h3>Recent Activity for <%= staffName %>
+                    </h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Module</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                                <th>IP</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% logs.forEach(log=> { %>
+                                <tr>
+                                    <td>
+                                        <%= new Date(log.timestamp).toLocaleString('en-GB') %>
+                                    </td>
+                                    <td><span class="badge badge-info">
+                                            <%= log.module %>
+                                        </span></td>
+                                    <td>
+                                        <%= log.action %>
+                                    </td>
+                                    <td>
+                                        <%= log.details %>
+                                    </td>
+                                    <td><span class="text-muted">
+                                            <%= log.ip_address %>
+                                        </span></td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } else if (query.staff_id) { %>
+                    <div class="empty-state">
+                        <i class="bi bi-activity"></i>
+                        <p>No activity logs found for this user.</p>
+                    </div>
+                    <% } %>
+        </main>
+
+        <style>
+            .filter-form {
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+
+            .badge-info {
+                background: #e0f2fe;
+                color: #0284c7;
+            }
+
+            .text-muted {
+                color: #888;
+                font-size: 0.85rem;
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

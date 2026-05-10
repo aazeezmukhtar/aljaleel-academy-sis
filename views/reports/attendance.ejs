@@ -1,0 +1,77 @@
+<%- include('../partials/header') %>
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+            <main class="main-content">
+                <header class="content-header">
+                    <h1>
+                        <%= title %>
+                    </h1>
+                    <p>Analysis of attendance records per class.</p>
+                </header>
+
+                <div class="card">
+                    <h3>Class Attendance Summary</h3>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Class Name</th>
+                                    <th>Total Records</th>
+                                    <th>Present Count</th>
+                                    <th>Attendance Rate</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (stats.length> 0) { %>
+                                    <% stats.forEach(s=> {
+                                        const percentage = s.total_records > 0 ? (s.present_count / s.total_records) *
+                                        100 : 0;
+                                        %>
+                                        <tr>
+                                            <td>
+                                                <%= s.class_name %>
+                                            </td>
+                                            <td>
+                                                <%= s.total_records %>
+                                            </td>
+                                            <td>
+                                                <%= s.present_count %>
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; align-items: center; gap: 10px;">
+                                                    <span style="font-weight: 700;">
+                                                        <%= percentage.toFixed(1) %>%
+                                                    </span>
+                                                    <div
+                                                        style="flex-grow: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; width: 60px;">
+                                                        <div
+                                                            style="width: <%= percentage %>%; height: 100%; background: <%= percentage >= 90 ? '#10b981' : (percentage >= 75 ? '#f59e0b' : '#ef4444') %>;">
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="badge" style="
+                                                background: <%= percentage >= 90 ? '#dcfce7' : (percentage >= 75 ? '#fef3c7' : '#fee2e2') %>;
+                                                color: <%= percentage >= 90 ? '#15803d' : (percentage >= 75 ? '#92400e' : '#b91c1c') %>;
+                                            ">
+                                                    <%= percentage>= 90 ? 'Excellent' : (percentage >= 75 ? 'Average' :
+                                                        'Poor') %>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="5" style="text-align: center; padding: 20px;">No
+                                                        attendance records found.</td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+    </div>
+    <%- include('../partials/footer') %>

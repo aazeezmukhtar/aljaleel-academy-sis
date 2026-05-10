@@ -1,0 +1,172 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header no-print">
+
+                <div class="header-left">
+                    <a href="/reports/attendance" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Low Attendance Alerts</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="low_attendance.csv">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print List
+                    </button>
+                </div>
+            </header>
+
+            <div class="card no-print settings-card">
+                <form action="/reports/attendance/low" method="GET" class="filter-form">
+                    <div class="form-group">
+                        <label>Term</label>
+                        <select name="term" required>
+                            <option value="1st Term" <%=query.term==='1st Term' ? 'selected' : '' %>>1st Term</option>
+                            <option value="2nd Term" <%=query.term==='2nd Term' ? 'selected' : '' %>>2nd Term</option>
+                            <option value="3rd Term" <%=query.term==='3rd Term' ? 'selected' : '' %>>3rd Term</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Session</label>
+                        <select name="session" required>
+                            <option value="2024/2025" <%=query.session==='2024/2025' ? 'selected' : '' %>>2024/2025
+                            </option>
+                            <option value="2025/2026" <%=query.session==='2025/2026' ? 'selected' : '' %>>2025/2026
+                            </option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Min. Attendance (%)</label>
+                        <input type="number" name="threshold" value="<%= query.threshold %>" min="1" max="100"
+                            style="width: 80px;">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Check</button>
+                </form>
+            </div>
+
+            <% if (students && students.length> 0) { %>
+                <div class="report-paper">
+                    <div class="report-header">
+                        <h2>Critical Attendance Report</h2>
+                        <p>Students below <%= query.threshold %>% attendance in <%= query.term %>, <%= query.session %>
+                        </p>
+                    </div>
+
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th>Student Name</th>
+                                <th>Adm No.</th>
+                                <th>Class</th>
+                                <th>Total Days</th>
+                                <th>Present Days</th>
+                                <th>Attendance %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% students.forEach(student=> { %>
+                                <% const percentage=((student.present_days / student.total_days) * 100).toFixed(1); %>
+                                    <tr>
+                                        <td style="font-weight: 500;">
+                                            <%= student.last_name.toUpperCase() %>, <%= student.first_name %>
+                                        </td>
+                                        <td>
+                                            <%= student.admission_number %>
+                                        </td>
+                                        <td>
+                                            <%= student.class_name %>
+                                        </td>
+                                        <td>
+                                            <%= student.total_days %>
+                                        </td>
+                                        <td>
+                                            <%= student.present_days %>
+                                        </td>
+                                        <td style="color: #dc2626; font-weight: bold;">
+                                            <%= percentage %>%
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } else if (query.term) { %>
+                    <div class="empty-state">
+                        <i class="bi bi-emoji-smile"></i>
+                        <p>Great! No students found with attendance below <%= query.threshold %>%.</p>
+                    </div>
+                    <% } %>
+        </main>
+
+        <style>
+            .filter-form {
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+
+            .report-paper {
+                background: white;
+                padding: 40px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                max-width: 210mm;
+                margin: 0 auto;
+            }
+
+            .report-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.95rem;
+            }
+
+            .report-table th,
+            .report-table td {
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: left;
+            }
+
+            .report-table th {
+                background: #f8f9fa;
+            }
+
+            @media print {
+                @page {
+                    size: A4;
+                    margin: 10mm;
+                }
+
+                body * {
+                    visibility: hidden;
+                }
+
+                .report-paper,
+                .report-paper * {
+                    visibility: visible;
+                }
+
+                .report-paper {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    box-shadow: none;
+                    padding: 0;
+                    margin: 0;
+                }
+
+                .main-content {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                .no-print {
+                    display: none !important;
+                }
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

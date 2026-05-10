@@ -1,0 +1,166 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header">
+                <a href="/reports" class="back-link"><i class="bi bi-arrow-left"></i> Back to Report Center</a>
+                <h1>Finance Reports</h1>
+                <p>Financial overview, fee collections, and outstanding balances.</p>
+            </header>
+
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #ecfccb; color: #65a30d;">
+                        <i class="bi bi-currency-dollar"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>₦<%= stats.total_collected_session.toLocaleString() %>
+                        </h3>
+                        <p>Total Collected (Session)</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fff7ed; color: #ea580c;">
+                        <i class="bi bi-calendar-check"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>₦<%= stats.total_payment_today.toLocaleString() %>
+                        </h3>
+                        <p>Collected Today</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="background: #fee2e2; color: #dc2626;">
+                        <i class="bi bi-graph-down-arrow"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Check Report</h3>
+                        <p>Outstanding Fees</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="report-dashboard-grid">
+                <a href="/reports/finance/status" class="report-card">
+                    <div class="report-icon">
+                        <i class="bi bi-credit-card-2-front-fill"></i>
+                    </div>
+                    <div class="report-info">
+                        <h3>Fee Status Report</h3>
+                        <p>Check paid and unpaid status per class.</p>
+                    </div>
+                </a>
+
+                <a href="/reports/finance/debtors" class="report-card">
+                    <div class="report-icon">
+                        <i class="bi bi-exclamation-circle-fill"></i>
+                    </div>
+                    <div class="report-info">
+                        <h3>Debtors List</h3>
+                        <p>Generate list of students owing fees.</p>
+                    </div>
+                </a>
+
+                <a href="/fees/manager" class="report-card">
+                    <div class="report-icon">
+                        <i class="bi bi-wallet2"></i>
+                    </div>
+                    <div class="report-info">
+                        <h3>Fee Manager</h3>
+                        <p>Go to main Fee Management dashboard.</p>
+                    </div>
+                </a>
+            </div>
+        </main>
+
+        <style>
+            .back-link {
+                display: inline-block;
+                margin-bottom: 10px;
+                color: var(--text-muted);
+                text-decoration: none;
+                font-size: 0.9rem;
+            }
+
+            .back-link:hover {
+                color: var(--primary);
+            }
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                gap: 20px;
+                margin-bottom: 30px;
+            }
+
+            .stat-card {
+                background: white;
+                padding: 20px;
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            }
+
+            .stat-icon {
+                width: 50px;
+                height: 50px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.5rem;
+            }
+
+            .stat-info h3 {
+                margin: 0;
+                font-size: 1.5rem;
+                color: var(--text-dark);
+            }
+
+            .stat-info p {
+                margin: 0;
+                font-size: 0.85rem;
+                color: var(--text-muted);
+            }
+
+            .report-dashboard-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+            }
+
+            .report-card {
+                background: white;
+                border-radius: 12px;
+                padding: 25px;
+                display: flex;
+                align-items: center;
+                gap: 20px;
+                text-decoration: none;
+                color: inherit;
+                border: 1px solid #eee;
+                transition: transform 0.2s;
+            }
+
+            .report-card:hover {
+                transform: translateY(-3px);
+                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+                border-color: var(--primary);
+            }
+
+            .report-icon {
+                width: 60px;
+                height: 60px;
+                background: #f8fafc;
+                color: var(--primary);
+                border-radius: 12px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 1.8rem;
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

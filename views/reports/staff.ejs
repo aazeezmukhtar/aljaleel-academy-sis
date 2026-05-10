@@ -1,0 +1,63 @@
+<%- include('../partials/header') %>
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+            <main class="main-content">
+                <header class="content-header">
+                    <h1>
+                        <%= title %>
+                    </h1>
+                    <p>Overview of staff distribution and teaching workload.</p>
+                </header>
+
+                <div class="card">
+                    <h3>Staff Directory & Workload</h3>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Email</th>
+                                    <th>Designation</th>
+                                    <th>Subject Load</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (staff.length> 0) { %>
+                                    <% staff.forEach(s=> { %>
+                                        <tr>
+                                            <td><strong>
+                                                    <%= s.first_name %>
+                                                        <%= s.last_name %>
+                                                </strong></td>
+                                            <td>
+                                                <%= s.email || 'N/A' %>
+                                            </td>
+                                            <td>
+                                                <%= s.designation || 'Teacher' %>
+                                            </td>
+                                            <td>
+                                                <span class="badge"
+                                                    style="background: #f1f5f9; color: var(--text-dark);">
+                                                    <%= s.subjects_count %> Subjects
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span class="badge"
+                                                    style="background: #dcfce7; color: #15803d;">Active</span>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="5" style="text-align: center;">No staff records found.
+                                                    </td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+    </div>
+    <%- include('../partials/footer') %>

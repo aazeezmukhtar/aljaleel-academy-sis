@@ -1,0 +1,124 @@
+<%- include('../../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <div>
+                        <h1>Daily Attendance Report</h1>
+                        <p class="text-muted">List of students marked as <strong>
+                                <%= query.type %>
+                            </strong> on <%= query.date %>
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="window.print()" class="btn btn-outline">
+                            <i class="bi bi-printer"></i> Print List
+                        </button>
+                        <button onclick="exportTableToCSV('daily-attendance-<%= query.date %>.csv')"
+                            class="btn btn-outline">
+                            <i class="bi bi-download"></i> Export CSV
+                        </button>
+                    </div>
+                </header>
+
+                <div class="card" style="margin-bottom: 30px;">
+                    <form action="/reports/attendance/daily" method="GET"
+                        style="display: flex; gap: 15px; align-items: end; flex-wrap: wrap;">
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" name="date" class="form-control" value="<%= query.date %>" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Status Type</label>
+                            <select name="type" class="form-control">
+                                <option value="Absent" <%=query.type==='Absent' ? 'selected' : '' %>>Absent</option>
+                                <option value="Late" <%=query.type==='Late' ? 'selected' : '' %>>Late</option>
+                                <option value="Present" <%=query.type==='Present' ? 'selected' : '' %>>Present</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Class (Optional)</label>
+                            <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                            <select name="class_id" class="form-control">
+                                <option value="">-- All Classes --</option>
+                                <% classes.forEach(c=> { %>
+                                    <option value="<%= c.id %>" <%=query.class_id==c.id ? 'selected' : '' %>><%= c.name
+                                            %>
+                                    </option>
+                                    <% }) %>
+                            </select>
+                            <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                            <input type="hidden" name="class_id" value="<%= classes[0].id %>">
+                            <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
+                            <% } %>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Generate List</button>
+                    </form>
+                </div>
+
+                <% if (students && students.length> 0) { %>
+                    <div class="card">
+                        <table class="data-table" id="dataTable">
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Admission #</th>
+                                    <th>Class</th>
+                                    <th>Parent Phone</th>
+                                    <th>Time Marked</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% students.forEach(s=> { %>
+                                    <tr>
+                                        <td>
+                                            <strong>
+                                                <%= s.last_name %>, <%= s.first_name %>
+                                            </strong>
+                                        </td>
+                                        <td>
+                                            <%= s.admission_number %>
+                                        </td>
+                                        <td>
+                                            <%= s.class_name %>
+                                        </td>
+                                        <td>
+                                            <%= s.parent_phone || 'N/A' %>
+                                        </td>
+                                        <td>
+                                            <%= s.time_marked ? new Date(s.time_marked).toLocaleTimeString([],
+                                                {hour: '2-digit' , minute:'2-digit'}) : '--' %>
+                                        </td>
+                                        <td>
+                                            <span
+                                                class="badge badge-<%= s.status === 'Present' ? 'success' : (s.status === 'Late' ? 'warning' : 'danger') %>">
+                                                <%= s.status %>
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                    <p class="text-muted" style="margin-top: 15px; text-align: right;">Total Records: <%=
+                            students.length %>
+                    </p>
+                    <% } else { %>
+                        <div class="card" style="text-align: center; padding: 50px;">
+                            <i class="bi bi-calendar-check"
+                                style="font-size: 3rem; color: #cbd5e1; margin-bottom: 20px;"></i>
+                            <h3>No records found</h3>
+                            <p class="text-muted">There are no students marked as <strong>
+                                    <%= query.type %>
+                                </strong> for this date.</p>
+                        </div>
+                        <% } %>
+            </main>
+    </div>
+
+    <script src="/js/table-export.js"></script>
+    <%- include('../../partials/footer') %>

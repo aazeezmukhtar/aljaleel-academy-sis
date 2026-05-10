@@ -1,0 +1,143 @@
+<%- include('../partials/header') %>
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+            <main class="main-content">
+                <header class="content-header">
+                    <h1>
+                        <%= title %>
+                    </h1>
+                    <p>Overview of student enrollment and demographics.</p>
+                </header>
+
+                <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 30px;">
+                    <div class="stat-card">
+                        <h3>Total Active Students</h3>
+                        <div class="value">
+                            <%= stats.total %>
+                        </div>
+                    </div>
+                    <% stats.gender.forEach(g=> { %>
+                        <div class="stat-card">
+                            <h3>
+                                <%= g.gender %>s
+                            </h3>
+                            <div class="value">
+                                <%= g.count %>
+                            </div>
+                        </div>
+                        <% }) %>
+                </div>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Gender Distribution</h3>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Gender</th>
+                                        <th>Count</th>
+                                        <th>Percentage</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% stats.gender.forEach(g=> { %>
+                                        <tr>
+                                            <td>
+                                                <%= g.gender %>
+                                            </td>
+                                            <td>
+                                                <%= g.count %>
+                                            </td>
+                                            <td>
+                                                <%= ((g.count / stats.total) * 100).toFixed(1) %>%
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Class Enrollment</h3>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Class Name</th>
+                                        <th>Student Count</th>
+                                        <th>% of Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% stats.classes.forEach(c=> { %>
+                                        <tr>
+                                            <td>
+                                                <%= c.name %>
+                                            </td>
+                                            <td>
+                                                <%= c.count %>
+                                            </td>
+                                            <td>
+                                                <div style="display: flex; align-items: center; gap: 10px;">
+                                                    <div
+                                                        style="flex-grow: 1; height: 6px; background: #f1f5f9; border-radius: 3px; overflow: hidden; width: 50px;">
+                                                        <div
+                                                            style="width: <%= (c.count / stats.total) * 100 %>%; height: 100%; background: var(--primary);">
+                                                        </div>
+                                                    </div>
+                                                    <span>
+                                                        <%= ((c.count / stats.total) * 100).toFixed(1) %>%
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top: 20px;">
+                    <h3>Recent Admissions</h3>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Student ID</th>
+                                    <th>Student Name</th>
+                                    <th>Date Admitted</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (stats.recent && stats.recent.length> 0) { %>
+                                    <% stats.recent.forEach(s=> { %>
+                                        <tr>
+                                            <td><span class="badge"
+                                                    style="background: #f1f5f9; color: var(--text-dark);">
+                                                    <%= s.admission_number %>
+                                                </span></td>
+                                            <td>
+                                                <%= s.first_name %>
+                                                    <%= s.last_name %>
+                                            </td>
+                                            <td>
+                                                <%= new Date(s.admission_date).toLocaleDateString() %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="3" style="text-align: center;">No recent admissions.
+                                                    </td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+    </div>
+    <%- include('../partials/footer') %>

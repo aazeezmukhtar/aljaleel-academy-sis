@@ -1,0 +1,46 @@
+<%- include('../partials/header') %>
+
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header class="content-header">
+            <div>
+                <a href="javascript:history.back()" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back</a>
+                <h1 style="margin-top: 10px;"><%= announcement.title %></h1>
+                <p class="text-muted">Posted on <%= new Date(announcement.created_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+            </div>
+            <% if (user && user.role === 'Admin') { %>
+                <a href="/announcements" class="btn btn-outline">Manage All</a>
+            <% } %>
+        </header>
+
+        <div class="card" style="max-width: 800px; margin: 0 auto; padding: 40px;">
+            <% if (announcement.image_path) { %>
+                <img src="/uploads/<%= announcement.image_path %>" alt="<%= announcement.title %>" style="width: 100%; border-radius: 12px; margin-bottom: 30px; max-height: 400px; object-fit: cover;">
+            <% } %>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+                <span class="badge <%= announcement.type === 'Event' ? 'badge-danger' : 'badge-primary' %>" style="font-size: 0.8rem; padding: 6px 12px;">
+                    <%= announcement.type.toUpperCase() %>
+                </span>
+                <% if (announcement.type === 'Event' && announcement.event_date) { %>
+                    <span class="badge badge-warning" style="font-size: 0.8rem; padding: 6px 12px;">
+                        <i class="bi bi-calendar-event"></i> <%= new Date(announcement.event_date).toLocaleDateString() %>
+                    </span>
+                <% } %>
+            </div>
+
+            <div class="announcement-content" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-primary);">
+                <%- announcement.content.replace(/\n/g, '<br>') %>
+            </div>
+
+            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+                <span class="text-muted" style="font-size: 0.9rem;">Target: <strong><%= announcement.target_role %></strong></span>
+                <button onclick="window.print()" class="btn btn-sm btn-outline"><i class="bi bi-printer"></i> Print</button>
+            </div>
+        </div>
+    </main>
+</div>
+
+<%- include('../partials/footer') %>

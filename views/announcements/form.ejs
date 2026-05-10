@@ -1,0 +1,76 @@
+<%- include('../partials/header') %>
+
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 30px;">
+            <a href="/announcements" class="btn-text" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to List</a>
+            <h1 style="margin-top: 10px;">Create New Announcement</h1>
+        </header>
+
+        <div class="card" style="max-width: 800px;">
+            <form action="/announcements/create" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Announcement Title</label>
+                    <input type="text" name="title" class="form-control" placeholder="Enter a catchy title" required>
+                </div>
+
+                <div class="grid-3" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Post Type</label>
+                        <select name="type" id="typeSelect" class="form-control" onchange="toggleEventDate()">
+                            <option value="Announcement">Announcement</option>
+                            <option value="Event">Event / Deadline</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="eventDateGroup" style="display: none;">
+                        <label>Event Date</label>
+                        <input type="date" name="event_date" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Target Audience</label>
+                        <select name="target_role" class="form-control">
+                            <option value="All">All (Staff & Students)</option>
+                            <option value="Staff">Staff Only</option>
+                            <option value="Students">Students Only</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select name="is_published" class="form-control">
+                            <option value="1">Publish Immediately</option>
+                            <option value="0">Save as Draft</option>
+                        </select>
+                    </div>
+                </div>
+
+                <script>
+                    function toggleEventDate() {
+                        const type = document.getElementById('typeSelect').value;
+                        const group = document.getElementById('eventDateGroup');
+                        group.style.display = type === 'Event' ? 'block' : 'none';
+                    }
+                </script>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Content</label>
+                    <textarea name="content" class="form-control" rows="8" placeholder="Write your announcement message here..." required></textarea>
+                </div>
+
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Featured Image (Optional)</label>
+                    <input type="file" name="image" class="form-control" accept="image/*">
+                    <p class="text-muted" style="font-size: 0.8rem; margin-top: 5px;">Images will be displayed at the top of the announcement.</p>
+                </div>
+
+                <div style="margin-top: 30px; display: flex; gap: 10px;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Broadcast Announcement</button>
+                    <a href="/announcements" class="btn btn-outline" style="flex: 1; text-align: center;">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </main>
+</div>
+
+<%- include('../partials/footer') %>

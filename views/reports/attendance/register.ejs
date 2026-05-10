@@ -1,0 +1,246 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header no-print">
+                <div class="header-left">
+                    <a href="/reports/attendance" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Monthly Attendance Register</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="attendance_register.csv">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print Register
+                    </button>
+                </div>
+            </header>
+
+            <div class="card no-print settings-card">
+                <form action="/reports/attendance/register" method="GET" class="filter-form">
+                    <div class="form-group">
+                        <label>Class</label>
+                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                        <select name="class_id" required>
+                            <option value="">Select Class</option>
+                            <% classes.forEach(c=> { %>
+                                <option value="<%= c.id %>" <%=query.class_id==c.id ? 'selected' : '' %>><%= c.name %>
+                                </option>
+                                <% }) %>
+                        </select>
+                        <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                        <input type="hidden" name="class_id" value="<%= classes[0].id %>">
+                        <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
+                        <% } %>
+                    </div>
+                    <div class="form-group">
+                        <label>Month</label>
+                        <select name="month" required>
+                            <% for(let i=1; i<=12; i++) { %>
+                                <option value="<%= i %>" <%=query.month==i ? 'selected' : '' %>><%= new Date(0,
+                                        i-1).toLocaleString('default', { month: 'long' }) %>
+                                </option>
+                                <% } %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Year</label>
+                        <select name="year" required>
+                            <% const currentYear=new Date().getFullYear(); %>
+                                <option value="<%= currentYear %>" <%=query.year==currentYear ? 'selected' : '' %>><%=
+                                        currentYear %>
+                                </option>
+                                <option value="<%= currentYear - 1 %>" <%=query.year==currentYear - 1 ? 'selected' : ''
+                                    %>><%= currentYear - 1 %>
+                                </option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Load</button>
+                </form>
+            </div>
+
+            <% if (registerData) { %>
+                <div class="report-paper landscape">
+                    <div class="report-header">
+                        <h2>Attendance Register - <%= registerData.class_name %>
+                        </h2>
+                        <p>
+                            <%= new Date(query.year, query.month - 1).toLocaleString('default', { month: 'long' ,
+                                year: 'numeric' }) %>
+                        </p>
+                    </div>
+
+                    <div class="table-container">
+                        <table class="report-table register-table">
+                            <thead>
+                                <tr>
+                                    <th class="sticky-col name-col">Student Name</th>
+                                    <% registerData.days.forEach(day=> { %>
+                                        <th class="day-col">
+                                            <%= day %>
+                                        </th>
+                                        <% }) %>
+                                            <th class="summary-col">P</th>
+                                            <th class="summary-col">A</th>
+                                            <th class="summary-col">L</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% registerData.students.forEach(student=> { %>
+                                    <tr>
+                                        <td class="sticky-col name-col">
+                                            <%= student.last_name.toUpperCase() %>, <%= student.first_name %>
+                                        </td>
+                                        <% registerData.days.forEach(day=> { %>
+                                            <% const status=student.attendance[day]; %>
+                                                <td class="status-<%= status ? status.toLowerCase() : 'none' %>">
+                                                    <% if (status==='Present' ) { %>/<% } else if (status==='Absent' ) {
+                                                            %>A<% } else if (status==='Late' ) { %>L<% } else { %>.<% }
+                                                                        %>
+                                                </td>
+                                                <% }) %>
+                                                    <td class="summary-col"><strong>
+                                                            <%= student.summary.present %>
+                                                        </strong></td>
+                                                    <td class="summary-col">
+                                                        <%= student.summary.absent %>
+                                                    </td>
+                                                    <td class="summary-col">
+                                                        <%= student.summary.late %>
+                                                    </td>
+                                    </tr>
+                                    <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="legend no-print">
+                        <span><strong>/</strong> Present</span>
+                        <span><strong>A</strong> Absent</span>
+                        <span><strong>L</strong> Late</span>
+                    </div>
+                </div>
+                <% } %>
+        </main>
+
+        <style>
+            .filter-form {
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+
+            .report-paper {
+                background: white;
+                padding: 30px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                margin: 0 auto;
+                overflow-x: auto;
+            }
+
+            .report-header {
+                text-align: center;
+                margin-bottom: 20px;
+                border-bottom: 2px solid #eee;
+                padding-bottom: 10px;
+            }
+
+            .register-table {
+                font-size: 0.8rem;
+                border-collapse: collapse;
+                min-width: 100%;
+            }
+
+            .register-table th,
+            .register-table td {
+                border: 1px solid #ddd;
+                padding: 4px;
+                text-align: center;
+            }
+
+            .name-col {
+                text-align: left;
+                min-width: 150px;
+                font-weight: 500;
+                background: #fff;
+            }
+
+            .day-col {
+                width: 25px;
+            }
+
+            .status-present {
+                color: green;
+                background: #f0fdf4;
+            }
+
+            .status-absent {
+                color: red;
+                background: #fef2f2;
+                font-weight: bold;
+            }
+
+            .status-late {
+                color: orange;
+                background: #fff7ed;
+                font-weight: bold;
+            }
+
+            .status-none {
+                color: #eee;
+            }
+
+            .summary-col {
+                background: #f8fafc;
+                font-weight: 600;
+                width: 30px;
+            }
+
+            .legend {
+                margin-top: 10px;
+                display: flex;
+                gap: 20px;
+                font-size: 0.85rem;
+                color: #666;
+                justify-content: flex-end;
+            }
+
+            @media print {
+                @page {
+                    size: A4 landscape;
+                    margin: 10mm;
+                }
+
+                body * {
+                    visibility: hidden;
+                }
+
+                .report-paper,
+                .report-paper * {
+                    visibility: visible;
+                }
+
+                .report-paper {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    box-shadow: none;
+                    padding: 0;
+                    margin: 0;
+                }
+
+                .main-content {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                .no-print {
+                    display: none !important;
+                }
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

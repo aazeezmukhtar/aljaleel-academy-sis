@@ -1,0 +1,146 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header" style="margin-bottom: 30px;">
+                    <div>
+                        <h1>Affective & Psychomotor Traits</h1>
+                        <p class="text-muted">Record behavioral and physical development traits for students.</p>
+                    </div>
+                    <a href="/results?class_id=<%= filters.class_id %>" class="btn btn-outline">Back to Result
+                        Manager</a>
+                </header>
+
+                <section class="card" style="margin-bottom: 30px;">
+                    <form action="/results/traits" method="GET"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; align-items: end;">
+                        <div class="form-group">
+                            <label>Select Class</label>
+                            <select name="class_id" required class="form-control">
+                                <option value="">-- Choose Class --</option>
+                                <% classes.forEach(c=> { %>
+                                    <option value="<%= c.id %>" <%=filters.class_id==c.id ? 'selected' : '' %>><%=
+                                            c.name %>
+                                    </option>
+                                    <% }) %>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Term & Session</label>
+                            <div style="display: flex; gap: 10px;">
+                                <select name="term" required class="form-control">
+                                    <option value="1st Term" <%=filters.term=='1st Term' ? 'selected' : '' %>>1st Term
+                                    </option>
+                                    <option value="2nd Term" <%=filters.term=='2nd Term' ? 'selected' : '' %>>2nd Term
+                                    </option>
+                                    <option value="3rd Term" <%=filters.term=='3rd Term' ? 'selected' : '' %>>3rd Term
+                                    </option>
+                                </select>
+                                <select name="session" required class="form-control">
+                                    <option value="2025/2026" <%=filters.session=='2025/2026' ? 'selected' : '' %>
+                                        >2025/2026</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Load Class</button>
+                    </form>
+                </section>
+
+                <% if (students.length> 0) { %>
+                    <section class="card">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Record traits for <%= students.length %> Students</h3>
+                            <button class="btn btn-success" onclick="saveAllTraits()">Save All Traits</button>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="data-table" id="traits-table">
+                                <thead>
+                                    <tr>
+                                        <th>Student Name</th>
+                                        <% traitNames.forEach(name=> { %>
+                                            <th style="text-align: center; font-size: 0.75rem;">
+                                                <%= name %>
+                                            </th>
+                                            <% }) %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% students.forEach(student=> { %>
+                                        <tr data-student-id="<%= student.id %>">
+                                            <td><strong>
+                                                    <%= student.name %>
+                                                </strong></td>
+                                            <% traitNames.forEach(name=> { %>
+                                                <td style="text-align: center;">
+                                                    <select class="form-control trait-select" data-trait="<%= name %>"
+                                                        style="width: 60px; padding: 4px; font-size: 0.8rem;">
+                                                        <% for(let i=1; i<=5; i++) { %>
+                                                            <option value="<%= i %>" <%=student.traits[name]==i
+                                                                ? 'selected' : '' %>><%= i %>
+                                                            </option>
+                                                            <% } %>
+                                                    </select>
+                                                </td>
+                                                <% }) %>
+                                        </tr>
+                                        <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                    <% } %>
+            </main>
+    </div>
+
+    <script>
+        async function saveAllTraits() {
+            const rows = document.querySelectorAll('#traits-table tbody tr');
+            const traits = {};
+
+            rows.forEach(row => {
+                const studentId = row.dataset.studentId;
+                traits[studentId] = {};
+                row.querySelectorAll('.trait-select').forEach(select => {
+                    traits[studentId][select.dataset.trait] = select.value;
+                });
+            });
+
+            const data = {
+                term: '<%= filters.term %>',
+                session: '<%= filters.session %>',
+                traits
+            };
+
+            try {
+                const btn = document.querySelector('button[onclick="saveAllTraits()"]');
+                btn.disabled = true;
+                btn.innerText = 'Saving...';
+
+                const response = await fetch('/results/traits/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const res = await response.json();
+
+                if (res.success) {
+                    alert('Traits saved successfully!');
+                } else {
+                    alert('Error skipping traits.');
+                }
+                btn.disabled = false;
+                btn.innerText = 'Save All Traits';
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred.');
+                btn.disabled = false;
+                btn.innerText = 'Save All Traits';
+            }
+        }
+    </script>
+
+    <%- include('../partials/footer') %>

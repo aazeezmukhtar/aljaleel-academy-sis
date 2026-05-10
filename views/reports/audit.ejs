@@ -1,0 +1,88 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <div>
+                        <h1>System Audit Logs</h1>
+                        <p>Track all administrative and academic activities across the system.</p>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="bi bi-printer"></i>
+                            Print Log</button>
+                    </div>
+                </header>
+
+                <div class="card">
+                    <div class="table-container mobile-cards">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>User</th>
+                                    <th>Module</th>
+                                    <th>Action</th>
+                                    <th>Details</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (logs.length> 0) { %>
+                                    <% logs.forEach(log=> { %>
+                                        <tr>
+                                            <td data-label="Timestamp"
+                                                style="white-space: nowrap; font-size: 0.85rem; color: var(--text-muted);">
+                                                <%= new Date(log.timestamp).toLocaleString('en-GB') %>
+                                            </td>
+                                            <td data-label="User">
+                                                <div style="display: flex; flex-direction: column; text-align: right;">
+                                                    <strong>
+                                                        <%= log.last_name %>, <%= log.first_name %>
+                                                    </strong>
+                                                    <code
+                                                        style="font-size: 0.75rem; color: var(--school-primary);"><%= log.staff_id %></code>
+                                                </div>
+                                            </td>
+                                            <td data-label="Module">
+                                                <span class="badge" style="background: #f1f5f9; color: #475569;">
+                                                    <%= log.module %>
+                                                </span>
+                                            </td>
+                                            <td data-label="Action">
+                                                <span class="badge" style="
+                                                    background: <%= log.action.includes('SAVE') || log.action.includes('UPDATE') ? '#dcfce7' : (log.action.includes('LOGIN') ? '#e0f2fe' : '#f1f5f9') %>;
+                                                    color: <%= log.action.includes('SAVE') || log.action.includes('UPDATE') ? '#15803d' : (log.action.includes('LOGIN') ? '#0369a1' : '#475569') %>;
+                                                ">
+                                                    <%= log.action %>
+                                                </span>
+                                            </td>
+                                            <td data-label="Details" style="max-width: 300px; font-size: 0.85rem;">
+                                                <div
+                                                    style="background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #f1f5f9; overflow-x: auto; text-align: left;">
+                                                    <code><%= log.details %></code>
+                                                </div>
+                                            </td>
+                                            <td data-label="IP Address"
+                                                style="font-family: monospace; font-size: 0.85rem; color: var(--text-muted);">
+                                                <%= log.ip_address %>
+                                            </td>
+                                        </tr>
+                                        <% }) %>
+                                            <% } else { %>
+                                                <tr>
+                                                    <td colspan="6"
+                                                        style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                                        No logs available yet.</td>
+                                                </tr>
+                                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

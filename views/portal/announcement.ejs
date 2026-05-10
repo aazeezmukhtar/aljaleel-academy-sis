@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --school-primary: <%= school.primary_color || '#6366f1' %>;
+        }
+        body {
+            background: #f1f5f9;
+            color: #1e293b;
+            font-family: 'Inter', sans-serif;
+            margin: 0; padding: 0;
+        }
+
+        .portal-nav {
+            background: var(--school-primary);
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .portal-nav h2 { margin: 0; font-family: 'Playfair Display', serif; font-size: 1.4rem; }
+
+        .portal-main {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/notification_bar') %>
+
+    <nav class="portal-nav">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="/portal" style="color: white; text-decoration: none;"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+        </div>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <a href="/auth/student-logout" style="color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
+                <i class="bi bi-box-arrow-right"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <main class="portal-main">
+        <div class="card" style="padding: 40px; background: white; border-radius: 20px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+            <h1 style="margin-top: 0; margin-bottom: 10px; color: #0f172a;"><%= announcement.title %></h1>
+            <p style="color: #64748b; font-weight: 500; font-size: 0.9rem; margin-bottom: 30px;">
+                Posted on <%= new Date(announcement.created_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %>
+            </p>
+
+            <% if (announcement.image_path) { %>
+                <img src="/uploads/<%= announcement.image_path %>" alt="Announcement Image" style="width: 100%; border-radius: 12px; margin-bottom: 30px; max-height: 400px; object-fit: cover;">
+            <% } %>
+
+            <div style="display: flex; gap: 10px; margin-bottom: 25px;">
+                <span style="background: #eef2ff; color: var(--school-primary); padding: 6px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: 700;">
+                    <%= announcement.type.toUpperCase() %>
+                </span>
+                <% if (announcement.type === 'Event' && announcement.event_date) { %>
+                    <span style="background: #fffbeb; color: #d97706; padding: 6px 12px; border-radius: 50px; font-size: 0.8rem; font-weight: 700;">
+                        <i class="bi bi-calendar-event"></i> <%= new Date(announcement.event_date).toLocaleDateString() %>
+                    </span>
+                <% } %>
+            </div>
+
+            <div style="font-size: 1.1rem; line-height: 1.8; color: #334155;">
+                <%- announcement.content.replace(/\n/g, '<br>') %>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

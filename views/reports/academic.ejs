@@ -1,0 +1,89 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header"
+                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+                    <div>
+                        <h1>Academic Performance Reports</h1>
+                        <p>High-level insights into class and subject performance.</p>
+                    </div>
+                </header>
+
+                <div class="grid-2">
+                    <div class="card">
+                        <h3>Class-Level Averages</h3>
+                        <div class="table-container" style="margin-top: 20px;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Class Name</th>
+                                        <th>Average Score</th>
+                                        <th>Results Count</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (classPerf.length> 0) { %>
+                                        <% classPerf.forEach(perf=> { %>
+                                            <tr>
+                                                <td><strong>
+                                                        <%= perf.class_name %>
+                                                    </strong></td>
+                                                <td>
+                                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                                        <span style="font-weight: 700;">
+                                                            <%= perf.avg_score.toFixed(2) %>%
+                                                        </span>
+                                                        <div
+                                                            style="flex-grow: 1; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; width: 60px;">
+                                                            <div
+                                                                style="width: <%= perf.avg_score %>%; height: 100%; background: <%= perf.avg_score >= 60 ? '#10b981' : (perf.avg_score >= 40 ? '#f59e0b' : '#ef4444') %>;">
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <%= perf.result_count %>
+                                                </td>
+                                                <td>
+                                                    <span class="badge" style="
+                                                        background: <%= perf.avg_score >= 60 ? '#dcfce7' : (perf.avg_score >= 40 ? '#fef3c7' : '#fee2e2') %>;
+                                                        color: <%= perf.avg_score >= 60 ? '#15803d' : (perf.avg_score >= 40 ? '#92400e' : '#b91c1c') %>;
+                                                    ">
+                                                        <%= perf.avg_score>= 60 ? 'Healthy' : (perf.avg_score >= 40 ?
+                                                            'Fair' : 'Needs Review') %>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                            <% }) %>
+                                                <% } else { %>
+                                                    <tr>
+                                                        <td colspan="4"
+                                                            style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                                            No performance data available.</td>
+                                                    </tr>
+                                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>Reporting Tips</h3>
+                        <p class="text-muted" style="margin-top: 15px; line-height: 1.6;">
+                            Use these reports to identify classes that may need additional academic support.
+                            <br><br>
+                            <strong>Averages</strong> are calculated across all subjects for the current session.
+                            <br><br>
+                            For detailed student-level reports, use the <strong>Results Manager</strong> or <strong>Bulk
+                                Report</strong> features.
+                        </p>
+                    </div>
+                </div>
+            </main>
+    </div>
+
+    <%- include('../partials/footer') %>

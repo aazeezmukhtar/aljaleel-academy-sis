@@ -1,0 +1,147 @@
+<%- include('../partials/header') %>
+
+    <div class="dashboard-container">
+        <%- include('../partials/sidebar') %>
+
+            <main class="main-content">
+                <header class="content-header">
+                    <div>
+                        <h1>Edit Student</h1>
+                        <p class="text-muted">Update details for <%= student.first_name %>
+                                <%= student.last_name %>
+                        </p>
+                    </div>
+                    <a href="/students/view/<%= student.id %>" class="btn btn-outline">
+                        <i class="bi bi-arrow-left"></i> Back to Profile
+                    </a>
+                </header>
+
+                <div class="card" style="max-width: 800px; margin: 0 auto; padding: 30px;">
+                    <form id="editStudentForm" enctype="multipart/form-data">
+                        <input type="hidden" name="existing_photo" value="<%= student.passport_photo_path %>">
+
+                        <h3 style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Personal
+                            Information</h3>
+                        <div class="form-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <div class="form-group">
+                                <label>First Name</label>
+                                <input type="text" name="first_name" class="form-control"
+                                    value="<%= student.first_name %>" required placeholder="e.g. John">
+                            </div>
+                            <div class="form-group">
+                                <label>Last Name</label>
+                                <input type="text" name="last_name" class="form-control"
+                                    value="<%= student.last_name %>" required placeholder="e.g. Doe">
+                            </div>
+                            <div class="form-group">
+                                <label>Gender</label>
+                                <select name="gender" class="form-control" required>
+                                    <option value="Male" <%=student.gender==='Male' ? 'selected' : '' %>>Male</option>
+                                    <option value="Female" <%=student.gender==='Female' ? 'selected' : '' %>>Female
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date of Birth</label>
+                                <input type="date" name="dob" class="form-control" value="<%= student.dob %>" required>
+                            </div>
+                        </div>
+
+                        <h3
+                            style="margin-top: 30px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                            Academic Details</h3>
+                        <div class="form-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <div class="form-group">
+                                <label>Student ID</label>
+                                <input type="text" name="admission_number" class="form-control"
+                                    value="<%= student.admission_number %>" placeholder="e.g. ADM/2024/001">
+                            </div>
+                            <div class="form-group">
+                                <label>Class</label>
+                                <select name="current_class_id" class="form-control">
+                                    <option value="">Select Class</option>
+                                    <% classes.forEach(c=> { %>
+                                        <option value="<%= c.id %>" <%=student.current_class_id==c.id ? 'selected' : ''
+                                            %>><%= c.name %>
+                                        </option>
+                                        <% }) %>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Status</label>
+                                <select name="status" class="form-control" required>
+                                    <option value="active" <%=student.status==='active' ? 'selected' : '' %>>Active
+                                    </option>
+                                    <option value="withdrawn" <%=student.status==='withdrawn' ? 'selected' : '' %>
+                                        >Withdrawn</option>
+                                    <option value="graduated" <%=student.status==='graduated' ? 'selected' : '' %>
+                                        >Graduated</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <h3
+                            style="margin-top: 30px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                            Parent/Guardian Contact</h3>
+                        <div class="form-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <div class="form-group">
+                                <label>Parent Phone Number</label>
+                                <input type="tel" name="parent_phone" class="form-control"
+                                    value="<%= student.parent_phone %>" placeholder="e.g. +234 800 000 0000">
+                            </div>
+                            <div class="form-group" style="grid-column: span 1;">
+                                <label>Parent Address</label>
+                                <textarea name="parent_address" class="form-control"
+                                    placeholder="Residential Address"><%= student.parent_address %></textarea>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 20px;">
+                            <label>Update Passport Photo</label>
+                            <input type="file" name="passport" class="form-control" accept="image/*">
+                            <% if (student.passport_photo_path) { %>
+                                <div style="margin-top: 10px;">
+                                    <img src="<%= student.passport_photo_path %>"
+                                        style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px;">
+                                </div>
+                                <% } %>
+                        </div>
+
+                        <div style="margin-top: 40px; display: flex; gap: 15px;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1;">Update Student
+                                Profile</button>
+                            <a href="/students" class="btn btn-outline" style="flex: 1; text-align: center;">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </main>
+    </div>
+
+    <script>
+        document.getElementById('editStudentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+
+            try {
+                const response = await fetch('/students/update/<%= student.id %>', {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Student updated successfully!');
+                    window.location.href = '/students/view/<%= student.id %>';
+                } else {
+                    alert('Error: ' + result.message);
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred during update.');
+            }
+        });
+    </script>
+
+    <%- include('../partials/footer') %>

@@ -1,0 +1,160 @@
+<%- include('../../partials/header') %>
+    <%- include('../../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header no-print">
+                <div class="header-left">
+                    <a href="/reports/health" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
+                    <h1>Emergency Contacts</h1>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-primary btn-export" data-filename="emergency_contacts.csv">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+                    </button>
+                    <button onclick="window.print()" class="btn btn-secondary">
+                        <i class="bi bi-printer"></i> Print List
+                    </button>
+                </div>
+            </header>
+
+            <div class="card no-print settings-card">
+                <form action="/reports/health/contacts" method="GET" class="filter-form">
+                    <div class="form-group">
+                        <label>Class</label>
+                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                        <select name="class_id" required>
+                            <option value="">Select Class</option>
+                            <% classes.forEach(c=> { %>
+                                <option value="<%= c.id %>" <%=query.class_id==c.id ? 'selected' : '' %>><%= c.name %>
+                                </option>
+                                <% }) %>
+                        </select>
+                        <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                        <input type="hidden" name="class_id" value="<%= classes[0].id %>">
+                        <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
+                        <% } %>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Load List</button>
+                </form>
+            </div>
+
+            <% if (contacts.length> 0) { %>
+                <div class="report-paper">
+                    <div class="report-header">
+                        <h2>Emergency Contact List</h2>
+                        <p>
+                            <%= contacts[0].class_name %> - <%= new Date().toLocaleDateString('en-GB') %>
+                        </p>
+                    </div>
+
+                    <table class="report-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">S/N</th>
+                                <th>Student Name</th>
+                                <th>Contact Person</th>
+                                <th>Phone Number</th>
+                                <th>Blood Group</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% contacts.forEach((contact, index)=> { %>
+                                <tr>
+                                    <td>
+                                        <%= index + 1 %>
+                                    </td>
+                                    <td>
+                                        <%= contact.last_name.toUpperCase() %>, <%= contact.first_name %>
+                                    </td>
+                                    <td>
+                                        <%= contact.contact_name || 'N/A' %>
+                                    </td>
+                                    <td style="font-weight: 500;">
+                                        <%= contact.contact_phone || 'N/A' %>
+                                    </td>
+                                    <td>
+                                        <%= contact.blood_group || '-' %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } else if (query.class_id) { %>
+                    <div class="empty-state">
+                        <i class="bi bi-person-lines-fill"></i>
+                        <p>No student contacts found for this class.</p>
+                    </div>
+                    <% } %>
+        </main>
+
+        <style>
+            .filter-form {
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+
+            .report-paper {
+                background: white;
+                padding: 40px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                max-width: 210mm;
+                margin: 0 auto;
+            }
+
+            .report-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.95rem;
+            }
+
+            .report-table th,
+            .report-table td {
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: left;
+            }
+
+            .report-table th {
+                background: #f8f9fa;
+            }
+
+            @media print {
+                @page {
+                    size: A4;
+                    margin: 10mm;
+                }
+
+                body * {
+                    visibility: hidden;
+                }
+
+                .report-paper,
+                .report-paper * {
+                    visibility: visible;
+                }
+
+                .report-paper {
+                    position: absolute;
+                    left: 0;
+                    top: 0;
+                    width: 100%;
+                    box-shadow: none;
+                    padding: 0;
+                    margin: 0;
+                }
+
+                .main-content {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                }
+
+                .no-print {
+                    display: none !important;
+                }
+            }
+        </style>
+
+        <%- include('../../partials/footer') %>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link rel="stylesheet" href="/css/report.css">
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        :root {
+            --school-primary: <%=school.primary_color || '#2c3e50' %>;
+            --primary: var(--school-primary);
+            --report-bg: #fff;
+            --report-text: #1a1a1a;
+            --accent-soft: #f4f7f9;
+        }
+
+        body {
+            background: #cbd5e0;
+            color: var(--report-text);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        .report-card {
+            background: var(--report-bg);
+            width: 210mm;
+            height: 297mm;
+            margin: 10mm auto;
+            padding: 12mm 15mm;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+            position: relative;
+            box-sizing: border-box;
+            overflow: hidden;
+            page-break-after: always;
+        }
+
+        /* Premium Watermark */
+        .report-card.has-watermark::after {
+            content: '<%= school.school_name %>';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 60pt;
+            color: rgba(0, 0, 0, 0.03);
+            white-space: nowrap;
+            z-index: 0;
+            pointer-events: none;
+            font-weight: 800;
+        }
+
+        .no-print button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s;
+        }
+
+        .no-print button:hover {
+            transform: translateY(-2px);
+        }
+
+        @media print {
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .report-card {
+                box-shadow: none;
+                margin: 0;
+                border: none;
+            }
+
+            .report-card:last-child {
+                page-break-after: auto;
+            }
+
+            .no-print {
+                display: none;
+            }
+
+            @page {
+                size: A4 portrait;
+                margin: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 100;">
+        <button onclick="window.print()" class="btn">Print High-Res PDF</button>
+        <button onclick="history.back()" class="btn" style="background:#555; margin-right: 10px;">Back</button>
+    </div>
+
+    <%- include('../partials/cumulative_content', { student, subjects, getGrade, position, classCount, session, school, grading, marksAnalysis }) %>
+</body>
+</html>

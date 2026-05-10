@@ -1,0 +1,101 @@
+<%- include('../partials/header') %>
+
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>General Announcements</h1>
+                <p class="text-muted">Broadcast messages to staff and students.</p>
+            </div>
+            <% if (user.role === 'Admin') { %>
+                <a href="/announcements/create" class="btn btn-primary"><i class="bi bi-megaphone"></i> New Announcement</a>
+            <% } %>
+        </header>
+
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="alert alert-success">
+                <i class="bi bi-check-circle-fill"></i> <%= success %>
+            </div>
+        <% } %>
+
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="alert alert-danger">
+                <i class="bi bi-exclamation-triangle-fill"></i> <%= error %>
+            </div>
+        <% } %>
+
+        <div class="card">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Title & Event Status</th>
+                            <th>Target</th>
+                            <th>Posted Date</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (announcements && announcements.length > 0) { %>
+                            <% announcements.forEach(post => { %>
+                                <tr>
+                                    <td>
+                                        <span class="badge" style="background: <%= post.type === 'Event' ? '#f43f5e' : '#64748b' %>; color: white;">
+                                            <i class="bi <%= post.type === 'Event' ? 'bi-calendar-event' : 'bi-megaphone' %>"></i> <%= post.type || 'Announcement' %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                                            <strong><%= post.title %></strong>
+                                            <% if (post.type === 'Event' && post.event_date) { %>
+                                                <% 
+                                                    const days = Math.ceil((new Date(post.event_date) - new Date()) / (1000 * 60 * 60 * 24));
+                                                    let statusColor = days > 7 ? '#10b981' : (days > 0 ? '#f59e0b' : '#ef4444');
+                                                %>
+                                                <span style="font-size: 0.75rem; color: <%= statusColor %>; font-weight: 700;">
+                                                    <i class="bi bi-clock-history"></i> 
+                                                    <%= days > 0 ? `Starts in ${days} day${days > 1 ? 's' : ''}` : (days === 0 ? 'Starts tomorrow' : 'Event ended') %>
+                                                </span>
+                                            <% } %>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge" style="background: <%= post.target_role === 'All' ? '#6366f1' : post.target_role === 'Staff' ? '#f59e0b' : '#10b981' %>; color: white;">
+                                            <%= post.target_role %>
+                                        </span>
+                                    </td>
+                                    <td><%= new Date(post.created_at).toLocaleDateString() %></td>
+                                    <td>
+                                        <span class="badge <%= post.is_published ? 'badge-success' : 'badge-warning' %>">
+                                            <%= post.is_published ? 'Active' : 'Draft' %>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div style="display: flex; gap: 10px; align-items: center;">
+                                            <form action="/announcements/toggle/<%= post.id %>" method="POST" style="margin:0;">
+                                                <button class="btn btn-sm btn-outline"><%= post.is_published ? 'Hide' : 'Show' %></button>
+                                            </form>
+                                            <form action="/announcements/delete/<%= post.id %>" method="POST" style="margin:0;" onsubmit="return confirm('Delete this announcement?');">
+                                                <button class="btn-text text-danger" style="background: none; border: none; font-size: 1.1rem; cursor: pointer;"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="5" style="text-align: center; padding: 40px; color: #64748b;">No announcements found.</td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+
+<%- include('../partials/footer') %>

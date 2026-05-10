@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --school-primary: <%= locals.school?.primary_color || '#6366f1' %>;
+        }
+        body {
+            background: #f1f5f9;
+            color: #1e293b;
+            font-family: 'Inter', sans-serif;
+            margin: 0; padding: 0;
+        }
+
+        .portal-nav {
+            background: var(--school-primary);
+            color: white;
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .portal-main {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+        
+        .badge {
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/notification_bar') %>
+
+    <nav class="portal-nav">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <a href="/portal" style="color: white; text-decoration: none;"><i class="bi bi-arrow-left"></i> Back to Dashboard</a>
+        </div>
+    </nav>
+
+    <main class="portal-main">
+        <header class="content-header" style="margin-bottom: 20px;">
+            <div>
+                <h1 style="margin: 0; color: #0f172a;">School Calendar</h1>
+                <p style="color: #64748b; margin-top: 5px;">Stay updated with upcoming school events and activities.</p>
+            </div>
+        </header>
+
+        <div class="card" style="background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Event</th>
+                            <th>Category</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (events && events.length > 0) { %>
+                            <% events.forEach(event => { %>
+                                <tr>
+                                    <td style="font-weight: 600; vertical-align: top;">
+                                        <%= new Date(event.event_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                                    </td>
+                                    <td>
+                                        <div style="font-weight: 700; color: #1e293b; font-size: 1.05rem; margin-bottom: 4px;"><%= event.title %></div>
+                                        <div style="font-size: 0.9rem; color: #64748b; line-height: 1.5;"><%= event.description || '' %></div>
+                                    </td>
+                                    <td style="vertical-align: top;">
+                                        <span class="badge" style="background: #eef2ff; color: var(--school-primary);">
+                                            <%= event.type || 'General' %>
+                                        </span>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr>
+                                <td colspan="3" style="text-align: center; padding: 40px; color: #94a3b8;">
+                                    <i class="bi bi-calendar-x" style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
+                                    No upcoming events scheduled.
+                                </td>
+                            </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

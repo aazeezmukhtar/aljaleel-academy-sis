@@ -1,0 +1,152 @@
+<%- include('../partials/header') %>
+    <%- include('../partials/sidebar') %>
+
+        <main class="main-content">
+            <header class="content-header">
+                <a href="/reports/academic" class="back-link"><i class="bi bi-arrow-left"></i> Back to Academic
+                    Reports</a>
+                <h1><i class="bi bi-card-checklist"></i> Print Report Cards</h1>
+                <p>Select a class and academic period to generate report cards for all students.</p>
+            </header>
+
+            <% if (error) { %>
+                <div class="alert alert-danger"
+                    style="margin-bottom: 20px; padding: 12px 16px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 8px; color: #dc2626;">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <%= error %>
+                </div>
+                <% } %>
+
+                    <div class="card" style="max-width: 600px;">
+                        <div class="card-body" style="padding: 30px;">
+                            <form id="bulkReportForm" method="GET" action="/results/bulk">
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label for="class_id"
+                                        style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-dark);">
+                                        <i class="bi bi-building"></i> Class
+                                    </label>
+                                    <select name="class_id" id="class_id" class="form-control" required
+                                        style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                                        <option value="">-- Select Class --</option>
+                                        <% classes.forEach(c=> { %>
+                                            <option value="<%= c.id %>" <%=filters.class_id==c.id ? 'selected' : '' %>>
+                                                <%= c.name %>
+                                            </option>
+                                            <% }) %>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 20px;">
+                                    <label for="term"
+                                        style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-dark);">
+                                        <i class="bi bi-calendar3"></i> Term
+                                    </label>
+                                    <select name="term" id="term" class="form-control" required
+                                        style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                                        <option value="">-- Select Term --</option>
+                                        <option value="1st Term" <%=filters.term==='1st Term' ? 'selected' : '' %>>1st
+                                            Term</option>
+                                        <option value="2nd Term" <%=filters.term==='2nd Term' ? 'selected' : '' %>>2nd
+                                            Term</option>
+                                        <option value="3rd Term" <%=filters.term==='3rd Term' ? 'selected' : '' %>>3rd
+                                            Term</option>
+                                        <option value="Cumulative" <%=filters.term==='Cumulative' ? 'selected' : '' %>>Cumulative
+                                            (Full Session)</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group" style="margin-bottom: 25px;">
+                                    <label for="session"
+                                        style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-dark);">
+                                        <i class="bi bi-journal-text"></i> Session
+                                    </label>
+                                    <select name="session" id="session" class="form-control" required
+                                        style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+                                        <option value="">-- Select Session --</option>
+                                        <option value="2024/2025" <%=filters.session==='2024/2025' ? 'selected' : '' %>
+                                            >2024/2025</option>
+                                        <option value="2025/2026" <%=filters.session==='2025/2026' ? 'selected' : '' %>
+                                            >2025/2026</option>
+                                        <option value="2026/2027" <%=filters.session==='2026/2027' ? 'selected' : '' %>
+                                            >2026/2027</option>
+                                    </select>
+                                </div>
+
+                                <% if (typeof user !== 'undefined' && user.role === 'Admin') { %>
+                                    <div style="display: flex; gap: 15px; margin-top: 10px;">
+                                        <button type="submit" class="btn btn-primary"
+                                            style="flex: 1; padding: 12px; font-size: 1rem; font-weight: 600; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                            <i class="bi bi-printer"></i> Generate Report Cards
+                                        </button>
+                                        <button type="button" class="btn" onclick="publishBulk()"
+                                            style="flex: 1; padding: 12px; font-size: 1rem; font-weight: 600; border-radius: 8px; background: transparent; border: 2px solid #16a34a; color: #16a34a; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                            <i class="bi bi-check-all"></i> Publish Results
+                                        </button>
+                                    </div>
+                                <% } else { %>
+                                    <button type="submit" class="btn btn-primary"
+                                        style="width: 100%; padding: 12px; font-size: 1rem; font-weight: 600; border-radius: 8px; border: none; background: var(--primary); color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <i class="bi bi-printer"></i> Generate Report Cards
+                                    </button>
+                                <% } %>
+                            </form>
+                        </div>
+                    </div>
+        </main>
+
+        <script>
+            async function publishBulk() {
+                const class_id = document.getElementById('class_id').value;
+                const term = document.getElementById('term').value;
+                const session = document.getElementById('session').value;
+
+                if (!term || !session) return alert('Session and Term are strictly required to publish results.');
+                
+                let confirmMsg = `Are you sure you want to PUBLISH results for ${term} ${session}?`;
+                if (!class_id) {
+                    confirmMsg = `WARNING: You did not select a Class! This will publish ALL RESULTS IN THE SYSTEM for ${term} ${session}. Do you want to proceed?`;
+                }
+
+                if (!confirm(confirmMsg)) return;
+
+                try {
+                    const res = await fetch('/results/publish-bulk', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ class_id, term, session })
+                    });
+                    const data = await res.json();
+                    alert(data.message);
+                } catch (err) {
+                    alert('Network error while attempting to publish results.');
+                }
+            }
+        </script>
+
+        <style>
+            .back-link {
+                display: inline-block;
+                margin-bottom: 10px;
+                color: var(--text-muted);
+                text-decoration: none;
+                font-size: 0.9rem;
+            }
+
+            .back-link:hover {
+                color: var(--primary);
+            }
+
+            .form-control:focus {
+                outline: none;
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 59, 130, 246), 0.1);
+            }
+
+            .btn:hover {
+                opacity: 0.9;
+                transform: translateY(-1px);
+                transition: all 0.2s;
+            }
+        </style>
+
+        <%- include('../partials/footer') %>

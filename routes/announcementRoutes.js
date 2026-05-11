@@ -5,8 +5,14 @@ const { isAdmin } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
 
+const os = require('os');
+const uploadDir = os.platform() === 'win32' ? './uploads/' : '/tmp/uploads/';
+if (!require('fs').existsSync(uploadDir)) {
+    require('fs').mkdirSync(uploadDir, { recursive: true });
+}
+
 const storage = multer.diskStorage({
-    destination: './uploads/',
+    destination: uploadDir,
     filename: (req, file, cb) => {
         cb(null, 'announcement-' + Date.now() + path.extname(file.originalname));
     }

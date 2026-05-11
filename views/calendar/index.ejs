@@ -60,30 +60,19 @@
                         
                         <div style="display: flex; flex-direction: column; gap: 15px;">
                             <% months[month].forEach(event => { %>
-                                <div class="card event-card" style="display: flex; gap: 20px; padding: 20px; transition: transform 0.2s;">
-                                    <div class="event-date-box" style="background: var(--accent-soft); color: var(--primary); padding: 15px; border-radius: 12px; text-align: center; min-width: 70px;">
-                                        <span style="display: block; font-size: 0.8rem; font-weight: 800; text-transform: uppercase;">
-                                            <%= new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' }) %>
-                                        </span>
-                                        <span style="display: block; font-size: 1.5rem; font-weight: 900;">
-                                            <%= new Date(event.event_date).getDate() %>
-                                        </span>
+                                <div class="card event-timeline-card" style="display: flex; gap: 20px; padding: 20px; margin-bottom: 15px; border-left: 5px solid <%= event.type === 'Exam' ? '#ef4444' : event.type === 'Holiday' ? '#10b981' : '#6366f1' %>;">
+                                    <div class="event-date-mini" style="text-align: center; min-width: 60px;">
+                                        <span style="display: block; font-size: 1.5rem; font-weight: 900; color: #1e293b;"><%= new Date(event.event_date).getDate() %></span>
+                                        <span style="display: block; font-size: 0.7rem; font-weight: 700; color: #64748b; text-transform: uppercase;"><%= new Date(event.event_date).toLocaleDateString('en-US', { weekday: 'short' }) %></span>
                                     </div>
-                                    <div class="event-details" style="flex: 1;">
-                                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                                            <h4 style="margin: 0; font-size: 1.1rem; color: var(--text-primary);"><%= event.title %></h4>
-                                            <% 
-                                                let badgeClass = 'badge-primary';
-                                                if(event.type === 'Exam') badgeClass = 'badge-danger';
-                                                if(event.type === 'Holiday') badgeClass = 'badge-success';
-                                                if(event.type === 'Deadline') badgeClass = 'badge-warning';
-                                            %>
-                                            <span class="badge <%= badgeClass %>" style="font-size: 0.7rem; letter-spacing: 0.05em;"><%= event.type.toUpperCase() %></span>
+                                    <div class="event-info" style="flex: 1;">
+                                        <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                            <h4 style="margin: 0; font-size: 1.1rem;"><%= event.title %></h4>
+                                            <span class="badge" style="background: <%= event.type === 'Exam' ? '#fee2e2' : event.type === 'Holiday' ? '#dcfce7' : '#e0f2fe' %>; color: <%= event.type === 'Exam' ? '#ef4444' : event.type === 'Holiday' ? '#16a34a' : '#0369a1' %>; font-size: 0.7rem;">
+                                                <%= event.type.toUpperCase() %>
+                                            </span>
                                         </div>
-                                        <p class="text-muted" style="font-size: 0.9rem; margin-bottom: 0;"><%= event.description || 'No additional details.' %></p>
-                                        <div style="margin-top: 10px; font-size: 0.75rem; color: #94a3b8; font-weight: 600;">
-                                            <i class="bi bi-clock"></i> <%= event.term %> • <%= event.session %>
-                                        </div>
+                                        <p style="margin: 0; font-size: 0.9rem; color: #64748b;"><%= event.description || 'General school activity' %></p>
                                     </div>
                                 </div>
                             <% }); %>

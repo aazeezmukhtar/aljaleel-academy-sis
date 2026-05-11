@@ -22,8 +22,10 @@ const getAcademicSettings = async () => {
     const settings = {};
     school.forEach(s => settings[s.key] = s.value);
     return {
-        session: settings.current_session || '2025/2026',
-        term: settings.current_term || 'First Term'
+    return {
+        session: settings.current_session || '2024/2025',
+        term: settings.current_term || '1st Term'
+    };
     };
 };
 
@@ -114,7 +116,8 @@ const saveAttendance = async (req, res) => {
             for (const [studentIdStr, status] of Object.entries(attendance || {})) {
                 const student_id = Number(studentIdStr);
                 if (isNaN(student_id)) continue;
-                await db.run(sql, [student_id, Number(class_id), date, status, session || '2025/2026', term || 'First Term']);
+                const settings = await getAcademicSettings();
+                await db.run(sql, [student_id, Number(class_id), date, status, session || settings.session, term || settings.term]);
             }
         });
 

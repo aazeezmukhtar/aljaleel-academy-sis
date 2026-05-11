@@ -21,7 +21,11 @@ const getSettingsPage = async (req, res) => {
 
 // Update Settings
 const updateSettings = async (req, res) => {
-    const { school_name, school_motto, primary_color, secondary_color, address, phone, next_term_start_date, show_watermark } = req.body;
+    const { 
+        school_name, school_motto, primary_color, secondary_color, 
+        address, phone, next_term_start_date, show_watermark,
+        current_session, current_term
+    } = req.body;
     const logoFile = req.file;
 
     const updates = [
@@ -32,7 +36,9 @@ const updateSettings = async (req, res) => {
         { key: 'address', value: address },
         { key: 'phone', value: phone },
         { key: 'next_term_start_date', value: next_term_start_date },
-        { key: 'show_watermark', value: show_watermark === 'true' ? 'true' : 'false' }
+        { key: 'show_watermark', value: show_watermark === 'true' ? 'true' : 'false' },
+        { key: 'current_session', value: current_session },
+        { key: 'current_term', value: current_term }
     ];
 
     if (logoFile) {
@@ -59,4 +65,48 @@ const updateSettings = async (req, res) => {
     }
 };
 
-module.exports = { getSettingsPage, updateSettings };
+// GET /settings/promotion
+const getPromotionPage = async (req, res) => {
+    try {
+        const classes = await db.all('SELECT * FROM classes ORDER BY name');
+        // Count students in each class
+        for (let c of classes) {
+            const count = await db.get('SELECT COUNT(*) as total FROM students WHERE current_class_id = ? AND status = \'active\'', [c.id]);
+            c.studentCount = count.total;
+        }
+        
+        res.render('settings/promotion', {
+            title: 'Session Transition & Promotion',
+            classes,
+            success: req.query.success,
+            error: req.query.error
+        });
+    } catch (err) {
+        console.error('Promotion Page Error:', err);
+        res.status(500).send('Database Error');
+    }
+};
+
+// POST /settings/promotion
+const processPromotion = async (req, res) => {
+    const { mapping } = req.body; // mapping will be { class_id: target_class_id or 'graduate' }
+    
+    try {
+        await db.transaction(async () => {
+            for (const [classId, targetId] of Object.entries(mapping)) {
+                if (targetId === 'graduate') {
+                    await db.run('UPDATE students SET status = \'graduated\' WHERE current_class_id = ? AND status = \'active\'', [classId]);
+                } else if (targetId && targetId !== 'none') {
+                    await db.run('UPDATE students SET current_class_id = ? WHERE current_class_id = ? AND status = \'active\'', [targetId, classId]);
+                }
+            }
+        });
+        
+        res.redirect('/settings/promotion?success=Promotion completed successfully');
+    } catch (err) {
+        console.error('Process Promotion Error:', err);
+        res.redirect('/settings/promotion?error=Promotion failed');
+    }
+};
+
+module.exports = { getSettingsPage, updateSettings, getPromotionPage, processPromotion };

@@ -101,7 +101,23 @@
                                                     class="form-control">
                                             </div>
 
-                                            <h4 style="margin-top: 30px; margin-bottom: 15px;">Report Settings</h4>
+                                            <h4 style="margin-top: 30px; margin-bottom: 15px;">Academic Session Configuration</h4>
+                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                                <div class="form-group">
+                                                    <label>Current Academic Session</label>
+                                                    <input type="text" name="current_session" value="<%= settings.current_session || '2025/2026' %>" required class="form-control" placeholder="e.g. 2025/2026">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Current Active Term</label>
+                                                    <select name="current_term" required class="form-control">
+                                                        <option value="1st Term" <%= settings.current_term === '1st Term' ? 'selected' : '' %>>1st Term</option>
+                                                        <option value="2nd Term" <%= settings.current_term === '2nd Term' ? 'selected' : '' %>>2nd Term</option>
+                                                        <option value="3rd Term" <%= settings.current_term === '3rd Term' ? 'selected' : '' %>>3rd Term</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <h4 style="margin-top: 30px; margin-bottom: 15px;">Report & Branding Settings</h4>
                                             <div class="form-group" style="margin-bottom: 20px;">
                                                 <label>Next Term Starts</label>
                                                 <input type="text" name="next_term_start_date"
@@ -120,6 +136,12 @@
 
                                             <button type="submit" class="btn btn-primary"
                                                 style="width: 100%; margin-top: 20px;">Save Changes</button>
+                                            
+                                            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc;">
+                                                <h4 style="color: #d32f2f;">Advanced: Session Transition</h4>
+                                                <p class="text-muted" style="font-size: 14px;">End the current academic year and promote students to their next classes.</p>
+                                                <a href="/settings/promotion" class="btn btn-outline" style="width: 100%; border-color: #d32f2f; color: #d32f2f;">Open Promotion Manager</a>
+                                            </div>
                                         </form>
                                     </section>
 

@@ -109,8 +109,8 @@
                     <div class="card">
                         <h3>Academic Context</h3>
                         <div style="margin-top: 15px;">
-                            <p><strong>Current Session:</strong> 2025/2026</p>
-                            <p><strong>Active Term:</strong> 1st Term</p>
+                            <p><strong>Current Session:</strong> <%= school.current_session || '2024/2025' %></p>
+                            <p><strong>Active Term:</strong> <%= school.current_term || '1st Term' %></p>
                             <hr style="margin: 15px 0; opacity: 0.1;">
                             <p class="text-muted" style="font-size: 0.85rem;">
                                 <i class="bi bi-info-circle"></i> Results entered here are subject to administrator

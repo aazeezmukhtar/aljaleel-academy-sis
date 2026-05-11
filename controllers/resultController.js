@@ -93,7 +93,7 @@ const saveGradingSystem = async (req, res) => {
 const getResultManager = async (req, res) => {
     const user = req.session.staff;
     const settings = await getSchoolSettings();
-    const activeSession = req.query.session || settings.current_session || '2025/2026';
+    const activeSession = req.query.session || settings.current_session || '2024/2025';
     const activeTerm = req.query.term || settings.current_term || '1st Term';
     const { class_id, subject_id } = req.query;
 

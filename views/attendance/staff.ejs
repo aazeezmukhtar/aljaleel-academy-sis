@@ -27,8 +27,8 @@
                 <section class="card">
                     <form id="staffAttendanceForm">
                         <input type="hidden" name="date" value="<%= date %>">
-                        <input type="hidden" name="session" value="2025/2026">
-                        <input type="hidden" name="term" value="1st Term">
+                        <input type="hidden" name="session" value="<%= school.current_session || '2024/2025' %>">
+                        <input type="hidden" name="term" value="<%= school.current_term || '1st Term' %>">
 
                         <!-- Staff Attendance list: stacks as cards on mobile -->
                         <div class="att-list">

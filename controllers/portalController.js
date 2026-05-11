@@ -77,7 +77,7 @@ exports.getDashboard = async (req, res) => {
         feeProgress,
         feeBalance,
         currentTerm: school.current_term || 'First',
-        currentSession: school.current_session || '2025/2026',
+        currentSession: school.current_session || '2024/2025',
         error: req.query.error
     });
 };

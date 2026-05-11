@@ -32,10 +32,19 @@ const upload = multer({
     }
 });
 
+const { isAdmin } = require('../middleware/authMiddleware');
+
+// Protected Routes (Admin Only)
+router.use(isAdmin);
+
 // GET /settings
 router.get('/', settingsController.getSettingsPage);
 
 // POST /settings/update
 router.post('/update', upload.single('school_logo'), settingsController.updateSettings);
+
+// Promotion Routes
+router.get('/promotion', settingsController.getPromotionPage);
+router.post('/promotion', settingsController.processPromotion);
 
 module.exports = router;

@@ -1,11 +1,13 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, '../../database.sqlite'));
+const db = require('../../utils/db');
 
-const getAttendanceDashboard = (req, res) => {
+const getAttendanceDashboard = async (req, res) => {
     const user = req.session.staff;
+    let query = "SELECT COUNT(*) as count FROM attendance WHERE date = date('now')";
+    if (db.DB_TYPE === 'postgres') {
+        query = "SELECT COUNT(*) as count FROM attendance WHERE date = CURRENT_DATE";
+    }
     const stats = {
-        total_records: db.prepare("SELECT COUNT(*) as count FROM attendance WHERE date = date('now')").get().count
+        total_records: (await db.get(query)).count
     };
 
     res.render('reports/attendance/index', {
@@ -15,33 +17,33 @@ const getAttendanceDashboard = (req, res) => {
     });
 };
 
-const getDailyAttendance = (req, res) => {
+const getDailyAttendance = async (req, res) => {
     const user = req.session.staff;
     const { class_id, date } = req.query;
 
     let classes;
     if (user.role === 'Admin') {
-        classes = db.prepare('SELECT * FROM classes').all();
+        classes = await db.all('SELECT * FROM classes');
     } else {
-        classes = db.prepare(`
+        classes = await db.all(`
             SELECT DISTINCT c.* 
             FROM classes c
             LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
             LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
             WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
             ORDER BY c.name ASC
-        `).all(user.id, user.id, user.id);
+        `, [user.id, user.id, user.id]);
     }
 
     let records = [];
     if (class_id && date) {
-        records = db.prepare(`
+        records = await db.all(`
             SELECT s.first_name, s.last_name, s.admission_number, a.status, a.date
             FROM students s
             JOIN attendance a ON s.id = a.student_id
             WHERE a.class_id = ? AND a.date = ?
             ORDER BY s.last_name, s.first_name
-        `).all(class_id, date);
+        `, [class_id, date]);
     }
 
     res.render('reports/attendance/daily', {
@@ -53,22 +55,22 @@ const getDailyAttendance = (req, res) => {
     });
 };
 
-const getRegister = (req, res) => {
+const getRegister = async (req, res) => {
     const user = req.session.staff;
     const { class_id, month, year } = req.query;
 
     let classes;
     if (user.role === 'Admin') {
-        classes = db.prepare('SELECT * FROM classes').all();
+        classes = await db.all('SELECT * FROM classes');
     } else {
-        classes = db.prepare(`
+        classes = await db.all(`
             SELECT DISTINCT c.* 
             FROM classes c
             LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
             LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
             WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
             ORDER BY c.name ASC
-        `).all(user.id, user.id, user.id);
+        `, [user.id, user.id, user.id]);
     }
 
     let registerData = null;
@@ -78,20 +80,20 @@ const getRegister = (req, res) => {
         const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
         const endDate = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-        const students = db.prepare(`
+        const students = await db.all(`
             SELECT id, first_name, last_name, admission_number
             FROM students
             WHERE current_class_id = ? AND status = 'active'
             ORDER BY last_name, first_name
-        `).all(class_id);
+        `, [class_id]);
 
-        const attendance = db.prepare(`
+        const attendance = await db.all(`
             SELECT student_id, date, status
             FROM attendance
             WHERE class_id = ? AND date BETWEEN ? AND ?
-        `).all(class_id, startDate, endDate);
+        `, [class_id, startDate, endDate]);
 
-        const clazz = db.prepare('SELECT name FROM classes WHERE id = ?').get(class_id);
+        const clazz = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);
 
         const formattedStudents = students.map(s => {
             const studentAttendance = {};
@@ -128,14 +130,14 @@ const getRegister = (req, res) => {
     });
 };
 
-const getLowAttendance = (req, res) => {
+const getLowAttendance = async (req, res) => {
     const user = req.session.staff;
     const { term, session, threshold } = req.query;
     const activeThreshold = threshold || 75;
 
     let students = [];
     if (term && session) {
-        students = db.prepare(`
+        let query = `
             SELECT 
                 s.first_name, s.last_name, s.admission_number, c.name as class_name,
                 SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present_days,
@@ -145,10 +147,28 @@ const getLowAttendance = (req, res) => {
             JOIN classes c ON s.current_class_id = c.id
             JOIN attendance a ON s.id = a.student_id
             WHERE a.term = ? AND a.session = ?
-            GROUP BY s.id
-            HAVING percentage < ? AND total_days > 0
+            GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+            HAVING (CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(a.id) * 100) < ? AND COUNT(a.id) > 0
             ORDER BY percentage ASC
-        `).all(term, session, activeThreshold);
+        `;
+        
+        if (db.DB_TYPE === 'postgres') {
+            query = `
+                SELECT 
+                    s.first_name, s.last_name, s.admission_number, c.name as class_name,
+                    SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present_days,
+                    COUNT(a.id) as total_days,
+                    ROUND((SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(a.id), 0) * 100)::numeric, 1) as percentage
+                FROM students s
+                JOIN classes c ON s.current_class_id = c.id
+                JOIN attendance a ON s.id = a.student_id
+                WHERE a.term = ? AND a.session = ?
+                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+                HAVING (SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END)::float / NULLIF(COUNT(a.id), 0) * 100) < ?
+                ORDER BY percentage ASC
+            `;
+        }
+        students = await db.all(query, [term, session, activeThreshold]);
     }
 
     res.render('reports/attendance/low', {

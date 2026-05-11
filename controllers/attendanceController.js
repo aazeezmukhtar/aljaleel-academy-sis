@@ -22,10 +22,8 @@ const getAcademicSettings = async () => {
     const settings = {};
     school.forEach(s => settings[s.key] = s.value);
     return {
-    return {
         session: settings.current_session || '2024/2025',
         term: settings.current_term || '1st Term'
-    };
     };
 };
 

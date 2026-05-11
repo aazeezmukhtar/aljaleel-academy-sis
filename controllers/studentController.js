@@ -112,7 +112,7 @@ const enrollStudent = async (req, res) => {
         parent_address
     } = req.body;
     
-    const admission_number = generateUniqueID();
+    const admission_number = await generateUniqueID();
     const passport_photo_path = req.file ? `/uploads/${req.file.filename}` : null;
 
     try {

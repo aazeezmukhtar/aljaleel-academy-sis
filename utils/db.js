@@ -34,7 +34,17 @@ async function all(sql, params = []) {
             pgSql += ' ON CONFLICT DO NOTHING';
         }
         // Handle boolean 1/0 for Postgres
-        const pgParams = params.map(p => typeof p === 'boolean' ? p : (p === 1 ? true : (p === 0 ? false : p)));
+        const pgParams = params.map(p => {
+            if (p === undefined) return null;
+            if (typeof p === 'boolean') return p;
+            if (p === 1 || p === 0) {
+                // If it's a numeric boolean (common in this app), keep it as is if the column is INTEGER, 
+                // but usually Postgres columns in this app are defined as INTEGER for booleans.
+                // However, some might be true/false. Let's be safe.
+                return p;
+            }
+            return p;
+        });
         const result = await pool.query(pgSql, pgParams);
         return result.rows;
     } else {
@@ -55,7 +65,17 @@ async function get(sql, params = []) {
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';
         }
-        const pgParams = params.map(p => typeof p === 'boolean' ? p : (p === 1 ? true : (p === 0 ? false : p)));
+        const pgParams = params.map(p => {
+            if (p === undefined) return null;
+            if (typeof p === 'boolean') return p;
+            if (p === 1 || p === 0) {
+                // If it's a numeric boolean (common in this app), keep it as is if the column is INTEGER, 
+                // but usually Postgres columns in this app are defined as INTEGER for booleans.
+                // However, some might be true/false. Let's be safe.
+                return p;
+            }
+            return p;
+        });
         const result = await pool.query(pgSql, pgParams);
         return result.rows[0];
     } else {
@@ -81,7 +101,12 @@ async function run(sql, params = []) {
             // But for simple "IGNORE" it often works.
             pgSql += ' ON CONFLICT DO NOTHING';
         }
-        const pgParams = params.map(p => typeof p === 'boolean' ? p : (p === 1 ? true : (p === 0 ? false : p)));
+        const pgParams = params.map(p => {
+            if (p === undefined) return null;
+            if (typeof p === 'boolean') return p;
+            if (p === 1 || p === 0) return p;
+            return p;
+        });
         const result = await pool.query(pgSql, pgParams);
         return { changes: result.rowCount, lastInsertRowid: null };
     } else {

@@ -27,7 +27,8 @@ if (DB_TYPE === 'postgres') {
  */
 async function all(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        let pgSql = sql.replace(/\?/g, (val, i) => `$${i + 1}`);
+        let counter = 1;
+        let pgSql = sql.replace(/\?/g, () => `$${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';
@@ -48,7 +49,8 @@ async function all(sql, params = []) {
  */
 async function get(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        let pgSql = sql.replace(/\?/g, (val, i) => `$${i + 1}`);
+        let counter = 1;
+        let pgSql = sql.replace(/\?/g, () => `$${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';
@@ -68,7 +70,8 @@ async function get(sql, params = []) {
  */
 async function run(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        let pgSql = sql.replace(/\?/g, (val, i) => `$${i + 1}`);
+        let counter = 1;
+        let pgSql = sql.replace(/\?/g, () => `$${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             // We need to know which columns are unique to use ON CONFLICT properly if it's not a generic IGNORE

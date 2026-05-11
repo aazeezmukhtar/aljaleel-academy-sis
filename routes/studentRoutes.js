@@ -3,7 +3,12 @@ const router = express.Router();
 const studentController = require('../controllers/studentController');
 const bulkStudentController = require('../controllers/bulkStudentController');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const os = require('os');
+const uploadDir = os.platform() === 'win32' ? 'uploads/' : '/tmp/uploads';
+if (!require('fs').existsSync(uploadDir)) {
+    require('fs').mkdirSync(uploadDir, { recursive: true });
+}
+const upload = multer({ dest: uploadDir });
 
 // GET /students
 router.get('/', studentController.getStudents);

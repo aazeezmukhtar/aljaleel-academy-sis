@@ -3,7 +3,12 @@ const router = express.Router();
 const resultController = require('../controllers/resultController');
 const importController = require('../controllers/importController');
 const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
+const os = require('os');
+const uploadDir = os.platform() === 'win32' ? 'uploads/' : '/tmp/uploads';
+if (!require('fs').existsSync(uploadDir)) {
+    require('fs').mkdirSync(uploadDir, { recursive: true });
+}
+const upload = multer({ dest: uploadDir });
 
 // GET /results - Dashboard
 router.get('/', resultController.getResultsDashboard);

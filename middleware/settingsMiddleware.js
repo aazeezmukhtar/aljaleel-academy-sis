@@ -1,10 +1,8 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, '../database.sqlite'));
+const db = require('../utils/db');
 
-const settingsMiddleware = (req, res, next) => {
+const settingsMiddleware = async (req, res, next) => {
     try {
-        const rows = db.prepare('SELECT key, value FROM settings').all();
+        const rows = await db.all('SELECT key, value FROM settings');
         const settings = {};
         rows.forEach(row => {
             settings[row.key] = row.value;

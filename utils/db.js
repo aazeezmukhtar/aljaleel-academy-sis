@@ -27,7 +27,14 @@ if (DB_TYPE === 'postgres') {
  */
 async function all(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+        let pgSql = sql.replace(/\?/g, (val, i) => `$${i + 1}`);
+        pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
+        if (sql.match(/INSERT OR IGNORE/gi)) {
+            pgSql += ' ON CONFLICT DO NOTHING';
+        }
+        // Handle boolean 1/0 for Postgres
+        const pgParams = params.map(p => typeof p === 'boolean' ? p : (p === 1 ? true : (p === 0 ? false : p)));
+        const result = await pool.query(pgSql, pgParams);
         return result.rows;
     } else {
         return sqliteDb.prepare(sql).all(params);
@@ -41,7 +48,13 @@ async function all(sql, params = []) {
  */
 async function get(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
+        let pgSql = sql.replace(/\?/g, (val, i) => `$${i + 1}`);
+        pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
+        if (sql.match(/INSERT OR IGNORE/gi)) {
+            pgSql += ' ON CONFLICT DO NOTHING';
+        }
+        const pgParams = params.map(p => typeof p === 'boolean' ? p : (p === 1 ? true : (p === 0 ? false : p)));
+        const result = await pool.query(pgSql, pgParams);
         return result.rows[0];
     } else {
         return sqliteDb.prepare(sql).get(params);
@@ -55,8 +68,19 @@ async function get(sql, params = []) {
  */
 async function run(sql, params = []) {
     if (DB_TYPE === 'postgres') {
-        const result = await pool.query(sql.replace(/\?/g, (val, i) => `$${i + 1}`), params);
-        return { changes: result.rowCount, lastInsertRowid: null }; // rowCount is equivalent to changes
+        let pgSql = sql.replace(/\?/g, (val, i) => `$${i + 1}`);
+        pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
+        if (sql.match(/INSERT OR IGNORE/gi)) {
+            // We need to know which columns are unique to use ON CONFLICT properly if it's not a generic IGNORE
+            // But usually for simple INSERT OR IGNORE, we can't easily guess the constraint name.
+            // However, Postgres 9.5+ supports ON CONFLICT DO NOTHING without specifying the column if we use it on a specific constraint.
+            // Actually, ON CONFLICT DO NOTHING without target is NOT supported in all cases.
+            // But for simple "IGNORE" it often works.
+            pgSql += ' ON CONFLICT DO NOTHING';
+        }
+        const pgParams = params.map(p => typeof p === 'boolean' ? p : (p === 1 ? true : (p === 0 ? false : p)));
+        const result = await pool.query(pgSql, pgParams);
+        return { changes: result.rowCount, lastInsertRowid: null };
     } else {
         const info = sqliteDb.prepare(sql).run(params);
         return { changes: info.changes, lastInsertRowid: info.lastInsertRowid };

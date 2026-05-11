@@ -1,13 +1,11 @@
-const Database = require('better-sqlite3');
-const path = require('path');
-const db = new Database(path.join(__dirname, '../database.sqlite'));
+const db = require('./db');
 
-const generateUniqueID = () => {
+const generateUniqueID = async () => {
     let admission_number;
     let unique = false;
     while (!unique) {
         admission_number = Math.floor(100000 + Math.random() * 900000).toString();
-        const existing = db.prepare("SELECT id FROM students WHERE admission_number = ?").get(admission_number);
+        const existing = await db.get("SELECT id FROM students WHERE admission_number = ?", [admission_number]);
         if (!existing) unique = true;
     }
     return admission_number;

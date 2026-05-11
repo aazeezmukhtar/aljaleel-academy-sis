@@ -1,7 +1,7 @@
 {
-  "name": "Nexus School Information System",
-  "short_name": "Nexus SIS",
-  "description": "Premium, Offline-First School Information System",
+  "name": "Al-Jaleel Academy",
+  "short_name": "Al-Jaleel Academy",
+  "description": "Premium School Information System for Al-Jaleel Academy",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",

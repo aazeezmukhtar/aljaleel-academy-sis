@@ -101,21 +101,8 @@
                                                     class="form-control">
                                             </div>
 
-                                            <h4 style="margin-top: 30px; margin-bottom: 15px;">Academic Session Configuration</h4>
-                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-                                                <div class="form-group">
-                                                    <label>Current Academic Session</label>
-                                                    <input type="text" name="current_session" value="<%= settings.current_session || '2025/2026' %>" required class="form-control" placeholder="e.g. 2025/2026">
-                                                </div>
-                                                <div class="form-group">
-                                                    <label>Current Active Term</label>
-                                                    <select name="current_term" required class="form-control">
-                                                        <option value="1st Term" <%= settings.current_term === '1st Term' ? 'selected' : '' %>>1st Term</option>
-                                                        <option value="2nd Term" <%= settings.current_term === '2nd Term' ? 'selected' : '' %>>2nd Term</option>
-                                                        <option value="3rd Term" <%= settings.current_term === '3rd Term' ? 'selected' : '' %>>3rd Term</option>
-                                                    </select>
-                                                </div>
-                                            </div>
+                                            <h4 style="margin-top: 30px; margin-bottom: 5px;">Academic Session</h4>
+                                            <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 15px;">Set independently for each section below.</p>
 
                                             <h4 style="margin-top: 30px; margin-bottom: 15px;">Report & Branding Settings</h4>
                                             <div class="form-group" style="margin-bottom: 20px;">
@@ -214,8 +201,42 @@
                                                 </div>
                                             </div>
                                         </div>
+
+                                   <div style="margin-top: 40px;">
+                                    <!-- Section Calendar Card -->
+                                    <section class="card">
+                                        <h3><i class="bi bi-calendar3"></i> Section Academic Calendar</h3>
+                                        <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 20px;">Set the current session and term for each section independently.</p>
+                                        <form action="/settings/section-calendar" method="POST">
+                                            <% sections.forEach(sec => { %>
+                                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                                                    <h4 style="margin-bottom: 15px; color: #1e293b;">
+                                                        <span style="background: <%= sec.name === 'Academy' ? '#e0e7ff' : '#fef3c7' %>; color: <%= sec.name === 'Academy' ? '#4338ca' : '#92400e' %>; padding: 3px 12px; border-radius: 20px; font-size: 0.85rem;">
+                                                            <%= sec.name %>
+                                                        </span>
+                                                    </h4>
+                                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                                        <div class="form-group">
+                                                            <label>Session</label>
+                                                            <input type="text" name="sections[<%= sec.id %>][session]" value="<%= sec.current_session || '' %>" class="form-control" placeholder="e.g. 2025/2026" required>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label>Current Term</label>
+                                                            <select name="sections[<%= sec.id %>][term]" class="form-control" required>
+                                                                <option value="1st Term" <%= sec.current_term === '1st Term' ? 'selected' : '' %>>1st Term</option>
+                                                                <option value="2nd Term" <%= sec.current_term === '2nd Term' ? 'selected' : '' %>>2nd Term</option>
+                                                                <option value="3rd Term" <%= sec.current_term === '3rd Term' ? 'selected' : '' %>>3rd Term</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <% }) %>
+                                            <button type="submit" class="btn btn-primary" style="width: 100%;">Update Section Calendars</button>
+                                        </form>
                                     </section>
                                 </div>
+                             </section>
+                                 </div>
             </main>
     </div>
 

@@ -24,6 +24,26 @@ const getSchoolSettings = async () => {
     return settings;
 };
 
+// Get active session/term for a specific class (section-aware)
+const getSectionAcademicContext = async (class_id) => {
+    if (class_id) {
+        const sec = await db.get(`
+            SELECT s.current_session, s.current_term 
+            FROM sections s 
+            JOIN classes c ON c.section_id = s.id 
+            WHERE c.id = ?
+        `, [class_id]);
+        if (sec && sec.current_session && sec.current_term) {
+            return { session: sec.current_session, term: sec.current_term };
+        }
+    }
+    const school = await getSchoolSettings();
+    return {
+        session: school.current_session || '2024/2025',
+        term: school.current_term || '1st Term'
+    };
+};
+
 const getGradingSystem = async (req, res) => {
     try {
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
@@ -92,10 +112,13 @@ const saveGradingSystem = async (req, res) => {
 
 const getResultManager = async (req, res) => {
     const user = req.session.staff;
-    const settings = await getSchoolSettings();
-    const activeSession = req.query.session || settings.current_session || '2024/2025';
-    const activeTerm = req.query.term || settings.current_term || '1st Term';
     const { class_id, subject_id } = req.query;
+
+    // Derive session/term from the selected class's section (falls back to global)
+    const sectionCtx = await getSectionAcademicContext(class_id || null);
+    const settings = await getSchoolSettings();
+    const activeSession = req.query.session || sectionCtx.session || settings.current_session || '2024/2025';
+    const activeTerm = req.query.term || sectionCtx.term || settings.current_term || '1st Term';
 
     try {
         let classes, subjects;

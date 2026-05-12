@@ -7,9 +7,12 @@ const getSettingsPage = async (req, res) => {
         const settings = {};
         settingsArr.forEach(s => settings[s.key] = s.value);
 
+        const sections = await db.all('SELECT * FROM sections ORDER BY name');
+
         res.render('settings', {
             title: 'School Settings',
             settings,
+            sections,
             success: req.query.success,
             error: req.query.error
         });
@@ -109,4 +112,25 @@ const processPromotion = async (req, res) => {
     }
 };
 
-module.exports = { getSettingsPage, updateSettings, getPromotionPage, processPromotion };
+// POST /settings/section-calendar - Update per-section session & term
+const updateSectionCalendar = async (req, res) => {
+    const { sections } = req.body; // { "1": { session: '...', term: '...' }, "2": { ... } }
+    try {
+        await db.transaction(async () => {
+            for (const [sectionId, vals] of Object.entries(sections || {})) {
+                if (vals.session && vals.term) {
+                    await db.run(
+                        'UPDATE sections SET current_session = ?, current_term = ? WHERE id = ?',
+                        [vals.session, vals.term, sectionId]
+                    );
+                }
+            }
+        });
+        res.redirect('/settings?success=Section calendars updated successfully');
+    } catch (err) {
+        console.error('Update Section Calendar Error:', err);
+        res.redirect('/settings?error=Failed to update section calendars');
+    }
+};
+
+module.exports = { getSettingsPage, updateSettings, updateSectionCalendar, getPromotionPage, processPromotion };

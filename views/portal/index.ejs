@@ -198,18 +198,24 @@
                 </div>
             </div>
             <div class="session-details">
-                <div class="session-stat">
-                    <span>Class</span>
-                    <strong><%= student.class_name %></strong>
-                </div>
-                <div class="session-stat">
-                    <span>Session</span>
-                    <strong><%= currentSession %></strong>
-                </div>
-                <div class="session-stat">
-                    <span>Term</span>
-                    <strong><%= currentTerm %></strong>
-                </div>
+                <% if (sectionInfo && sectionInfo.length > 0) { %>
+                    <% sectionInfo.forEach(sec => { %>
+                        <div class="session-stat" style="border-left: 3px solid rgba(255,255,255,0.4); padding-left: 12px;">
+                            <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.75;"><%= sec.section_name || 'Section' %></span>
+                            <strong style="font-size: 0.85rem;"><%= sec.class_name %></strong>
+                            <span style="font-size: 0.75rem; opacity: 0.85;"><%= sec.current_term %> &bull; <%= sec.current_session %></span>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <div class="session-stat">
+                        <span>Session</span>
+                        <strong><%= currentSession %></strong>
+                    </div>
+                    <div class="session-stat">
+                        <span>Term</span>
+                        <strong><%= currentTerm %></strong>
+                    </div>
+                <% } %>
             </div>
         </section>
 

@@ -83,13 +83,14 @@ exports.getDashboard = async (req, res) => {
         ORDER BY event_date ASC LIMIT 5
     `);
 
-    // Fetch student data with enrolled classes
+    // Fetch student data with enrolled classes (including per-section term info)
     const studentObj = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
     const enrolledClasses = await db.all(`
-        SELECT c.name as class_name, s.name as section_name 
+        SELECT c.name as class_name, sec.name as section_name, 
+               sec.current_session as section_session, sec.current_term as section_term
         FROM student_enrollments se 
         JOIN classes c ON se.class_id = c.id 
-        LEFT JOIN sections s ON c.section_id = s.id
+        LEFT JOIN sections sec ON c.section_id = sec.id
         WHERE se.student_id = ? AND se.session = ?
     `, [studentId, currentSessionStr]);
     
@@ -98,6 +99,14 @@ exports.getDashboard = async (req, res) => {
     } else {
         studentObj.class_name = 'Not Enrolled';
     }
+
+    // Build per-section info for dashboard display
+    const sectionInfo = enrolledClasses.map(ec => ({
+        class_name: ec.class_name,
+        section_name: ec.section_name,
+        current_session: ec.section_session || school.current_session || currentSessionStr,
+        current_term: ec.section_term || school.current_term || '1st Term'
+    }));
 
     res.render('portal/index', {
         title: 'Student Dashboard',
@@ -112,6 +121,7 @@ exports.getDashboard = async (req, res) => {
         individualMessagesCount,
         feeProgress,
         feeBalance,
+        sectionInfo,
         currentTerm: school.current_term || 'First',
         currentSession: school.current_session || '2024/2025',
         error: req.query.error

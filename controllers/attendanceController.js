@@ -16,8 +16,21 @@ const getAssignedClasses = async (user) => {
     `, [user.id, user.id, user.id]);
 };
 
-// Helper: get current academic settings
-const getAcademicSettings = async () => {
+// Helper: get current academic settings (section-aware)
+const getAcademicSettings = async (class_id = null) => {
+    // If a class is provided, derive term/session from its section
+    if (class_id) {
+        const sec = await db.get(`
+            SELECT s.current_session, s.current_term 
+            FROM sections s 
+            JOIN classes c ON c.section_id = s.id 
+            WHERE c.id = ?
+        `, [class_id]);
+        if (sec && sec.current_session && sec.current_term) {
+            return { session: sec.current_session, term: sec.current_term };
+        }
+    }
+    // Fallback to global settings
     const school = await db.all('SELECT key, value FROM settings');
     const settings = {};
     school.forEach(s => settings[s.key] = s.value);
@@ -62,7 +75,7 @@ const getTakeAttendance = async (req, res) => {
         const clazz = await db.get('SELECT * FROM classes WHERE id = ?', [class_id]);
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
-        const settings = await getAcademicSettings();
+        const settings = await getAcademicSettings(class_id);
 
         const students = await db.all(`
             SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
@@ -115,7 +128,7 @@ const saveAttendance = async (req, res) => {
             for (const [studentIdStr, status] of Object.entries(attendance || {})) {
                 const student_id = Number(studentIdStr);
                 if (isNaN(student_id)) continue;
-                const settings = await getAcademicSettings();
+                const settings = await getAcademicSettings(class_id);
                 await db.run(sql, [student_id, Number(class_id), date, status, session || settings.session, term || settings.term]);
             }
         });

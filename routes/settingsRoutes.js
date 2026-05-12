@@ -47,4 +47,7 @@ router.post('/update', upload.single('school_logo'), settingsController.updateSe
 router.get('/promotion', settingsController.getPromotionPage);
 router.post('/promotion', settingsController.processPromotion);
 
+// Section Calendar Routes
+router.post('/section-calendar', settingsController.updateSectionCalendar);
+
 module.exports = router;

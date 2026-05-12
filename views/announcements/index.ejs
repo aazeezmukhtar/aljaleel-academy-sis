@@ -64,9 +64,16 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <span class="badge" style="background: <%= post.target_role === 'All' ? '#6366f1' : post.target_role === 'Staff' ? '#f59e0b' : '#10b981' %>; color: white;">
-                                            <%= post.target_role %>
-                                        </span>
+                                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                                            <span class="badge" style="background: <%= post.target_role === 'All' ? '#6366f1' : post.target_role === 'Staff' ? '#f59e0b' : '#10b981' %>; color: white;">
+                                                <%= post.target_role %>
+                                            </span>
+                                            <% if (post.section_name) { %>
+                                                <span class="badge" style="background: #e0e7ff; color: #4338ca;"><%= post.section_name %></span>
+                                            <% } else { %>
+                                                <span class="badge" style="background: #f1f5f9; color: #64748b;">Global</span>
+                                            <% } %>
+                                        </div>
                                     </td>
                                     <td><%= new Date(post.created_at).toLocaleDateString() %></td>
                                     <td>

@@ -1,7 +1,7 @@
 const db = require('../utils/db');
 
 exports.getIndex = async (req, res) => {
-    const announcements = await db.all('SELECT * FROM announcements ORDER BY created_at DESC');
+    const announcements = await db.all('SELECT a.*, s.name as section_name FROM announcements a LEFT JOIN sections s ON a.section_id = s.id ORDER BY a.created_at DESC');
     
     res.render('announcements/index', {
         title: 'Announcement Management',
@@ -10,22 +10,24 @@ exports.getIndex = async (req, res) => {
     });
 };
 
-exports.createAnnouncement = (req, res) => {
+exports.createAnnouncement = async (req, res) => {
+    const sections = await db.all('SELECT * FROM sections');
     res.render('announcements/form', {
         title: 'Create Announcement',
-        path: '/announcements'
+        path: '/announcements',
+        sections
     });
 };
 
 exports.storeAnnouncement = async (req, res) => {
     try {
-        const { title, content, target_role, is_published, type, event_date } = req.body;
+        const { title, content, target_role, is_published, type, event_date, section_id } = req.body;
         const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
         const image_path = req.file ? req.file.filename : null;
 
         await db.run(`
-            INSERT INTO announcements (title, slug, content, target_role, image_path, is_published, type, event_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO announcements (title, slug, content, target_role, image_path, is_published, type, event_date, section_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
             title, 
             slug, 
@@ -34,7 +36,8 @@ exports.storeAnnouncement = async (req, res) => {
             image_path, 
             is_published === '1' ? 1 : 0,
             type || 'Announcement',
-            (type === 'Event' && event_date) ? event_date : null
+            (type === 'Event' && event_date) ? event_date : null,
+            section_id || null
         ]);
 
         res.redirect('/announcements?success=Announcement created successfully');

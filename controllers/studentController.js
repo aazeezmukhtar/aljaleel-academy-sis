@@ -80,11 +80,12 @@ const getEnrollmentForm = async (req, res) => {
         const user = req.session.staff;
         let classes;
         if (user.role === 'Admin' || user.role === 'Registrar') {
-            classes = await db.all('SELECT * FROM classes');
+            classes = await db.all('SELECT c.*, s.name as section_name FROM classes c LEFT JOIN sections s ON c.section_id = s.id');
         } else {
             classes = await db.all(`
-                SELECT DISTINCT c.* 
+                SELECT DISTINCT c.*, s.name as section_name 
                 FROM classes c
+                LEFT JOIN sections s ON c.section_id = s.id
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
@@ -107,7 +108,8 @@ const enrollStudent = async (req, res) => {
         last_name,
         gender,
         dob,
-        current_class_id,
+        academy_class_id,
+        tahfeez_class_id,
         parent_phone,
         parent_address
     } = req.body;
@@ -116,13 +118,30 @@ const enrollStudent = async (req, res) => {
     const passport_photo_path = req.file ? `/uploads/${req.file.filename}` : null;
 
     try {
+        const primary_class_id = academy_class_id || tahfeez_class_id || null;
         const sql = `
             INSERT INTO students (first_name, last_name, gender, dob, current_class_id, parent_phone, parent_address, admission_number, passport_photo_path, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `;
-        await db.run(sql, [first_name, last_name, gender, dob, current_class_id, parent_phone, parent_address, admission_number, passport_photo_path]);
+        const insertResult = await db.run(sql, [first_name, last_name, gender, dob, primary_class_id, parent_phone, parent_address, admission_number, passport_photo_path]);
         
-        logAction(req.session.staff.id, 'ENROLL_STUDENT', 'STUDENT', { first_name, last_name, class_id: current_class_id }, req.ip);
+        // Postgres returns lastInsertRowid as null, we need to fetch by admission_number
+        const studentRow = await db.get("SELECT id FROM students WHERE admission_number = ?", [admission_number]);
+        const studentId = studentRow.id;
+        
+        // Get current session
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
+        // Insert Enrollments
+        if (academy_class_id) {
+            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentId, academy_class_id, currentSession]);
+        }
+        if (tahfeez_class_id) {
+            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentId, tahfeez_class_id, currentSession]);
+        }
+        
+        logAction(req.session.staff.id, 'ENROLL_STUDENT', 'STUDENT', { first_name, last_name }, req.ip);
         res.redirect('/students?success=true');
     } catch (err) {
         console.error('Enroll Error:', err);
@@ -177,13 +196,21 @@ const getEditForm = async (req, res) => {
     const user = req.session.staff;
     try {
         const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
+        
+        // Get current session enrollments
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+        const enrollments = await db.all('SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ?', [id, currentSession]);
+        const enrolledClassIds = enrollments.map(e => e.class_id);
+
         let classes;
         if (user.role === 'Admin' || user.role === 'Registrar') {
-            classes = await db.all('SELECT * FROM classes');
+            classes = await db.all('SELECT c.*, s.name as section_name FROM classes c LEFT JOIN sections s ON c.section_id = s.id');
         } else {
             classes = await db.all(`
-                SELECT DISTINCT c.* 
+                SELECT DISTINCT c.*, s.name as section_name 
                 FROM classes c
+                LEFT JOIN sections s ON c.section_id = s.id
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
@@ -193,7 +220,8 @@ const getEditForm = async (req, res) => {
         res.render('students/edit', {
             title: `Edit Student: ${student.first_name} ${student.last_name}`,
             student,
-            classes
+            classes,
+            enrolledClassIds
         });
     } catch (err) {
         console.error('Fetch Edit Form Error:', err);
@@ -209,7 +237,8 @@ const updateStudent = async (req, res) => {
         gender,
         dob,
         admission_number,
-        current_class_id,
+        academy_class_id,
+        tahfeez_class_id,
         parent_phone,
         parent_address,
         status
@@ -221,6 +250,7 @@ const updateStudent = async (req, res) => {
     }
 
     try {
+        const primary_class_id = academy_class_id || tahfeez_class_id || null;
         const sql = `
             UPDATE students SET
                 first_name = ?, last_name = ?, gender = ?, dob = ?, 
@@ -232,13 +262,28 @@ const updateStudent = async (req, res) => {
         await db.run(sql, [
             first_name, last_name, gender, dob,
             admission_number || null,
-            current_class_id || null,
+            primary_class_id,
             parent_phone || null,
             parent_address || null,
             passport_photo_path,
             status,
             id
         ]);
+
+        // Get current session
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
+        // Clear existing enrollments for this session
+        await db.run("DELETE FROM student_enrollments WHERE student_id = ? AND session = ?", [id, currentSession]);
+
+        // Re-insert Enrollments
+        if (academy_class_id) {
+            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [id, academy_class_id, currentSession]);
+        }
+        if (tahfeez_class_id) {
+            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [id, tahfeez_class_id, currentSession]);
+        }
 
         res.json({ success: true, message: 'Student updated successfully.' });
 

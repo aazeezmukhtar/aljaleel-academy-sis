@@ -59,14 +59,25 @@
                                     value="<%= student.admission_number %>" placeholder="e.g. ADM/2024/001">
                             </div>
                             <div class="form-group">
-                                <label>Class</label>
-                                <select name="current_class_id" class="form-control">
-                                    <option value="">Select Class</option>
-                                    <% classes.forEach(c=> { %>
-                                        <option value="<%= c.id %>" <%=student.current_class_id==c.id ? 'selected' : ''
-                                            %>><%= c.name %>
+                                <label>Academy Class (Western)</label>
+                                <select name="academy_class_id" class="form-control">
+                                    <option value="">None / Unassigned</option>
+                                    <% classes.filter(c => c.section_name === 'Academy' || !c.section_name).forEach(c => { %>
+                                        <option value="<%= c.id %>" <%= enrolledClassIds.includes(c.id) ? 'selected' : '' %>>
+                                            <%= c.name %>
                                         </option>
-                                        <% }) %>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Tahfeez Class (Arabic)</label>
+                                <select name="tahfeez_class_id" class="form-control">
+                                    <option value="">None / Unassigned</option>
+                                    <% classes.filter(c => c.section_name === 'Tahfeez').forEach(c => { %>
+                                        <option value="<%= c.id %>" <%= enrolledClassIds.includes(c.id) ? 'selected' : '' %>>
+                                            <%= c.name %>
+                                        </option>
+                                    <% }) %>
                                 </select>
                             </div>
                             <div class="form-group">

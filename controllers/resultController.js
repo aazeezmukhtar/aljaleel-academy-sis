@@ -133,11 +133,12 @@ const getResultManager = async (req, res) => {
                 SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
                        r.ca1, r.ca2, r.exam, r.total, r.grade, r.status, r.teacher_remark
                 FROM students s 
+                JOIN student_enrollments se ON s.id = se.student_id AND se.class_id = ? AND se.session = ?
                 LEFT JOIN results r ON s.id = r.student_id 
                     AND r.subject_id = ? AND r.term = ? AND r.session = ?
-                WHERE s.current_class_id = ? AND s.status = 'active'
+                WHERE s.status = 'active'
                 ORDER BY s.last_name, s.first_name
-            `, [subject_id, activeTerm, activeSession, class_id]);
+            `, [class_id, activeSession, subject_id, activeTerm, activeSession]);
         }
 
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
@@ -212,14 +213,28 @@ const getReportCard = async (req, res) => {
 
     try {
         const school = await getSchoolSettings();
-        const student = await db.get(`
-            SELECT s.*, c.name as class_name 
-            FROM students s
-            LEFT JOIN classes c ON s.current_class_id = c.id
-            WHERE s.id = ?
-        `, [student_id]);
-
+        const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
         if (!student) return res.status(404).send('Student not found');
+
+        const { class_name } = req.query;
+        let classObj;
+        if (class_name) {
+            classObj = await db.get('SELECT * FROM classes WHERE name = ?', [class_name]);
+        }
+        
+        if (!classObj) {
+            // Find first enrolled class for the session
+            classObj = await db.get(`
+                SELECT c.* FROM classes c
+                JOIN student_enrollments se ON c.id = se.class_id
+                WHERE se.student_id = ? AND se.session = ?
+            `, [student_id, session]);
+        }
+
+        if (!classObj) return res.status(404).send('No class enrollment found for this session');
+        
+        student.class_name = classObj.name;
+        const target_class_id = classObj.id;
 
         // Results with subject rank
         const results = await db.all(`
@@ -227,21 +242,23 @@ const getReportCard = async (req, res) => {
             (SELECT COUNT(*) + 1 FROM results r2 
              WHERE r2.subject_id = r.subject_id AND r2.term = r.term 
              AND r2.session = r.session AND r2.total > r.total
-             AND r2.student_id IN (SELECT id FROM students WHERE current_class_id = ?)) as subject_rank
+             AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
+            JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-        `, [student.current_class_id, student_id, term, session]);
+        `, [target_class_id, session, target_class_id, session, student_id, term, session]);
 
         // Overall Position
         const classPerformance = await db.all(`
-            SELECT student_id, SUM(total) as student_total
-            FROM results
-            WHERE term = ? AND session = ? 
-            AND student_id IN (SELECT id FROM students WHERE current_class_id = ?)
-            GROUP BY student_id
+            SELECT r.student_id, SUM(r.total) as student_total
+            FROM results r
+            JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
+            WHERE r.term = ? AND r.session = ? 
+            AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+            GROUP BY r.student_id
             ORDER BY student_total DESC
-        `, [term, session, student.current_class_id]);
+        `, [target_class_id, session, term, session, target_class_id, session]);
 
         const studentPerf = classPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -313,21 +330,36 @@ const getCumulativeReport = async (req, res) => {
 
     try {
         const school = await getSchoolSettings();
-        const student = await db.get(`
-            SELECT s.*, c.name as class_name 
-            FROM students s
-            LEFT JOIN classes c ON s.current_class_id = c.id
-            WHERE s.id = ?
-        `, [student_id]);
-
+        const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
         if (!student) return res.status(404).send('Student not found');
+
+        const { class_name } = req.query;
+        let classObj;
+        if (class_name) {
+            classObj = await db.get('SELECT * FROM classes WHERE name = ?', [class_name]);
+        }
+        
+        if (!classObj) {
+            // Find first enrolled class for the session
+            classObj = await db.get(`
+                SELECT c.* FROM classes c
+                JOIN student_enrollments se ON c.id = se.class_id
+                WHERE se.student_id = ? AND se.session = ?
+            `, [student_id, session]);
+        }
+
+        if (!classObj) return res.status(404).send('No class enrollment found for this session');
+        
+        student.class_name = classObj.name;
+        const target_class_id = classObj.id;
 
         const rawResults = await db.all(`
             SELECT r.*, s.name as subject_name
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
+            JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
             WHERE r.student_id = ? AND r.session = ?
-        `, [student_id, session]);
+        `, [target_class_id, session, student_id, session]);
 
         const subjectMap = {};
         rawResults.forEach(r => {
@@ -340,12 +372,13 @@ const getCumulativeReport = async (req, res) => {
         const subjects = Object.values(subjectMap);
 
         const sessionPerformance = await db.all(`
-            SELECT student_id, AVG(total) as session_avg
-            FROM results
-            WHERE session = ? AND student_id IN (SELECT id FROM students WHERE current_class_id = ?)
-            GROUP BY student_id
+            SELECT r.student_id, AVG(r.total) as session_avg
+            FROM results r
+            JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
+            WHERE r.session = ? AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+            GROUP BY r.student_id
             ORDER BY session_avg DESC
-        `, [session, student.current_class_id]);
+        `, [target_class_id, session, session, target_class_id, session]);
 
         const studentPerf = sessionPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? sessionPerformance.indexOf(studentPerf) + 1 : 0;

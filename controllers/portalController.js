@@ -31,10 +31,30 @@ exports.getDashboard = async (req, res) => {
         LIMIT 5
     `, [studentId]);
 
+    const currentSessionStr = school.current_session || '2024/2025';
+    
+    // Get student's enrolled sections
+    const enrollments = await db.all(`
+        SELECT s.id as section_id 
+        FROM student_enrollments se 
+        JOIN classes c ON se.class_id = c.id 
+        JOIN sections s ON c.section_id = s.id 
+        WHERE se.student_id = ? AND se.session = ?
+    `, [studentId, currentSessionStr]);
+    const sectionIds = enrollments.map(e => e.section_id);
+    
+    let sectionFilter = '';
+    if (sectionIds.length > 0) {
+        sectionFilter = ` AND (section_id IS NULL OR section_id IN (${sectionIds.join(',')}))`;
+    } else {
+        sectionFilter = ` AND section_id IS NULL`;
+    }
+
     // Fetch latest announcements
     const announcements = await db.all(`
         SELECT * FROM announcements 
         WHERE is_published = 1 AND (target_role = 'Students' OR target_role = 'All')
+        ${sectionFilter}
         ORDER BY created_at DESC LIMIT 3
     `);
 
@@ -54,14 +74,30 @@ exports.getDashboard = async (req, res) => {
     `, [studentId]);
     const feeProgress = feeStats.expected > 0 ? Math.round((feeStats.collected / feeStats.expected) * 100) : 0;
     const feeBalance = (feeStats.expected || 0) - (feeStats.collected || 0);
+    
     // Fetch upcoming events
     const upcomingEvents = await db.all(`
         SELECT * FROM term_events 
         WHERE event_date >= date('now') 
+        ${sectionFilter}
         ORDER BY event_date ASC LIMIT 5
     `);
 
-    const studentObj = await db.get('SELECT s.*, c.name as class_name FROM students s LEFT JOIN classes c ON s.current_class_id = c.id WHERE s.id = ?', [studentId]);
+    // Fetch student data with enrolled classes
+    const studentObj = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+    const enrolledClasses = await db.all(`
+        SELECT c.name as class_name, s.name as section_name 
+        FROM student_enrollments se 
+        JOIN classes c ON se.class_id = c.id 
+        LEFT JOIN sections s ON c.section_id = s.id
+        WHERE se.student_id = ? AND se.session = ?
+    `, [studentId, currentSessionStr]);
+    
+    if (enrolledClasses.length > 0) {
+        studentObj.class_name = enrolledClasses.map(c => c.class_name).join(', ');
+    } else {
+        studentObj.class_name = 'Not Enrolled';
+    }
 
     res.render('portal/index', {
         title: 'Student Dashboard',

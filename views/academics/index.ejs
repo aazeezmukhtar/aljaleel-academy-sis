@@ -186,10 +186,10 @@
                                     <div class="form-group">
                                         <label>Session</label>
                                         <select name="session" required>
-                                            <% sections.forEach(sec => { %>
-                                                <option value="<%= sec.current_session || '2024/2025' %>"><%= sec.name %>: <%= sec.current_session || '2024/2025' %></option>
-                                            <% }) %>
-                                        </select>
+                                <% available_sessions.forEach(s => { %>
+                                    <option value="<%= s %>" <%= (typeof filters !== 'undefined' ? filters.session : (typeof query !== 'undefined' ? query.session : (typeof school !== 'undefined' ? school.current_session : '2024/2025'))) === s ? 'selected' : '' %>><%= s %></option>
+                                <% }) %>
+                            </select>
                                     </div>
                                     <div style="grid-column: span 4; display: flex; gap: 10px; margin-top: 10px;">
                                         <button type="submit" class="btn">Save Assignment</button>

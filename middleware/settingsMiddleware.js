@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const sessionHelper = require('../utils/sessionHelper');
 
 const settingsMiddleware = async (req, res, next) => {
     try {
@@ -10,6 +11,8 @@ const settingsMiddleware = async (req, res, next) => {
         
         // Inject into res.locals for ejs access
         res.locals.school = settings;
+        res.locals.available_sessions = await sessionHelper.getAvailableSessions();
+        res.locals.available_terms = sessionHelper.getAvailableTerms();
         next();
     } catch (err) {
         console.error('Error fetching settings:', err);
@@ -17,6 +20,8 @@ const settingsMiddleware = async (req, res, next) => {
             school_name: 'Nexus SIS',
             primary_color: '#2c3e50'
         };
+        res.locals.available_sessions = ['2024/2025'];
+        res.locals.available_terms = ['1st Term', '2nd Term', '3rd Term'];
         next();
     }
 };

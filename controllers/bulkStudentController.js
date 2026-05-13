@@ -138,9 +138,13 @@ const processBulkImport = async (req, res) => {
             });
         }
 
+        // Get current session for enrollments
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
         await db.transaction(async () => {
             for (const student of validStudents) {
-                const admission_number = student.admission_number || generateUniqueID();
+                const admission_number = student.admission_number || await generateUniqueID();
                 await db.run(`
                     INSERT INTO students (
                         first_name, last_name, gender, dob, admission_number,
@@ -154,6 +158,13 @@ const processBulkImport = async (req, res) => {
                     admission_number,
                     student.class_id || null
                 ]);
+
+                if (student.class_id) {
+                    const studentRow = await db.get("SELECT id FROM students WHERE admission_number = ?", [admission_number]);
+                    if (studentRow) {
+                        await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, currentSession]);
+                    }
+                }
             }
         });
 

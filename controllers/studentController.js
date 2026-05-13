@@ -183,7 +183,8 @@ const getStudentProfile = async (req, res) => {
             health,
             academicTerms,
             success,
-            error
+            error,
+            user: req.session.staff
         });
     } catch (err) {
         console.error('Fetch Profile Error:', err);
@@ -333,7 +334,30 @@ const saveHealthRecord = async (req, res) => {
     }
 };
 
+const deleteStudent = async (req, res) => {
+    const { id } = req.params;
+    try {
+        await db.run('DELETE FROM attendance WHERE student_id = ?', [id]);
+        await db.run('DELETE FROM results WHERE student_id = ?', [id]);
+        await db.run('DELETE FROM payments WHERE student_id = ?', [id]);
+        await db.run('DELETE FROM student_fees WHERE student_id = ?', [id]);
+        await db.run('DELETE FROM affective_psychomotor WHERE student_id = ?', [id]);
+        await db.run('DELETE FROM class_posts WHERE student_id = ?', [id]);
+        await db.run('DELETE FROM student_health WHERE student_id = ?', [id]);
+        await db.run('DELETE FROM student_enrollments WHERE student_id = ?', [id]);
+        await db.run('DELETE FROM notification_reads WHERE user_id = ? AND user_type = ?', [id, 'student']);
+        await db.run('DELETE FROM students WHERE id = ?', [id]);
+
+        logAction(req.session.staff.id, 'DELETE_STUDENT', 'STUDENT', { id }, req.ip);
+
+        res.json({ success: true, message: 'Student deleted successfully.' });
+    } catch (err) {
+        console.error('Delete Student Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to delete student.' });
+    }
+};
+
 module.exports = {
     enrollStudent, getStudents, getEnrollmentForm,
-    getStudentProfile, getEditForm, updateStudent, saveHealthRecord
+    getStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent
 };

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const studentController = require('../controllers/studentController');
 const bulkStudentController = require('../controllers/bulkStudentController');
+const { isAdmin } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const os = require('os');
 const uploadDir = os.platform() === 'win32' ? 'uploads/' : '/tmp/uploads';
@@ -27,6 +28,9 @@ router.get('/edit/:id', studentController.getEditForm);
 
 // POST /students/update/:id
 router.post('/update/:id', upload.single('passport'), studentController.updateStudent);
+
+// POST /students/delete/:id
+router.post('/delete/:id', isAdmin, studentController.deleteStudent);
 
 // Bulk Import Routes
 router.get('/bulk-import', bulkStudentController.getBulkImportPage);

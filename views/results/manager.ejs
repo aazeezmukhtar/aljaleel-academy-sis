@@ -56,6 +56,22 @@
                             <button type="submit" class="btn btn-primary" style="width: 100%;">Load Sheet</button>
                         </div>
                     </form>
+                    <script>
+                        // Auto-switch Session and Term based on selected Class's Section
+                        (function() {
+                            const classDropdown = document.querySelector('select[name="class_id"]');
+                            if (classDropdown) {
+                                const classData = <%- JSON.stringify(classes.map(c => ({ id: c.id, session: c.sec_session, term: c.sec_term }))) %>;
+                                classDropdown.addEventListener('change', function() {
+                                    const selected = classData.find(c => String(c.id) === String(this.value));
+                                    if (selected) {
+                                        if (selected.session) document.querySelector('select[name="session"]').value = selected.session;
+                                        if (selected.term) document.querySelector('select[name="term"]').value = selected.term;
+                                    }
+                                });
+                            }
+                        })();
+                    </script>
                 </div>
                 <% } else { %>
                     <!-- Active Selection Summary -->

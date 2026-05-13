@@ -124,11 +124,17 @@ const getResultManager = async (req, res) => {
         let classes, subjects;
 
         if (user.role === 'Admin' || user.role === 'Examination Officer') {
-            classes = await db.all('SELECT * FROM classes');
+            classes = await db.all(`
+                SELECT c.*, s.current_session as sec_session, s.current_term as sec_term 
+                FROM classes c 
+                LEFT JOIN sections s ON c.section_id = s.id
+            `);
             subjects = await db.all('SELECT * FROM subjects');
         } else {
             classes = await db.all(`
-                SELECT DISTINCT c.* FROM classes c
+                SELECT DISTINCT c.*, s.current_session as sec_session, s.current_term as sec_term 
+                FROM classes c
+                LEFT JOIN sections s ON c.section_id = s.id
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 WHERE sa.id IS NOT NULL OR ca.id IS NOT NULL

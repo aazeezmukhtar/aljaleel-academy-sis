@@ -218,15 +218,21 @@
                                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                                                         <div class="form-group">
                                                             <label>Session</label>
-                                                            <input type="text" name="sections[<%= sec.id %>][session]" value="<%= sec.current_session || '' %>" class="form-control" placeholder="e.g. 2025/2026" required>
+                                                            <input type="text" name="sections[<%= sec.id %>][session]" list="available-sessions-sec-<%= sec.id %>" value="<%= sec.current_session || '' %>" class="form-control" placeholder="e.g. 2024/2025" required>
+                                                            <datalist id="available-sessions-sec-<%= sec.id %>">
+                                                                <% available_sessions.forEach(s => { %>
+                                                                    <option value="<%= s %>">
+                                                                <% }) %>
+                                                            </datalist>
                                                         </div>
                                                         <div class="form-group">
                                                             <label>Current Term</label>
-                                                            <select name="sections[<%= sec.id %>][term]" class="form-control" required>
-                                                                <option value="1st Term" <%= sec.current_term === '1st Term' ? 'selected' : '' %>>1st Term</option>
-                                                                <option value="2nd Term" <%= sec.current_term === '2nd Term' ? 'selected' : '' %>>2nd Term</option>
-                                                                <option value="3rd Term" <%= sec.current_term === '3rd Term' ? 'selected' : '' %>>3rd Term</option>
-                                                            </select>
+                                                            <input type="text" name="sections[<%= sec.id %>][term]" list="available-terms-sec-<%= sec.id %>" value="<%= sec.current_term || '1st Term' %>" class="form-control" required>
+                                                            <datalist id="available-terms-sec-<%= sec.id %>">
+                                                                <% available_terms.forEach(t => { %>
+                                                                    <option value="<%= t %>">
+                                                                <% }) %>
+                                                            </datalist>
                                                         </div>
                                                     </div>
                                                 </div>

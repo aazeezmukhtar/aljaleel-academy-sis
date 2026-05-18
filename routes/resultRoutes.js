@@ -22,6 +22,7 @@ router.post('/save', resultController.saveResults);
 // Admin Setup Routes
 router.get('/setup', resultController.getGradingSystem);
 router.post('/setup/config', resultController.saveResultConfig);
+router.post('/setup/section-config', resultController.saveResultConfigForSection);
 router.post('/setup/grading', resultController.saveGradingSystem);
 router.post('/approve', resultController.approveResults);
 router.post('/lock', resultController.lockResults);

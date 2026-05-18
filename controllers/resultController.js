@@ -20,8 +20,32 @@ const getSchoolSettings = async () => {
     const configArr = await db.all('SELECT * FROM result_config');
     const settings = {};
     settingsArr.forEach(s => settings[s.key] = s.value);
-    configArr.forEach(c => settings[c.key] = c.value); 
+    configArr.forEach(c => settings[c.key] = c.value);
     return settings;
+};
+
+// Get result config for a specific class (section-aware, falls back to global)
+const getSectionResultConfig = async (class_id) => {
+    const defaults = { ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
+
+    // Load global config first
+    const globalRows = await db.all('SELECT key, value FROM result_config');
+    globalRows.forEach(r => { defaults[r.key] = r.value; });
+
+    if (!class_id) return defaults;
+
+    // Try to find the section for this class
+    const classRow = await db.get('SELECT section_id FROM classes WHERE id = ?', [class_id]);
+    if (!classRow || !classRow.section_id) return defaults;
+
+    // Load section-specific overrides
+    const sectionRows = await db.all(
+        'SELECT key, value FROM section_result_config WHERE section_id = ?',
+        [classRow.section_id]
+    );
+    sectionRows.forEach(r => { defaults[r.key] = r.value; });
+
+    return defaults;
 };
 
 // Get active session/term for a specific class (section-aware)
@@ -48,18 +72,51 @@ const getGradingSystem = async (req, res) => {
     try {
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
         const config = await getSchoolSettings();
+        const sections = await db.all('SELECT * FROM sections ORDER BY name');
+
+        // Load per-section configs
+        const sectionConfigs = {};
+        for (const sec of sections) {
+            const rows = await db.all('SELECT key, value FROM section_result_config WHERE section_id = ?', [sec.id]);
+            sectionConfigs[sec.id] = { ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
+            rows.forEach(r => { sectionConfigs[sec.id][r.key] = r.value; });
+        }
 
         if (req && res) {
             res.render('results/setup', {
                 title: 'Result Configuration',
                 grading,
-                config
+                config,
+                sections,
+                sectionConfigs
             });
         }
         return { grading, config };
     } catch (err) {
         console.error('Get Grading Error:', err);
         if (res) res.status(500).send('Database Error');
+    }
+};
+
+// POST /results/setup/section-config  — save per-section CA weights
+const saveResultConfigForSection = async (req, res) => {
+    const { section_id, ca_count, ca1_max, ca2_max, exam_max } = req.body;
+    if (!section_id) return res.status(400).json({ success: false, message: 'section_id required.' });
+
+    try {
+        const upsert = db.DB_TYPE === 'postgres'
+            ? 'INSERT INTO section_result_config (section_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (section_id, key) DO UPDATE SET value = EXCLUDED.value'
+            : 'INSERT INTO section_result_config (section_id, key, value) VALUES (?, ?, ?) ON CONFLICT(section_id, key) DO UPDATE SET value = excluded.value';
+
+        await db.transaction(async () => {
+            for (const [key, value] of Object.entries({ ca_count: ca_count || '2', ca1_max, ca2_max, exam_max })) {
+                await db.run(upsert, [section_id, key, value]);
+            }
+        });
+        res.json({ success: true, message: 'Section config saved.' });
+    } catch (err) {
+        console.error('saveResultConfigForSection Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to save section config.' });
     }
 };
 
@@ -120,6 +177,9 @@ const getResultManager = async (req, res) => {
     const activeSession = req.query.session || sectionCtx.session || settings.current_session || '2024/2025';
     const activeTerm = req.query.term || sectionCtx.term || settings.current_term || '1st Term';
 
+    // Section-specific result config (ca weights, exam max)
+    const resultConfig = await getSectionResultConfig(class_id || null);
+
     try {
         let classes, subjects;
 
@@ -179,6 +239,7 @@ const getResultManager = async (req, res) => {
             students,
             filters: { class_id, subject_id, term: activeTerm, session: activeSession },
             school: settings,
+            resultConfig,
             grading
         });
     } catch (err) {
@@ -843,6 +904,7 @@ module.exports = {
     saveTraits,
     getGradingSystem,
     saveResultConfig,
+    saveResultConfigForSection,
     saveGradingSystem,
     approveResults,
     lockResults,

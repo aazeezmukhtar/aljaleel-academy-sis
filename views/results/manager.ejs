@@ -108,7 +108,7 @@
                             </h3>
                             <div class="result-actions-group">
                                 <span class="text-muted result-config-info">
-                                    <i class="bi bi-info-circle"></i> Max: CA1=<%= school.ca1_max || 20 %>, CA2=<%= school.ca2_max || 20 %>, Exam=<%= school.exam_max || 60 %>
+                                    <i class="bi bi-info-circle"></i> Max: CA1=<%= resultConfig.ca1_max || 20 %>, CA2=<%= resultConfig.ca2_max || 20 %>, Exam=<%= resultConfig.exam_max || 60 %>
                                 </span>
 
                                 <div class="button-stack">
@@ -130,11 +130,11 @@
                                     <tr>
                                         <th style="width: 50px;">#</th>
                                         <th style="width: 250px;">Student Name</th>
-                                        <th style="width: 100px;">CA 1 (<%= school.ca1_max || 20 %>)</th>
-                                        <% if (school.ca_count !=1) { %>
-                                            <th style="width: 100px;">CA 2 (<%= school.ca2_max || 20 %>)</th>
+                                        <th style="width: 100px;">CA 1 (<%= resultConfig.ca1_max || 20 %>)</th>
+                                        <% if (resultConfig.ca_count != 1) { %>
+                                            <th style="width: 100px;">CA 2 (<%= resultConfig.ca2_max || 20 %>)</th>
                                             <% } %>
-                                                <th style="width: 100px;">Exam (<%= school.exam_max || 60 %>)</th>
+                                                <th style="width: 100px;">Exam (<%= resultConfig.exam_max || 60 %>)</th>
                                                 <th style="width: 80px;">Total</th>
                                                 <th style="width: 80px;">Grade</th>
                                     </tr>
@@ -170,13 +170,13 @@
                                             </td>
                                             <td data-label="CA 1">
                                                 <input type="number" class="form-control score-input ca1"
-                                                    value="<%= s.ca1 %>" min="0" max="<%= school.ca1_max || 20 %>"
+                                                    value="<%= s.ca1 %>" min="0" max="<%= resultConfig.ca1_max || 20 %>"
                                                     <%= isLocked ? 'disabled' : '' %>>
                                             </td>
-                                            <% if (school.ca_count !=1) { %>
+                                            <% if (resultConfig.ca_count != 1) { %>
                                                 <td data-label="CA 2">
                                                     <input type="number" class="form-control score-input ca2"
-                                                        value="<%= s.ca2 %>" min="0" max="<%= school.ca2_max || 20 %>"
+                                                        value="<%= s.ca2 %>" min="0" max="<%= resultConfig.ca2_max || 20 %>"
                                                         <%= isLocked ? 'disabled' : '' %>>
                                                 </td>
                                                 <% } else { %>
@@ -185,7 +185,7 @@
                                                         <td data-label="Exam">
                                                             <input type="number" class="form-control score-input exam"
                                                                 value="<%= s.exam %>" min="0"
-                                                                max="<%= school.exam_max || 60 %>"
+                                                                max="<%= resultConfig.exam_max || 60 %>"
                                                                 <%= isLocked ? 'disabled' : '' %>>
                                                         </td>
                                                         <td data-label="Total" class="total fw-bold"><%= s.total || 0 %></td>
@@ -223,9 +223,9 @@
     <!-- Constants for JS -->
     <script>
         const CONFIG = {
-            CA1_MAX: <%- school.ca1_max || 20 %>,
-            CA2_MAX: <%- school.ca2_max || 20 %>,
-            EXAM_MAX: <%- school.exam_max || 60 %>
+            CA1_MAX: <%- resultConfig.ca1_max || 20 %>,
+            CA2_MAX: <%- resultConfig.ca2_max || 20 %>,
+            EXAM_MAX: <%- resultConfig.exam_max || 60 %>
         };
 
         // Grading System from Backend

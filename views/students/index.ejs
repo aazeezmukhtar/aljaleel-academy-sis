@@ -12,35 +12,35 @@
                         <p class="text-muted">Manage and enroll students at <%= school.school_name %>
                         </p>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <a href="/students/bulk-import" class="btn btn-outline" style="border-style: dashed;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <a href="/students/bulk-import" class="btn btn-outline" style="border-style: dashed; flex: 1; min-width: 120px; text-align: center;">
                             <i class="bi bi-file-earmark-spreadsheet"></i> Bulk Import
                         </a>
-                        <a href="/students/enroll" class="btn btn-primary">
-                            <i class="bi bi-person-plus"></i> Enroll New Student
+                        <a href="/students/enroll" class="btn btn-primary" style="flex: 1; min-width: 120px; text-align: center;">
+                            <i class="bi bi-person-plus"></i> Enroll Student
                         </a>
                     </div>
                 </header>
 
                 <div class="card" style="margin-bottom: 30px;">
-                    <form action="/students" method="GET" class="grid-main-aside" style="gap: 15px;">
-                        <div style="flex-grow: 1; position: relative;">
+                    <form action="/students" method="GET" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 180px; position: relative;">
                             <i class="bi bi-search"
                                 style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
                             <input type="text" name="search" placeholder="Search students..."
                                 value="<%= filters.search || '' %>" class="form-control" style="padding-left: 40px;">
                         </div>
-                        <div style="display: flex; gap: 10px;">
-                            <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
-                                <select name="class_id" class="form-control" style="flex: 1;">
+                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                            <div style="flex: 1; min-width: 140px;">
+                                <select name="class_id" class="form-control">
                                     <option value="">All Classes</option>
                                     <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
                                         <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %></option>
                                     <% }); } %>
                                 </select>
-                            <% } %>
-                            <button type="submit" class="btn btn-primary">Search</button>
-                        </div>
+                            </div>
+                        <% } %>
+                        <button type="submit" class="btn btn-primary" style="flex-shrink: 0;">Search</button>
                     </form>
                 </div>
 

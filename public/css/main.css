@@ -1278,3 +1278,74 @@ body.is-offline .offline-banner { display: block; }
         padding-top: 88px !important; /* 56px topbar + 8px banner + 24px gap */
     }
 }
+
+/* ----------------------------------------------------------
+   RESPONSIVE LAYOUT UTILITIES  (Phase 1 – Responsive UI)
+   ---------------------------------------------------------- */
+
+/* 2-column main+aside that collapses on mobile */
+.grid-main-aside {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 30px;
+}
+
+@media (max-width: 768px) {
+    .grid-main-aside {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Content header with title + action buttons */
+.content-header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.content-header-actions .header-btn-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 576px) {
+    .content-header-actions .header-btn-group {
+        width: 100%;
+    }
+    .content-header-actions .header-btn-group .btn {
+        flex: 1;
+        text-align: center;
+        justify-content: center;
+    }
+}
+
+/* Responsive filter/search bar */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.filter-bar .filter-input {
+    flex: 1;
+    min-width: 180px;
+}
+
+.filter-bar .filter-select {
+    flex: 1;
+    min-width: 140px;
+}
+
+@media (max-width: 576px) {
+    .filter-bar .filter-input,
+    .filter-bar .filter-select {
+        min-width: 0;
+        width: 100%;
+        flex: 1 1 100%;
+    }
+}

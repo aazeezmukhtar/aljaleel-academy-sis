@@ -1,166 +1,240 @@
 /**
- * Nexus SIS Offline Handler
- * Manages IndexedDB for offline attendance and results entry.
+ * Nexus SIS Offline Handler v2
+ * IndexedDB queue for offline attendance + result entry.
+ * Syncs automatically when connection is restored.
  */
 
 const DB_NAME = 'NexusSIS_OfflineDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
-let db;
+let _idb = null;
 
-// Initialize IndexedDB
-const request = indexedDB.open(DB_NAME, DB_VERSION);
+// ─── IndexedDB Init ────────────────────────────────────────────────────────
 
-request.onupgradeneeded = (event) => {
-    const db = event.target.result;
-    if (!db.objectStoreNames.contains('attendance_sync')) {
-        db.createObjectStore('attendance_sync', { keyPath: 'id', autoIncrement: true });
-    }
-    if (!db.objectStoreNames.contains('results_sync')) {
-        db.createObjectStore('results_sync', { keyPath: 'id', autoIncrement: true });
-    }
-};
+function openDB() {
+    return new Promise((resolve, reject) => {
+        if (_idb) return resolve(_idb);
 
-request.onsuccess = (event) => {
-    db = event.target.result;
-    console.log('IndexedDB initialized');
-    checkOnlineStatus();
-};
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
 
-request.onerror = (event) => {
-    console.error('IndexedDB error:', event.target.error);
-};
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('attendance_sync')) {
+                db.createObjectStore('attendance_sync', { keyPath: 'id', autoIncrement: true });
+            }
+            if (!db.objectStoreNames.contains('results_sync')) {
+                db.createObjectStore('results_sync', { keyPath: 'id', autoIncrement: true });
+            }
+        };
 
-/**
- * Saves attendance data to IndexedDB
- */
+        req.onsuccess = (e) => {
+            _idb = e.target.result;
+            resolve(_idb);
+        };
+
+        req.onerror = (e) => {
+            console.error('[NexusOffline] IndexedDB open failed:', e.target.error);
+            reject(e.target.error);
+        };
+    });
+}
+
+// ─── Queue Writers ─────────────────────────────────────────────────────────
+
 async function saveAttendanceOffline(data) {
+    const db = await openDB();
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction(['attendance_sync'], 'readwrite');
-        const store = transaction.objectStore('attendance_sync');
-        const request = store.add({
-            ...data,
-            timestamp: new Date().toISOString()
-        });
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
+        const tx = db.transaction(['attendance_sync'], 'readwrite');
+        const store = tx.objectStore('attendance_sync');
+        const req = store.add({ ...data, _savedAt: new Date().toISOString() });
+        req.onsuccess = () => {
+            updateSyncUI();
+            resolve();
+        };
+        req.onerror = () => reject(req.error);
     });
 }
 
-/**
- * Saves result data to IndexedDB
- */
 async function saveResultOffline(data) {
+    const db = await openDB();
     return new Promise((resolve, reject) => {
-        const transaction = db.transaction(['results_sync'], 'readwrite');
-        const store = transaction.objectStore('results_sync');
-        const request = store.add({
-            ...data,
-            timestamp: new Date().toISOString()
-        });
-        request.onsuccess = () => resolve();
-        request.onerror = () => reject(request.error);
+        const tx = db.transaction(['results_sync'], 'readwrite');
+        const store = tx.objectStore('results_sync');
+        const req = store.add({ ...data, _savedAt: new Date().toISOString() });
+        req.onsuccess = () => {
+            updateSyncUI();
+            resolve();
+        };
+        req.onerror = () => reject(req.error);
     });
 }
 
-/**
- * Synchronizes all pending data
- */
-async function syncData() {
-    if (!navigator.onLine) return;
+// ─── Queue Readers ─────────────────────────────────────────────────────────
 
-    console.log('Syncing data...');
-    updateSyncUI('syncing', 'Syncing data...');
+async function getAllQueued(storeName) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const req = db.transaction([storeName], 'readonly').objectStore(storeName).getAll();
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
 
+async function deleteQueued(storeName, id) {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const req = db.transaction([storeName], 'readwrite').objectStore(storeName).delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+    });
+}
+
+async function getPendingCount() {
     try {
-        await syncAttendance();
-        await syncResults();
-        updateSyncUI('online', 'All data synced');
-    } catch (err) {
-        console.error('Sync failed:', err);
-        updateSyncUI('error', 'Sync failed. Will retry later.');
+        const att = await getAllQueued('attendance_sync');
+        const res = await getAllQueued('results_sync');
+        return att.length + res.length;
+    } catch {
+        return 0;
     }
 }
 
-async function syncAttendance() {
-    const transaction = db.transaction(['attendance_sync'], 'readwrite');
-    const store = transaction.objectStore('attendance_sync');
-    const request = store.getAll();
+// ─── Sync Logic ────────────────────────────────────────────────────────────
 
-    return new Promise((resolve, reject) => {
-        request.onsuccess = async () => {
-            const items = request.result;
-            for (const item of items) {
-                try {
-                    const response = await fetch('/attendance/mark', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(item)
-                    });
-                    if (response.ok) {
-                        db.transaction(['attendance_sync'], 'readwrite').objectStore('attendance_sync').delete(item.id);
-                    }
-                } catch (err) {
-                    console.error('Failed to sync attendance item:', item, err);
-                }
+let _isSyncing = false;
+
+async function syncData() {
+    if (!navigator.onLine || _isSyncing) return;
+    _isSyncing = true;
+
+    const pending = await getPendingCount();
+    if (pending === 0) {
+        _isSyncing = false;
+        updateSyncUI();
+        return;
+    }
+
+    updateSyncUI('syncing');
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // ── Sync Attendance ──
+    const attendanceItems = await getAllQueued('attendance_sync');
+    for (const item of attendanceItems) {
+        try {
+            const { id, _savedAt, ...payload } = item;
+            const res = await fetch('/attendance/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok || res.status === 409) {
+                // 409 = conflict (already saved), treat as success
+                await deleteQueued('attendance_sync', id);
+                successCount++;
+            } else {
+                failCount++;
             }
-            resolve();
-        };
-        request.onerror = () => reject(request.error);
-    });
-}
+        } catch {
+            failCount++;
+        }
+    }
 
-async function syncResults() {
-    const transaction = db.transaction(['results_sync'], 'readwrite');
-    const store = transaction.objectStore('results_sync');
-    const request = store.getAll();
-
-    return new Promise((resolve, reject) => {
-        request.onsuccess = async () => {
-            const items = request.result;
-            for (const item of items) {
-                try {
-                    const response = await fetch('/results/bulk-save', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(item)
-                    });
-                    if (response.ok) {
-                        db.transaction(['results_sync'], 'readwrite').objectStore('results_sync').delete(item.id);
-                    }
-                } catch (err) {
-                    console.error('Failed to sync result item:', item, err);
-                }
+    // ── Sync Results ──
+    const resultItems = await getAllQueued('results_sync');
+    for (const item of resultItems) {
+        try {
+            const { id, _savedAt, ...payload } = item;
+            const res = await fetch('/results/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                await deleteQueued('results_sync', id);
+                successCount++;
+            } else {
+                failCount++;
             }
-            resolve();
-        };
-        request.onerror = () => reject(request.error);
-    });
+        } catch {
+            failCount++;
+        }
+    }
+
+    _isSyncing = false;
+    updateSyncUI(failCount > 0 ? 'partial' : 'done', successCount, failCount);
 }
 
-function updateSyncUI(status, message) {
-    const indicator = document.getElementById('sync-indicator');
-    if (!indicator) return;
+// ─── UI Updates ────────────────────────────────────────────────────────────
 
-    indicator.className = 'sync-indicator ' + status;
-    indicator.innerHTML = `<span class="dot"></span> ${message}`;
-}
+async function updateSyncUI(state, successCount, failCount) {
+    // Update every sync indicator on the page
+    const indicators = document.querySelectorAll('.sync-indicator');
+    if (!indicators.length) return;
 
-function checkOnlineStatus() {
-    if (navigator.onLine) {
-        updateSyncUI('online', 'Online');
-        syncData();
+    const pending = await getPendingCount().catch(() => 0);
+
+    let cls = 'sync-indicator';
+    let html = '';
+
+    if (!navigator.onLine) {
+        cls += ' offline';
+        html = `<span class="sync-dot"></span> Offline Mode${pending > 0 ? ` &bull; ${pending} pending` : ''}`;
+    } else if (state === 'syncing') {
+        cls += ' syncing';
+        html = `<span class="sync-dot"></span> Syncing ${pending} record(s)...`;
+    } else if (state === 'partial') {
+        cls += ' warning';
+        html = `<span class="sync-dot"></span> ${successCount} synced, ${failCount} failed`;
+    } else if (state === 'done') {
+        cls += ' synced';
+        html = `<span class="sync-dot"></span> Synced ✓`;
+        setTimeout(() => updateSyncUI(), 4000);
+    } else if (pending > 0) {
+        cls += ' pending';
+        html = `<span class="sync-dot"></span> ${pending} unsynced record(s)`;
     } else {
-        updateSyncUI('offline', 'Offline Mode');
+        cls += ' online';
+        html = `<span class="sync-dot"></span> Online`;
     }
+
+    indicators.forEach(el => {
+        el.className = cls;
+        el.innerHTML = html;
+    });
 }
 
-window.addEventListener('online', checkOnlineStatus);
-window.addEventListener('offline', checkOnlineStatus);
+// ─── Event Listeners ───────────────────────────────────────────────────────
 
-// Export to window for access from forms
+window.addEventListener('online', () => {
+    document.body.classList.remove('is-offline');
+    updateSyncUI();
+    // Small delay to ensure network is actually stable
+    setTimeout(syncData, 1500);
+});
+
+window.addEventListener('offline', () => {
+    document.body.classList.add('is-offline');
+    updateSyncUI();
+});
+
+// Init on page load
+document.addEventListener('DOMContentLoaded', () => {
+    openDB().then(() => {
+        if (!navigator.onLine) {
+            document.body.classList.add('is-offline');
+        }
+        updateSyncUI();
+        if (navigator.onLine) syncData();
+    }).catch(err => console.warn('[NexusOffline] Could not open IndexedDB:', err));
+});
+
+// ─── Public API ────────────────────────────────────────────────────────────
+
 window.NexusOffline = {
     saveAttendanceOffline,
     saveResultOffline,
-    syncData
+    syncData,
+    getPendingCount
 };

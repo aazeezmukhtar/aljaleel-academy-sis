@@ -18,8 +18,24 @@
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('SW Registered'))
+                    .then(reg => {
+                        console.log('SW Registered');
+                        // Listen for sync trigger message from SW
+                        navigator.serviceWorker.addEventListener('message', (event) => {
+                            if (event.data && event.data.type === 'TRIGGER_SYNC') {
+                                if (window.NexusOffline) window.NexusOffline.syncData();
+                            }
+                        });
+                    })
                     .catch(err => console.log('SW Register Error', err));
+            });
+
+            // Register background sync when coming back online
+            window.addEventListener('online', async () => {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    if (reg.sync) await reg.sync.register('sync-nexus');
+                } catch(e) { /* Background sync not supported */ }
             });
         }
 

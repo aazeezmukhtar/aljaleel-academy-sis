@@ -43,14 +43,18 @@ const getClassListReport = async (req, res) => {
 
     let students = [];
     if (class_id) {
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
         let query = `
             SELECT s.*, c.name as class_name, a.name as arm_name 
             FROM students s
-            LEFT JOIN classes c ON s.current_class_id = c.id
+            JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
+            LEFT JOIN classes c ON se.class_id = c.id
             LEFT JOIN arms a ON s.current_arm_id = a.id
-            WHERE s.current_class_id = ? AND s.status = 'active'
+            WHERE se.class_id = ? AND s.status = 'active'
         `;
-        const params = [class_id];
+        const params = [currentSession, class_id];
 
         if (arm_id) {
             query += " AND s.current_arm_id = ?";

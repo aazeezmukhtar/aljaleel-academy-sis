@@ -46,13 +46,16 @@ const getDashboard = async (req, res) => {
                 }
             });
 
+            const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+            const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
             const recentEnrollments = await db.all(`
-                SELECT s.first_name, s.last_name, c.name as class_name, s.admission_date
+                SELECT s.first_name, s.last_name, s.admission_date,
+                       (SELECT c.name FROM student_enrollments se JOIN classes c ON se.class_id = c.id WHERE se.student_id = s.id AND se.session = ? LIMIT 1) as class_name
                 FROM students s
-                LEFT JOIN classes c ON s.current_class_id = c.id
                 ORDER BY s.admission_date DESC
                 LIMIT 5
-            `);
+            `, [currentSession]);
 
             const announcements = await db.all(`
                 SELECT * FROM announcements 
@@ -96,13 +99,17 @@ const getDashboard = async (req, res) => {
                 WHERE sa.teacher_id = ?
             `, [user.id]);
 
+            const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+            const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
             const myStudentsCount = (await db.get(`
-                SELECT COUNT(*) as count 
-                FROM students 
-                WHERE current_class_id IN (
+                SELECT COUNT(DISTINCT se.student_id) as count 
+                FROM student_enrollments se
+                JOIN students s ON se.student_id = s.id
+                WHERE se.session = ? AND se.class_id IN (
                     SELECT class_id FROM class_assignments WHERE staff_id = ?
-                ) AND status = 'active'
-            `, [user.id])).count;
+                ) AND s.status = 'active'
+            `, [currentSession, user.id])).count;
 
             const myAttendanceData = await db.get(`
                 SELECT 

@@ -41,17 +41,21 @@ const getFeeStatusReport = async (req, res) => {
 
     if (class_id) {
         let coalesceFunc = db.DB_TYPE === 'postgres' ? 'COALESCE' : 'IFNULL';
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
         const query = `
             SELECT s.id, s.first_name, s.last_name, s.admission_number, c.name as class_name,
                    (SELECT ${coalesceFunc}(SUM(amount), 0) FROM payments WHERE student_id = s.id) as paid_amount,
                    (SELECT ${coalesceFunc}(SUM(amount), 0) FROM student_fees WHERE student_id = s.id) as total_payable
             FROM students s
-            JOIN classes c ON s.current_class_id = c.id
-            WHERE s.current_class_id = ? AND s.status = 'active'
+            JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
+            JOIN classes c ON se.class_id = c.id
+            WHERE se.class_id = ? AND s.status = 'active'
         `;
 
         try {
-            const rawStudents = await db.all(query, [class_id]);
+            const rawStudents = await db.all(query, [currentSession, class_id]);
             students = rawStudents.map(s => {
                 s.balance = s.total_payable - s.paid_amount;
                 s.status = s.balance <= 0 ? 'Paid' : (s.paid_amount > 0 ? 'Partial' : 'Unpaid');
@@ -85,20 +89,45 @@ const getDebtorsList = async (req, res) => {
     let debtors = [];
     try {
         let coalesceFunc = db.DB_TYPE === 'postgres' ? 'COALESCE' : 'IFNULL';
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
         debtors = await db.all(`
             SELECT 
-                s.first_name, s.last_name, s.admission_number, c.name as class_name,
+                s.id, s.first_name, s.last_name, s.admission_number,
                 (SELECT ${coalesceFunc}(SUM(amount), 0) FROM student_fees WHERE student_id = s.id) as payable,
                 (SELECT ${coalesceFunc}(SUM(amount), 0) FROM payments WHERE student_id = s.id) as paid
             FROM students s
-            JOIN classes c ON s.current_class_id = c.id
             WHERE s.status = 'active'
-            GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+            GROUP BY s.id, s.first_name, s.last_name, s.admission_number
             HAVING ((SELECT ${coalesceFunc}(SUM(amount), 0) FROM student_fees WHERE student_id = s.id) - (SELECT ${coalesceFunc}(SUM(amount), 0) FROM payments WHERE student_id = s.id)) >= ?
             ORDER BY (payable - paid) DESC
         `, [threshold]);
 
-        debtors.forEach(d => d.debt = d.payable - d.paid);
+        if (debtors.length > 0) {
+            const studentIds = debtors.map(d => d.id);
+            const placeholders = studentIds.map(() => '?').join(',');
+            const enrollments = await db.all(`
+                SELECT se.student_id, c.name as class_name
+                FROM student_enrollments se
+                JOIN classes c ON se.class_id = c.id
+                WHERE se.student_id IN (${placeholders}) AND se.session = ?
+            `, [...studentIds, currentSession]);
+
+            const classMap = new Map();
+            enrollments.forEach(e => {
+                if (!classMap.has(e.student_id)) {
+                    classMap.set(e.student_id, []);
+                }
+                classMap.get(e.student_id).push(e.class_name);
+            });
+
+            debtors.forEach(d => {
+                const classes = classMap.get(d.id) || [];
+                d.class_name = classes.length > 0 ? classes.join(', ') : 'Not Enrolled';
+                d.debt = d.payable - d.paid;
+            });
+        }
 
     } catch (e) { console.error('Debtors List Error:', e.message); }
 

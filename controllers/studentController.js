@@ -21,21 +21,25 @@ const getStudents = async (req, res) => {
         `, [user.id, user.id, user.id]);
     }
 
+    const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+    const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
     let query = `
-        SELECT s.*, c.name as class_name 
+        SELECT s.*, c.name as class_name, se.class_id as enrolled_class_id
         FROM students s
-        LEFT JOIN classes c ON s.current_class_id = c.id
+        LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
+        LEFT JOIN classes c ON se.class_id = c.id
         WHERE 1=1
     `;
-    const params = [];
+    const params = [currentSession];
 
     let myClasses = [];
     if (user.role !== 'Admin' && user.role !== 'Registrar') {
         myClasses = classes.map(c => c.id);
         if (myClasses.length > 0) {
-            query += ` AND s.current_class_id IN (${myClasses.join(',')})`;
+            query += ` AND se.class_id IN (${myClasses.join(',')})`;
         } else {
-            query += ` AND s.current_class_id = -1`; // Return none
+            query += ` AND se.class_id = -1`; // Return none
         }
     }
 
@@ -46,10 +50,10 @@ const getStudents = async (req, res) => {
 
     if (class_id) {
         if (user.role === 'Admin' || user.role === 'Registrar' || myClasses.includes(parseInt(class_id))) {
-            query += ` AND s.current_class_id = ?`;
+            query += ` AND se.class_id = ?`;
             params.push(class_id);
         } else if (user.role !== 'Admin' && user.role !== 'Registrar') {
-            query += ` AND s.current_class_id = -1`; 
+            query += ` AND se.class_id = -1`; 
         }
     }
 
@@ -61,7 +65,29 @@ const getStudents = async (req, res) => {
     query += ` ORDER BY s.last_name ASC, s.first_name ASC`;
 
     try {
-        const students = await db.all(query, params);
+        const rows = await db.all(query, params);
+
+        let students = [];
+        if (!class_id) {
+            // Group by student ID to prevent duplicate listings in directory
+            const studentMap = new Map();
+            for (const row of rows) {
+                if (!studentMap.has(row.id)) {
+                    studentMap.set(row.id, {
+                        ...row,
+                        class_names: row.class_name ? [row.class_name] : []
+                    });
+                } else if (row.class_name) {
+                    studentMap.get(row.id).class_names.push(row.class_name);
+                }
+            }
+            students = Array.from(studentMap.values()).map(s => {
+                s.class_name = s.class_names.length > 0 ? s.class_names.join(', ') : 'Not Enrolled';
+                return s;
+            });
+        } else {
+            students = rows;
+        }
 
         res.render('students/index', {
             title: 'Student Management',
@@ -154,14 +180,20 @@ const enrollStudent = async (req, res) => {
 const getStudentProfile = async (req, res) => {
     const { id } = req.params;
     try {
-        const student = await db.get(`
-            SELECT s.*, c.name as class_name 
-            FROM students s 
-            LEFT JOIN classes c ON s.current_class_id = c.id 
-            WHERE s.id = ?
-        `, [id]);
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
 
+        const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
         if (!student) return res.status(404).send('Student not found');
+
+        const enrollments = await db.all(`
+            SELECT c.name as class_name
+            FROM student_enrollments se
+            JOIN classes c ON se.class_id = c.id
+            WHERE se.student_id = ? AND se.session = ?
+        `, [id, currentSession]);
+
+        student.class_name = enrollments.map(e => e.class_name).join(', ') || 'Not Enrolled';
 
         const feeRow = await db.get(`
             SELECT COALESCE(SUM(total_amount), 0) as total_owed, COALESCE(SUM(paid_amount), 0) as total_paid

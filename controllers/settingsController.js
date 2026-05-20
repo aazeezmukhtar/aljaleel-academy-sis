@@ -71,10 +71,18 @@ const updateSettings = async (req, res) => {
 // GET /settings/promotion
 const getPromotionPage = async (req, res) => {
     try {
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+
         const classes = await db.all('SELECT * FROM classes ORDER BY name');
         // Count students in each class
         for (let c of classes) {
-            const count = await db.get('SELECT COUNT(*) as total FROM students WHERE current_class_id = ? AND status = \'active\'', [c.id]);
+            const count = await db.get(`
+                SELECT COUNT(DISTINCT se.student_id) as total 
+                FROM student_enrollments se
+                JOIN students s ON se.student_id = s.id
+                WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
+            `, [c.id, currentSession]);
             c.studentCount = count.total;
         }
         
@@ -95,12 +103,46 @@ const processPromotion = async (req, res) => {
     const { mapping } = req.body; // mapping will be { class_id: target_class_id or 'graduate' }
     
     try {
+        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+        const parts = currentSession.split('/');
+        const nextSession = parts.length === 2 ? `${parseInt(parts[0]) + 1}/${parseInt(parts[1]) + 1}` : '2025/2026';
+
         await db.transaction(async () => {
             for (const [classId, targetId] of Object.entries(mapping)) {
                 if (targetId === 'graduate') {
-                    await db.run('UPDATE students SET status = \'graduated\' WHERE current_class_id = ? AND status = \'active\'', [classId]);
+                    // Find active students enrolled in this class for the current session
+                    const enrolledStudents = await db.all(`
+                        SELECT s.id 
+                        FROM students s
+                        JOIN student_enrollments se ON s.id = se.student_id
+                        WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
+                    `, [classId, currentSession]);
+
+                    if (enrolledStudents.length > 0) {
+                        const ids = enrolledStudents.map(s => s.id);
+                        const placeholders = ids.map(() => '?').join(',');
+                        await db.run(`UPDATE students SET status = 'graduated' WHERE id IN (${placeholders})`, ids);
+                    }
                 } else if (targetId && targetId !== 'none') {
-                    await db.run('UPDATE students SET current_class_id = ? WHERE current_class_id = ? AND status = \'active\'', [targetId, classId]);
+                    // Find active students enrolled in this class for the current session
+                    const enrolledStudents = await db.all(`
+                        SELECT s.id 
+                        FROM students s
+                        JOIN student_enrollments se ON s.id = se.student_id
+                        WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
+                    `, [classId, currentSession]);
+
+                    for (const student of enrolledStudents) {
+                        // Keep legacy current_class_id updated
+                        await db.run('UPDATE students SET current_class_id = ? WHERE id = ?', [targetId, student.id]);
+                        // Enroll in the next session
+                        await db.run(`
+                            INSERT INTO student_enrollments (student_id, class_id, session)
+                            VALUES (?, ?, ?)
+                            ON CONFLICT (student_id, class_id, session) DO UPDATE SET class_id = excluded.class_id
+                        `, [student.id, targetId, nextSession]);
+                    }
                 }
             }
         });

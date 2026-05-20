@@ -44,7 +44,16 @@
                             </div>
                             <div class="form-group">
                                 <label>Date of Birth</label>
-                                <input type="date" name="dob" class="form-control" value="<%= student.dob %>" required>
+                                <%
+                                  let formattedDob = '';
+                                  if (student.dob) {
+                                      const d = new Date(student.dob);
+                                      if (!isNaN(d.getTime())) {
+                                          formattedDob = d.toISOString().split('T')[0];
+                                      }
+                                  }
+                                %>
+                                <input type="date" name="dob" class="form-control" value="<%= formattedDob %>" required>
                             </div>
                         </div>
 

@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
+const bcrypt = require('bcryptjs');
 
 const getStudents = async (req, res) => {
     const user = req.session.staff;
@@ -119,11 +120,12 @@ const enrollStudent = async (req, res) => {
 
     try {
         const primary_class_id = academy_class_id || tahfeez_class_id || null;
+        const hashedPassword = await bcrypt.hash(admission_number, 10);
         const sql = `
-            INSERT INTO students (first_name, last_name, gender, dob, current_class_id, parent_phone, parent_address, admission_number, passport_photo_path, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+            INSERT INTO students (first_name, last_name, gender, dob, current_class_id, parent_phone, parent_address, admission_number, passport_photo_path, password, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `;
-        const insertResult = await db.run(sql, [first_name, last_name, gender, dob, primary_class_id, parent_phone, parent_address, admission_number, passport_photo_path]);
+        const insertResult = await db.run(sql, [first_name, last_name, gender, dob, primary_class_id, parent_phone, parent_address, admission_number, passport_photo_path, hashedPassword]);
         
         // Postgres returns lastInsertRowid as null, we need to fetch by admission_number
         const studentRow = await db.get("SELECT id FROM students WHERE admission_number = ?", [admission_number]);
@@ -357,7 +359,32 @@ const deleteStudent = async (req, res) => {
     }
 };
 
+const resetStudentPassword = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const student = await db.get('SELECT admission_number FROM students WHERE id = ?', [id]);
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+        
+        const defaultPassword = student.admission_number;
+        if (!defaultPassword) {
+            return res.status(400).json({ success: false, message: 'Cannot reset password: Student does not have an Admission Number/ID yet.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+        await db.run('UPDATE students SET password = ? WHERE id = ?', [hashedPassword, id]);
+
+        logAction(req.session.staff.id, 'RESET_STUDENT_PASSWORD', 'STUDENT', { id, admission_number: defaultPassword }, req.ip);
+
+        res.json({ success: true, message: 'Student password has been reset to their Admission Number successfully.' });
+    } catch (err) {
+        console.error('Reset Student Password Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to reset student password.' });
+    }
+};
+
 module.exports = {
     enrollStudent, getStudents, getEnrollmentForm,
-    getStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent
+    getStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
 };

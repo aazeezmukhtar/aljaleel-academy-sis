@@ -122,11 +122,15 @@
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div style="display: flex; gap: 10px;">
+                                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
                                                     <a href="/students/edit/<%= student.id %>" class="btn btn-primary">
                                                         <i class="bi bi-pencil-square"></i> Edit Profile
                                                     </a>
                                                     <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                                                        <button onclick="resetPassword('<%= student.id %>')" class="btn btn-outline"
+                                                            style="border-color: var(--school-secondary); color: var(--school-secondary);">
+                                                            <i class="bi bi-shield-lock"></i> Reset Password
+                                                        </button>
                                                         <button onclick="deleteStudent('<%= student.id %>')" class="btn btn-danger"
                                                             style="background: #ef4444; color: white;">
                                                             <i class="bi bi-trash"></i> Delete
@@ -136,25 +140,43 @@
                                 </div>
 
                                 <script>
-                                    async function deleteStudent(id) {
-                                        if (!confirm('Are you sure you want to PERMANENTLY delete this student? This will remove all their records including attendance, results, fees, etc.')) return;
+                                     async function resetPassword(id) {
+                                         if (!confirm('Are you sure you want to reset this student\'s password to default? The student will be able to log in using their Student ID/Admission Number as the password.')) return;
 
-                                        try {
-                                            const response = await fetch(`/students/delete/${id}`, { method: 'POST' });
-                                            const result = await response.json();
+                                         try {
+                                             const response = await fetch(`/students/reset-password/${id}`, { method: 'POST' });
+                                             const result = await response.json();
 
-                                            if (result.success) {
-                                                alert(result.message);
-                                                window.location.href = '/students';
-                                            } else {
-                                                alert('Error: ' + result.message);
-                                            }
-                                        } catch (err) {
-                                            console.error(err);
-                                            alert('Network error occurred.');
-                                        }
-                                    }
-                                </script>
+                                             if (result.success) {
+                                                 alert(result.message);
+                                             } else {
+                                                 alert('Error: ' + result.message);
+                                             }
+                                         } catch (err) {
+                                             console.error(err);
+                                             alert('Network error occurred.');
+                                         }
+                                     }
+
+                                     async function deleteStudent(id) {
+                                         if (!confirm('Are you sure you want to PERMANENTLY delete this student? This will remove all their records including attendance, results, fees, etc.')) return;
+
+                                         try {
+                                             const response = await fetch(`/students/delete/${id}`, { method: 'POST' });
+                                             const result = await response.json();
+
+                                             if (result.success) {
+                                                 alert(result.message);
+                                                 window.location.href = '/students';
+                                             } else {
+                                                 alert('Error: ' + result.message);
+                                             }
+                                         } catch (err) {
+                                             console.error(err);
+                                             alert('Network error occurred.');
+                                         }
+                                     }
+                                 </script>
 
                                 <div class="grid-2" style="margin-top: 30px;">
                                     <div class="card">

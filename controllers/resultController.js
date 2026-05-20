@@ -321,10 +321,12 @@ const getReportCard = async (req, res) => {
             `, [student_id, session]);
         }
 
-        if (!classObj) return res.status(404).send('No class enrollment found for this session');
+                if (!classObj) return res.status(404).send('No class enrollment found for this session');
         
         student.class_name = classObj.name;
         const target_class_id = classObj.id;
+
+        const resultConfig = await getSectionResultConfig(target_class_id);
 
         // Results with subject rank
         const results = await db.all(`
@@ -405,7 +407,7 @@ const getReportCard = async (req, res) => {
             position,
             classCount,
             grading,
-            caCount: school.ca_count || 2,
+            caCount: resultConfig.ca_count || 2,
             marksAnalysis
         });
     } catch (err) {
@@ -546,6 +548,7 @@ const getBulkReport = async (req, res) => {
         }
 
         const school = await getSchoolSettings();
+        const resultConfig = await getSectionResultConfig(class_id);
         // Use enrollment table — handles multi-section students correctly
         const students = await db.all(`
             SELECT s.* FROM students s
@@ -635,7 +638,7 @@ const getBulkReport = async (req, res) => {
             school,
             grading,
             classCount: classPerformance.length,
-            caCount: school.ca_count || 2
+            caCount: resultConfig.ca_count || 2
         });
     } catch (err) {
         console.error('Bulk Report Error:', err);

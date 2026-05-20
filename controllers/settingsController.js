@@ -114,14 +114,16 @@ const processPromotion = async (req, res) => {
 
 // POST /settings/section-calendar - Update per-section session & term
 const updateSectionCalendar = async (req, res) => {
-    const { sections } = req.body; // { "1": { session: '...', term: '...' }, "2": { ... } }
     try {
+        const sections = await db.all('SELECT id FROM sections');
         await db.transaction(async () => {
-            for (const [sectionId, vals] of Object.entries(sections || {})) {
-                if (vals.session && vals.term) {
+            for (const sec of sections) {
+                const session = req.body[`sections_${sec.id}_session`];
+                const term = req.body[`sections_${sec.id}_term`];
+                if (session && term) {
                     await db.run(
                         'UPDATE sections SET current_session = ?, current_term = ? WHERE id = ?',
-                        [vals.session, vals.term, sectionId]
+                        [session, term, sec.id]
                     );
                 }
             }

@@ -3,6 +3,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const { generateUniqueID } = require('../utils/idHelper');
+const bcrypt = require('bcryptjs');
 
 const getBulkImportPage = async (req, res) => {
     try {
@@ -145,18 +146,20 @@ const processBulkImport = async (req, res) => {
         await db.transaction(async () => {
             for (const student of validStudents) {
                 const admission_number = student.admission_number || await generateUniqueID();
+                const hashedPassword = await bcrypt.hash(admission_number.toString(), 10);
                 await db.run(`
                     INSERT INTO students (
                         first_name, last_name, gender, dob, admission_number,
-                        current_class_id, status
-                    ) VALUES (?, ?, ?, ?, ?, ?, 'active')
+                        current_class_id, password, status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
                 `, [
                     student.first_name,
                     student.last_name,
                     student.gender,
                     student.dob || null,
                     admission_number,
-                    student.class_id || null
+                    student.class_id || null,
+                    hashedPassword
                 ]);
 
                 if (student.class_id) {

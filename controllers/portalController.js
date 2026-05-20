@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const bcrypt = require('bcryptjs');
 
 const getSettings = async () => {
     const rows = await db.all('SELECT key, value FROM settings');
@@ -175,11 +176,20 @@ exports.postChangePassword = async (req, res) => {
     try {
         const student = await db.get('SELECT password FROM students WHERE id = ?', [studentId]);
 
-        if (student.password !== current_password) {
+        // Support both hashed passwords and legacy plaintext passwords
+        let isMatch = false;
+        if (student.password && student.password.startsWith('$2')) {
+            isMatch = await bcrypt.compare(current_password, student.password);
+        } else {
+            isMatch = student.password === current_password;
+        }
+
+        if (!isMatch) {
             return res.redirect('/portal/change-password?error=Incorrect current password');
         }
 
-        await db.run('UPDATE students SET password = ? WHERE id = ?', [new_password, studentId]);
+        const hashedPassword = await bcrypt.hash(new_password, 10);
+        await db.run('UPDATE students SET password = ? WHERE id = ?', [hashedPassword, studentId]);
         
         res.redirect('/portal/change-password?success=Password updated successfully');
     } catch (err) {

@@ -100,7 +100,7 @@ const getResultManager = async (req, res) => {
     try {
         let classes, subjects;
 
-        if (user.role === 'Admin') {
+        if (user.role === 'Admin' || user.role === 'Examination Officer') {
             classes = await db.all('SELECT * FROM classes');
             subjects = await db.all('SELECT * FROM subjects');
         } else {
@@ -121,7 +121,7 @@ const getResultManager = async (req, res) => {
         let students = [];
 
         if (class_id && subject_id) {
-            if (user.role !== 'Admin') {
+            if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
                 const hasAccess = await db.get(`
                     SELECT id FROM subject_assignments 
                     WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
@@ -166,7 +166,7 @@ const saveResults = async (req, res) => {
     }
 
     try {
-        if (user.role !== 'Admin') {
+        if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
             const hasAccess = await db.get(`
                 SELECT id FROM subject_assignments 
                 WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
@@ -399,7 +399,7 @@ const getBulkReport = async (req, res) => {
     try {
         if (!class_id || !term || !session) {
             let classes;
-            if (user.role === 'Admin') {
+            if (user.role === 'Admin' || user.role === 'Examination Officer') {
                 classes = await db.all('SELECT * FROM classes ORDER BY name');
             } else {
                 classes = await db.all(`
@@ -602,7 +602,7 @@ const getTraitsForm = async (req, res) => {
 
     try {
         let classes;
-        if (user.role === 'Admin') {
+        if (user.role === 'Admin' || user.role === 'Examination Officer') {
             classes = await db.all('SELECT * FROM classes');
         } else {
             classes = await db.all(`
@@ -614,7 +614,7 @@ const getTraitsForm = async (req, res) => {
 
         let students = [];
         if (class_id) {
-            if (user.role !== 'Admin') {
+            if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
                 const isAssigned = await db.get(`
                     SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
                 `, [user.id, class_id]);
@@ -657,7 +657,7 @@ const saveTraits = async (req, res) => {
     const user = req.session.staff;
 
     try {
-        if (user.role !== 'Admin') {
+        if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
             const isAssigned = await db.get(`
                 SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
             `, [user.id, class_id]);
@@ -690,7 +690,7 @@ const approveResults = async (req, res) => {
     const { subject_id, class_id, term, session } = req.body;
     const user = req.session.staff;
 
-    if (user.role !== 'Admin') return res.status(403).json({ success: false, message: 'Unauthorized' });
+    if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
         const info = await db.run(`
@@ -710,7 +710,7 @@ const lockResults = async (req, res) => {
     const { subject_id, class_id, term, session } = req.body;
     const user = req.session.staff;
 
-    if (user.role !== 'Admin') return res.status(403).json({ success: false, message: 'Unauthorized' });
+    if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
         const info = await db.run(`
@@ -730,7 +730,7 @@ const publishBulkResults = async (req, res) => {
     const { class_id, term, session } = req.body;
     const user = req.session.staff;
 
-    if (user.role !== 'Admin') return res.status(403).json({ success: false, message: 'Unauthorized' });
+    if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
         let info;

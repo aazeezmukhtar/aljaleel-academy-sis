@@ -128,8 +128,9 @@
 
         <!-- BOTTOM SECTION -->
         <div class="rc-bottom">
-            <!-- ACADEMIC SUMMARY -->
-                <div class="rc-summary-grid">
+            <!-- LEFT COLUMN (Summary & Position) -->
+            <div class="rc-summary-box" style="display: flex; flex-direction: column;">
+                <div class="rc-summary-grid" style="flex: 1;">
                     <div class="rc-avg-display">
                         <span class="rc-section-subtitle">SESSIONAL SUMMARY</span>
                         <span class="rc-avg-number"><%= overallAvg.toFixed(2) %></span>
@@ -146,34 +147,38 @@
                         <%= getOrdinal(position) %><span class="rc-pos-of">/ <%= classCount %></span>
                     </span>
                 </div>
+            </div>
 
-            <div class="rc-analysis-box">
-                <div class="rc-section-subtitle" style="margin-bottom: 3mm;">PERFORMANCE ANALYSIS</div>
-                <ul class="rc-analysis-list">
-                    <% if (typeof marksAnalysis !== 'undefined' && marksAnalysis.length > 0) { %>
-                        <% marksAnalysis.forEach(function(analysis) { %>
-                            <li class="<%= analysis.includes('tied') ? 'text-highlight-purple' : '' %>">
-                                <i class="bi bi-dot"></i> 
-                                <span class="<%= analysis.includes('tied') ? 'text-italic' : '' %>" style="<%= analysis.includes('tied') ? 'color: ' + (school.primary_color || '#6366f1') : '' %>"><%= analysis %></span>
-                            </li>
-                        <% }); %>
-                    <% } %>
-                    <li style="margin-top: 4mm; border-top: 1px dotted #ccc; padding-top: 3mm; font-weight: 700; color: #64748b;">
-                        RECOMMENDATION:
-                    </li>
-                    <li class="rc-recommendation-text">
-                        <% if (overallAvg >= 70) { %>
-                            Outstanding cumulative academic performance! Highly encouraged to keep up the momentum. Promoted.
-                        <% } else if (overallAvg >= 50) { %>
-                            Good overall session effort, though targeted improvement in weaker subjects is advised. Promoted.
-                        <% } else { %>
-                            Below average sessional performance. Remedial guidance required. Result Withheld/Advised.
+            <!-- RIGHT COLUMN (Analysis & Grading Scale) -->
+            <div class="rc-analysis-box" style="display: flex; flex-direction: column;">
+                <div class="rc-analysis-top" style="flex: 1; padding-bottom: 2mm; border-bottom: 2px solid #f1f5f9;">
+                    <span class="rc-section-subtitle">PERFORMANCE ANALYSIS</span>
+                    <ul class="rc-analysis-list" style="margin-top: 1mm; padding-left: 0; list-style-type: none; font-size: 8.5pt; color: #475569;">
+                        <% if (typeof marksAnalysis !== 'undefined' && marksAnalysis.length > 0) { %>
+                            <% marksAnalysis.forEach(function(analysis) { %>
+                                <li class="<%= analysis.includes('tied') ? 'text-highlight-purple' : '' %>" style="margin-bottom: 1.5mm; display: flex; align-items: flex-start; gap: 2mm;">
+                                    <span style="display: block; width: 4px; height: 4px; background-color: #94a3b8; border-radius: 50%; flex-shrink: 0; margin-top: 2mm;"></span>
+                                    <span class="<%= analysis.includes('tied') ? 'text-italic' : '' %>" style="<%= analysis.includes('tied') ? 'color: ' + (school.primary_color || '#6366f1') : '' %>"><%= analysis %></span>
+                                </li>
+                            <% }); %>
                         <% } %>
-                    </li>
-                </ul>
+                        <li style="margin-top: 4mm; border-top: 1px dotted #ccc; padding-top: 3mm; font-weight: 700; color: #64748b;">
+                            RECOMMENDATION:
+                        </li>
+                        <li class="rc-recommendation-text" style="font-size: 8.5pt; color: #475569;">
+                            <% if (overallAvg >= 70) { %>
+                                Outstanding cumulative academic performance! Highly encouraged to keep up the momentum. Promoted.
+                            <% } else if (overallAvg >= 50) { %>
+                                Good overall session effort, though targeted improvement in weaker subjects is advised. Promoted.
+                            <% } else { %>
+                                Below average sessional performance. Remedial guidance required. Result Withheld/Advised.
+                            <% } %>
+                        </li>
+                    </ul>
+                </div>
 
                 <!-- GRADING SCALE -->
-                <div class="rc-grading-scale">
+                <div class="rc-grading-scale" style="margin-top: 0; padding-top: 2mm; border-top: none;">
                     <% if (typeof grading !== 'undefined' && grading && grading.length > 0) { %>
                         <% grading.forEach(function(g) { %>
                             <div class="rc-grade-key">

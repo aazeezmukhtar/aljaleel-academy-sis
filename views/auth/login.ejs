@@ -6,78 +6,97 @@
                 <div class="login-logo">
                     <i class="bi bi-shield-lock-fill"></i>
                 </div>
-                <h1>Nexus SIS</h1>
-                <p>Enter your credentials to access the portal</p>
+                <h1>Staff Portal</h1>
+                <p>Enter your credentials to access the system</p>
             </div>
 
             <% if (error) { %>
-                <div class="alert alert-danger" style="margin-bottom: 20px;">
+                <div class="alert alert-danger">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     <%= error %>
                 </div>
-                <% } %>
+            <% } %>
 
-                    <form action="/auth/login" method="POST" class="enroll-form">
-                        <div class="form-group">
-                            <label for="staff_id">Staff ID</label>
-                            <div class="input-with-icon">
-                                <i class="bi bi-person-badge"></i>
-                                <input type="text" id="staff_id" name="staff_id" placeholder="e.g. admin" required
-                                    autofocus class="form-control">
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="password">Password</label>
-                            <div class="input-with-icon">
-                                <i class="bi bi-key-fill"></i>
-                                <input type="password" id="password" name="password" placeholder="••••••••" required
-                                    class="form-control">
-                            </div>
-                        </div>
-
-                        <button type="submit" class="btn btn-primary btn-block"
-                            style="margin-top: 20px; width: 100%; height: 50px; font-size: 1.1rem;">
-                            <i class="bi bi-box-arrow-in-right"></i> Sign In to Portal
-                        </button>
-                    </form>
-
-                    <div class="login-footer">
-                        <p>&copy; 2026 Nexus SIS Core. Offline-First Desktop Edition.</p>
+            <form action="/auth/login" method="POST" class="enroll-form">
+                <div class="form-group">
+                    <label for="staff_id">Staff ID</label>
+                    <div class="input-with-icon">
+                        <i class="bi bi-person-badge"></i>
+                        <input type="text" id="staff_id" name="staff_id" placeholder="e.g. admin" required
+                            autofocus class="form-control">
                     </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-with-icon">
+                        <i class="bi bi-key-fill"></i>
+                        <input type="password" id="password" name="password" placeholder="••••••••" required
+                            class="form-control">
+                        <button type="button" class="toggle-pwd-btn" onclick="togglePwd()" aria-label="Toggle password">
+                            <i class="bi bi-eye" id="pwd-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block"
+                    style="margin-top: 20px; width: 100%; height: 50px; font-size: 1.1rem;">
+                    <i class="bi bi-box-arrow-in-right"></i> Sign In to Portal
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <p>Student? <a href="/auth/student-login">Access Student Portal →</a></p>
+            </div>
         </div>
     </div>
 
     <style>
         .login-page {
-            height: 100vh;
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, var(--school-primary), var(--school-secondary));
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
             padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .login-page::before, .login-page::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.15;
+            pointer-events: none;
+        }
+        .login-page::before {
+            width: 500px; height: 500px;
+            background: var(--school-primary, #6366f1);
+            top: -150px; left: -150px;
+        }
+        .login-page::after {
+            width: 400px; height: 400px;
+            background: var(--school-secondary, #a855f7);
+            bottom: -100px; right: -100px;
         }
 
         .login-card {
             background: white;
             width: 100%;
             max-width: 450px;
-            padding: 40px;
+            padding: 44px 40px;
             border-radius: 24px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
-            animation: slideUp 0.6s ease-out;
+            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.35);
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) both;
         }
 
         @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
+            from { opacity: 0; transform: translateY(30px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
 
         .login-header {
@@ -86,57 +105,86 @@
         }
 
         .login-logo {
-            width: 80px;
-            height: 80px;
-            background: var(--school-primary);
+            width: 76px;
+            height: 76px;
+            background: linear-gradient(135deg, var(--school-primary, #6366f1), var(--school-secondary, #a855f7));
             color: white;
             border-radius: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
+            font-size: 2.2rem;
             margin: 0 auto 20px;
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
         }
 
         .login-header h1 {
-            font-size: 2rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.85rem;
             color: #1e293b;
             margin-bottom: 8px;
+            font-weight: 800;
         }
 
         .login-header p {
             color: #64748b;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
 
         .input-with-icon {
             position: relative;
         }
 
-        .input-with-icon i {
+        .input-with-icon > i:first-child {
             position: absolute;
             left: 15px;
             top: 50%;
             transform: translateY(-50%);
             color: #94a3b8;
             transition: color 0.3s;
+            pointer-events: none;
+            z-index: 1;
         }
 
         .input-with-icon .form-control {
-            padding-left: 45px;
+            padding-left: 44px;
+            padding-right: 44px;
         }
 
-        .input-with-icon .form-control:focus+i {
-            color: var(--school-primary);
+        .input-with-icon .form-control:focus {
+            border-color: var(--school-primary, #6366f1);
         }
+
+        .toggle-pwd-btn {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #94a3b8;
+            font-size: 1rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            transition: color 0.2s;
+        }
+        .toggle-pwd-btn:hover { color: var(--school-primary, #6366f1); }
 
         .login-footer {
-            margin-top: 30px;
+            margin-top: 24px;
             text-align: center;
             color: #94a3b8;
             font-size: 0.85rem;
         }
+
+        .login-footer a {
+            color: var(--school-primary, #6366f1);
+            font-weight: 600;
+            text-decoration: none;
+        }
+        .login-footer a:hover { text-decoration: underline; }
 
         .alert {
             padding: 12px 16px;
@@ -145,6 +193,7 @@
             display: flex;
             align-items: center;
             gap: 10px;
+            margin-bottom: 20px;
         }
 
         .alert-danger {
@@ -152,6 +201,20 @@
             color: #b91c1c;
             border: 1px solid #fee2e2;
         }
+
+        @media (max-width: 480px) {
+            .login-card { padding: 28px 20px; }
+        }
     </style>
+
+    <script>
+        function togglePwd() {
+            const input = document.getElementById('password');
+            const icon  = document.getElementById('pwd-eye');
+            const isHidden = input.type === 'password';
+            input.type = isHidden ? 'text' : 'password';
+            icon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+        }
+    </script>
 
     <%- include('../partials/footer') %>

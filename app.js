@@ -13,7 +13,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const session = require('express-session');
-const { isAuthenticated, injectUser } = require('./middleware/authMiddleware');
+const { isAuthenticated, injectUser, isAnyAuthenticated } = require('./middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,7 +75,7 @@ app.use('/fees', isAuthenticated, feeRoutes);
 app.use('/settings', isAuthenticated, settingsRoutes);
 app.use('/reports', isAuthenticated, reportRoutes);
 app.use('/announcements', isAuthenticated, require('./routes/announcementRoutes'));
-app.use('/api/notifications', isAuthenticated, require('./routes/notificationRoutes'));
+app.use('/api/notifications', isAnyAuthenticated, require('./routes/notificationRoutes'));
 app.use('/calendar', require('./routes/calendarRoutes'));
 
 // Protected Student Portal Routes

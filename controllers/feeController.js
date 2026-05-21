@@ -40,7 +40,7 @@ const getFeeManager = async (req, res) => {
     const user = req.session.staff;
     try {
         let classes;
-        if (user.role === 'Admin') {
+        if (user.role === 'Admin' || user.role === 'Bursar') {
             classes = await db.all('SELECT * FROM classes ORDER BY name');
         } else {
             classes = await db.all(`
@@ -54,7 +54,7 @@ const getFeeManager = async (req, res) => {
         let students = [];
         if (class_id) {
             // Access control check
-            if (user.role !== 'Admin') {
+            if (user.role !== 'Admin' && user.role !== 'Bursar') {
                 const isAssigned = classes.find(c => String(c.id) === String(class_id));
                 if (!isAssigned) return res.redirect('/fees/manager?error=Unauthorized Access');
             }
@@ -91,7 +91,7 @@ const getStudentFees = async (req, res) => {
         if (!student) return res.status(404).send('Student not found');
 
         // Access control check
-        if (user.role !== 'Admin') {
+        if (user.role !== 'Admin' && user.role !== 'Bursar') {
             const isAssigned = await db.get(`
                 SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
             `, [user.id, student.current_class_id]);

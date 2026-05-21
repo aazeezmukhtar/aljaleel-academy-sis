@@ -2,9 +2,9 @@ const db = require('../utils/db');
 
 exports.getLatestNotifications = async (req, res) => {
     try {
-        const userId = req.session.user ? req.session.user.id : (req.session.student ? req.session.student.id : null);
-        const userType = req.session.user ? 'staff' : 'student';
-        const role = req.session.user ? req.session.user.role : 'Student';
+        const userId = req.session.staff ? req.session.staff.id : (req.session.student ? req.session.student.id : null);
+        const userType = req.session.staff ? 'staff' : 'student';
+        const role = req.session.staff ? req.session.staff.role : 'Student';
 
         if (!userId) return res.json({ notifications: [], unreadCount: 0 });
 
@@ -37,10 +37,10 @@ exports.getLatestNotifications = async (req, res) => {
                     FROM class_posts WHERE class_id = ?
                 `, [classId]);
             }
-        } else if (req.session.user && req.session.user.role === 'Admin') {
+        } else if (req.session.staff && req.session.staff.role === 'Admin') {
             // Admin should NOT see assignments in notification bell as requested
             assignments = []; 
-        } else if (req.session.user) {
+        } else if (req.session.staff) {
             // Teachers see posts for classes they are assigned to
             assignments = await db.all(`
                 SELECT cp.id, cp.title, cp.post_type as type, cp.due_date as date, cp.created_at, 'class_post' as source_type
@@ -93,7 +93,11 @@ exports.getLatestNotifications = async (req, res) => {
             // Build Target URL
             let url = '#';
             if (n.source_type === 'announcement') {
-                url = `/announcements/view/${n.id}`;
+                if (n.type === 'Event') {
+                    url = userType === 'student' ? '/portal/calendar' : '/calendar';
+                } else {
+                    url = userType === 'student' ? `/portal/announcement/${n.id}` : `/announcements/view/${n.id}`;
+                }
             } else if (n.source_type === 'class_post') {
                 url = userType === 'student' ? '/portal#class-board' : '/staff/board';
             }
@@ -116,8 +120,8 @@ exports.getLatestNotifications = async (req, res) => {
 exports.markAsRead = async (req, res) => {
     try {
         const { source_id, source_type } = req.body;
-        const userId = req.session.user ? req.session.user.id : (req.session.student ? req.session.student.id : null);
-        const userType = req.session.user ? 'staff' : 'student';
+        const userId = req.session.staff ? req.session.staff.id : (req.session.student ? req.session.student.id : null);
+        const userType = req.session.staff ? 'staff' : 'student';
 
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 

@@ -7,7 +7,7 @@ const getStudents = async (req, res) => {
     const { search, class_id, status } = req.query;
 
     let classes;
-    if (user.role === 'Admin') {
+    if (user.role === 'Admin' || user.role === 'Registrar') {
         classes = await db.all('SELECT * FROM classes WHERE id != 0');
     } else {
         classes = await db.all(`
@@ -29,7 +29,7 @@ const getStudents = async (req, res) => {
     const params = [];
 
     let myClasses = [];
-    if (user.role !== 'Admin') {
+    if (user.role !== 'Admin' && user.role !== 'Registrar') {
         myClasses = classes.map(c => c.id);
         if (myClasses.length > 0) {
             query += ` AND s.current_class_id IN (${myClasses.join(',')})`;
@@ -44,10 +44,10 @@ const getStudents = async (req, res) => {
     }
 
     if (class_id) {
-        if (user.role === 'Admin' || myClasses.includes(parseInt(class_id))) {
+        if (user.role === 'Admin' || user.role === 'Registrar' || myClasses.includes(parseInt(class_id))) {
             query += ` AND s.current_class_id = ?`;
             params.push(class_id);
-        } else if (user.role !== 'Admin') {
+        } else if (user.role !== 'Admin' && user.role !== 'Registrar') {
             query += ` AND s.current_class_id = -1`; 
         }
     }
@@ -79,7 +79,7 @@ const getEnrollmentForm = async (req, res) => {
     try {
         const user = req.session.staff;
         let classes;
-        if (user.role === 'Admin') {
+        if (user.role === 'Admin' || user.role === 'Registrar') {
             classes = await db.all('SELECT * FROM classes');
         } else {
             classes = await db.all(`
@@ -178,7 +178,7 @@ const getEditForm = async (req, res) => {
     try {
         const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
         let classes;
-        if (user.role === 'Admin') {
+        if (user.role === 'Admin' || user.role === 'Registrar') {
             classes = await db.all('SELECT * FROM classes');
         } else {
             classes = await db.all(`

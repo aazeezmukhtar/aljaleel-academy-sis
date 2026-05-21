@@ -28,5 +28,18 @@ module.exports = {
             res.locals.user = null;
         }
         next();
+    },
+
+    // Allow either staff or student
+    isAnyAuthenticated: (req, res, next) => {
+        if ((req.session && req.session.staff) || (req.session && req.session.student)) {
+            return next();
+        }
+        // Redirect logic depends on the route, but if API we should ideally return 401.
+        // But for web, we will redirect to /auth/login as a fallback.
+        if (req.originalUrl.startsWith('/api/')) {
+            return res.status(401).json({ error: 'Unauthorized' });
+        }
+        res.redirect('/auth/login');
     }
 };

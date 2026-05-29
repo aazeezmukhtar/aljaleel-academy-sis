@@ -162,14 +162,21 @@ const getResultManager = async (req, res) => {
             }
 
             students = await db.all(`
-                SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
+                SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
                        r.ca1, r.ca2, r.exam, r.total, r.grade, r.status, r.teacher_remark
                 FROM students s 
                 LEFT JOIN results r ON s.id = r.student_id 
                     AND r.subject_id = ? AND r.term = ? AND r.session = ?
-                WHERE s.current_class_id = ? AND s.status = 'active'
+                WHERE s.status = 'active'
+                AND (
+                    s.id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+                    OR (
+                        s.current_class_id = ? 
+                        AND s.id NOT IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+                    )
+                )
                 ORDER BY s.last_name, s.first_name
-            `, [subject_id, activeTerm, activeSession, class_id]);
+            `, [subject_id, activeTerm, activeSession, class_id, activeSession, class_id, class_id, activeSession]);
         }
 
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');

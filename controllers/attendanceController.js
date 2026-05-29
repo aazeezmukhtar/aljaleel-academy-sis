@@ -62,16 +62,24 @@ const getTakeAttendance = async (req, res) => {
         const clazz = await db.get('SELECT * FROM classes WHERE id = ?', [class_id]);
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
+        const settings = await getAcademicSettings();
+        const session = settings.session || '2025/2026';
+
         const students = await db.all(`
-            SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
+            SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
                    a.status
             FROM students s
             LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
-            WHERE s.current_class_id = ? AND s.status = 'active'
+            WHERE s.status = 'active'
+            AND (
+                s.id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+                OR (
+                    s.current_class_id = ? 
+                    AND s.id NOT IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+                )
+            )
             ORDER BY s.last_name, s.first_name
-        `, [date, class_id, class_id]);
-
-        const settings = await getAcademicSettings();
+        `, [date, class_id, class_id, session, class_id, class_id, session]);
 
         res.render('attendance/take', {
             title: 'Mark Attendance',

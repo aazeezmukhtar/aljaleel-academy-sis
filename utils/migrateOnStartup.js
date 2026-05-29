@@ -84,7 +84,7 @@ async function runMigrations() {
 
     // Backfill student_enrollments from students.current_class_id
     const enrollmentCount = await db.get('SELECT COUNT(*) as c FROM student_enrollments');
-    if (enrollmentCount.c === 0) {
+    if (Number(enrollmentCount.c || 0) === 0) {
         const settingsRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
         const currentSession = settingsRow ? settingsRow.value : '2025/2026';
 

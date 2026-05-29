@@ -10,6 +10,7 @@ const db = require('./db');
  * Uses student_enrollments junction table with fallback to current_class_id.
  */
 async function getEnrolledStudents(classId, session) {
+    const classIdNum = Number(classId);
     // First try the enrollment table
     let students = await db.all(`
         SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number, 
@@ -18,7 +19,7 @@ async function getEnrolledStudents(classId, session) {
         JOIN student_enrollments se ON s.id = se.student_id
         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
         ORDER BY s.last_name, s.first_name
-    `, [classId, session]);
+    `, [classIdNum, session]);
 
     // Fallback to current_class_id if no enrollment records
     if (students.length === 0) {
@@ -28,7 +29,7 @@ async function getEnrolledStudents(classId, session) {
             FROM students
             WHERE current_class_id = ? AND status = 'active'
             ORDER BY last_name, first_name
-        `, [classId]);
+        `, [classIdNum]);
     }
 
     return students;

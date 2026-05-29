@@ -1,11 +1,13 @@
 const db = require('../utils/db');
 const { logAction } = require('../utils/logger');
+const { getEnrolledStudents } = require('../utils/enrollmentHelper');
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user) => {
     if (user.role === 'Admin') {
         return await db.all('SELECT * FROM classes ORDER BY name ASC');
     }
+    const staffId = Number(user.id);
     return await db.all(`
         SELECT DISTINCT c.* 
         FROM classes c
@@ -13,7 +15,7 @@ const getAssignedClasses = async (user) => {
         LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
         WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
         ORDER BY c.name ASC
-    `, [user.id, user.id, user.id]);
+    `, [staffId, staffId, staffId]);
 };
 
 // Helper: get current academic settings
@@ -59,27 +61,25 @@ const getTakeAttendance = async (req, res) => {
             if (!hasAccess) return res.redirect('/attendance?error=Access Denied');
         }
 
-        const clazz = await db.get('SELECT * FROM classes WHERE id = ?', [class_id]);
+        const clazz = await db.get('SELECT * FROM classes WHERE id = ?', [Number(class_id)]);
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
         const settings = await getAcademicSettings();
         const session = settings.session || '2025/2026';
 
-        const students = await db.all(`
-            SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
-                   a.status
-            FROM students s
-            LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
-            WHERE s.status = 'active'
-            AND (
-                s.id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-                OR (
-                    s.current_class_id = ? 
-                    AND s.id NOT IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-                )
-            )
-            ORDER BY s.last_name, s.first_name
-        `, [date, class_id, class_id, session, class_id, class_id, session]);
+        const enrolledStudents = await getEnrolledStudents(Number(class_id), session);
+        let students = [];
+        if (enrolledStudents.length > 0) {
+            const studentIds = enrolledStudents.map(s => s.id);
+            students = await db.all(`
+                SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
+                       a.status
+                FROM students s
+                LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
+                WHERE s.id IN (${studentIds.map(() => '?').join(',')})
+                ORDER BY s.last_name, s.first_name
+            `, [date, Number(class_id), ...studentIds]);
+        }
 
         res.render('attendance/take', {
             title: 'Mark Attendance',
@@ -171,7 +171,7 @@ const getReport = async (req, res) => {
                     WHERE a.class_id = ? AND a.date BETWEEN ? AND ?
                     GROUP BY s.id
                     ORDER BY s.last_name, s.first_name
-                `, [class_id, start_date, end_date]);
+                `, [Number(class_id), start_date, end_date]);
             }
         }
 

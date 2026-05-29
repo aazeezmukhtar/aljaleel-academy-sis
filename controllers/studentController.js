@@ -177,6 +177,15 @@ const getEditForm = async (req, res) => {
     const user = req.session.staff;
     try {
         const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
+        // Format DOB to YYYY-MM-DD for the date input (Postgres returns a Date object)
+        if (student && student.dob) {
+            const d = new Date(student.dob);
+            if (!isNaN(d.getTime())) {
+                student.dob = d.toISOString().slice(0, 10);
+            } else {
+                student.dob = '';
+            }
+        }
         let classes;
         if (user.role === 'Admin' || user.role === 'Registrar') {
             classes = await db.all('SELECT * FROM classes');
@@ -288,7 +297,31 @@ const saveHealthRecord = async (req, res) => {
     }
 };
 
+const bcrypt = require('bcryptjs');
+
+const resetStudentPassword = async (req, res) => {
+    const { id } = req.params;
+    const user = req.session.staff;
+    if (!user || user.role !== 'Admin') {
+        return res.status(403).json({ success: false, message: 'Admin access required.' });
+    }
+    try {
+        const student = await db.get('SELECT admission_number FROM students WHERE id = ?', [id]);
+        if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+
+        const hashed = await bcrypt.hash(student.admission_number, 10);
+        await db.run('UPDATE students SET password = ? WHERE id = ?', [hashed, id]);
+
+        logAction(user.id, 'RESET_STUDENT_PASSWORD', 'STUDENT', { student_id: id }, req.ip);
+        res.json({ success: true, message: `Password reset to admission number: ${student.admission_number}` });
+    } catch (err) {
+        console.error('Reset Password Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to reset password.' });
+    }
+};
+
 module.exports = {
     enrollStudent, getStudents, getEnrollmentForm,
-    getStudentProfile, getEditForm, updateStudent, saveHealthRecord
+    getStudentProfile, getEditForm, updateStudent, saveHealthRecord,
+    resetStudentPassword
 };

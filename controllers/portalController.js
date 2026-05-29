@@ -120,19 +120,32 @@ exports.getChangePassword = (req, res) => {
 exports.postChangePassword = async (req, res) => {
     const { current_password, new_password, confirm_password } = req.body;
     const studentId = req.session.student.id;
+    const bcrypt = require('bcryptjs');
 
     if (new_password !== confirm_password) {
         return res.redirect('/portal/change-password?error=New passwords do not match');
     }
 
     try {
-        const student = await db.get('SELECT password FROM students WHERE id = ?', [studentId]);
+        const student = await db.get('SELECT password, admission_number FROM students WHERE id = ?', [studentId]);
 
-        if (student.password !== current_password) {
+        // Check current password: support bcrypt hash, plaintext legacy, and admission_number default
+        let isMatch = false;
+        if (student.password && (student.password.startsWith('$2a$') || student.password.startsWith('$2b$'))) {
+            isMatch = await bcrypt.compare(current_password, student.password);
+        } else if (student.password) {
+            isMatch = (student.password === current_password);
+        } else {
+            // No password set — accept admission number as current
+            isMatch = (current_password === student.admission_number);
+        }
+
+        if (!isMatch) {
             return res.redirect('/portal/change-password?error=Incorrect current password');
         }
 
-        await db.run('UPDATE students SET password = ? WHERE id = ?', [new_password, studentId]);
+        const hashed = await bcrypt.hash(new_password, 10);
+        await db.run('UPDATE students SET password = ? WHERE id = ?', [hashed, studentId]);
         
         res.redirect('/portal/change-password?success=Password updated successfully');
     } catch (err) {

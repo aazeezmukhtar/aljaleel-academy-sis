@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const path = require('path');
 const { computeResult, getGrade } = require('../utils/resultHelper');
 const { logAction } = require('../utils/logger');
+const { getClassSection, getSectionResultConfig, getEnrolledStudents } = require('../utils/enrollmentHelper');
 
 const getOrdinal = (n) => {
     const s = ['th', 'st', 'nd', 'rd'];
@@ -28,20 +29,51 @@ const getGradingSystem = async (req, res) => {
     try {
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
         const config = await getSchoolSettings();
+        const sections = await db.all('SELECT * FROM sections ORDER BY name');
+        const sectionConfigs = await db.all('SELECT * FROM section_result_config');
 
         if (req && res) {
             res.render('results/setup', {
                 title: 'Result Configuration',
                 grading,
-                config
+                config,
+                sections,
+                sectionConfigs
             });
         }
-        return { grading, config };
+        return { grading, config, sections, sectionConfigs };
     } catch (err) {
         console.error('Get Grading Error:', err);
         if (res) res.status(500).send('Database Error');
     }
 };
+
+const saveSectionConfig = async (req, res) => {
+    const { section_id, ca_count, ca1_max, ca2_max, exam_max } = req.body;
+    try {
+        const sql = `
+            INSERT INTO section_result_config (section_id, ca_count, ca1_max, ca2_max, exam_max)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(section_id) DO UPDATE SET
+            ca_count = excluded.ca_count,
+            ca1_max = excluded.ca1_max,
+            ca2_max = excluded.ca2_max,
+            exam_max = excluded.exam_max
+        `;
+        await db.run(sql, [
+            parseInt(section_id),
+            parseInt(ca_count) || 2,
+            parseInt(ca1_max) || 0,
+            parseInt(ca2_max) || 0,
+            parseInt(exam_max) || 0
+        ]);
+        res.json({ success: true, message: 'Section assessment limits updated.' });
+    } catch (err) {
+        console.error('Save Section Config Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to save section config.' });
+    }
+};
+
 
 const saveResultConfig = async (req, res) => {
     const { ca1_max, ca2_max, exam_max } = req.body;
@@ -221,27 +253,39 @@ const getReportCard = async (req, res) => {
 
         if (!student) return res.status(404).send('Student not found');
 
-        // Results with subject rank
+        // Fetch section result config
+        const section = student.current_class_id ? await getClassSection(student.current_class_id) : null;
+        const sectionConfig = await getSectionResultConfig(section ? section.id : null);
+
+        // Results with subject rank using student_enrollments with fallback
         const results = await db.all(`
             SELECT r.*, s.name as subject_name,
             (SELECT COUNT(*) + 1 FROM results r2 
              WHERE r2.subject_id = r.subject_id AND r2.term = r.term 
              AND r2.session = r.session AND r2.total > r.total
-             AND r2.student_id IN (SELECT id FROM students WHERE current_class_id = ?)) as subject_rank
+             AND r2.student_id IN (
+                 SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?
+                 UNION
+                 SELECT id FROM students WHERE current_class_id = ? AND id NOT IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+             )) as subject_rank
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-        `, [student.current_class_id, student_id, term, session]);
+        `, [student.current_class_id, session, student.current_class_id, student.current_class_id, session, student_id, term, session]);
 
-        // Overall Position
+        // Overall Position with multi-class enrollment fallback
         const classPerformance = await db.all(`
             SELECT student_id, SUM(total) as student_total
             FROM results
             WHERE term = ? AND session = ? 
-            AND student_id IN (SELECT id FROM students WHERE current_class_id = ?)
+            AND student_id IN (
+                SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?
+                UNION
+                SELECT id FROM students WHERE current_class_id = ? AND id NOT IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+            )
             GROUP BY student_id
             ORDER BY student_total DESC
-        `, [term, session, student.current_class_id]);
+        `, [term, session, student.current_class_id, session, student.current_class_id, student.current_class_id, session]);
 
         const studentPerf = classPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -298,7 +342,8 @@ const getReportCard = async (req, res) => {
             position,
             classCount,
             grading,
-            caCount: school.ca_count || 2,
+            caCount: sectionConfig.ca_count || 2,
+            sectionConfig,
             marksAnalysis
         });
     } catch (err) {
@@ -767,6 +812,7 @@ module.exports = {
     saveTraits,
     getGradingSystem,
     saveResultConfig,
+    saveSectionConfig,
     saveGradingSystem,
     approveResults,
     lockResults,

@@ -56,6 +56,10 @@ const { isStudentAuthenticated, injectStudent } = require('./middleware/studentA
 // Settings injection and global vars
 app.use(settingsMiddleware);
 
+// Run non-destructive migrations on startup
+const { runMigrations } = require('./utils/migrateOnStartup');
+runMigrations().catch(err => console.error('[migrate] Migration error:', err.message));
+
 // Routes
 app.use('/auth', authRoutes);
 

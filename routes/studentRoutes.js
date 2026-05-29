@@ -23,6 +23,9 @@ router.get('/edit/:id', studentController.getEditForm);
 // POST /students/update/:id
 router.post('/update/:id', upload.single('passport'), studentController.updateStudent);
 
+// POST /students/reset-password/:id  (Admin only)
+router.post('/reset-password/:id', studentController.resetStudentPassword);
+
 // Bulk Import Routes
 router.get('/bulk-import', bulkStudentController.getBulkImportPage);
 router.post('/bulk-import', upload.single('studentFile'), bulkStudentController.processBulkImport);

@@ -45,14 +45,16 @@
                     <i class="bi bi-calendar-check-fill"></i> Attendance
                 </a>
 
-                <% if (user && user.role==='Admin' ) { %>
+                <% if (user && (user.role === 'Admin' || user.role === 'Bursar')) { %>
                     <a href="/fees/manager" class="<%= title.includes('Fee') ? 'active' : '' %>">
                         <i class="bi bi-wallet-fill"></i> Fees
                     </a>
+                <% } %>
+                <% if (user && user.role === 'Admin') { %>
                     <a href="/academics" class="<%= title.includes('Academic') ? 'active' : '' %>">
                         <i class="bi bi-book-half"></i> Academics
                     </a>
-                    <% } %>
+                <% } %>
 
                         <!-- Results -->
                         <a href="/results" class="<%= title.includes('Result') ? 'active' : '' %>">

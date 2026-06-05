@@ -32,7 +32,7 @@
 
                 <% if (students.length> 0) { %>
                     <section class="card">
-                        <div class="table-container table-stack">
+                        <div class="table-container mobile-cards">
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -48,11 +48,11 @@
                                     <% students.forEach(s=> { %>
                                         <% const balance=s.total_owed - s.total_paid; %>
                                             <tr>
-                                                <td>
+                                                <td data-label="Student ID">
                                                     <%= s.admission_number %>
                                                 </td>
-                                                <td>
-                                                    <div style="display: flex; align-items: center; gap: 10px;">
+                                                <td data-label="Student Name">
+                                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
                                                         <div
                                                             style="width: 32px; height: 32px; background: #f3f4f6; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                                                             <% if (s.passport_photo_path) { %>
@@ -68,15 +68,14 @@
                                                         </strong>
                                                     </div>
                                                 </td>
-                                                <td>₦<%= s.total_owed.toLocaleString() %>
+                                                <td data-label="Total Owed">₦<%= s.total_owed.toLocaleString() %>
                                                 </td>
-                                                <td style="color: #2e7d32;">₦<%= s.total_paid.toLocaleString() %>
+                                                <td data-label="Total Paid" style="color: #2e7d32;">₦<%= s.total_paid.toLocaleString() %>
                                                 </td>
-                                                <td
-                                                    style="color: <%= balance > 0 ? '#d32f2f' : '#2e7d32' %>; font-weight: bold;">
+                                                <td data-label="Outstanding" style="color: <%= balance > 0 ? '#d32f2f' : '#2e7d32' %>; font-weight: bold;">
                                                     ₦<%= balance.toLocaleString() %>
                                                 </td>
-                                                <td style="text-align: right;">
+                                                <td data-label="Action" style="text-align: right;">
                                                     <a href="/fees/student/<%= s.id %>"
                                                         class="btn btn-sm btn-outline">View Details</a>
                                                 </td>

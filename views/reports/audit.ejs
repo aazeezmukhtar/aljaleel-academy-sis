@@ -17,7 +17,7 @@
                 </header>
 
                 <div class="card">
-                    <div class="table-container">
+                    <div class="table-container mobile-cards">
                         <table class="data-table">
                             <thead>
                                 <tr>
@@ -33,12 +33,12 @@
                                 <% if (logs.length> 0) { %>
                                     <% logs.forEach(log=> { %>
                                         <tr>
-                                            <td
+                                            <td data-label="Timestamp"
                                                 style="white-space: nowrap; font-size: 0.85rem; color: var(--text-muted);">
                                                 <%= new Date(log.timestamp).toLocaleString('en-GB') %>
                                             </td>
-                                            <td>
-                                                <div style="display: flex; flex-direction: column;">
+                                            <td data-label="User">
+                                                <div style="display: flex; flex-direction: column; text-align: right;">
                                                     <strong>
                                                         <%= log.last_name %>, <%= log.first_name %>
                                                     </strong>
@@ -46,12 +46,12 @@
                                                         style="font-size: 0.75rem; color: var(--school-primary);"><%= log.staff_id %></code>
                                                 </div>
                                             </td>
-                                            <td>
+                                            <td data-label="Module">
                                                 <span class="badge" style="background: #f1f5f9; color: #475569;">
                                                     <%= log.module %>
                                                 </span>
                                             </td>
-                                            <td>
+                                            <td data-label="Action">
                                                 <span class="badge" style="
                                                     background: <%= log.action.includes('SAVE') || log.action.includes('UPDATE') ? '#dcfce7' : (log.action.includes('LOGIN') ? '#e0f2fe' : '#f1f5f9') %>;
                                                     color: <%= log.action.includes('SAVE') || log.action.includes('UPDATE') ? '#15803d' : (log.action.includes('LOGIN') ? '#0369a1' : '#475569') %>;
@@ -59,13 +59,13 @@
                                                     <%= log.action %>
                                                 </span>
                                             </td>
-                                            <td style="max-width: 300px; font-size: 0.85rem;">
+                                            <td data-label="Details" style="max-width: 300px; font-size: 0.85rem;">
                                                 <div
-                                                    style="background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #f1f5f9; overflow-x: auto;">
+                                                    style="background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #f1f5f9; overflow-x: auto; text-align: left;">
                                                     <code><%= log.details %></code>
                                                 </div>
                                             </td>
-                                            <td
+                                            <td data-label="IP Address"
                                                 style="font-family: monospace; font-size: 0.85rem; color: var(--text-muted);">
                                                 <%= log.ip_address %>
                                             </td>

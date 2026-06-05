@@ -657,13 +657,10 @@ table {
     z-index: 3000 !important; /* Above everything */
 }
 
-.global-broadcast-bar {
-    z-index: 4000 !important;
-}
 
 /* Print Styles */
 @media print {
-    .sidebar, .mobile-toggle, .btn, .no-print, .notification-bell-container, .global-broadcast-bar,
+    .sidebar, .mobile-toggle, .btn, .no-print, .notification-bell-container,
     .mobile-topbar, .bottom-nav, .bottom-nav-spacer { display: none !important; }
     .main-content { margin: 0; padding: 0; width: 100%; }
     .card { border: 1px solid #eee; box-shadow: none; }

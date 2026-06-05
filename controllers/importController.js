@@ -3,6 +3,7 @@ const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const { computeResult } = require('../utils/resultHelper');
+const { getEnrolledStudents } = require('../utils/enrollmentHelper');
 
 const downloadTemplate = async (req, res) => {
     const { class_id, subject_id } = req.query;
@@ -15,14 +16,13 @@ const downloadTemplate = async (req, res) => {
         configArr.forEach(c => settings[c.key] = c.value);
         const caCount = parseInt(settings.ca_count || '2');
 
-        const students = await db.all(`
-            SELECT admission_number, first_name, last_name 
-            FROM students WHERE current_class_id = ? AND status = 'active'
-            ORDER BY last_name, first_name
-        `, [class_id]);
+        const settingsRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSession = settingsRow ? settingsRow.value : '2025/2026';
 
-        const subject = await db.get('SELECT name FROM subjects WHERE id = ?', [subject_id]);
-        const className = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);
+        const students = await getEnrolledStudents(Number(class_id), currentSession);
+
+        const subject = await db.get('SELECT name FROM subjects WHERE id = ?', [Number(subject_id)]);
+        const className = await db.get('SELECT name FROM classes WHERE id = ?', [Number(class_id)]);
 
         if (!students.length) return res.status(404).send('No active students found in this class.');
 
@@ -122,7 +122,7 @@ const processImport = async (req, res) => {
 
             // If we want to allow cross-subject import, we'd need to find subject_id by name
             // For now, we trust the subject_id from the form if the row doesn't specify or matches.
-            let activeSubjectId = subject_id;
+            let activeSubjectId = Number(subject_id);
             if (subjectName) {
                 const sub = await db.get('SELECT id FROM subjects WHERE LOWER(name) = LOWER(?)', [subjectName]);
                 if (sub) activeSubjectId = sub.id;

@@ -122,10 +122,15 @@
                                                         </span>
                                                     </div>
                                                 </div>
-                                                <div>
+                                                <div style="display:flex; flex-direction:column; gap:10px; align-items:flex-end;">
                                                     <a href="/students/edit/<%= student.id %>" class="btn btn-primary">
                                                         <i class="bi bi-pencil-square"></i> Edit Profile
                                                     </a>
+                                                    <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                                                    <button class="btn btn-outline" style="font-size:0.82rem; color:#b91c1c; border-color:#fecaca;" onclick="resetStudentPassword(<%= student.id %>)">
+                                                        <i class="bi bi-shield-lock"></i> Reset Password
+                                                    </button>
+                                                    <% } %>
                                                 </div>
                                 </div>
 
@@ -142,7 +147,9 @@
                                             <div class="detail-item">
                                                 <strong>Date of Birth</strong>
                                                 <span>
-                                                    <%= new Date(student.dob).toLocaleDateString() %>
+                                                    <% if (student.dob) { const d = new Date(student.dob); %>
+                                                        <%= isNaN(d.getTime()) ? 'Not Set' : d.toLocaleDateString() %>
+                                                    <% } else { %>Not Set<% } %>
                                                 </span>
                                             </div>
                                             <div class="detail-item">
@@ -352,6 +359,22 @@
                                 <script>
                                     function openHealthModal() { document.getElementById('healthModal').style.display = 'flex'; }
                                     function closeHealthModal() { document.getElementById('healthModal').style.display = 'none'; }
+
+                                    async function resetStudentPassword(studentId) {
+                                        if (!confirm('Reset this student\'s password to their admission number?')) return;
+                                        try {
+                                            const res = await fetch('/students/reset-password/' + studentId, { method: 'POST' });
+                                            const data = await res.json();
+                                            if (data.success) {
+                                                alert(data.message);
+                                            } else {
+                                                alert('Error: ' + data.message);
+                                            }
+                                        } catch (err) {
+                                            console.error(err);
+                                            alert('Failed to reset password.');
+                                        }
+                                    }
                                 </script>
     </div>
 

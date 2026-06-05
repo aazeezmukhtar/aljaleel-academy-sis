@@ -265,3 +265,32 @@ CREATE TABLE IF NOT EXISTS results (
 CREATE INDEX IF NOT EXISTS idx_payment_student ON payments(student_id);
 CREATE INDEX IF NOT EXISTS idx_attendance_lookup ON attendance(class_id, arm_id, date);
 CREATE INDEX IF NOT EXISTS idx_result_lookup ON results(student_id, session, term);
+
+-- Sections (Primary / Secondary)
+CREATE TABLE IF NOT EXISTS sections (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE
+);
+
+-- Per-section result weight configuration
+CREATE TABLE IF NOT EXISTS section_result_config (
+    id SERIAL PRIMARY KEY,
+    section_id INTEGER NOT NULL REFERENCES sections(id),
+    ca_count INTEGER DEFAULT 2,
+    ca1_max INTEGER DEFAULT 20,
+    ca2_max INTEGER DEFAULT 20,
+    exam_max INTEGER DEFAULT 60,
+    UNIQUE(section_id)
+);
+
+-- Student enrollments junction table (multi-class per session)
+CREATE TABLE IF NOT EXISTS student_enrollments (
+    id SERIAL PRIMARY KEY,
+    student_id INTEGER NOT NULL REFERENCES students(id),
+    class_id INTEGER NOT NULL REFERENCES classes(id),
+    session TEXT NOT NULL,
+    UNIQUE(student_id, class_id, session)
+);
+
+-- Add section_id FK to classes (run manually if column doesn't exist)
+-- ALTER TABLE classes ADD COLUMN IF NOT EXISTS section_id INTEGER REFERENCES sections(id);

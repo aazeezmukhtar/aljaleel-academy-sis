@@ -4,8 +4,7 @@
         <%- include('../partials/sidebar') %>
 
             <main class="main-content">
-                <header
-                    style="margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <header class="content-header" style="margin-bottom: 30px; align-items: flex-end;">
                     <div>
                         <a href="/attendance"
                             style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back</a>
@@ -15,7 +14,7 @@
                             </strong></p>
                     </div>
                     <form action="/attendance/staff" method="GET"
-                        style="display: flex; gap: 10px; align-items: flex-end;">
+                        style="display: flex; gap: 10px; align-items: flex-end; flex-shrink: 0;">
                         <div class="form-group" style="margin-bottom: 0;">
                             <label style="font-size: 0.8rem;">Change Date</label>
                             <input type="date" name="date" value="<%= date %>" class="form-control"

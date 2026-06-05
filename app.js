@@ -13,7 +13,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const session = require('express-session');
-const { isAuthenticated, injectUser } = require('./middleware/authMiddleware');
+const { isAuthenticated, injectUser, isAnyAuthenticated } = require('./middleware/authMiddleware');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -66,12 +66,42 @@ const { isStudentAuthenticated, injectStudent } = require('./middleware/studentA
 // Settings injection and global vars
 app.use(settingsMiddleware);
 
+// Run non-destructive migrations on startup
+const { runMigrations } = require('./utils/migrateOnStartup');
+runMigrations().catch(err => console.error('[migrate] Migration error:', err.message));
+
 // Routes
 app.use('/auth', authRoutes);
 
 // Public Routes
 app.get('/', (req, res) => {
     res.redirect('/auth/login');
+});
+
+// TEMPORARY DEBUG ROUTE
+app.get('/test-db', async (req, res) => {
+    try {
+        const db = require('./utils/db');
+        const { getEnrolledStudents } = require('./utils/enrollmentHelper');
+        const classId = req.query.class_id || 10;
+        const session = req.query.session || '2025/2026';
+        
+        const students = await getEnrolledStudents(classId, session);
+        const rawClass = await db.all('SELECT * FROM students WHERE current_class_id = ?', [Number(classId)]);
+        
+        res.json({
+            success: true,
+            classId,
+            session,
+            enrolledHelperCount: students.length,
+            rawClassCount: rawClass.length,
+            dbType: db.DB_TYPE,
+            enrolledStudents: students,
+            rawClassStudents: rawClass
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message, stack: err.stack });
+    }
 });
 
 // Protected Staff/Admin Routes
@@ -85,7 +115,7 @@ app.use('/fees', isAuthenticated, feeRoutes);
 app.use('/settings', isAuthenticated, settingsRoutes);
 app.use('/reports', isAuthenticated, reportRoutes);
 app.use('/announcements', isAuthenticated, require('./routes/announcementRoutes'));
-app.use('/api/notifications', isAuthenticated, require('./routes/notificationRoutes'));
+app.use('/api/notifications', isAnyAuthenticated, require('./routes/notificationRoutes'));
 app.use('/calendar', require('./routes/calendarRoutes'));
 
 // Protected Student Portal Routes

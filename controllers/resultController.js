@@ -560,8 +560,9 @@ const getBulkReport = async (req, res) => {
                 marksAnalysis
             });
         }
+    }
 
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+    const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
 
         res.render('results/bulk_report', {
             title: `Bulk Report - ${className}`,

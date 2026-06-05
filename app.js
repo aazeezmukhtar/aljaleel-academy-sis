@@ -68,6 +68,32 @@ app.get('/', (req, res) => {
     res.redirect('/auth/login');
 });
 
+// TEMPORARY DEBUG ROUTE
+app.get('/test-db', async (req, res) => {
+    try {
+        const db = require('./utils/db');
+        const { getEnrolledStudents } = require('./utils/enrollmentHelper');
+        const classId = req.query.class_id || 10;
+        const session = req.query.session || '2025/2026';
+        
+        const students = await getEnrolledStudents(classId, session);
+        const rawClass = await db.all('SELECT * FROM students WHERE current_class_id = ?', [Number(classId)]);
+        
+        res.json({
+            success: true,
+            classId,
+            session,
+            enrolledHelperCount: students.length,
+            rawClassCount: rawClass.length,
+            dbType: db.DB_TYPE,
+            enrolledStudents: students,
+            rawClassStudents: rawClass
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message, stack: err.stack });
+    }
+});
+
 // Protected Staff/Admin Routes
 app.use('/dashboard', isAuthenticated, homeController.getDashboard);
 app.use('/students', isAuthenticated, studentRoutes);

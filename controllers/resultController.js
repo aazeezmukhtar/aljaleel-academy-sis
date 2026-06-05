@@ -649,8 +649,9 @@ const getBulkCumulative = async (req, res) => {
                 marksAnalysis
             });
         }
+    }
 
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+    const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
 
         res.render('results/bulk_cumulative', {
             title: `Bulk Cumulative - ${className}`,

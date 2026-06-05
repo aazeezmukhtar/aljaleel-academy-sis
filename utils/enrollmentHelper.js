@@ -17,7 +17,7 @@ async function getEnrolledStudents(classId, session) {
                s.passport_photo_path, s.gender, s.status
         FROM students s
         JOIN student_enrollments se ON s.id = se.student_id
-        WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
+        WHERE se.class_id = ? AND se.session = ? AND (s.status = 'active' OR s.status IS NULL OR s.status = 'Active')
         ORDER BY s.last_name, s.first_name
     `, [classIdNum, session]);
 
@@ -27,7 +27,7 @@ async function getEnrolledStudents(classId, session) {
             SELECT id, first_name, last_name, admission_number, 
                    passport_photo_path, gender, status
             FROM students
-            WHERE current_class_id = ? AND status = 'active'
+            WHERE current_class_id = ? AND (status = 'active' OR status IS NULL OR status = 'Active')
             ORDER BY last_name, first_name
         `, [classIdNum]);
     }

@@ -50,6 +50,22 @@
             --school-secondary: #a855f7;
         }
     </style>
+    <!-- Vercel Speed Insights -->
+    <script>
+        (function() {
+            if (typeof window !== 'undefined') {
+                var script = document.createElement('script');
+                script.src = '/_vercel/speed-insights/script.js';
+                script.defer = true;
+                script.dataset.sdkn = '@vercel/speed-insights';
+                script.dataset.sdkv = '2.0.0';
+                script.onerror = function() {
+                    console.log('[Vercel Speed Insights] Failed to load script. Please check if any content blockers are enabled and try again.');
+                };
+                document.head.appendChild(script);
+            }
+        })();
+    </script>
 </head>
 
 <body>
@@ -75,4 +91,4 @@
             </div>
             <% } %>
         </div>
-    </div>
+    </div>

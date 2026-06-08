@@ -30,12 +30,16 @@ exports.getLatestNotifications = async (req, res) => {
 
         // Fetch Assignments/Class Posts
         if (req.session.student) {
-            const classId = req.session.student.class_id;
-            if (classId) {
+            const enrollRows = await db.all(`
+                SELECT class_id FROM student_enrollments WHERE student_id = ?
+            `, [userId]);
+            const enrolledClassIds = enrollRows.map(r => r.class_id);
+            if (enrolledClassIds.length > 0) {
+                const placeholders = enrolledClassIds.map(() => '?').join(',');
                 assignments = await db.all(`
                     SELECT id, title, post_type as type, due_date as date, created_at, 'class_post' as source_type
-                    FROM class_posts WHERE class_id = ?
-                `, [classId]);
+                    FROM class_posts WHERE class_id IN (${placeholders})
+                `, enrolledClassIds);
             }
         } else if (req.session.staff && req.session.staff.role === 'Admin') {
             // Admin should NOT see assignments in notification bell as requested

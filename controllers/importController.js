@@ -14,11 +14,22 @@ const downloadTemplate = async (req, res) => {
         configArr.forEach(c => settings[c.key] = c.value);
         const caCount = parseInt(settings.ca_count || '2');
 
-        const students = await db.all(`
-            SELECT admission_number, first_name, last_name 
-            FROM students WHERE current_class_id = ? AND status = 'active'
-            ORDER BY last_name, first_name
+        // Retrieve class's section current session dynamically
+        const secRow = await db.get(`
+            SELECT s.current_session 
+            FROM sections s 
+            JOIN classes c ON c.section_id = s.id 
+            WHERE c.id = ?
         `, [class_id]);
+        const session = secRow ? secRow.current_session : '2024/2025';
+
+        const students = await db.all(`
+            SELECT s.admission_number, s.first_name, s.last_name 
+            FROM students s
+            JOIN student_enrollments se ON s.id = se.student_id
+            WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
+            ORDER BY s.last_name, s.first_name
+        `, [class_id, session]);
 
         const subject = await db.get('SELECT name FROM subjects WHERE id = ?', [subject_id]);
         const className = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);

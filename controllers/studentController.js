@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { getAcademicContext, getSectionContext } = require('../utils/sessionHelper');
 const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
@@ -21,17 +22,19 @@ const getStudents = async (req, res) => {
         `, [user.id, user.id, user.id]);
     }
 
-    const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-    const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
     let query = `
         SELECT s.*, c.name as class_name, se.class_id as enrolled_class_id
         FROM students s
-        LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
+        LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.session = (
+            SELECT sec.current_session 
+            FROM sections sec 
+            JOIN classes cl ON cl.section_id = sec.id 
+            WHERE cl.id = se.class_id
+        )
         LEFT JOIN classes c ON se.class_id = c.id
         WHERE 1=1
     `;
-    const params = [currentSession];
+    const params = [];
 
     let myClasses = [];
     if (user.role !== 'Admin' && user.role !== 'Registrar') {
@@ -157,16 +160,14 @@ const enrollStudent = async (req, res) => {
         const studentRow = await db.get("SELECT id FROM students WHERE admission_number = ?", [admission_number]);
         const studentId = studentRow.id;
         
-        // Get current session
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
         // Insert Enrollments
         if (academy_class_id) {
-            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentId, academy_class_id, currentSession]);
+            const context = await getAcademicContext(academy_class_id);
+            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentId, academy_class_id, context.session]);
         }
         if (tahfeez_class_id) {
-            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentId, tahfeez_class_id, currentSession]);
+            const context = await getAcademicContext(tahfeez_class_id);
+            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentId, tahfeez_class_id, context.session]);
         }
         
         logAction(req.session.staff.id, 'ENROLL_STUDENT', 'STUDENT', { first_name, last_name }, req.ip);
@@ -180,9 +181,6 @@ const enrollStudent = async (req, res) => {
 const getStudentProfile = async (req, res) => {
     const { id } = req.params;
     try {
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
         const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
         if (!student) return res.status(404).send('Student not found');
 
@@ -190,8 +188,9 @@ const getStudentProfile = async (req, res) => {
             SELECT c.name as class_name
             FROM student_enrollments se
             JOIN classes c ON se.class_id = c.id
-            WHERE se.student_id = ? AND se.session = ?
-        `, [id, currentSession]);
+            JOIN sections sec ON c.section_id = sec.id
+            WHERE se.student_id = ? AND se.session = sec.current_session
+        `, [id]);
 
         student.class_name = enrollments.map(e => e.class_name).join(', ') || 'Not Enrolled';
 
@@ -233,9 +232,13 @@ const getEditForm = async (req, res) => {
         const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
         
         // Get current session enrollments
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-        const enrollments = await db.all('SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ?', [id, currentSession]);
+        const enrollments = await db.all(`
+            SELECT se.class_id 
+            FROM student_enrollments se
+            JOIN classes c ON se.class_id = c.id
+            JOIN sections sec ON c.section_id = sec.id
+            WHERE se.student_id = ? AND se.session = sec.current_session
+        `, [id]);
         const enrolledClassIds = enrollments.map(e => e.class_id);
 
         let classes;
@@ -305,19 +308,33 @@ const updateStudent = async (req, res) => {
             id
         ]);
 
-        // Get current session
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
-        // Clear existing enrollments for this session
-        await db.run("DELETE FROM student_enrollments WHERE student_id = ? AND session = ?", [id, currentSession]);
-
-        // Re-insert Enrollments
-        if (academy_class_id) {
-            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [id, academy_class_id, currentSession]);
+        // Clear and update enrollments based on section sessions
+        const academyCtx = await getSectionContext(1);
+        if (academyCtx) {
+            await db.run(`
+                DELETE FROM student_enrollments 
+                WHERE student_id = ? 
+                  AND class_id IN (SELECT id FROM classes WHERE section_id = 1) 
+                  AND session = ?
+            `, [id, academyCtx.session]);
+            
+            if (academy_class_id) {
+                await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [id, academy_class_id, academyCtx.session]);
+            }
         }
-        if (tahfeez_class_id) {
-            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [id, tahfeez_class_id, currentSession]);
+
+        const tahfeezCtx = await getSectionContext(2);
+        if (tahfeezCtx) {
+            await db.run(`
+                DELETE FROM student_enrollments 
+                WHERE student_id = ? 
+                  AND class_id IN (SELECT id FROM classes WHERE section_id = 2) 
+                  AND session = ?
+            `, [id, tahfeezCtx.session]);
+            
+            if (tahfeez_class_id) {
+                await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [id, tahfeez_class_id, tahfeezCtx.session]);
+            }
         }
 
         res.json({ success: true, message: 'Student updated successfully.' });

@@ -1,4 +1,5 @@
 const db = require('../../utils/db');
+const { getAcademicContext } = require('../../utils/sessionHelper');
 
 const getFinanceDashboard = async (req, res) => {
     const user = req.session.staff;
@@ -39,10 +40,15 @@ const getFeeStatusReport = async (req, res) => {
     let classes = await db.all('SELECT * FROM classes');
     let students = [];
 
-    if (class_id) {
+    let activeClassId = class_id;
+    if (!activeClassId && classes && classes.length > 0) {
+        activeClassId = classes[0].id;
+    }
+
+    if (activeClassId) {
         let coalesceFunc = db.DB_TYPE === 'postgres' ? 'COALESCE' : 'IFNULL';
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+        const context = await getAcademicContext(activeClassId);
+        const currentSession = context.session;
 
         const query = `
             SELECT s.id, s.first_name, s.last_name, s.admission_number, c.name as class_name,
@@ -55,7 +61,7 @@ const getFeeStatusReport = async (req, res) => {
         `;
 
         try {
-            const rawStudents = await db.all(query, [currentSession, class_id]);
+            const rawStudents = await db.all(query, [currentSession, activeClassId]);
             students = rawStudents.map(s => {
                 s.balance = s.total_payable - s.paid_amount;
                 s.status = s.balance <= 0 ? 'Paid' : (s.paid_amount > 0 ? 'Partial' : 'Unpaid');
@@ -75,7 +81,7 @@ const getFeeStatusReport = async (req, res) => {
         title: 'Fee Status Report',
         classes,
         students,
-        query: { class_id, status }
+        query: { class_id: activeClassId, status }
     });
 };
 
@@ -89,9 +95,6 @@ const getDebtorsList = async (req, res) => {
     let debtors = [];
     try {
         let coalesceFunc = db.DB_TYPE === 'postgres' ? 'COALESCE' : 'IFNULL';
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
         debtors = await db.all(`
             SELECT 
                 s.id, s.first_name, s.last_name, s.admission_number,
@@ -111,8 +114,9 @@ const getDebtorsList = async (req, res) => {
                 SELECT se.student_id, c.name as class_name
                 FROM student_enrollments se
                 JOIN classes c ON se.class_id = c.id
-                WHERE se.student_id IN (${placeholders}) AND se.session = ?
-            `, [...studentIds, currentSession]);
+                JOIN sections sec ON c.section_id = sec.id
+                WHERE se.student_id IN (${placeholders}) AND se.session = sec.current_session
+            `, studentIds);
 
             const classMap = new Map();
             enrollments.forEach(e => {

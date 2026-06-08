@@ -126,11 +126,22 @@ async function syncData() {
             const { id, _savedAt, ...payload } = item;
             const res = await fetch('/attendance/save', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (res.ok || res.status === 409) {
-                // 409 = conflict (already saved), treat as success
+            if (res.redirected) {
+                failCount++;
+                continue;
+            }
+            if (res.ok && !res.redirected) {
+                const data = await res.json().catch(() => ({}));
+                if (data.success || res.status === 409) {
+                    await deleteQueued('attendance_sync', id);
+                    successCount++;
+                } else {
+                    failCount++;
+                }
+            } else if (res.status === 409) {
                 await deleteQueued('attendance_sync', id);
                 successCount++;
             } else {
@@ -148,12 +159,21 @@ async function syncData() {
             const { id, _savedAt, ...payload } = item;
             const res = await fetch('/results/save', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (res.ok) {
-                await deleteQueued('results_sync', id);
-                successCount++;
+            if (res.redirected) {
+                failCount++;
+                continue;
+            }
+            if (res.ok && !res.redirected) {
+                const data = await res.json().catch(() => ({}));
+                if (data.success) {
+                    await deleteQueued('results_sync', id);
+                    successCount++;
+                } else {
+                    failCount++;
+                }
             } else {
                 failCount++;
             }

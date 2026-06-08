@@ -1,4 +1,5 @@
 const db = require('../../utils/db');
+const { getAcademicContext } = require('../../utils/sessionHelper');
 
 const getHealthDashboard = async (req, res) => {
     const user = req.session.staff;
@@ -21,10 +22,8 @@ const getMedicalAlerts = async (req, res) => {
     let classes = await db.all('SELECT * FROM classes');
     let medicalRisks = [];
 
-    const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-    const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
     if (class_id) {
+        const context = await getAcademicContext(class_id);
         medicalRisks = await db.all(`
             SELECT s.last_name, s.first_name, s.admission_number, h.allergies, h.medical_conditions, h.blood_group, h.emergency_contact_phone, c.name as class_name
             FROM students s
@@ -33,19 +32,20 @@ const getMedicalAlerts = async (req, res) => {
             JOIN classes c ON se.class_id = c.id
             WHERE se.class_id = ? AND s.status = 'active'
             AND ((h.allergies IS NOT NULL AND h.allergies != '') OR (h.medical_conditions IS NOT NULL AND h.medical_conditions != ''))
-        `, [currentSession, class_id]);
+        `, [context.session, class_id]);
     } else {
         // All students with risks if no class selected
         medicalRisks = await db.all(`
             SELECT s.last_name, s.first_name, s.admission_number, h.allergies, h.medical_conditions, h.blood_group, h.emergency_contact_phone, c.name as class_name
             FROM students s
             JOIN student_health h ON s.id = h.student_id
-            JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
+            JOIN student_enrollments se ON s.id = se.student_id
             JOIN classes c ON se.class_id = c.id
-            WHERE s.status = 'active'
+            JOIN sections sec ON c.section_id = sec.id
+            WHERE s.status = 'active' AND se.session = sec.current_session
             AND ((h.allergies IS NOT NULL AND h.allergies != '') OR (h.medical_conditions IS NOT NULL AND h.medical_conditions != ''))
             ORDER BY c.name, s.last_name
-        `, [currentSession]);
+        `);
     }
 
     res.render('reports/health/alerts', {
@@ -62,12 +62,16 @@ const getEmergencyContacts = async (req, res) => {
     let classes = await db.all('SELECT * FROM classes');
     let contacts = [];
 
-    if (class_id) {
+    let activeClassId = class_id;
+    if (!activeClassId && classes && classes.length > 0) {
+        activeClassId = classes[0].id;
+    }
+
+    if (activeClassId) {
         let coalesceFunc = "IFNULL";
         if (db.DB_TYPE === 'postgres') coalesceFunc = "COALESCE";
 
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+        const context = await getAcademicContext(activeClassId);
 
         contacts = await db.all(`
             SELECT 
@@ -81,14 +85,14 @@ const getEmergencyContacts = async (req, res) => {
             JOIN classes c ON se.class_id = c.id
             WHERE se.class_id = ? AND s.status = 'active'
             ORDER BY s.last_name
-        `, [currentSession, class_id]);
+        `, [context.session, activeClassId]);
     }
 
     res.render('reports/health/contacts', {
         title: 'Emergency Contacts',
         classes,
         contacts,
-        query: { class_id }
+        query: { class_id: activeClassId }
     });
 };
 

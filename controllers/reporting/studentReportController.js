@@ -1,4 +1,5 @@
 const db = require('../../utils/db');
+const { getAcademicContext } = require('../../utils/sessionHelper');
 
 const getStudentDashboard = async (req, res) => {
     const user = req.session.staff;
@@ -41,10 +42,15 @@ const getClassListReport = async (req, res) => {
         `, [user.id, user.id, user.id]);
     }
 
+    let activeClassId = class_id;
+    if (!activeClassId && classes && classes.length > 0) {
+        activeClassId = classes[0].id;
+    }
+
     let students = [];
-    if (class_id) {
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+    if (activeClassId) {
+        const context = await getAcademicContext(activeClassId);
+        const currentSession = context.session;
 
         let query = `
             SELECT s.*, c.name as class_name, a.name as arm_name 
@@ -54,7 +60,7 @@ const getClassListReport = async (req, res) => {
             LEFT JOIN arms a ON s.current_arm_id = a.id
             WHERE se.class_id = ? AND s.status = 'active'
         `;
-        const params = [currentSession, class_id];
+        const params = [currentSession, activeClassId];
 
         if (arm_id) {
             query += " AND s.current_arm_id = ?";
@@ -70,7 +76,7 @@ const getClassListReport = async (req, res) => {
         classes,
         students,
         user,
-        query: { class_id, arm_id }
+        query: { class_id: activeClassId, arm_id }
     });
 };
 

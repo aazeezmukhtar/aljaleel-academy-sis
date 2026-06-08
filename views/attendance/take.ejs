@@ -276,57 +276,50 @@
             }
         }
 
-        // Handle Offline Mode
+        let savedOffline = false;
+
         if (!navigator.onLine) {
+            savedOffline = true;
+        } else {
+            try {
+                const res = await fetch('/attendance/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.status === 401 || res.url.includes('/auth/login')) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = '/auth/login';
+                    return;
+                }
+
+                const result = await res.json().catch(() => ({}));
+                if (result.success) {
+                    document.getElementById('feedbackModal').style.display = 'flex';
+                } else {
+                    alert('Server Error: ' + (result.message || 'Unknown error occurred'));
+                }
+            } catch (err) {
+                console.warn('Network request failed, falling back to offline storage:', err);
+                savedOffline = true;
+            }
+        }
+
+        if (savedOffline) {
             try {
                 await window.NexusOffline.saveAttendanceOffline(data);
                 document.getElementById('feedbackModal').querySelector('h2').textContent = 'Saved Offline!';
                 document.getElementById('feedbackModal').querySelector('p').textContent = 'Your changes have been saved locally and will sync when you are back online.';
                 document.getElementById('feedbackModal').style.display = 'flex';
-                return;
             } catch (err) {
                 console.error('Offline Save Error:', err);
                 alert('Error saving offline: ' + err.message);
-                return;
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = originalText;
             }
-        }
-
-        try {
-            const res = await fetch('/attendance/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            
-            // Check if we were redirected to login (session expired)
-            if (res.url.includes('/auth/login')) {
-                alert('Session expired. Please log in again.');
-                window.location.href = '/auth/login';
-                return;
-            }
-
-            const text = await res.text();
-            let result;
-            try {
-                result = JSON.parse(text);
-            } catch (e) {
-                console.error('Invalid JSON response:', text);
-                alert('System Error: Server returned invalid format.\n\nResponse preview: ' + text.substring(0, 200));
-                return;
-            }
-
-            if (result.success) {
-                document.getElementById('feedbackModal').style.display = 'flex';
-            } else {
-                alert('Server Error: ' + (result.message || 'Unknown error occurred'));
-            }
-        } catch (err) {
-            console.error('Fetch Error:', err);
-            alert('System Error: ' + err.message);
-        } finally {
+        } else {
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }

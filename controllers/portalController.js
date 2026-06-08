@@ -40,8 +40,8 @@ exports.getDashboard = async (req, res) => {
         FROM student_enrollments se 
         JOIN classes c ON se.class_id = c.id 
         JOIN sections s ON c.section_id = s.id 
-        WHERE se.student_id = ? AND se.session = ?
-    `, [studentId, currentSessionStr]);
+        WHERE se.student_id = ? AND se.session = s.current_session
+    `, [studentId]);
     const sectionIds = enrollments.map(e => e.section_id);
     
     let sectionFilter = '';
@@ -59,9 +59,23 @@ exports.getDashboard = async (req, res) => {
         ORDER BY created_at DESC LIMIT 3
     `);
 
-    // Fetch latest class posts (general + targeted)
-    const classId = req.session.student.class_id;
-    const classPosts = classId ? await db.all('SELECT cp.*, s.first_name, s.last_name FROM class_posts cp JOIN staff s ON cp.teacher_id = s.id WHERE cp.class_id = ? AND (cp.student_id IS NULL OR cp.student_id = ?) ORDER BY cp.created_at DESC LIMIT 5', [classId, studentId]) : [];
+    // Fetch latest class posts (general + targeted) for all classes the student is enrolled in
+    const enrollRows = await db.all(`
+        SELECT class_id FROM student_enrollments WHERE student_id = ?
+    `, [studentId]);
+    const enrolledClassIds = enrollRows.map(r => r.class_id);
+
+    let classPosts = [];
+    if (enrolledClassIds.length > 0) {
+        const placeholders = enrolledClassIds.map(() => '?').join(',');
+        classPosts = await db.all(`
+            SELECT cp.*, s.first_name, s.last_name 
+            FROM class_posts cp 
+            JOIN staff s ON cp.teacher_id = s.id 
+            WHERE cp.class_id IN (${placeholders}) AND (cp.student_id IS NULL OR cp.student_id = ?) 
+            ORDER BY cp.created_at DESC LIMIT 5
+        `, [...enrolledClassIds, studentId]);
+    }
 
     const individualMessagesCount = (await db.get('SELECT COUNT(*) as c FROM class_posts WHERE student_id = ?', [studentId])).c;
     
@@ -92,8 +106,8 @@ exports.getDashboard = async (req, res) => {
         FROM student_enrollments se 
         JOIN classes c ON se.class_id = c.id 
         LEFT JOIN sections sec ON c.section_id = sec.id
-        WHERE se.student_id = ? AND se.session = ?
-    `, [studentId, currentSessionStr]);
+        WHERE se.student_id = ? AND se.session = sec.current_session
+    `, [studentId]);
     
     if (enrolledClasses.length > 0) {
         studentObj.class_name = enrolledClasses.map(c => c.class_name).join(', ');

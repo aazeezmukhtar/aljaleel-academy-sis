@@ -50,4 +50,27 @@
             </main>
     </div>
 
+    <script>
+        // Pre-fetch assigned classes for offline use when online
+        if (navigator.onLine && 'serviceWorker' in navigator) {
+            document.addEventListener('DOMContentLoaded', () => {
+                const classSelect = document.querySelector('select[name="class_id"]');
+                if (classSelect) {
+                    const classIds = Array.from(classSelect.options)
+                        .map(opt => opt.value)
+                        .filter(val => val !== "");
+                    
+                    const today = new Date().toISOString().split('T')[0];
+                    classIds.forEach(classId => {
+                        fetch(`/attendance/take?class_id=${classId}&date=${today}`)
+                            .then(res => {
+                                if (res.ok) console.log(`[Offline Prep] Pre-cached attendance for class ${classId}`);
+                            })
+                            .catch(err => console.warn(`[Offline Prep] Failed to pre-cache class ${classId}:`, err));
+                    });
+                }
+            });
+        }
+    </script>
+
     <%- include('../partials/footer') %>

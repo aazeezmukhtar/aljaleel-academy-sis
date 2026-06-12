@@ -219,6 +219,41 @@
         'Late': 'bi-clock-fill'
     };
 
+    // Handle offline date adjustments
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDate = urlParams.get('date');
+        if (urlDate) {
+            const dateInput = document.querySelector('input[name="date"]');
+            if (dateInput && dateInput.value !== urlDate) {
+                // Update hidden input
+                dateInput.value = urlDate;
+                
+                // Update header date display
+                const dateIcon = document.querySelector('.meta-pill i.bi-calendar-event');
+                if (dateIcon) {
+                    const parent = dateIcon.parentElement;
+                    const parts = urlDate.split('-');
+                    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+                    const formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    parent.innerHTML = `<i class="bi bi-calendar-event"></i> ${formattedDate}`;
+                }
+                
+                // Reset student statuses to 'Absent' (default state for a new day)
+                document.querySelectorAll('.student-row-card').forEach(card => {
+                    const btn = card.querySelector('.cycle-btn');
+                    const input = card.querySelector('.status-input');
+                    const defaultState = 'Absent';
+                    btn.dataset.state = defaultState;
+                    input.value = defaultState;
+                    btn.className = `cycle-btn btn-status-${defaultState.toLowerCase()}`;
+                    btn.querySelector('i').className = `bi ${STATUS_ICONS[defaultState]}`;
+                    btn.querySelector('.status-label').textContent = defaultState;
+                });
+            }
+        }
+    });
+
     function cycleStatus(studentId) {
         const card = document.querySelector(`.student-row-card[data-student-id="${studentId}"]`);
         const btn = card.querySelector('.cycle-btn');

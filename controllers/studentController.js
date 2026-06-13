@@ -279,7 +279,8 @@ const updateStudent = async (req, res) => {
         status
     } = req.body;
 
-    let passport_photo_path = req.body.existing_photo;
+    // Preserve existing photo if no new file is uploaded. If the hidden field is empty, keep the current DB value unchanged (null).
+    let passport_photo_path = req.body.existing_photo && req.body.existing_photo.trim() !== '' ? req.body.existing_photo : null;
     if (req.file) {
         passport_photo_path = `/uploads/${req.file.filename}`;
     }

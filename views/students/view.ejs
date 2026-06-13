@@ -101,14 +101,13 @@
 
                                 <div class="profile-header">
                                     <% if (student.passport_photo_path) { %>
-                                        <img src="<%= student.passport_photo_path %>" alt="Student Photo"
-                                            style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                                        <% } else { %>
-                                            <div class="avatar-placeholder">
-                                                <%= student.first_name[0] %>
-                                                    <%= student.last_name[0] %>
-                                            </div>
-                                            <% } %>
+    <img src="<%= student.passport_photo_path %>" alt="Student Photo"
+        style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+<% } else { %>
+    <div class="avatar-placeholder" style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #6b73ff 0%, #000dff 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+        <%= student.first_name.charAt(0).toUpperCase() + student.last_name.charAt(0).toUpperCase() %>
+    </div>
+<% } %>
                                                 <div class="profile-info" style="flex-grow: 1;">
                                                     <h1>
                                                         <%= student.first_name %> <%= student.last_name %>

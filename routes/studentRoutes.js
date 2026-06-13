@@ -5,11 +5,19 @@ const bulkStudentController = require('../controllers/bulkStudentController');
 const { isAdmin } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const os = require('os');
-const uploadDir = os.platform() === 'win32' ? 'uploads/' : '/tmp/uploads';
+const path = require('path');
+const uploadDir = os.platform() === 'win32' ? path.join(__dirname, '..', 'uploads') : path.join(os.tmpdir(), 'uploads');
 if (!require('fs').existsSync(uploadDir)) {
     require('fs').mkdirSync(uploadDir, { recursive: true });
 }
-const upload = multer({ dest: uploadDir });
+const storage = multer.diskStorage({
+    destination: uploadDir,
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'student-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage });
 
 // GET /students
 router.get('/', studentController.getStudents);

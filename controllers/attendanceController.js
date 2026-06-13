@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { logAction } = require('../utils/logger');
+const { getEnrolledStudents } = require('../utils/enrollmentHelper');
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user) => {
@@ -77,15 +78,20 @@ const getTakeAttendance = async (req, res) => {
 
         const settings = await getAcademicSettings(class_id);
 
-        const students = await db.all(`
-            SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
-                   a.status
-            FROM students s
-            JOIN student_enrollments se ON s.id = se.student_id AND se.class_id = ? AND se.session = ?
-            LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
-            WHERE s.status = 'active'
-            ORDER BY s.last_name, s.first_name
-        `, [class_id, settings.session, date, class_id]);
+        // Use centralized helper (handles student_enrollments + current_class_id fallback + case-insensitive status)
+        const enrolledStudents = await getEnrolledStudents(class_id, settings.session);
+        let students = [];
+        if (enrolledStudents.length > 0) {
+            const studentIds = enrolledStudents.map(s => Number(s.id));
+            students = await db.all(`
+                SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
+                       a.status
+                FROM students s
+                LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
+                WHERE s.id IN (${studentIds.map(() => '?').join(',')})
+                ORDER BY s.last_name, s.first_name
+            `, [date, Number(class_id), ...studentIds]);
+        }
 
         res.render('attendance/take', {
             title: 'Mark Attendance',

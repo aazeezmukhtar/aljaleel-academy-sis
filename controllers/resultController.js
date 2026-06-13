@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const path = require('path');
 const { computeResult, getGrade } = require('../utils/resultHelper');
 const { logAction } = require('../utils/logger');
+const { getEnrolledStudents } = require('../utils/enrollmentHelper');
 
 const getOrdinal = (n) => {
     const s = ['th', 'st', 'nd', 'rd'];
@@ -218,16 +219,20 @@ const getResultManager = async (req, res) => {
                 if (!hasAccess) return res.redirect('/results?error=Access Denied to this Subject/Class combination');
             }
 
-            students = await db.all(`
-                SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
-                       r.ca1, r.ca2, r.exam, r.total, r.grade, r.status, r.teacher_remark
-                FROM students s 
-                JOIN student_enrollments se ON s.id = se.student_id AND se.class_id = ? AND se.session = ?
-                LEFT JOIN results r ON s.id = r.student_id 
-                    AND r.subject_id = ? AND r.term = ? AND r.session = ?
-                WHERE s.status = 'active'
-                ORDER BY s.last_name, s.first_name
-            `, [class_id, activeSession, subject_id, activeTerm, activeSession]);
+            // Use centralized helper (handles student_enrollments + current_class_id fallback + case-insensitive status)
+            const enrolledStudents = await getEnrolledStudents(class_id, activeSession);
+            if (enrolledStudents.length > 0) {
+                const studentIds = enrolledStudents.map(s => Number(s.id));
+                students = await db.all(`
+                    SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
+                           r.ca1, r.ca2, r.exam, r.total, r.grade, r.status, r.teacher_remark
+                    FROM students s
+                    LEFT JOIN results r ON s.id = r.student_id
+                        AND r.subject_id = ? AND r.term = ? AND r.session = ?
+                    WHERE s.id IN (${studentIds.map(() => '?').join(',')})
+                    ORDER BY s.last_name, s.first_name
+                `, [subject_id, activeTerm, activeSession, ...studentIds]);
+            }
         }
 
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
@@ -549,13 +554,8 @@ const getBulkReport = async (req, res) => {
 
         const school = await getSchoolSettings();
         const resultConfig = await getSectionResultConfig(class_id);
-        // Use enrollment table — handles multi-section students correctly
-        const students = await db.all(`
-            SELECT s.* FROM students s
-            JOIN student_enrollments se ON s.id = se.student_id
-            WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-            ORDER BY s.last_name, s.first_name
-        `, [class_id, session]);
+        // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
+        const students = await getEnrolledStudents(class_id, session);
         const classInfo = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);
         const className = classInfo ? classInfo.name : 'Class';
 
@@ -651,13 +651,8 @@ const getBulkCumulative = async (req, res) => {
     const { class_id, session } = req.query;
     try {
         const school = await getSchoolSettings();
-        // Use enrollment table for multi-section support
-        const students = await db.all(`
-            SELECT s.* FROM students s
-            JOIN student_enrollments se ON s.id = se.student_id
-            WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-            ORDER BY s.last_name, s.first_name
-        `, [class_id, session]);
+        // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
+        const students = await getEnrolledStudents(class_id, session);
         const classInfo = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);
         const className = classInfo ? classInfo.name : 'Class';
 
@@ -760,15 +755,19 @@ const getTraitsForm = async (req, res) => {
                 if (!isAssigned) return res.redirect('/results/traits?error=Access Denied');
             }
 
-            students = await db.all(`
-                SELECT s.id, s.first_name, s.last_name, s.admission_number,
-                       ap.trait_name, ap.score
-                FROM students s
-                JOIN student_enrollments se ON s.id = se.student_id AND se.class_id = ?
-                LEFT JOIN affective_psychomotor ap ON s.id = ap.student_id AND ap.term = ? AND ap.session = ?
-                WHERE s.status = 'active'
-                ORDER BY s.last_name, s.first_name
-            `, [class_id, term, session]);
+            // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
+            const enrolledForTraits = await getEnrolledStudents(class_id, session);
+            if (enrolledForTraits.length > 0) {
+                const traitIds = enrolledForTraits.map(s => Number(s.id));
+                students = await db.all(`
+                    SELECT s.id, s.first_name, s.last_name, s.admission_number,
+                           ap.trait_name, ap.score
+                    FROM students s
+                    LEFT JOIN affective_psychomotor ap ON s.id = ap.student_id AND ap.term = ? AND ap.session = ?
+                    WHERE s.id IN (${traitIds.map(() => '?').join(',')})
+                    ORDER BY s.last_name, s.first_name
+                `, [term, session, ...traitIds]);
+            }
         }
 
         const studentMap = {};

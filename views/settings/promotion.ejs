@@ -33,25 +33,57 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <% classes.forEach(cls => { %>
-                            <tr>
-                                <td><strong><%= cls.name %></strong></td>
-                                <td style="text-align: center;"><span class="badge" style="background: #e3f2fd; color: #1976d2;"><%= cls.studentCount %> Students</span></td>
-                                <td>
-                                    <select name="mapping[<%= cls.id %>]" class="form-control" style="max-width: 300px;">
-                                        <option value="none">-- No Change --</option>
-                                        <option value="graduate" style="color: #d32f2f; font-weight: 600;">🎓 Graduating / Alumni</option>
-                                        <optgroup label="Promote to Class:">
-                                            <% classes.forEach(target => { %>
-                                                <% if (target.id !== cls.id) { %>
-                                                    <option value="<%= target.id %>"><%= target.name %></option>
-                                                <% } %>
-                                            <% }) %>
-                                        </optgroup>
-                                    </select>
+                        <% 
+                        // Group classes by section name
+                        let sectionsMap = {};
+                        classes.forEach(cls => {
+                            const secName = cls.section_name || 'General';
+                            if (!sectionsMap[secName]) {
+                                sectionsMap[secName] = {
+                                    session: cls.currentSession,
+                                    classes: []
+                                };
+                            }
+                            sectionsMap[secName].classes.push(cls);
+                        });
+                        
+                        for (const [secName, secData] of Object.entries(sectionsMap)) {
+                        %>
+                            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                                <td colspan="3" style="padding: 12px 15px; border-bottom: 2px solid #dee2e6; border-top: 2px solid #dee2e6;">
+                                    <span style="font-size: 1.1em; color: var(--primary);"><%= secName %> Section</span> 
+                                    <span class="text-muted" style="font-weight: normal; margin-left: 10px;">(Current Session: <%= secData.session %>)</span>
                                 </td>
                             </tr>
-                        <% }) %>
+                            <% secData.classes.forEach(cls => { %>
+                                <tr>
+                                    <td style="padding-left: 30px;"><strong><%= cls.name %></strong></td>
+                                    <td style="text-align: center;"><span class="badge" style="background: #e3f2fd; color: #1976d2;"><%= cls.studentCount %> Students</span></td>
+                                    <td>
+                                        <select name="mapping[<%= cls.id %>]" class="form-control" style="max-width: 300px;">
+                                            <option value="none">-- No Change --</option>
+                                            <option value="graduate" style="color: #d32f2f; font-weight: 600;">🎓 Graduating / Alumni</option>
+                                            
+                                            <% 
+                                            // Group target options by section
+                                            for (const [targetSecName, targetSecData] of Object.entries(sectionsMap)) { 
+                                                const filteredTargets = targetSecData.classes.filter(t => t.id !== cls.id);
+                                                if (filteredTargets.length > 0) {
+                                            %>
+                                                <optgroup label="<%= targetSecName %> Classes:">
+                                                    <% filteredTargets.forEach(target => { %>
+                                                        <option value="<%= target.id %>"><%= target.name %></option>
+                                                    <% }) %>
+                                                </optgroup>
+                                            <% 
+                                                }
+                                            } 
+                                            %>
+                                        </select>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } %>
                     </tbody>
                 </table>
 

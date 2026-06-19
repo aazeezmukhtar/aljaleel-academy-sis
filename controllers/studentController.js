@@ -46,20 +46,6 @@ const getStudents = async (req, res) => {
         }
     }
 
-    if (search) {
-        query += ` AND (s.first_name LIKE ? OR s.last_name LIKE ? OR s.admission_number LIKE ?)`;
-        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-    }
-
-    if (class_id) {
-        if (user.role === 'Admin' || user.role === 'Registrar' || myClasses.includes(parseInt(class_id))) {
-            query += ` AND se.class_id = ?`;
-            params.push(class_id);
-        } else if (user.role !== 'Admin' && user.role !== 'Registrar') {
-            query += ` AND se.class_id = -1`; 
-        }
-    }
-
     if (status) {
         query += ` AND s.status = ?`;
         params.push(status);
@@ -70,27 +56,31 @@ const getStudents = async (req, res) => {
     try {
         const rows = await db.all(query, params);
 
-        let students = [];
-        if (!class_id) {
-            // Group by student ID to prevent duplicate listings in directory
-            const studentMap = new Map();
-            for (const row of rows) {
-                if (!studentMap.has(row.id)) {
-                    studentMap.set(row.id, {
-                        ...row,
-                        class_names: row.class_name ? [row.class_name] : []
-                    });
-                } else if (row.class_name) {
+        // Always group by student ID to prevent duplicate listings in directory
+        // and to collect all classes for dual class assignments.
+        const studentMap = new Map();
+        for (const row of rows) {
+            if (!studentMap.has(row.id)) {
+                studentMap.set(row.id, {
+                    ...row,
+                    class_names: row.class_name ? [row.class_name] : [],
+                    class_ids: row.enrolled_class_id ? [row.enrolled_class_id] : []
+                });
+            } else {
+                if (row.class_name && !studentMap.get(row.id).class_names.includes(row.class_name)) {
                     studentMap.get(row.id).class_names.push(row.class_name);
                 }
+                if (row.enrolled_class_id && !studentMap.get(row.id).class_ids.includes(row.enrolled_class_id)) {
+                    studentMap.get(row.id).class_ids.push(row.enrolled_class_id);
+                }
             }
-            students = Array.from(studentMap.values()).map(s => {
-                s.class_name = s.class_names.length > 0 ? s.class_names.join(', ') : 'Not Enrolled';
-                return s;
-            });
-        } else {
-            students = rows;
         }
+        
+        const students = Array.from(studentMap.values()).map(s => {
+            s.class_name = s.class_names.length > 0 ? s.class_names.join(', ') : 'Not Enrolled';
+            s.enrolled_class_ids = s.class_ids.join(',');
+            return s;
+        });
 
         res.render('students/index', {
             title: 'Student Management',

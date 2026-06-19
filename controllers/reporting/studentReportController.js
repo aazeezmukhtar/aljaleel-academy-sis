@@ -139,15 +139,15 @@ const getProfileAuditReport = async (req, res) => {
     const students = await db.all(`
         SELECT id, first_name, last_name, admission_number, 
                CASE WHEN passport_photo_path IS NULL OR passport_photo_path = '' THEN 1 ELSE 0 END as missing_photo,
-               CASE WHEN guardian_phone IS NULL OR guardian_phone = '' THEN 1 ELSE 0 END as missing_phone,
-               CASE WHEN dob IS NULL OR dob = '' THEN 1 ELSE 0 END as missing_dob,
-               CASE WHEN address IS NULL OR address = '' THEN 1 ELSE 0 END as missing_address
+               CASE WHEN parent_phone IS NULL OR parent_phone = '' THEN 1 ELSE 0 END as missing_phone,
+               CASE WHEN dob IS NULL THEN 1 ELSE 0 END as missing_dob,
+               CASE WHEN parent_address IS NULL OR parent_address = '' THEN 1 ELSE 0 END as missing_address
         FROM students
         WHERE status = 'active'
         AND (passport_photo_path IS NULL OR passport_photo_path = '' 
-             OR guardian_phone IS NULL OR guardian_phone = ''
-             OR dob IS NULL OR dob = ''
-             OR address IS NULL OR address = '')
+             OR parent_phone IS NULL OR parent_phone = ''
+             OR dob IS NULL
+             OR parent_address IS NULL OR parent_address = '')
     `);
 
     res.render('reports/student/audit', {

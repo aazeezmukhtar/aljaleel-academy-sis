@@ -17,29 +17,28 @@ const getAuditLogs = async (req, res) => {
 const getAcademicReports = async (req, res) => {
     const user = req.session.staff;
     try {
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
         let classPerf;
         if (user.role === 'Admin') {
             classPerf = await db.all(`
                 SELECT c.name as class_name, AVG(r.total) as avg_score, COUNT(r.id) as result_count
                 FROM classes c
-                JOIN student_enrollments se ON c.id = se.class_id AND se.session = ?
+                JOIN sections sec ON c.section_id = sec.id
+                JOIN student_enrollments se ON c.id = se.class_id AND se.session = sec.current_session
                 JOIN results r ON se.student_id = r.student_id AND se.session = r.session
                 GROUP BY c.id, c.name
-            `, [currentSession]);
+            `);
         } else {
             classPerf = await db.all(`
                 SELECT c.name as class_name, AVG(r.total) as avg_score, COUNT(r.id) as result_count
                 FROM classes c
+                JOIN sections sec ON c.section_id = sec.id
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
-                JOIN student_enrollments se ON c.id = se.class_id AND se.session = ?
+                JOIN student_enrollments se ON c.id = se.class_id AND se.session = sec.current_session
                 JOIN results r ON se.student_id = r.student_id AND se.session = r.session
                 WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
                 GROUP BY c.id, c.name
-            `, [user.id, user.id, currentSession, user.id]);
+            `, [user.id, user.id, user.id]);
         }
         res.render('reports/academic', { title: 'Academic Reports', classPerf });
     } catch (err) {
@@ -50,19 +49,17 @@ const getAcademicReports = async (req, res) => {
 
 const getStudentReports = async (req, res) => {
     try {
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
         const totalStudents = await db.get("SELECT count(*) as count FROM students WHERE status='active'");
         const genderDist = await db.all("SELECT gender, count(*) as count FROM students WHERE status='active' GROUP BY gender");
         const classDist = await db.all(`
             SELECT c.name, count(se.student_id) as count
             FROM student_enrollments se
             JOIN classes c ON se.class_id = c.id
+            JOIN sections sec ON c.section_id = sec.id
             JOIN students s ON se.student_id = s.id
-            WHERE s.status='active' AND se.session = ?
+            WHERE s.status='active' AND se.session = sec.current_session
             GROUP BY c.id, c.name
-        `, [currentSession]);
+        `);
         const recentAdmissions = await db.all(`
             SELECT first_name, last_name, admission_number, admission_date 
             FROM students 
@@ -112,10 +109,6 @@ const getFeeReports = async (req, res) => {
              JOIN fee_categories fc ON sf.fee_category_id = fc.id
              GROUP BY fc.id
         `);
-
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
         const debtors = await db.all(`
             SELECT s.id, s.first_name, s.last_name, s.admission_number,
                    SUM(sf.total_amount) as total_owed,
@@ -135,8 +128,9 @@ const getFeeReports = async (req, res) => {
                 SELECT se.student_id, c.name as class_name
                 FROM student_enrollments se
                 JOIN classes c ON se.class_id = c.id
-                WHERE se.student_id IN (${placeholders}) AND se.session = ?
-            `, [...studentIds, currentSession]);
+                JOIN sections sec ON c.section_id = sec.id
+                WHERE se.student_id IN (${placeholders}) AND se.session = sec.current_session
+            `, studentIds);
 
             const classMap = new Map();
             enrollments.forEach(e => {
@@ -182,9 +176,6 @@ const getStaffReports = async (req, res) => {
 
 const getHealthReports = async (req, res) => {
     try {
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
         const students = await db.all(`
             SELECT s.id, s.first_name, s.last_name, s.admission_number, s.parent_phone, s.parent_address
             FROM students s
@@ -196,8 +187,9 @@ const getHealthReports = async (req, res) => {
                 SELECT se.student_id, c.name as class_name
                 FROM student_enrollments se
                 JOIN classes c ON se.class_id = c.id
-                WHERE se.session = ?
-            `, [currentSession]);
+                JOIN sections sec ON c.section_id = sec.id
+                WHERE se.session = sec.current_session
+            `);
 
             const classMap = new Map();
             enrollments.forEach(e => {

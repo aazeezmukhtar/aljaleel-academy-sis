@@ -6,7 +6,7 @@ const path = require('path');
 
 // Configure Multer for Image Upload
 const os = require('os');
-const uploadDir = os.platform() === 'win32' ? 'public/uploads' : '/tmp/uploads';
+const uploadDir = os.platform() === 'win32' ? 'uploads/' : '/tmp/uploads';
 if (!require('fs').existsSync(uploadDir)) {
     require('fs').mkdirSync(uploadDir, { recursive: true });
 }

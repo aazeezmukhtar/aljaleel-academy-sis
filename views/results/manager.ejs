@@ -517,49 +517,56 @@
                 status
             };
 
-            // Handle Offline Mode
+            const btn = event.currentTarget || event.target;
+            btn.dataset.oldText = btn.innerHTML;
+            btn.innerHTML = 'Saving...';
+            btn.disabled = true;
+
+            let savedOffline = false;
+
             if (!navigator.onLine) {
+                savedOffline = true;
+            } else {
                 try {
-                    await window.NexusOffline.saveResultOffline(payload);
-                    alert('Saved Offline! Your changes have been saved locally and will sync when you are back online.');
-                    return;
+                    const res = await fetch('/results/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.status === 401 || res.url.includes('/auth/login')) {
+                        alert('Session expired. Please log in again.');
+                        window.location.href = '/auth/login';
+                        return;
+                    }
+
+                    const data = await res.json().catch(() => ({}));
+                    if (data.success) {
+                        alert(data.message);
+                        if (status === 'submitted') location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Unknown error occurred'));
+                    }
                 } catch (err) {
-                    console.error('Offline Save Error:', err);
-                    alert('Error saving offline: ' + err.message);
-                    return;
-                } finally {
-                    const btn = event.currentTarget || event.target;
-                    btn.innerHTML = btn.dataset.oldText || 'Save';
-                    btn.disabled = false;
+                    console.warn('Network request failed, falling back to offline storage:', err);
+                    savedOffline = true;
                 }
             }
 
-            try {
-                const btn = event.currentTarget || event.target;
-                btn.dataset.oldText = btn.innerHTML;
-                btn.innerHTML = 'Saving...';
-                btn.disabled = true;
-
-                const res = await fetch('/results/save', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                const data = await res.json();
-                if (data.success) {
-                    alert(data.message);
-                    if (status === 'submitted') location.reload();
-                } else {
-                    alert('Error: ' + data.message);
+            if (savedOffline) {
+                try {
+                    await window.NexusOffline.saveResultOffline(payload);
+                    alert('Saved Offline! Your changes have been saved locally and will sync when you are back online.');
+                } catch (err) {
+                    console.error('Offline Save Error:', err);
+                    alert('Error saving offline: ' + err.message);
+                } finally {
+                    btn.innerHTML = btn.dataset.oldText || 'Save';
+                    btn.disabled = false;
                 }
-
+            } else {
                 btn.innerHTML = btn.dataset.oldText;
                 btn.disabled = false;
-
-            } catch (err) {
-                console.error(err);
-                alert('Network Error');
             }
         }
 

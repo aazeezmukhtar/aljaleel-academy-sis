@@ -52,6 +52,7 @@ const deleteClass = async (req, res) => {
             `, [id]);
             
             await db.run('UPDATE students SET current_class_id = NULL WHERE current_class_id = ?', [id]);
+            await db.run('DELETE FROM student_enrollments WHERE class_id = ?', [id]);
             await db.run('DELETE FROM class_assignments WHERE class_id = ?', [id]);
             await db.run('DELETE FROM subject_assignments WHERE class_id = ?', [id]);
             await db.run('DELETE FROM class_posts WHERE class_id = ?', [id]);

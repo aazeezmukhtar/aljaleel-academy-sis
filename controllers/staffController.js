@@ -207,15 +207,14 @@ const getClassBoard = async (req, res) => {
             WHERE sa.teacher_id = ?
         `, [user.id]);
 
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
         const students = await db.all(`
             SELECT DISTINCT s.id, s.first_name, s.last_name, se.class_id
             FROM students s
-            JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
-            WHERE s.status = 'active'
-        `, [currentSession]);
+            JOIN student_enrollments se ON s.id = se.student_id
+            JOIN classes c ON se.class_id = c.id
+            JOIN sections sec ON c.section_id = sec.id
+            WHERE s.status = 'active' AND se.session = sec.current_session
+        `);
 
         const posts = classes.length > 0 ? await db.all(`
             SELECT cp.*, c.name as class_name, s.name as subject_name,

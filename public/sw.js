@@ -1,4 +1,4 @@
-const CACHE_NAME = 'nexus-sis-v3';
+const CACHE_NAME = 'nexus-sis-v4';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -88,15 +88,31 @@ self.addEventListener('fetch', (event) => {
         fetch(request)
             .then((res) => {
                 // Cache successful navigation responses for offline fallback
-                if (res && res.status === 200 && request.mode === 'navigate') {
+                if (res && res.status === 200 && (request.mode === 'navigate' || url.pathname === '/attendance/take' || url.pathname === '/results/manage')) {
                     caches.open(CACHE_NAME).then((cache) => cache.put(request, res.clone()));
                 }
                 return res;
             })
             .catch(() => {
                 // Offline fallback
-                return caches.match(request).then((cached) => {
+                return caches.match(request).then(async (cached) => {
                     if (cached) return cached;
+
+                    // Special handling for /attendance/take: match ignoring date parameter
+                    if (url.pathname === '/attendance/take') {
+                        const classId = url.searchParams.get('class_id');
+                        if (classId) {
+                            const cache = await caches.open(CACHE_NAME);
+                            const keys = await cache.keys();
+                            for (const key of keys) {
+                                const cachedUrl = new URL(key.url);
+                                if (cachedUrl.pathname === '/attendance/take' && cachedUrl.searchParams.get('class_id') === classId) {
+                                    const matched = await cache.match(key);
+                                    if (matched) return matched;
+                                }
+                            }
+                        }
+                    }
 
                     // For navigation requests: serve the cached dashboard shell
                     if (request.mode === 'navigate') {

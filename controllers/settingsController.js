@@ -71,19 +71,24 @@ const updateSettings = async (req, res) => {
 // GET /settings/promotion
 const getPromotionPage = async (req, res) => {
     try {
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
-        const classes = await db.all('SELECT * FROM classes ORDER BY name');
-        // Count students in each class
+        const classes = await db.all(`
+            SELECT c.*, s.name as section_name, s.current_session as sec_session
+            FROM classes c
+            LEFT JOIN sections s ON c.section_id = s.id
+            ORDER BY s.name, c.name
+        `);
+        
+        // Count students in each class based on its section's current session
         for (let c of classes) {
+            const classSession = c.sec_session || '2024/2025';
             const count = await db.get(`
                 SELECT COUNT(DISTINCT se.student_id) as total 
                 FROM student_enrollments se
                 JOIN students s ON se.student_id = s.id
                 WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-            `, [c.id, currentSession]);
+            `, [c.id, classSession]);
             c.studentCount = count.total;
+            c.currentSession = classSession;
         }
         
         res.render('settings/promotion', {
@@ -103,13 +108,29 @@ const processPromotion = async (req, res) => {
     const { mapping } = req.body; // mapping will be { class_id: target_class_id or 'graduate' }
     
     try {
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-        const parts = currentSession.split('/');
-        const nextSession = parts.length === 2 ? `${parseInt(parts[0]) + 1}/${parseInt(parts[1]) + 1}` : '2025/2026';
+        // Fetch all classes and their section sessions
+        const classes = await db.all(`
+            SELECT c.id, c.section_id, s.current_session
+            FROM classes c
+            LEFT JOIN sections s ON c.section_id = s.id
+        `);
+        
+        const classSessionMap = {};
+        const classSectionIdMap = {};
+        classes.forEach(c => {
+            classSessionMap[c.id] = c.current_session || '2024/2025';
+            classSectionIdMap[c.id] = c.section_id;
+        });
 
         await db.transaction(async () => {
-            for (const [classId, targetId] of Object.entries(mapping)) {
+            for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
+                const classId = parseInt(classIdStr);
+                const currentSession = classSessionMap[classId];
+                if (!currentSession) continue;
+
+                const parts = currentSession.split('/');
+                const nextSession = parts.length === 2 ? `${parseInt(parts[0]) + 1}/${parseInt(parts[1]) + 1}` : '2025/2026';
+
                 if (targetId === 'graduate') {
                     // Find active students enrolled in this class for the current session
                     const enrolledStudents = await db.all(`
@@ -133,14 +154,26 @@ const processPromotion = async (req, res) => {
                         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
                     `, [classId, currentSession]);
 
+                    const targetSectionId = classSectionIdMap[targetId];
+
                     for (const student of enrolledStudents) {
                         // Keep legacy current_class_id updated
                         await db.run('UPDATE students SET current_class_id = ? WHERE id = ?', [targetId, student.id]);
+                        
+                        // Clear existing enrollments for the student in nextSession for classes belonging to the target section
+                        if (targetSectionId) {
+                            await db.run(`
+                                DELETE FROM student_enrollments 
+                                WHERE student_id = ? 
+                                  AND class_id IN (SELECT id FROM classes WHERE section_id = ?) 
+                                  AND session = ?
+                            `, [student.id, targetSectionId, nextSession]);
+                        }
+
                         // Enroll in the next session
                         await db.run(`
                             INSERT INTO student_enrollments (student_id, class_id, session)
                             VALUES (?, ?, ?)
-                            ON CONFLICT (student_id, class_id, session) DO UPDATE SET class_id = excluded.class_id
                         `, [student.id, targetId, nextSession]);
                     }
                 }
@@ -150,7 +183,7 @@ const processPromotion = async (req, res) => {
         res.redirect('/settings/promotion?success=Promotion completed successfully');
     } catch (err) {
         console.error('Process Promotion Error:', err);
-        res.redirect('/settings/promotion?error=Promotion failed');
+        res.redirect(`/settings/promotion?error=${encodeURIComponent(err.message)}`);
     }
 };
 

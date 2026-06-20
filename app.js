@@ -27,30 +27,26 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-// Custom uploads handler to serve files (including extensionless ones with correct content-type)
 const fs = require('fs');
 const os = require('os');
 
+// Custom uploads handler to serve files (including extensionless ones with correct content-type)
 app.get('/uploads/:filename', (req, res, next) => {
     const filename = req.params.filename;
-    
     let filePath = path.join(__dirname, 'uploads', filename);
     if (!fs.existsSync(filePath)) {
         filePath = path.join('/tmp/uploads', filename);
     }
-    
     if (fs.existsSync(filePath)) {
         const ext = path.extname(filename).toLowerCase();
         if (ext) {
             return res.sendFile(filePath);
         }
-        
         try {
             const fd = fs.openSync(filePath, 'r');
             const buffer = Buffer.alloc(8);
             fs.readSync(fd, buffer, 0, 8, 0);
             fs.closeSync(fd);
-            
             let mimeType = 'image/jpeg';
             if (buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4E && buffer[3] === 0x47) {
                 mimeType = 'image/png';
@@ -61,7 +57,6 @@ app.get('/uploads/:filename', (req, res, next) => {
             } else if (buffer.toString('ascii', 0, 4) === 'RIFF' && buffer.toString('ascii', 8, 12) === 'WEBP') {
                 mimeType = 'image/webp';
             }
-            
             res.setHeader('Content-Type', mimeType);
             return res.sendFile(filePath);
         } catch (err) {
@@ -74,11 +69,10 @@ app.get('/uploads/:filename', (req, res, next) => {
     }
 });
 
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-if (os.platform() !== 'win32') {
-    app.use('/uploads', express.static('/tmp/uploads'));
-}
+// Static files serving
 app.use(express.static(path.join(__dirname, 'public')));
+const uploadDir = os.platform() === 'win32' ? path.join(__dirname, 'uploads') : '/tmp/uploads';
+app.use('/uploads', express.static(uploadDir));
 
 // Session Middleware
 const isPostgres = process.env.DB_TYPE === 'postgres' || !!process.env.DATABASE_URL;

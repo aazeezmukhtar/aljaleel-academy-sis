@@ -48,7 +48,7 @@ const getWorkloadReport = async (req, res) => {
             COUNT(DISTINCT sa.subject_id) as subject_count
         FROM staff s
         LEFT JOIN class_assignments ca ON s.id = ca.staff_id
-        LEFT JOIN subject_assignments sa ON s.id = sa.staff_id
+        LEFT JOIN subject_assignments sa ON s.id = sa.teacher_id
         WHERE s.status = 'active' AND s.role = 'Teacher'
         GROUP BY s.id, s.first_name, s.last_name, s.role
         ORDER BY class_count DESC, subject_count DESC
@@ -63,10 +63,12 @@ const getWorkloadReport = async (req, res) => {
         `, [staff.id])).map(c => c.name).join(', ');
 
         staff.subjects = (await db.all(`
-            SELECT sub.name FROM subjects sub 
+            SELECT sub.name as subject_name, c.name as class_name 
+            FROM subjects sub 
             JOIN subject_assignments sa ON sub.id = sa.subject_id 
-            WHERE sa.staff_id = ?
-        `, [staff.id])).map(s => s.name).join(', ');
+            JOIN classes c ON sa.class_id = c.id
+            WHERE sa.teacher_id = ?
+        `, [staff.id])).map(s => `${s.subject_name} (${s.class_name})`).join(', ');
     }
 
     res.render('reports/staff/workload', {

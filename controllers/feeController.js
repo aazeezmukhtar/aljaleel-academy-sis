@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { getAcademicContext } = require('../utils/sessionHelper');
 
 const getSetup = async (req, res) => {
     try {
@@ -59,8 +60,8 @@ const getFeeManager = async (req, res) => {
                 if (!isAssigned) return res.redirect('/fees/manager?error=Unauthorized Access');
             }
 
-            const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-            const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+            const context = await getAcademicContext(class_id);
+            const currentSession = context.session;
 
             students = await db.all(`
                 SELECT s.id, s.first_name, s.last_name, s.admission_number,
@@ -94,10 +95,13 @@ const getStudentFees = async (req, res) => {
         const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
         if (!student) return res.status(404).send('Student not found');
 
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
-        const enrollments = await db.all('SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ?', [student_id, currentSession]);
+        const enrollments = await db.all(`
+            SELECT se.class_id 
+            FROM student_enrollments se
+            JOIN classes c ON se.class_id = c.id
+            JOIN sections sec ON c.section_id = sec.id
+            WHERE se.student_id = ? AND se.session = sec.current_session
+        `, [student_id]);
         const enrolledClassIds = enrollments.map(e => e.class_id);
 
         // Access control check

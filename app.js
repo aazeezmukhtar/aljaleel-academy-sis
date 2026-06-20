@@ -92,7 +92,7 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'nexus-sis-secret-key-offline-first',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // 1 week
+    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'lax', secure: false }
 }));
 
 app.use(injectUser);

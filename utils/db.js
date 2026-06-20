@@ -14,7 +14,10 @@ if (DB_TYPE === 'postgres') {
         connectionString: process.env.DATABASE_URL,
         ssl: {
             rejectUnauthorized: false
-        }
+        },
+        max: 1,               // limit to 1 connection for serverless Vercel to avoid max client errors
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 2000
     });
 } else {
     sqliteDb = new Database(path.join(__dirname, '../', process.env.DB_PATH || 'database.sqlite'));

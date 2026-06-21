@@ -49,6 +49,17 @@ const getStudents = async (req, res) => {
     if (status) {
         query += ` AND s.status = ?`;
         params.push(status);
+        // Apply class filter if provided (overrides or further restricts)
+        if (class_id) {
+            query += ` AND se.class_id = ?`;
+            params.push(class_id);
+        }
+        // Apply search filter on name or admission number
+        if (search) {
+            query += ` AND (s.first_name LIKE ? OR s.last_name LIKE ? OR s.admission_number LIKE ?)`;
+            const like = `%${search}%`;
+            params.push(like, like, like);
+        }
     }
 
     query += ` ORDER BY s.last_name ASC, s.first_name ASC`;

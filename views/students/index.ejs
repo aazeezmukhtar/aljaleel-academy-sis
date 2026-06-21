@@ -40,7 +40,7 @@
                                 </select>
                             </div>
                         <% } %>
-                        <button type="submit" class="btn btn-primary" style="flex-shrink: 0; display: none;">Search</button>
+                        <button type="submit" class="btn btn-primary" style="flex-shrink: 0; margin-left: 8px;">Search</button>
                     </form>
                 </div>
 
@@ -167,7 +167,7 @@
                 margin-bottom: 16px !important;
                 background: white !important;
                 display: grid !important;
-                grid-template-columns: 1fr auto !important;
+                grid-template-columns: 1fr 1fr !important;
                 grid-template-rows: auto auto auto !important;
                 gap: 12px 8px !important;
                 box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
@@ -243,6 +243,28 @@
             }
         }
     </style>
+<style>
+/* Mobile tweaks for very small screens */
+@media (max-width: 600px) {
+    .student-mobile-cards .btn {
+        width: 100% !important;
+        margin-top: 8px !important;
+    }
+    .student-mobile-cards .table-container {
+        overflow-x: hidden !important;
+    }
+    .student-mobile-cards .data-table {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .student-mobile-cards td[data-label="Class"] .badge {
+        display: inline-block;
+    }
+    .student-mobile-cards td[data-label="Action"] .btn {
+        padding: 8px 12px !important;
+    }
+}
+</style>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {

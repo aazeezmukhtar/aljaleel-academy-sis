@@ -6,7 +6,7 @@ const { isAdmin } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const os = require('os');
 const path = require('path');
-const uploadDir = os.platform() === 'win32' ? path.join(__dirname, '..', 'uploads') : path.join(os.tmpdir(), 'uploads');
+const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
 if (!require('fs').existsSync(uploadDir)) {
     require('fs').mkdirSync(uploadDir, { recursive: true });
 }

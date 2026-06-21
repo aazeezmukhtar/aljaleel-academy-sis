@@ -15,7 +15,7 @@ if (DB_TYPE === 'postgres') {
         ssl: {
             rejectUnauthorized: false
         },
-        max: 1,               // limit to 1 connection for serverless Vercel to avoid max client errors
+        max: 15,              // increased to handle higher concurrency
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 2000
     });

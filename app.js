@@ -39,9 +39,10 @@ app.use(express.static(path.join(__dirname, 'public')));
 const isPostgres = process.env.DB_TYPE === 'postgres' || !!process.env.DATABASE_URL;
 
 const sessionStore = isPostgres
-    ? new (require('connect-pg-simple')(session))({ 
+    ? new (require('connect-pg-simple')(session))({
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
+        poolSize: 30, // increased to match DB pool
         pgOptions: {
             ssl: { rejectUnauthorized: false }
         }

@@ -664,6 +664,17 @@ table {
     .mobile-topbar, .bottom-nav, .bottom-nav-spacer { display: none !important; }
     .main-content { margin: 0; padding: 0; width: 100%; }
     .card { border: 1px solid #eee; box-shadow: none; }
+    /* Ensure tables print correctly */
+    .student-mobile-cards table,
+    .student-mobile-cards tbody,
+    .student-mobile-cards tr,
+    .student-mobile-cards td,
+    .student-mobile-cards th {
+        display: table-cell !important;
+        width: auto !important;
+        box-sizing: content-box !important;
+    }
+    .student-mobile-cards thead { display: table-header-group !important; }
 }
 
 /* ============================================================

@@ -42,8 +42,8 @@ const sessionStore = isPostgres
     ? new (require('connect-pg-simple')(session))({
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
-        poolSize: 30, // increased to match DB pool
         pgOptions: {
+            max: 100,              // increased to handle higher concurrency
             ssl: { rejectUnauthorized: false }
         }
     })

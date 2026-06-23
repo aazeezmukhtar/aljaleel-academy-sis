@@ -49,30 +49,6 @@
                     </div>
 
                     <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th style="width: 50px;">S/N</th>
-                                <th>Registration No.</th>
-                                <th>Name</th>
-                                <th>Gender</th>
-                                <th>Guardian Phone</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% students.forEach((student, index)=> { %>
-                                <tr>
-                                    <td>
-                                        <%= index + 1 %>
-                                    </td>
-                                    <td>
-                                        <%= student.admission_number %>
-                                    </td>
-                                    <td>
-                                        <%= student.last_name.toUpperCase() %>, <%= student.first_name %>
-                                    </td>
-                                    <td>
-                                        <%= student.gender %>
-                                    </td>
                                     <td>
                                         <%= student.guardian_phone || '-' %>
                                     </td>
@@ -163,57 +139,14 @@
             }
 
             /* Print Styles */
+@media print {
+    .no-print { display: none !important; }
+    .report-paper { display: block !important; }
+}
             @media print {
-                @page {
-                    size: A4;
-                    margin: 10mm;
-                }
                 .no-print { display: none !important; }
-                .report-paper, .report-paper * { visibility: visible !important; }
-                .report-paper {
-                    position: static;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    box-shadow: none;
-                    padding: 0;
-                    margin: 0;
-                }
-                .main-content { margin: 0 !important; padding: 0 !important; }
-            }
-            /* Duplicate print styles removed */
-                @page {
-                    size: A4;
-                    margin: 10mm;
-                }
-
-                body * {
-                    visibility: hidden;
-                }
-
-                .report-paper,
-                .report-paper * {
-                    visibility: visible;
-                }
-
-                .report-paper {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    box-shadow: none;
-                    padding: 0;
-                    margin: 0;
-                }
-
-                .main-content {
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-
-                .no-print {
-                    display: none !important;
-                }
+                body * { display: none !important; }
+                .report-paper, .report-paper * { display: block !important; visibility: visible !important; }
             }
         </style>
 

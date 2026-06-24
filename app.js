@@ -43,7 +43,7 @@ const sessionStore = isPostgres
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
         pgOptions: {
-            max: 100,              // increased to handle higher concurrency
+            max: 2,              // Reduced to 2 for serverless to prevent EMAXCONNSESSION
             ssl: { rejectUnauthorized: false }
         }
     })

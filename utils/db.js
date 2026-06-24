@@ -15,9 +15,9 @@ if (DB_TYPE === 'postgres') {
         ssl: {
             rejectUnauthorized: false
         },
-        max: 100,              // increased to handle higher concurrency
-        idleTimeoutMillis: 30000,
-        connectionTimeoutMillis: 2000
+        max: 4,              // reduced to 4 to handle Supabase limits (15) across multiple Vercel instances
+        idleTimeoutMillis: 10000,
+        connectionTimeoutMillis: 5000
     });
 } else {
     sqliteDb = new Database(path.join(__dirname, '../', process.env.DB_PATH || 'database.sqlite'));

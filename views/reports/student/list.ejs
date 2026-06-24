@@ -165,8 +165,22 @@
             /* Print Styles */
             @media print {
               .no-print { display: none !important; }
-              .report-paper { display: block !important; }
+              .report-paper { display: block !important; width: 100% !important; margin: 0 !important; }
               .report-paper * { visibility: visible !important; }
+              
+              /* Force Tabular Layout for both Portrait and Landscape */
+              .report-table { display: table !important; width: 100% !important; }
+              .report-table thead { display: table-header-group !important; position: static !important; width: auto !important; height: auto !important; overflow: visible !important; }
+              .report-table thead tr { position: static !important; }
+              .report-table tbody { display: table-row-group !important; }
+              .report-table tr { display: table-row !important; margin: 0 !important; border: none !important; box-shadow: none !important; }
+              .report-table th, .report-table td { 
+                  display: table-cell !important; 
+                  text-align: left !important;
+                  padding: 8px !important;
+                  border: 1px solid #ddd !important;
+              }
+              .report-table td:before { content: none !important; display: none !important; }
             }
         </style>
 

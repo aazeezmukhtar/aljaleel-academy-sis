@@ -15,7 +15,7 @@ if (DB_TYPE === 'postgres') {
         ssl: {
             rejectUnauthorized: false
         },
-        max: 30,              // increased to handle higher concurrency
+        max: 100,              // increased to handle higher concurrency
         idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 2000
     });

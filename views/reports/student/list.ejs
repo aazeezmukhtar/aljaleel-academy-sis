@@ -131,6 +131,105 @@
             }
 
             .report-footer {
+                        <% } %>
+                    </div>
+                    <!-- Arm Selection Logic could be improved with JS, keeping simple for now -->
+                </form>
+            </div>
+
+            
+                <div class="report-paper">
+                    <div class="report-header">
+                        <h2>
+                            <%= students[0].class_name %> Class List
+                        </h2>
+                        <p>Generated on <%= new Date().toLocaleDateString('en-GB') %>
+                        </p>
+                    </div>
+
+                    <table class="report-table">
+                                    <td>
+                                        <%= student.guardian_phone || '-' %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                        </tbody>
+                    </table>
+
+                    <div class="report-footer">
+                        <p>Total Students: <strong>
+                                <%= students.length %>
+                            </strong> (Male: <%= students.filter(s=> s.gender === 'Male').length %>, Female: <%=
+                                    students.filter(s=> s.gender === 'Female').length %>)</p>
+                    </div>
+                </div>
+                <% } else if (query.class_id) { %>
+                    <div class="empty-state">
+                        <i class="bi bi-people"></i>
+                        <p>No students found for this class.</p>
+                    </div>
+                    <% } %>
+        </main>
+
+        <style>
+            /* Screen Styles */
+            .filter-form {
+                display: flex;
+                gap: 20px;
+                align-items: flex-end;
+            }
+
+            .report-paper {
+                background: white;
+                padding: 40px;
+                border-radius: 4px;
+                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+                max-width: 210mm;
+                /* A4 Width */
+                margin: 0 auto;
+            }
+
+            .report-header {
+                text-align: center;
+                margin-bottom: 30px;
+                border-bottom: 2px solid #eee;
+                padding-bottom: 20px;
+            }
+
+            .report-header h2 {
+                margin: 0 0 5px 0;
+                color: #333;
+            }
+
+            .report-header p {
+                margin: 0;
+                color: #666;
+                font-size: 0.9rem;
+            }
+
+            .report-table {
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 0.95rem;
+            }
+
+            .report-table th,
+            .report-table td {
+                border: 1px solid #ddd;
+                padding: 10px;
+                text-align: left;
+            }
+
+            .report-table th {
+                background: #f8f9fa;
+                font-weight: 600;
+            }
+
+            .report-table tr:nth-child(even) {
+                background-color: #fafafa;
+            }
+
+            .report-footer {
                 margin-top: 20px;
                 text-align: right;
                 font-size: 0.9rem;
@@ -140,13 +239,39 @@
 
             /* Print Styles */
 @media print {
-    .no-print { display: none !important; }
-    .report-paper { display: block !important; }
+  .no-print { display: none !important; }
+  .report-paper { display: block !important; }
+  .report-paper * { visibility: visible !important; }
 }
-            @media print {
-                .no-print { display: none !important; }
-                body * { display: none !important; }
-                .report-paper, .report-paper * { display: block !important; visibility: visible !important; }
+@media print {
+  .no-print { display: none !important; }
+  .report-paper { display: block !important; }
+  .report-paper * { visibility: visible !important; }
+}
+@media print {
+  .no-print { display: none !important; }
+  .report-paper { display: block !important; }
+  .report-paper * { visibility: visible !important; }
+}
+@media print {
+  .no-print { display: none !important; }
+  .report-paper { display: block !important; }
+  .report-paper * { visibility: visible !important; }
+}
+@media print {
+  .no-print { display: none !important; }
+  .report-paper { display: block !important; }
+  .report-paper * { visibility: visible !important; }
+}
+@media print {
+  .no-print { display: none !important; }
+}
+@media print {
+  .no-print { display:none !important; }
+  .report-paper { display:block !important; }
+}
+              body * { display:none !important; }
+              .report-paper, .report-paper * { display:block !important; }
             }
         </style>
 

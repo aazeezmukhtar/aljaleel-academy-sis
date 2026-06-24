@@ -62,7 +62,7 @@
                             <% students.forEach(student => { %>
                                 <tr>
                                     <td>
-                                        <%= student.admission_no %>
+                                        <%= student.admission_number || '-' %>
                                     </td>
                                     <td>
                                         <%= student.first_name %> <%= student.last_name %>

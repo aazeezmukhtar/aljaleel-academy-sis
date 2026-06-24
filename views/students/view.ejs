@@ -140,7 +140,7 @@
 
                                 <script>
                                      async function resetPassword(id) {
-                                         if (!confirm('Are you sure you want to reset this student\'s password to default? The student will be able to log in using their Student ID/Admission Number as the password.')) return;
+                                         if (!confirm('Are you sure you want to reset this student\'s password to default? The student will be able to log in using their Student ID/Student ID as the password.')) return;
 
                                          try {
                                              const response = await fetch(`/students/reset-password/${id}`, { method: 'POST' });

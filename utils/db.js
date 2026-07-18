@@ -10,13 +10,12 @@ let sqliteDb = null;
 console.log(`[DB] Using ${DB_TYPE} mode`);
 
 if (DB_TYPE === 'postgres') {
+    const connectionString = process.env.DB_POOL_URL || process.env.DATABASE_URL;
     pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
-        ssl: {
-            rejectUnauthorized: false
-        },
-        max: 4,              // reduced to 4 to handle Supabase limits (15) across multiple Vercel instances
-        idleTimeoutMillis: 10000,
+        connectionString,
+        ssl: { rejectUnauthorized: false },
+        max: 200, // Supabase paid tier supports up to 200 connections
+        idleTimeoutMillis: 30000,
         connectionTimeoutMillis: 5000
     });
 } else {
@@ -138,8 +137,18 @@ async function transaction(callback) {
             client.release();
         }
     } else {
-        const tx = sqliteDb.transaction(callback);
-        return tx();
+        // For SQLite, if the callback is async, we cannot use sqliteDb.transaction(callback)
+        // because better-sqlite3 transactions must be synchronous.
+        // Instead, we manually run BEGIN/COMMIT/ROLLBACK.
+        sqliteDb.prepare('BEGIN').run();
+        try {
+            const result = await callback();
+            sqliteDb.prepare('COMMIT').run();
+            return result;
+        } catch (e) {
+            sqliteDb.prepare('ROLLBACK').run();
+            throw e;
+        }
     }
 }
 

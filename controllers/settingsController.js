@@ -27,7 +27,10 @@ const updateSettings = async (req, res) => {
     const { 
         school_name, school_motto, primary_color, secondary_color, 
         address, phone, next_term_start_date, show_watermark,
-        current_session, current_term
+        current_session, current_term,
+        attendance_minimum_percentage,
+        attendance_consecutive_absence_limit,
+        attendance_term_absence_limit
     } = req.body;
     const logoFile = req.file;
 
@@ -41,7 +44,10 @@ const updateSettings = async (req, res) => {
         { key: 'next_term_start_date', value: next_term_start_date },
         { key: 'show_watermark', value: show_watermark === 'true' ? 'true' : 'false' },
         { key: 'current_session', value: current_session },
-        { key: 'current_term', value: current_term }
+        { key: 'current_term', value: current_term },
+        { key: 'attendance.minimum_percentage', value: attendance_minimum_percentage },
+        { key: 'attendance.consecutive_absence_limit', value: attendance_consecutive_absence_limit },
+        { key: 'attendance.term_absence_limit', value: attendance_term_absence_limit }
     ];
 
     if (logoFile) {
@@ -52,11 +58,11 @@ const updateSettings = async (req, res) => {
     try {
         await db.transaction(async () => {
             for (const item of updates) {
-                if (item.value) { // Only update if value is provided
+                if (item.value !== undefined && item.value !== null && item.value !== '') { // Only update if value is provided
                     await db.run(`
                         INSERT INTO settings (key, value) VALUES (?, ?)
                         ON CONFLICT(key) DO UPDATE SET value = excluded.value
-                    `, [item.key, item.value]);
+                    `, [item.key, String(item.value)]);
                 }
             }
         });

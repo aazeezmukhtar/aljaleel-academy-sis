@@ -101,8 +101,22 @@
                                                     class="form-control">
                                             </div>
 
-                                            <h4 style="margin-top: 30px; margin-bottom: 5px;">Academic Session</h4>
-                                            <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 15px;">Set independently for each section below.</p>
+                                            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc;">
+                                                <h4 style="color: #d32f2f;">Attendance Settings</h4>
+                                                <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 15px;">Configure attendance thresholds for the system.</p>
+                                                <div class="form-group" style="margin-bottom: 15px;">
+                                                    <label>Minimum Attendance Percentage</label>
+                                                    <input type="number" name="attendance_minimum_percentage" min="0" max="100" value="<%= settings['attendance.minimum_percentage'] || '75' %>" class="form-control" />
+                                                </div>
+                                                <div class="form-group" style="margin-bottom: 15px;">
+                                                    <label>Consecutive Absence Alert Limit (days)</label>
+                                                    <input type="number" name="attendance_consecutive_absence_limit" min="1" value="<%= settings['attendance.consecutive_absence_limit'] || '3' %>" class="form-control" />
+                                                </div>
+                                                <div class="form-group" style="margin-bottom: 15px;">
+                                                    <label>Total Absence Alert Limit per Term (days)</label>
+                                                    <input type="number" name="attendance_term_absence_limit" min="1" value="<%= settings['attendance.term_absence_limit'] || '10' %>" class="form-control" />
+                                                </div>
+                                            </div>
 
                                             <h4 style="margin-top: 30px; margin-bottom: 15px;">Report & Branding Settings</h4>
                                             <div class="form-group" style="margin-bottom: 20px;">

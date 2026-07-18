@@ -42,8 +42,11 @@ const sessionStore = isPostgres
     ? new (require('connect-pg-simple')(session))({
         conString: process.env.DATABASE_URL,
         createTableIfMissing: true,
+        ttl: 5 * 60 * 60, // 5 hours in seconds
+        autoRemove: 'interval',
+        autoRemoveInterval: 60, // run cleanup each minute
         pgOptions: {
-            max: 2,              // Reduced to 2 for serverless to prevent EMAXCONNSESSION
+            max: 30,              // increased to handle higher concurrency on Vercel
             ssl: { rejectUnauthorized: false }
         }
     })
@@ -54,9 +57,11 @@ app.use(session({
     secret: process.env.SESSION_SECRET || 'nexus-sis-secret-key-offline-first',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000, sameSite: 'lax', secure: false }
+    rolling: true, // reset expiry on each request
+    cookie: { maxAge: 5 * 60 * 60 * 1000, sameSite: 'lax', secure: false }
 }));
 
+app.use(require('./middleware/autoLogout'));
 app.use(injectUser);
 
 const homeController = require('./controllers/homeController');

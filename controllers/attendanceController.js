@@ -46,10 +46,85 @@ const getIndex = async (req, res) => {
     try {
         const user = req.session.staff;
         const classes = await getAssignedClasses(user);
+
+        // Fetch thresholds from settings
+        const limitRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.term_absence_limit'");
+        const termAbsenceLimit = Number(limitRow ? limitRow.value : 10);
+
+        const consecutiveRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.consecutive_absence_limit'");
+        const consecutiveAbsenceLimit = Number(consecutiveRow ? consecutiveRow.value : 3);
+
+        // Prepare flagged students list per class (uses per-section term/session)
+        const flaggedStudents = {};
+        for (const cls of classes) {
+            // Use section-aware academic settings so term/session match what was recorded
+            const academicSettings = await getAcademicSettings(cls.id);
+
+            // Fetch all student attendance records for this class & term/session
+            const attendanceRecords = await db.all(`
+                SELECT a.student_id, a.status, a.date, a.reason, s.first_name, s.last_name, s.parent_phone
+                FROM attendance a
+                JOIN students s ON a.student_id = s.id
+                WHERE a.class_id = ? AND a.term = ? AND a.session = ?
+                ORDER BY a.student_id, a.date ASC
+            `, [cls.id, academicSettings.term, academicSettings.session]);
+
+            // Group by student and evaluate consecutive absences
+            const studentStats = {};
+            for (const record of attendanceRecords) {
+                if (!studentStats[record.student_id]) {
+                    studentStats[record.student_id] = {
+                        id: record.student_id,
+                        first_name: record.first_name,
+                        last_name: record.last_name,
+                        parent_phone: record.parent_phone,
+                        total_absent_days: 0,
+                        consecutive_absent_days: 0,
+                        current_streak: 0,
+                        absences_without_reason: 0
+                    };
+                }
+
+                const stats = studentStats[record.student_id];
+
+                if (record.status === 'Absent') {
+                    stats.total_absent_days++;
+                    stats.current_streak++;
+                    if (stats.current_streak > stats.consecutive_absent_days) {
+                        stats.consecutive_absent_days = stats.current_streak;
+                    }
+                    if (!record.reason || record.reason.trim() === '' || record.reason === 'Unknown') {
+                        stats.absences_without_reason++;
+                    }
+                } else if (record.status === 'Present' || record.status === 'Late') {
+                    stats.current_streak = 0;
+                }
+                // 'Leave' status is ignored (does not count as absent, nor breaks consecutive streak)
+            }
+
+            // Filter students meeting either threshold
+            const flagged = Object.values(studentStats).filter(s => {
+                s.flag_reason = [];
+                if (s.total_absent_days >= termAbsenceLimit) {
+                    s.flag_reason.push(`Term Limit: ${s.total_absent_days} absences`);
+                }
+                if (s.consecutive_absent_days >= consecutiveAbsenceLimit) {
+                    s.flag_reason.push(`Consecutive: ${s.consecutive_absent_days} absences`);
+                }
+                return s.flag_reason.length > 0;
+            });
+
+            if (flagged.length > 0) {
+                flaggedStudents[cls.id] = { class: cls, students: flagged };
+            }
+        }
         res.render('attendance/index', {
             title: 'Attendance Management',
             classes,
-            user
+            user,
+            flaggedStudents,
+            termAbsenceLimit,
+            consecutiveAbsenceLimit
         });
     } catch (err) {
         console.error('Attendance Index Error:', err);
@@ -110,7 +185,7 @@ const getTakeAttendance = async (req, res) => {
 
 // POST /attendance/save - Save student attendance records
 const saveAttendance = async (req, res) => {
-    const { class_id, date, session, term, attendance } = req.body;
+    const { class_id, date, session, term, attendance, reasons = {}, custom_reasons = {} } = req.body;
     const user = req.session.staff;
 
     if (!user) {
@@ -125,9 +200,12 @@ const saveAttendance = async (req, res) => {
         }
 
         const sql = `
-            INSERT INTO attendance (student_id, class_id, date, status, session, term)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(student_id, date, session, term) DO UPDATE SET status = excluded.status, class_id = excluded.class_id
+            INSERT INTO attendance (student_id, class_id, date, status, session, term, reason, reason_type, custom_reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(student_id, date, session, term)
+            DO UPDATE SET status = excluded.status, class_id = excluded.class_id, 
+                          reason = excluded.reason, reason_type = excluded.reason_type, 
+                          custom_reason = excluded.custom_reason
         `;
 
         await db.transaction(async () => {
@@ -135,7 +213,27 @@ const saveAttendance = async (req, res) => {
                 const student_id = Number(studentIdStr);
                 if (isNaN(student_id)) continue;
                 const settings = await getAcademicSettings(class_id);
-                await db.run(sql, [student_id, Number(class_id), date, status, session || settings.session, term || settings.term]);
+                
+                const rawReason = reasons[studentIdStr] || null;
+                const customReason = custom_reasons[studentIdStr] || null;
+                
+                // Set main reason text
+                let reason = rawReason;
+                if (rawReason === 'Other' && customReason) {
+                    reason = customReason;
+                }
+                
+                await db.run(sql, [
+                    student_id,
+                    Number(class_id),
+                    date,
+                    status,
+                    session || settings.session,
+                    term || settings.term,
+                    reason,
+                    rawReason,
+                    customReason
+                ]);
             }
         });
 

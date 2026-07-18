@@ -85,7 +85,7 @@ const getActivityLog = async (req, res) => {
 
     if (staff_id) {
         const staff = await db.get('SELECT first_name, last_name FROM staff WHERE id = ?', [staff_id]);
-        if (staff) staffName = `${staff.last_name}, ${staff.first_name}`;
+        if (staff) staffName = `${staff.first_name} ${staff.last_name}`;
 
         logs = await db.all(`
             SELECT * FROM audit_logs 

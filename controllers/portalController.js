@@ -247,3 +247,23 @@ exports.viewAnnouncement = async (req, res) => {
         res.status(500).send('Database Error');
     }
 };
+
+// Assignment view
+exports.viewAssignment = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const assignment = await db.get('SELECT * FROM assignments WHERE id = ?', [id]);
+        if (!assignment) {
+            return res.redirect('/portal?error=Assignment not found');
+        }
+        res.render('portal/assignment', {
+            title: assignment.title,
+            student: req.session.student,
+            school: await getSettings(),
+            post: assignment
+        });
+    } catch (err) {
+        console.error('Portal View Assignment Error:', err);
+        res.status(500).send('Database Error');
+    }
+};

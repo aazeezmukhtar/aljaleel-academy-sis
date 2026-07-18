@@ -46,7 +46,8 @@ const sessionStore = isPostgres
         autoRemove: 'interval',
         autoRemoveInterval: 60, // run cleanup each minute
         pgOptions: {
-            max: 30,              // increased to handle higher concurrency on Vercel
+            max: 100,               // increased pool size for higher concurrency
+            idleTimeoutMillis: 30000, // release idle connections after 30s
             ssl: { rejectUnauthorized: false }
         }
     })

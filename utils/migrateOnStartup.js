@@ -167,6 +167,24 @@ async function runMigrations() {
         console.log('[migrate] Backfilled student_enrollments from current_class_id');
     }
 
+    // 10. Add reason_type and custom_reason columns to attendance table
+    try {
+        await db.run("ALTER TABLE attendance ADD COLUMN reason_type TEXT");
+        console.log('[migrate] Added reason_type to attendance');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] attendance.reason_type failed:', e.message);
+        }
+    }
+    try {
+        await db.run("ALTER TABLE attendance ADD COLUMN custom_reason TEXT");
+        console.log('[migrate] Added custom_reason to attendance');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] attendance.custom_reason failed:', e.message);
+        }
+    }
+
     console.log('[migrate] Startup migrations complete.');
 }
 

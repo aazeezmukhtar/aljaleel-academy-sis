@@ -252,7 +252,7 @@
                 <div class="p-card-body">
                     <% if (classPosts && classPosts.length > 0) { %>
                         <% classPosts.forEach(post => { %>
-                            <div class="item-row">
+                            <a href="/portal/assignment/<%= post.id %>" class="item-row assignment-card" style="text-decoration:none;color:inherit;transition:all 0.2s;padding:12px 10px;border-radius:12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:15px;">
                                 <div class="item-icon" style="background: <%= post.post_type === 'Assignment' ? '#fef2f2' : '#f0fdf4' %>; color: <%= post.post_type === 'Assignment' ? '#ef4444' : '#16a34a' %>;">
                                     <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-chat-left-text' %>"></i>
                                 </div>

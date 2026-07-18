@@ -153,7 +153,8 @@ const getLowAttendance = async (req, res) => {
             JOIN attendance a ON s.id = a.student_id AND a.session = se.session AND a.class_id = se.class_id
             WHERE a.term = ? AND a.session = ?
             GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
-            HAVING (CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(a.id) * 100) < ? AND COUNT(a.id) > 0
+            HAVING (CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(a.id) * 100) < ?
+            AND COUNT(a.id) > 0
             ORDER BY percentage ASC
         `;
         

@@ -21,7 +21,7 @@ async function getEnrolledStudents(classId, session = null) {
         params.push(session);
     }
     enrollmentQuery += " AND (s.status = 'active' OR s.status = 'Active' OR s.status IS NULL)";
-    enrollmentQuery += " ORDER BY s.last_name, s.first_name";
+    enrollmentQuery += " ORDER BY s.first_name, s.last_name";
 
     let students = await db.all(enrollmentQuery, params);
 
@@ -33,7 +33,7 @@ async function getEnrolledStudents(classId, session = null) {
             FROM students
             WHERE current_class_id = ?
               AND (status = 'active' OR status = 'Active' OR status IS NULL)
-            ORDER BY last_name, first_name
+            ORDER BY first_name, last_name
         `;
         students = await db.all(fallbackQuery, [classIdNum]);
     }

@@ -103,7 +103,12 @@ exports.getLatestNotifications = async (req, res) => {
                     url = userType === 'student' ? `/portal/announcement/${n.id}` : `/announcements/view/${n.id}`;
                 }
             } else if (n.source_type === 'class_post') {
-                url = userType === 'student' ? '/portal#class-board' : '/staff/board';
+                // Assignment view for students
+                if (n.type && n.type.toLowerCase() === 'assignment') {
+                    url = userType === 'student' ? `/portal/assignment/${n.id}` : '#';
+                } else {
+                    url = userType === 'student' ? '/portal#class-board' : '/staff/board';
+                }
             }
 
             return {

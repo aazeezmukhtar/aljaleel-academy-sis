@@ -42,7 +42,7 @@ const getDailyAttendance = async (req, res) => {
             FROM students s
             JOIN attendance a ON s.id = a.student_id
             WHERE a.class_id = ? AND a.date = ?
-            ORDER BY s.last_name, s.first_name
+            ORDER BY s.first_name, s.last_name
         `, [class_id, date]);
     }
 
@@ -88,7 +88,7 @@ const getRegister = async (req, res) => {
             FROM students s
             JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
             WHERE se.class_id = ? AND s.status = 'active'
-            ORDER BY s.last_name, s.first_name
+            ORDER BY s.first_name, s.last_name
         `, [currentSession, class_id]);
 
         const attendance = await db.all(`

@@ -84,7 +84,7 @@ const getEmergencyContacts = async (req, res) => {
             JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
             JOIN classes c ON se.class_id = c.id
             WHERE se.class_id = ? AND s.status = 'active'
-            ORDER BY s.last_name
+            ORDER BY s.first_name, s.last_name
         `, [context.session, activeClassId]);
     }
 

@@ -28,7 +28,7 @@ const downloadTemplate = async (req, res) => {
             FROM students s
             JOIN student_enrollments se ON s.id = se.student_id
             WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-            ORDER BY s.last_name, s.first_name
+            ORDER BY s.first_name, s.last_name
         `, [class_id, session]);
 
         const subject = await db.get('SELECT name FROM subjects WHERE id = ?', [subject_id]);

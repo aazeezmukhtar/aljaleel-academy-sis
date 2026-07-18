@@ -230,7 +230,7 @@ const getResultManager = async (req, res) => {
                     LEFT JOIN results r ON s.id = r.student_id
                         AND r.subject_id = ? AND r.term = ? AND r.session = ?
                     WHERE s.id IN (${studentIds.map(() => '?').join(',')})
-                    ORDER BY s.last_name, s.first_name
+                    ORDER BY s.first_name, s.last_name
                 `, [subject_id, activeTerm, activeSession, ...studentIds]);
             }
         }

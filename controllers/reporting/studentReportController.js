@@ -67,7 +67,7 @@ const getClassListReport = async (req, res) => {
             params.push(arm_id);
         }
 
-        query += " ORDER BY s.last_name, s.first_name";
+        query += ` ORDER BY s.first_name, s.last_name`;
         students = await db.all(query, params);
     }
 

@@ -72,7 +72,7 @@ const getFeeManager = async (req, res) => {
                 LEFT JOIN student_fees sf ON s.id = sf.student_id
                 WHERE se.class_id = ? AND s.status = 'active'
                 GROUP BY s.id, s.first_name, s.last_name, s.admission_number
-                ORDER BY s.last_name, s.first_name
+                ORDER BY s.first_name, s.last_name
             `, [currentSession, class_id]);
         }
 

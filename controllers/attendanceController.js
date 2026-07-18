@@ -164,7 +164,7 @@ const getTakeAttendance = async (req, res) => {
                 FROM students s
                 LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
                 WHERE s.id IN (${studentIds.map(() => '?').join(',')})
-                ORDER BY s.last_name, s.first_name
+                ORDER BY s.first_name, s.last_name
             `, [date, Number(class_id), ...studentIds]);
         }
 
@@ -281,7 +281,7 @@ const getReport = async (req, res) => {
                     JOIN attendance a ON s.id = a.student_id
                     WHERE a.class_id = ? AND a.date BETWEEN ? AND ?
                     GROUP BY s.id
-                    ORDER BY s.last_name, s.first_name
+                    ORDER BY s.first_name, s.last_name
                 `, [class_id, start_date, end_date]);
             }
         }
@@ -314,7 +314,7 @@ const getStaffAttendance = async (req, res) => {
             SELECT s.*, sa.status 
             FROM staff s
             LEFT JOIN staff_attendance sa ON s.id = sa.teacher_id AND sa.date = ?
-            ORDER BY s.last_name, s.first_name
+            ORDER BY s.first_name, s.last_name
         `, [targetDate]);
 
         res.render('attendance/staff', {

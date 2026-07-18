@@ -62,7 +62,7 @@ const getStudents = async (req, res) => {
         }
     }
 
-    query += ` ORDER BY s.last_name ASC, s.first_name ASC`;
+    query += ` ORDER BY s.first_name ASC, s.last_name ASC`;
 
     try {
         const rows = await db.all(query, params);

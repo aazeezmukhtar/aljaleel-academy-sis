@@ -63,12 +63,6 @@ const getIndex = async (req, res) => {
     try {
         const user = req.session.staff;
         const classes = await getAssignedClasses(user);
-<<<<<<< HEAD
-        res.render('attendance/index', {
-            title: 'Attendance Management',
-            classes,
-            user
-=======
 
         // Fetch thresholds from settings
         const limitRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.term_absence_limit'");

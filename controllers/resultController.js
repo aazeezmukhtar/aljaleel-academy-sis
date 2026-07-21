@@ -765,7 +765,7 @@ const getTraitsForm = async (req, res) => {
                     FROM students s
                     LEFT JOIN affective_psychomotor ap ON s.id = ap.student_id AND ap.term = ? AND ap.session = ?
                     WHERE s.id IN (${traitIds.map(() => '?').join(',')})
-                    ORDER BY s.last_name, s.first_name
+                    ORDER BY s.first_name, s.last_name
                 `, [term, session, ...traitIds]);
             }
         }

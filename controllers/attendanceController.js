@@ -62,7 +62,7 @@ const getIndex = async (req, res) => {
 
             // Fetch all student attendance records for this class & term/session
             const attendanceRecords = await db.all(`
-                SELECT a.student_id, a.status, a.date, a.reason, s.first_name, s.last_name, s.parent_phone
+                SELECT a.student_id, a.status, a.date, s.first_name, s.last_name, s.parent_phone
                 FROM attendance a
                 JOIN students s ON a.student_id = s.id
                 WHERE a.class_id = ? AND a.term = ? AND a.session = ?

@@ -82,11 +82,19 @@
                         <div class="grid-2">
                             <div class="form-group">
                                 <label for="first_name">First Name *</label>
+<<<<<<< HEAD
                                 <input type="text" id="first_name" name="first_name" required placeholder="e.g. John">
                             </div>
                             <div class="form-group">
                                 <label for="last_name">Last Name *</label>
                                 <input type="text" id="last_name" name="last_name" required placeholder="e.g. Doe">
+=======
+                                <input type="text" id="first_name" name="first_name" required placeholder="e.g. Musa">
+                            </div>
+                            <div class="form-group">
+                                <label for="last_name">Last Name *</label>
+                                <input type="text" id="last_name" name="last_name" required placeholder="e.g. Bala">
+>>>>>>> local-master
                             </div>
                         </div>
 
@@ -127,6 +135,7 @@
 
                         <div class="grid-2">
                             <div class="form-group">
+<<<<<<< HEAD
                                 <label for="current_class_id">Class</label>
                                 <select id="current_class_id" name="current_class_id">
                                     <option value="">Assign Later</option>
@@ -135,6 +144,23 @@
                                             <%= cls.name %>
                                         </option>
                                         <% }); %>
+=======
+                                <label for="academy_class_id">Academy Class (Western)</label>
+                                <select id="academy_class_id" name="academy_class_id">
+                                    <option value="">None / Assign Later</option>
+                                    <% classes.filter(c => c.section_name === 'Academy' || !c.section_name).forEach(cls => { %>
+                                        <option value="<%= cls.id %>"><%= cls.name %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="tahfeez_class_id">Tahfeez Class (Arabic)</label>
+                                <select id="tahfeez_class_id" name="tahfeez_class_id">
+                                    <option value="">None / Assign Later</option>
+                                    <% classes.filter(c => c.section_name === 'Tahfeez').forEach(cls => { %>
+                                        <option value="<%= cls.id %>"><%= cls.name %></option>
+                                    <% }); %>
+>>>>>>> local-master
                                 </select>
                             </div>
                         </div>

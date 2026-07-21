@@ -37,6 +37,18 @@
                         </select>
                     </div>
                     <div class="form-group">
+<<<<<<< HEAD
+=======
+                        <label>Target Section</label>
+                        <select name="section_id" class="form-control">
+                            <option value="">All Sections</option>
+                            <% sections.forEach(sec => { %>
+                                <option value="<%= sec.id %>"><%= sec.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="form-group">
+>>>>>>> local-master
                         <label>Status</label>
                         <select name="is_published" class="form-control">
                             <option value="1">Publish Immediately</option>

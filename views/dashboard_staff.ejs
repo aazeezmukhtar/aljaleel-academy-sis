@@ -142,6 +142,7 @@
                     </div>
 
                     <!-- School Activity Feed (Cloned from Student Portal) -->
+<<<<<<< HEAD
                     <div class="card" style="border-top: 4px solid #6366f1;">
                         <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3><i class="bi bi-app-indicator" style="color: #6366f1;"></i> School Activity</h3>
@@ -178,6 +179,73 @@
                         </div>
                     </div>
                 </div>
+=======
+                        <!-- Upcoming Events Card -->
+                        <div class="card" style="border-top: 4px solid #f59e0b;">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3><i class="bi bi-calendar-event" style="color: #f59e0b;"></i> Term Calendar</h3>
+                                <a href="/calendar" class="btn btn-sm btn-outline">View All</a>
+                            </div>
+                            <div class="list-group">
+                                <% if (locals.upcomingEvents && upcomingEvents.length > 0) { %>
+                                    <% upcomingEvents.forEach(event => { %>
+                                        <div class="event-item" style="display: flex; gap: 15px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dotted #e2e8f0;">
+                                            <div style="background: #fff7ed; color: #f59e0b; padding: 10px; border-radius: 10px; text-align: center; min-width: 60px;">
+                                                <span style="display: block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">
+                                                    <%= new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' }) %>
+                                                </span>
+                                                <span style="display: block; font-size: 1.2rem; font-weight: 900;">
+                                                    <%= new Date(event.event_date).getDate() %>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                <h4 style="margin: 0; font-size: 0.95rem; color: #1e293b;"><%= event.title %></h4>
+                                                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">
+                                                    <% if(event.type === 'Exam') { %>
+                                                        <i class="bi bi-pencil-square" style="color: #ef4444;"></i> Exam
+                                                    <% } else if(event.type === 'Holiday') { %>
+                                                        <i class="bi bi-sun" style="color: #10b981;"></i> Holiday
+                                                    <% } else if(event.type === 'Deadline') { %>
+                                                        <i class="bi bi-exclamation-circle" style="color: #f59e0b;"></i> Deadline
+                                                    <% } else { %>
+                                                        <i class="bi bi-info-circle" style="color: #3b82f6;"></i> Event
+                                                    <% } %>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                <% } else { %>
+                                    <p class="text-muted" style="text-align: center; padding: 20px;">No upcoming events scheduled.</p>
+                                <% } %>
+                            </div>
+                        </div>
+
+                        <div class="card" style="border-top: 4px solid #6366f1;">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3><i class="bi bi-app-indicator" style="color: #6366f1;"></i> School Activity</h3>
+                            </div>
+                            <div class="list-group" id="activityFeed">
+                                <% if (locals.announcements && announcements.length > 0) { %>
+                                    <% announcements.forEach((post, index) => { %>
+                                        <a href="/announcements/view/<%= post.id %>" class="activity-item announcement-card <%= index >= 3 ? 'hidden' : '' %>" data-id="<%= post.id %>" style="display: block; text-decoration: none; margin-bottom: 15px; padding: 15px; border-radius: 12px; border: 1px solid #f1f5f9; transition: all 0.2s; background: white;">
+                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;"><%= new Date(post.created_at).toLocaleDateString() %></span>
+                                                <% if(post.type === 'Event') { %>
+                                                    <span style="font-size: 0.7rem; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 20px; font-weight: 800; letter-spacing: 0.05em;">EVENT</span>
+                                                <% } else { %>
+                                                    <span style="font-size: 0.7rem; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 20px; font-weight: 800; letter-spacing: 0.05em;">UPDATE</span>
+                                                <% } %>
+                                            </div>
+                                            <h4 class="post-title" style="margin: 0 0 8px; font-size: 1rem; color: #1e293b; transition: color 0.2s;"><%= post.title %></h4>
+                                            <p class="line-clamp-2 post-content" style="margin: 0; font-size: 0.85rem; color: #64748b; line-height: 1.5;"><%= post.content %></p>
+                                        </a>
+                                    <% }); %>
+                                <% } else { %>
+                                    <p class="text-muted" style="padding: 20px; text-align: center;">No recent school activities.</p>
+                                <% } %>
+                            </div>
+                        </div>
+>>>>>>> local-master
 
                 <section style="margin-top: 40px;">
                     <h3 style="margin-bottom: 20px;"><i class="bi bi-megaphone-fill"></i> General Announcements</h3>

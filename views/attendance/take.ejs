@@ -11,6 +11,10 @@
                     <a href="/attendance" class="back-link"><i class="bi bi-arrow-left"></i> Directory</a>
                     <h1 style="font-size: 1.25rem; margin: 0;">Mark Attendance</h1>
                 </div>
+<<<<<<< HEAD
+=======
+                <div id="sync-indicator" class="sync-indicator"></div>
+>>>>>>> local-master
                 <div class="action-buttons">
                     <button type="submit" form="attendance-form" class="btn btn-primary">
                         <i class="bi bi-cloud-check-fill"></i> Save Records
@@ -47,7 +51,11 @@
                             <div class="row-info">
                                 <div style="width: 46px; height: 54px; flex-shrink: 0; background: #f3f4f6; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1;">
                                     <% if (student.passport_photo_path) { %>
+<<<<<<< HEAD
                                         <img src="<%= student.passport_photo_path %>" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">
+=======
+                                        <img src="<%= student.passport_photo_path %>" onerror="this.onerror=null;this.src='https://via.placeholder.com/100?text=No+Image'" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">
+>>>>>>> local-master
                                     <% } else { %>
                                         <i class="bi bi-person-fill" style="color: #9ca3af; font-size: 1.5rem;"></i>
                                     <% } %>
@@ -61,6 +69,7 @@
                                 </div>
                             </div>
 
+<<<<<<< HEAD
                             <div class="row-action">
                                 <button type="button" 
                                         class="cycle-btn btn-status-<%= currentStatus.toLowerCase() %>" 
@@ -69,6 +78,27 @@
                                     <i class="bi <%= currentStatus === 'Present' ? 'bi-check-circle-fill' : currentStatus === 'Late' ? 'bi-clock-fill' : currentStatus === 'Leave' ? 'bi-journal-text' : 'bi-x-circle-fill' %>"></i>
                                     <span class="status-label"><%= currentStatus %></span>
                                 </button>
+=======
+                            <div class="row-action" style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                                <div style="display: flex; align-items: center;">
+                                    <button type="button"
+                                            class="cycle-btn btn-status-<%= currentStatus.toLowerCase() %>"
+                                            data-state="<%= currentStatus %>"
+                                            onclick="cycleStatus('<%= student.id %>')">
+                                        <i class="bi <%= currentStatus === 'Present' ? 'bi-check-circle-fill' : currentStatus === 'Late' ? 'bi-clock-fill' : currentStatus === 'Leave' ? 'bi-journal-text' : 'bi-x-circle-fill' %>"></i>
+                                        <span class="status-label"><%= currentStatus %></span>
+                                    </button>
+                                    <select name="reason[<%= student.id %>]" class="attendance-reason" style="margin-left: 8px;" title="Reason for absence / status change" onchange="toggleCustomReason('<%= student.id %>', this.value)">
+                                        <option value="">-- Reason --</option>
+                                        <option value="Sick">Sick</option>
+                                        <option value="Permission Granted">Permission Granted</option>
+                                        <option value="School Activity">School Activity</option>
+                                        <option value="Unknown">Unknown</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <input type="text" name="custom_reason[<%= student.id %>]" class="custom-reason-input form-control" placeholder="Specify other reason..." style="display: none; width: 180px; font-size: 0.8rem; padding: 4px 8px; height: auto;" id="custom_reason_<%= student.id %>">
+>>>>>>> local-master
                             </div>
                         </div>
                     <% }); %>
@@ -218,6 +248,44 @@
         'Late': 'bi-clock-fill'
     };
 
+<<<<<<< HEAD
+=======
+    // Handle offline date adjustments
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlDate = urlParams.get('date');
+        if (urlDate) {
+            const dateInput = document.querySelector('input[name="date"]');
+            if (dateInput && dateInput.value !== urlDate) {
+                // Update hidden input
+                dateInput.value = urlDate;
+                
+                // Update header date display
+                const dateIcon = document.querySelector('.meta-pill i.bi-calendar-event');
+                if (dateIcon) {
+                    const parent = dateIcon.parentElement;
+                    const parts = urlDate.split('-');
+                    const d = new Date(parts[0], parts[1] - 1, parts[2]);
+                    const formattedDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    parent.innerHTML = `<i class="bi bi-calendar-event"></i> ${formattedDate}`;
+                }
+                
+                // Reset student statuses to 'Absent' (default state for a new day)
+                document.querySelectorAll('.student-row-card').forEach(card => {
+                    const btn = card.querySelector('.cycle-btn');
+                    const input = card.querySelector('.status-input');
+                    const defaultState = 'Absent';
+                    btn.dataset.state = defaultState;
+                    input.value = defaultState;
+                    btn.className = `cycle-btn btn-status-${defaultState.toLowerCase()}`;
+                    btn.querySelector('i').className = `bi ${STATUS_ICONS[defaultState]}`;
+                    btn.querySelector('.status-label').textContent = defaultState;
+                });
+            }
+        }
+    });
+
+>>>>>>> local-master
     function cycleStatus(studentId) {
         const card = document.querySelector(`.student-row-card[data-student-id="${studentId}"]`);
         const btn = card.querySelector('.cycle-btn');
@@ -237,6 +305,19 @@
         btn.querySelector('.status-label').textContent = nextState;
     }
 
+<<<<<<< HEAD
+=======
+    function toggleCustomReason(studentId, val) {
+        const input = document.getElementById(`custom_reason_${studentId}`);
+        if (input) {
+            input.style.display = val === 'Other' ? 'block' : 'none';
+            if (val !== 'Other') {
+                input.value = '';
+            }
+        }
+    }
+
+>>>>>>> local-master
     function markAllPresent() {
         document.querySelectorAll('.student-row-card').forEach(card => {
             const studentId = card.dataset.studentId;
@@ -265,13 +346,20 @@
             date: formData.get('date'),
             session: formData.get('session'),
             term: formData.get('term'),
+<<<<<<< HEAD
             attendance: {}
+=======
+            attendance: {},
+            reasons: {},
+            custom_reasons: {}
+>>>>>>> local-master
         };
 
         for (let [key, value] of formData.entries()) {
             if (key.startsWith('attendance[')) {
                 const id = key.match(/\[(\d+)\]/)[1];
                 data.attendance[id] = value;
+<<<<<<< HEAD
             }
         }
 
@@ -308,6 +396,61 @@
             console.error('Fetch Error:', err);
             alert('System Error: ' + err.message);
         } finally {
+=======
+            } else if (key.startsWith('reason[')) {
+                const id = key.match(/\[(\d+)\]/)[1];
+                data.reasons[id] = value;
+            } else if (key.startsWith('custom_reason[')) {
+                const id = key.match(/\[(\d+)\]/)[1];
+                data.custom_reasons[id] = value;
+            }
+        }
+
+        let savedOffline = false;
+
+        if (!navigator.onLine) {
+            savedOffline = true;
+        } else {
+            try {
+                const res = await fetch('/attendance/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (res.status === 401 || res.url.includes('/auth/login')) {
+                    alert('Session expired. Please log in again.');
+                    window.location.href = '/auth/login';
+                    return;
+                }
+
+                const result = await res.json().catch(() => ({}));
+                if (result.success) {
+                    document.getElementById('feedbackModal').style.display = 'flex';
+                } else {
+                    alert('Server Error: ' + (result.message || 'Unknown error occurred'));
+                }
+            } catch (err) {
+                console.warn('Network request failed, falling back to offline storage:', err);
+                savedOffline = true;
+            }
+        }
+
+        if (savedOffline) {
+            try {
+                await window.NexusOffline.saveAttendanceOffline(data);
+                document.getElementById('feedbackModal').querySelector('h2').textContent = 'Saved Offline!';
+                document.getElementById('feedbackModal').querySelector('p').textContent = 'Your changes have been saved locally and will sync when you are back online.';
+                document.getElementById('feedbackModal').style.display = 'flex';
+            } catch (err) {
+                console.error('Offline Save Error:', err);
+                alert('Error saving offline: ' + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        } else {
+>>>>>>> local-master
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }

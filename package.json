@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "Premium, Offline-First School Information System",
   "main": "app.js",
+<<<<<<< HEAD
+=======
+  "engines": {
+    "node": "20.x"
+  },
+>>>>>>> local-master
   "scripts": {
     "start": "node app.js",
     "dev": "nodemon app.js",
@@ -10,6 +16,7 @@
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
+<<<<<<< HEAD
     "better-sqlite3": "^12.5.0",
     "connect-pg-simple": "^10.0.0",
     "connect-sqlite3": "^0.9.16",
@@ -19,10 +26,25 @@
     "express-session": "^1.18.2",
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
+=======
+    "better-sqlite3": "^12.9.0",
+    "connect-pg-simple": "^10.0.0",
+    "connect-sqlite3": "^0.9.16",
+    "dotenv": "^16.6.1",
+    "ejs": "^3.1.10",
+    "express": "^4.22.1",
+    "express-session": "^1.19.0",
+    "morgan": "^1.10.1",
+    "multer": "^2.1.1",
+>>>>>>> local-master
     "pg": "^8.20.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+<<<<<<< HEAD
     "nodemon": "^3.0.1"
+=======
+    "nodemon": "^3.1.14"
+>>>>>>> local-master
   }
 }

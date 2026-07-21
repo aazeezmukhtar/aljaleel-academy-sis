@@ -13,14 +13,46 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#6366f1">
     <link rel="apple-touch-icon" href="/img/logo-512.png">
+<<<<<<< HEAD
+=======
+    <script src="/js/offline-handler.js"></script>
+>>>>>>> local-master
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/sw.js')
+<<<<<<< HEAD
                     .then(reg => console.log('SW Registered'))
                     .catch(err => console.log('SW Register Error', err));
             });
         }
+=======
+                    .then(reg => {
+                        console.log('SW Registered');
+                        // Listen for sync trigger message from SW
+                        navigator.serviceWorker.addEventListener('message', (event) => {
+                            if (event.data && event.data.type === 'TRIGGER_SYNC') {
+                                if (window.NexusOffline) window.NexusOffline.syncData();
+                            }
+                        });
+                    })
+                    .catch(err => console.log('SW Register Error', err));
+            });
+
+            // Register background sync when coming back online
+            window.addEventListener('online', async () => {
+                try {
+                    const reg = await navigator.serviceWorker.ready;
+                    if (reg.sync) await reg.sync.register('sync-nexus');
+                } catch(e) { /* Background sync not supported */ }
+            });
+        }
+
+        // Global offline status handling
+        window.addEventListener('online', () => document.body.classList.remove('is-offline'));
+        window.addEventListener('offline', () => document.body.classList.add('is-offline'));
+        if (!navigator.onLine) document.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-offline'));
+>>>>>>> local-master
     </script>
     <style>
         :root {
@@ -31,13 +63,22 @@
 </head>
 
 <body>
+<<<<<<< HEAD
+=======
+    <div class="offline-banner">
+        <i class="bi bi-wifi-off"></i> You are currently offline. Changes will be synced when you reconnect.
+    </div>
+>>>>>>> local-master
     <%- include('notification_bar') %>
 
     <!-- Mobile Top Bar (visible < 992px) -->
     <div class="mobile-topbar" id="mobile-topbar">
+<<<<<<< HEAD
         <button class="mobile-hamburger" onclick="toggleSidebar()" style="background:none; border:none; color:var(--text-primary); font-size:1.5rem; cursor:pointer; padding:0; display:flex; align-items:center;" aria-label="Toggle Sidebar">
             <i class="bi bi-list"></i>
         </button>
+=======
+>>>>>>> local-master
         <span class="mobile-topbar-title"><%= title %></span>
         <div class="mobile-topbar-actions">
             <% if (typeof user !== 'undefined' && user) { %>

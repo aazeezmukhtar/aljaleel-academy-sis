@@ -43,25 +43,44 @@ const getBroadsheet = async (req, res) => {
             SELECT DISTINCT s.id, s.name
             FROM subjects s
             JOIN results r ON s.id = r.subject_id
+<<<<<<< HEAD
             JOIN students st ON r.student_id = st.id
             WHERE st.current_class_id = ? AND r.term = ? AND r.session = ?
+=======
+            JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
+            WHERE se.class_id = ? AND r.term = ? AND r.session = ?
+>>>>>>> local-master
             ORDER BY s.name
         `, [class_id, term, session]);
 
         // All active students in the class
         const students = await db.all(`
+<<<<<<< HEAD
             SELECT id, first_name, last_name, admission_number
             FROM students
             WHERE current_class_id = ? AND status = 'active'
             ORDER BY last_name, first_name
         `, [class_id]);
+=======
+            SELECT DISTINCT st.id, st.first_name, st.last_name, st.admission_number
+            FROM students st
+            JOIN student_enrollments se ON st.id = se.student_id
+            WHERE se.class_id = ? AND se.session = ? AND st.status = 'active'
+            ORDER BY st.last_name, st.first_name
+        `, [class_id, session]);
+>>>>>>> local-master
 
         // All results for this class/term/session
         const allResults = await db.all(`
             SELECT r.student_id, r.subject_id, r.total, r.grade
             FROM results r
+<<<<<<< HEAD
             JOIN students st ON r.student_id = st.id
             WHERE st.current_class_id = ? AND r.term = ? AND r.session = ?
+=======
+            JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
+            WHERE se.class_id = ? AND r.term = ? AND r.session = ?
+>>>>>>> local-master
         `, [class_id, term, session]);
 
         // Build result lookup map: resultMap[student_id][subject_id]
@@ -156,9 +175,16 @@ const getTopPerformers = async (req, res) => {
                 AVG(r.total) as average_score
             FROM students s
             JOIN results r ON s.id = r.student_id
+<<<<<<< HEAD
             JOIN classes c ON s.current_class_id = c.id
             WHERE s.current_class_id = ? AND r.term = ? AND r.session = ?
             GROUP BY s.id
+=======
+            JOIN student_enrollments se ON s.id = se.student_id AND se.session = r.session
+            JOIN classes c ON se.class_id = c.id
+            WHERE se.class_id = ? AND r.term = ? AND r.session = ?
+            GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+>>>>>>> local-master
             ORDER BY average_score DESC
             LIMIT ?
         `, [class_id, term, session, limit || 10]);

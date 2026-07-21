@@ -1,4 +1,8 @@
 const db = require('../utils/db');
+<<<<<<< HEAD
+=======
+const bcrypt = require('bcryptjs');
+>>>>>>> local-master
 
 const getSettings = async () => {
     const rows = await db.all('SELECT key, value FROM settings');
@@ -31,16 +35,62 @@ exports.getDashboard = async (req, res) => {
         LIMIT 5
     `, [studentId]);
 
+<<<<<<< HEAD
+=======
+    const currentSessionStr = school.current_session || '2024/2025';
+    
+    // Get student's enrolled sections
+    const enrollments = await db.all(`
+        SELECT s.id as section_id 
+        FROM student_enrollments se 
+        JOIN classes c ON se.class_id = c.id 
+        JOIN sections s ON c.section_id = s.id 
+        WHERE se.student_id = ? AND se.session = s.current_session
+    `, [studentId]);
+    const sectionIds = enrollments.map(e => e.section_id);
+    
+    let sectionFilter = '';
+    if (sectionIds.length > 0) {
+        sectionFilter = ` AND (section_id IS NULL OR section_id IN (${sectionIds.join(',')}))`;
+    } else {
+        sectionFilter = ` AND section_id IS NULL`;
+    }
+
+>>>>>>> local-master
     // Fetch latest announcements
     const announcements = await db.all(`
         SELECT * FROM announcements 
         WHERE is_published = 1 AND (target_role = 'Students' OR target_role = 'All')
+<<<<<<< HEAD
         ORDER BY created_at DESC LIMIT 3
     `);
 
     // Fetch latest class posts (general + targeted)
     const classId = req.session.student.class_id;
     const classPosts = classId ? await db.all('SELECT cp.*, s.first_name, s.last_name FROM class_posts cp JOIN staff s ON cp.teacher_id = s.id WHERE cp.class_id = ? AND (cp.student_id IS NULL OR cp.student_id = ?) ORDER BY cp.created_at DESC LIMIT 5', [classId, studentId]) : [];
+=======
+        ${sectionFilter}
+        ORDER BY created_at DESC LIMIT 3
+    `);
+
+    // Fetch latest class posts (general + targeted) for all classes the student is enrolled in
+    const enrollRows = await db.all(`
+        SELECT class_id FROM student_enrollments WHERE student_id = ?
+    `, [studentId]);
+    const enrolledClassIds = enrollRows.map(r => r.class_id);
+
+    let classPosts = [];
+    if (enrolledClassIds.length > 0) {
+        const placeholders = enrolledClassIds.map(() => '?').join(',');
+        classPosts = await db.all(`
+            SELECT cp.*, s.first_name, s.last_name 
+            FROM class_posts cp 
+            JOIN staff s ON cp.teacher_id = s.id 
+            WHERE cp.class_id IN (${placeholders}) AND (cp.student_id IS NULL OR cp.student_id = ?) 
+            ORDER BY cp.created_at DESC LIMIT 5
+        `, [...enrolledClassIds, studentId]);
+    }
+>>>>>>> local-master
 
     const individualMessagesCount = (await db.get('SELECT COUNT(*) as c FROM class_posts WHERE student_id = ?', [studentId])).c;
     
@@ -54,6 +104,7 @@ exports.getDashboard = async (req, res) => {
     `, [studentId]);
     const feeProgress = feeStats.expected > 0 ? Math.round((feeStats.collected / feeStats.expected) * 100) : 0;
     const feeBalance = (feeStats.expected || 0) - (feeStats.collected || 0);
+<<<<<<< HEAD
     const eventsSql = db.DB_TYPE === 'postgres' 
         ? "SELECT * FROM term_events WHERE event_date >= CURRENT_DATE ORDER BY event_date ASC LIMIT 5"
         : "SELECT * FROM term_events WHERE event_date >= date('now') ORDER BY event_date ASC LIMIT 5";
@@ -61,6 +112,41 @@ exports.getDashboard = async (req, res) => {
     const upcomingEvents = await db.all(eventsSql);
 
     const studentObj = await db.get('SELECT s.*, c.name as class_name FROM students s LEFT JOIN classes c ON s.current_class_id = c.id WHERE s.id = ?', [studentId]);
+=======
+    
+    // Fetch upcoming events
+    const upcomingEvents = await db.all(`
+        SELECT * FROM term_events 
+        WHERE event_date >= date('now') 
+        ${sectionFilter}
+        ORDER BY event_date ASC LIMIT 5
+    `);
+
+    // Fetch student data with enrolled classes (including per-section term info)
+    const studentObj = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+    const enrolledClasses = await db.all(`
+        SELECT c.name as class_name, sec.name as section_name, 
+               sec.current_session as section_session, sec.current_term as section_term
+        FROM student_enrollments se 
+        JOIN classes c ON se.class_id = c.id 
+        LEFT JOIN sections sec ON c.section_id = sec.id
+        WHERE se.student_id = ? AND se.session = sec.current_session
+    `, [studentId]);
+    
+    if (enrolledClasses.length > 0) {
+        studentObj.class_name = enrolledClasses.map(c => c.class_name).join(', ');
+    } else {
+        studentObj.class_name = 'Not Enrolled';
+    }
+
+    // Build per-section info for dashboard display
+    const sectionInfo = enrolledClasses.map(ec => ({
+        class_name: ec.class_name,
+        section_name: ec.section_name,
+        current_session: ec.section_session || school.current_session || currentSessionStr,
+        current_term: ec.section_term || school.current_term || '1st Term'
+    }));
+>>>>>>> local-master
 
     res.render('portal/index', {
         title: 'Student Dashboard',
@@ -75,8 +161,14 @@ exports.getDashboard = async (req, res) => {
         individualMessagesCount,
         feeProgress,
         feeBalance,
+<<<<<<< HEAD
         currentTerm: school.current_term || 'First',
         currentSession: school.current_session || '2025/2026',
+=======
+        sectionInfo,
+        currentTerm: school.current_term || 'First',
+        currentSession: school.current_session || '2024/2025',
+>>>>>>> local-master
         error: req.query.error
     });
 };
@@ -120,13 +212,17 @@ exports.getChangePassword = (req, res) => {
 exports.postChangePassword = async (req, res) => {
     const { current_password, new_password, confirm_password } = req.body;
     const studentId = req.session.student.id;
+<<<<<<< HEAD
     const bcrypt = require('bcryptjs');
+=======
+>>>>>>> local-master
 
     if (new_password !== confirm_password) {
         return res.redirect('/portal/change-password?error=New passwords do not match');
     }
 
     try {
+<<<<<<< HEAD
         const student = await db.get('SELECT password, admission_number FROM students WHERE id = ?', [studentId]);
 
         // Check current password: support bcrypt hash, plaintext legacy, and admission_number default
@@ -138,14 +234,29 @@ exports.postChangePassword = async (req, res) => {
         } else {
             // No password set — accept admission number as current
             isMatch = (current_password === student.admission_number);
+=======
+        const student = await db.get('SELECT password FROM students WHERE id = ?', [studentId]);
+
+        // Support both hashed passwords and legacy plaintext passwords
+        let isMatch = false;
+        if (student.password && student.password.startsWith('$2')) {
+            isMatch = await bcrypt.compare(current_password, student.password);
+        } else {
+            isMatch = student.password === current_password;
+>>>>>>> local-master
         }
 
         if (!isMatch) {
             return res.redirect('/portal/change-password?error=Incorrect current password');
         }
 
+<<<<<<< HEAD
         const hashed = await bcrypt.hash(new_password, 10);
         await db.run('UPDATE students SET password = ? WHERE id = ?', [hashed, studentId]);
+=======
+        const hashedPassword = await bcrypt.hash(new_password, 10);
+        await db.run('UPDATE students SET password = ? WHERE id = ?', [hashedPassword, studentId]);
+>>>>>>> local-master
         
         res.redirect('/portal/change-password?success=Password updated successfully');
     } catch (err) {
@@ -189,3 +300,26 @@ exports.viewAnnouncement = async (req, res) => {
         res.status(500).send('Database Error');
     }
 };
+<<<<<<< HEAD
+=======
+
+// Assignment view
+exports.viewAssignment = async (req, res) => {
+    try {
+        const id = req.params.id;
+        const assignment = await db.get('SELECT * FROM assignments WHERE id = ?', [id]);
+        if (!assignment) {
+            return res.redirect('/portal?error=Assignment not found');
+        }
+        res.render('portal/assignment', {
+            title: assignment.title,
+            student: req.session.student,
+            school: await getSettings(),
+            post: assignment
+        });
+    } catch (err) {
+        console.error('Portal View Assignment Error:', err);
+        res.status(500).send('Database Error');
+    }
+};
+>>>>>>> local-master

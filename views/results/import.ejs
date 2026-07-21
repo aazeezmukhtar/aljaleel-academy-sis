@@ -57,16 +57,30 @@
                                     <div class="form-group">
                                         <label>Term</label>
                                         <select name="term" required>
+<<<<<<< HEAD
                                             <option value="1st Term">1st Term</option>
                                             <option value="2nd Term">2nd Term</option>
                                             <option value="3rd Term">3rd Term</option>
                                         </select>
+=======
+                                <% available_terms.forEach(t => { %>
+                                    <option value="<%= t %>" <%= (typeof filters !== 'undefined' ? filters.term : (typeof query !== 'undefined' ? query.term : (typeof school !== 'undefined' ? school.current_term : '1st Term'))) === t ? 'selected' : '' %>><%= t %></option>
+                                <% }) %>
+                            </select>
+>>>>>>> local-master
                                     </div>
                                     <div class="form-group">
                                         <label>Session</label>
                                         <select name="session" required>
+<<<<<<< HEAD
                                             <option value="2025/2026">2025/2026</option>
                                         </select>
+=======
+                                <% available_sessions.forEach(s => { %>
+                                    <option value="<%= s %>" <%= (typeof filters !== 'undefined' ? filters.session : (typeof query !== 'undefined' ? query.session : (typeof school !== 'undefined' ? school.current_session : '2024/2025'))) === s ? 'selected' : '' %>><%= s %></option>
+                                <% }) %>
+                            </select>
+>>>>>>> local-master
                                     </div>
                                 </div>
 

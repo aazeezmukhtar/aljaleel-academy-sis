@@ -30,12 +30,25 @@ exports.getLatestNotifications = async (req, res) => {
 
         // Fetch Assignments/Class Posts
         if (req.session.student) {
+<<<<<<< HEAD
             const classId = req.session.student.class_id;
             if (classId) {
                 assignments = await db.all(`
                     SELECT id, title, post_type as type, due_date as date, created_at, 'class_post' as source_type
                     FROM class_posts WHERE class_id = ?
                 `, [classId]);
+=======
+            const enrollRows = await db.all(`
+                SELECT class_id FROM student_enrollments WHERE student_id = ?
+            `, [userId]);
+            const enrolledClassIds = enrollRows.map(r => r.class_id);
+            if (enrolledClassIds.length > 0) {
+                const placeholders = enrolledClassIds.map(() => '?').join(',');
+                assignments = await db.all(`
+                    SELECT id, title, post_type as type, due_date as date, created_at, 'class_post' as source_type
+                    FROM class_posts WHERE class_id IN (${placeholders})
+                `, enrolledClassIds);
+>>>>>>> local-master
             }
         } else if (req.session.staff && req.session.staff.role === 'Admin') {
             // Admin should NOT see assignments in notification bell as requested
@@ -99,7 +112,16 @@ exports.getLatestNotifications = async (req, res) => {
                     url = userType === 'student' ? `/portal/announcement/${n.id}` : `/announcements/view/${n.id}`;
                 }
             } else if (n.source_type === 'class_post') {
+<<<<<<< HEAD
                 url = userType === 'student' ? '/portal#class-board' : '/staff/board';
+=======
+                // Assignment view for students
+                if (n.type && n.type.toLowerCase() === 'assignment') {
+                    url = userType === 'student' ? `/portal/assignment/${n.id}` : '#';
+                } else {
+                    url = userType === 'student' ? '/portal#class-board' : '/staff/board';
+                }
+>>>>>>> local-master
             }
 
             return {
@@ -125,11 +147,18 @@ exports.markAsRead = async (req, res) => {
 
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+<<<<<<< HEAD
         const sql = db.DB_TYPE === 'postgres' 
             ? `INSERT INTO notification_reads (user_id, user_type, source_id, source_type) VALUES (?, ?, ?, ?) ON CONFLICT DO NOTHING`
             : `INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type) VALUES (?, ?, ?, ?)`;
 
         await db.run(sql, [userId, userType, source_id, source_type]);
+=======
+        await db.run(`
+            INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
+            VALUES (?, ?, ?, ?)
+        `, [userId, userType, source_id, source_type]);
+>>>>>>> local-master
 
         res.json({ success: true });
     } catch (e) {

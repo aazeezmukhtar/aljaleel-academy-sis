@@ -12,17 +12,27 @@
                         <p class="text-muted">Manage and enroll students at <%= school.school_name %>
                         </p>
                     </div>
+<<<<<<< HEAD
                     <div style="display: flex; gap: 10px;">
                         <a href="/students/bulk-import" class="btn btn-outline" style="border-style: dashed;">
                             <i class="bi bi-file-earmark-spreadsheet"></i> Bulk Import
                         </a>
                         <a href="/students/enroll" class="btn btn-primary">
                             <i class="bi bi-person-plus"></i> Enroll New Student
+=======
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <a href="/students/bulk-import" class="btn btn-outline" style="border-style: dashed; flex: 1; min-width: 120px; text-align: center;">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Bulk Import
+                        </a>
+                        <a href="/students/enroll" class="btn btn-primary" style="flex: 1; min-width: 120px; text-align: center;">
+                            <i class="bi bi-person-plus"></i> Enroll Student
+>>>>>>> local-master
                         </a>
                     </div>
                 </header>
 
                 <div class="card" style="margin-bottom: 30px;">
+<<<<<<< HEAD
                     <form action="/students" method="GET" class="grid-main-aside" style="gap: 15px;">
                         <div style="flex-grow: 1; position: relative;">
                             <i class="bi bi-search"
@@ -33,14 +43,32 @@
                         <div style="display: flex; gap: 10px;">
                             <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
                                 <select name="class_id" class="form-control" style="flex: 1;">
+=======
+                    <form id="filter-form" action="/students" method="GET" style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 180px; position: relative;">
+                            <i class="bi bi-search"
+                                style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
+                            <input type="text" id="search-input" name="search" placeholder="Search students..."
+                                value="<%= filters.search || '' %>" class="form-control" style="padding-left: 40px;">
+                        </div>
+                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                            <div style="flex: 1; min-width: 140px;">
+                                <select id="class-filter" name="class_id" class="form-control">
+>>>>>>> local-master
                                     <option value="">All Classes</option>
                                     <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
                                         <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %></option>
                                     <% }); } %>
                                 </select>
+<<<<<<< HEAD
                             <% } %>
                             <button type="submit" class="btn btn-primary">Search</button>
                         </div>
+=======
+                            </div>
+                        <% } %>
+                        <button type="submit" class="btn btn-primary" style="flex-shrink: 0; margin-left: 8px;">Search</button>
+>>>>>>> local-master
                     </form>
                 </div>
 
@@ -59,7 +87,11 @@
                         <tbody>
                             <% if (students.length> 0) { %>
                                 <% students.forEach(student=> { %>
+<<<<<<< HEAD
                                     <tr>
+=======
+                                    <tr class="student-row" data-class-ids="<%= student.enrolled_class_ids %>" data-search-text="<%= (student.first_name + ' ' + student.last_name + ' ' + (student.admission_number || '')).toLowerCase() %>">
+>>>>>>> local-master
                                         <td data-label="Name">
                                             <div style="display: flex; align-items: center; gap: 15px;">
                                                 <div
@@ -120,6 +152,18 @@
                                         </td>
                                     </tr>
                                     <% }); %>
+<<<<<<< HEAD
+=======
+                                        <tr id="empty-state-row" style="display: none;">
+                                            <td colspan="6" style="text-align: center; padding: 60px;">
+                                                <div style="color: var(--text-muted); margin-bottom: 15px;">
+                                                    <i class="bi bi-search"
+                                                        style="font-size: 2rem; opacity: 0.5;"></i>
+                                                </div>
+                                                <p>No students found matching your criteria.</p>
+                                            </td>
+                                        </tr>
+>>>>>>> local-master
                                         <% } else { %>
                                             <tr>
                                                 <td colspan="6" style="text-align: center; padding: 60px;">
@@ -127,12 +171,16 @@
                                                         <i class="bi bi-search"
                                                             style="font-size: 2rem; opacity: 0.5;"></i>
                                                     </div>
+<<<<<<< HEAD
                                                     <p>No students found matching your criteria.</p>
                                                     <% if (filters.search) { %>
                                                         <a href="/students"
                                                             style="color: var(--primary); font-weight: 500;">Clear
                                                             filters</a>
                                                         <% } %>
+=======
+                                                    <p>No students found in directory.</p>
+>>>>>>> local-master
                                                 </td>
                                             </tr>
                                             <% } %>
@@ -163,7 +211,11 @@
                 margin-bottom: 16px !important;
                 background: white !important;
                 display: grid !important;
+<<<<<<< HEAD
                 grid-template-columns: 1fr auto !important;
+=======
+                grid-template-columns: 1fr 1fr !important;
+>>>>>>> local-master
                 grid-template-rows: auto auto auto !important;
                 gap: 12px 8px !important;
                 box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
@@ -239,5 +291,88 @@
             }
         }
     </style>
+<<<<<<< HEAD
+=======
+<style>
+/* Mobile tweaks for very small screens */
+@media (max-width: 600px) {
+    .student-mobile-cards .btn {
+        width: 100% !important;
+        margin-top: 8px !important;
+    }
+    .student-mobile-cards .table-container {
+        overflow-x: hidden !important;
+    }
+    .student-mobile-cards .data-table {
+        width: 100% !important;
+        min-width: 0 !important;
+    }
+    .student-mobile-cards td[data-label="Class"] .badge {
+        display: inline-block;
+    }
+    .student-mobile-cards td[data-label="Action"] .btn {
+        padding: 8px 12px !important;
+    }
+}
+</style>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('search-input');
+        const classFilter = document.getElementById('class-filter');
+        const rows = document.querySelectorAll('.student-row');
+        const emptyState = document.getElementById('empty-state-row');
+
+        function filterTable() {
+            const searchText = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            const selectedClassId = classFilter ? classFilter.value : '';
+
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const rowSearchText = row.getAttribute('data-search-text') || '';
+                const rowClassIds = (row.getAttribute('data-class-ids') || '').split(',');
+
+                const matchesSearch = searchText === '' || rowSearchText.includes(searchText);
+                const matchesClass = selectedClassId === '' || rowClassIds.includes(selectedClassId);
+
+                if (matchesSearch && matchesClass) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (emptyState) {
+                if (visibleCount === 0 && rows.length > 0) {
+                    emptyState.style.display = '';
+                } else {
+                    emptyState.style.display = 'none';
+                }
+            }
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', filterTable);
+        }
+        if (classFilter) {
+            classFilter.addEventListener('change', filterTable);
+        }
+
+        // Run initial filter in case query params were populated
+        filterTable();
+
+        // Prevent form submission since it is now realtime
+        const filterForm = document.getElementById('filter-form');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                filterTable();
+            });
+        }
+    });
+    </script>
+>>>>>>> local-master
 
     <%- include('../partials/footer') %>

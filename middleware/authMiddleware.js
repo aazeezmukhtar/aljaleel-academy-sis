@@ -3,12 +3,21 @@
  * Handles session validation and role-based access control.
  */
 module.exports = {
+<<<<<<< HEAD
     // Ensure user is logged in
+=======
+>>>>>>> local-master
     isAuthenticated: (req, res, next) => {
         if (req.session && req.session.staff) {
             res.locals.user = req.session.staff; // Inject user into templates
             return next();
         }
+<<<<<<< HEAD
+=======
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.method !== 'GET') {
+            return res.status(401).json({ success: false, message: 'Session expired' });
+        }
+>>>>>>> local-master
         res.redirect('/auth/login');
     },
 

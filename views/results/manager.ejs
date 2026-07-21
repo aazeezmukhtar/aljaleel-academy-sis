@@ -2,11 +2,19 @@
     <div class="dashboard-container">
         <%- include('../partials/sidebar') %>
             <main class="main-content">
+<<<<<<< HEAD
                 <header class="content-header">
+=======
+                <header class="content-header" style="display: flex; justify-content: space-between; align-items: center;">
+>>>>>>> local-master
                     <div>
                         <h1>Result Entry</h1>
                         <p>Record and manage student performance.</p>
                     </div>
+<<<<<<< HEAD
+=======
+                    <div id="sync-indicator" class="sync-indicator"></div>
+>>>>>>> local-master
                 </header>
 
                 <!-- Filters -->
@@ -16,19 +24,31 @@
                         <div class="form-group">
                             <label>Session</label>
                             <select name="session" class="form-control" required>
+<<<<<<< HEAD
                                 <option value="2025/2026" <%=filters.session==='2025/2026' ? 'selected' : '' %>
                                     >2025/2026</option>
+=======
+                                <% available_sessions.forEach(s => { %>
+                                    <option value="<%= s %>" <%= (typeof filters !== 'undefined' ? filters.session : (typeof query !== 'undefined' ? query.session : (typeof school !== 'undefined' ? school.current_session : '2024/2025'))) === s ? 'selected' : '' %>><%= s %></option>
+                                <% }) %>
+>>>>>>> local-master
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Term</label>
                             <select name="term" class="form-control" required>
+<<<<<<< HEAD
                                 <option value="1st Term" <%=filters.term==='1st Term' ? 'selected' : '' %>>1st Term
                                 </option>
                                 <option value="2nd Term" <%=filters.term==='2nd Term' ? 'selected' : '' %>>2nd Term
                                 </option>
                                 <option value="3rd Term" <%=filters.term==='3rd Term' ? 'selected' : '' %>>3rd Term
                                 </option>
+=======
+                                <% available_terms.forEach(t => { %>
+                                    <option value="<%= t %>" <%= (typeof filters !== 'undefined' ? filters.term : (typeof query !== 'undefined' ? query.term : (typeof school !== 'undefined' ? school.current_term : '1st Term'))) === t ? 'selected' : '' %>><%= t %></option>
+                                <% }) %>
+>>>>>>> local-master
                             </select>
                         </div>
                         <div class="form-group">
@@ -57,6 +77,25 @@
                             <button type="submit" class="btn btn-primary" style="width: 100%;">Load Sheet</button>
                         </div>
                     </form>
+<<<<<<< HEAD
+=======
+                    <script>
+                        // Auto-switch Session and Term based on selected Class's Section
+                        (function() {
+                            const classDropdown = document.querySelector('select[name="class_id"]');
+                            if (classDropdown) {
+                                const classData = <%- JSON.stringify(classes.map(c => ({ id: c.id, session: c.sec_session, term: c.sec_term }))) %>;
+                                classDropdown.addEventListener('change', function() {
+                                    const selected = classData.find(c => String(c.id) === String(this.value));
+                                    if (selected) {
+                                        if (selected.session) document.querySelector('select[name="session"]').value = selected.session;
+                                        if (selected.term) document.querySelector('select[name="term"]').value = selected.term;
+                                    }
+                                });
+                            }
+                        })();
+                    </script>
+>>>>>>> local-master
                 </div>
                 <% } else { %>
                     <!-- Active Selection Summary -->
@@ -93,7 +132,11 @@
                             </h3>
                             <div class="result-actions-group">
                                 <span class="text-muted result-config-info">
+<<<<<<< HEAD
                                     <i class="bi bi-info-circle"></i> Max: CA1=<%= school.ca1_max || 20 %>, CA2=<%= school.ca2_max || 20 %>, Exam=<%= school.exam_max || 60 %>
+=======
+                                    <i class="bi bi-info-circle"></i> Max: CA1=<%= resultConfig.ca1_max || 20 %>, CA2=<%= resultConfig.ca2_max || 20 %>, Exam=<%= resultConfig.exam_max || 60 %>
+>>>>>>> local-master
                                 </span>
 
                                 <div class="button-stack">
@@ -115,11 +158,19 @@
                                     <tr>
                                         <th style="width: 50px;">#</th>
                                         <th style="width: 250px;">Student Name</th>
+<<<<<<< HEAD
                                         <th style="width: 100px;">CA 1 (<%= school.ca1_max || 20 %>)</th>
                                         <% if (school.ca_count !=1) { %>
                                             <th style="width: 100px;">CA 2 (<%= school.ca2_max || 20 %>)</th>
                                             <% } %>
                                                 <th style="width: 100px;">Exam (<%= school.exam_max || 60 %>)</th>
+=======
+                                        <th style="width: 100px;">CA 1 (<%= resultConfig.ca1_max || 20 %>)</th>
+                                        <% if (resultConfig.ca_count != 1) { %>
+                                            <th style="width: 100px;">CA 2 (<%= resultConfig.ca2_max || 20 %>)</th>
+                                            <% } %>
+                                                <th style="width: 100px;">Exam (<%= resultConfig.exam_max || 60 %>)</th>
+>>>>>>> local-master
                                                 <th style="width: 80px;">Total</th>
                                                 <th style="width: 80px;">Grade</th>
                                     </tr>
@@ -155,6 +206,7 @@
                                             </td>
                                             <td data-label="CA 1">
                                                 <input type="number" class="form-control score-input ca1"
+<<<<<<< HEAD
                                                     value="<%= s.ca1 %>" min="0" max="<%= school.ca1_max || 20 %>"
                                                     <%= isLocked ? 'disabled' : '' %>>
                                             </td>
@@ -162,6 +214,15 @@
                                                 <td data-label="CA 2">
                                                     <input type="number" class="form-control score-input ca2"
                                                         value="<%= s.ca2 %>" min="0" max="<%= school.ca2_max || 20 %>"
+=======
+                                                    value="<%= s.ca1 %>" min="0" max="<%= resultConfig.ca1_max || 20 %>"
+                                                    <%= isLocked ? 'disabled' : '' %>>
+                                            </td>
+                                            <% if (resultConfig.ca_count != 1) { %>
+                                                <td data-label="CA 2">
+                                                    <input type="number" class="form-control score-input ca2"
+                                                        value="<%= s.ca2 %>" min="0" max="<%= resultConfig.ca2_max || 20 %>"
+>>>>>>> local-master
                                                         <%= isLocked ? 'disabled' : '' %>>
                                                 </td>
                                                 <% } else { %>
@@ -170,7 +231,11 @@
                                                         <td data-label="Exam">
                                                             <input type="number" class="form-control score-input exam"
                                                                 value="<%= s.exam %>" min="0"
+<<<<<<< HEAD
                                                                 max="<%= school.exam_max || 60 %>"
+=======
+                                                                max="<%= resultConfig.exam_max || 60 %>"
+>>>>>>> local-master
                                                                 <%= isLocked ? 'disabled' : '' %>>
                                                         </td>
                                                         <td data-label="Total" class="total fw-bold"><%= s.total || 0 %></td>
@@ -208,9 +273,15 @@
     <!-- Constants for JS -->
     <script>
         const CONFIG = {
+<<<<<<< HEAD
             CA1_MAX: <%- school.ca1_max || 20 %>,
             CA2_MAX: <%- school.ca2_max || 20 %>,
             EXAM_MAX: <%- school.exam_max || 60 %>
+=======
+            CA1_MAX: <%- resultConfig.ca1_max || 20 %>,
+            CA2_MAX: <%- resultConfig.ca2_max || 20 %>,
+            EXAM_MAX: <%- resultConfig.exam_max || 60 %>
+>>>>>>> local-master
         };
 
         // Grading System from Backend
@@ -502,6 +573,7 @@
                 status
             };
 
+<<<<<<< HEAD
             try {
                 const btn = event.currentTarget || event.target;
                 const oldText = btn.innerHTML;
@@ -528,6 +600,58 @@
             } catch (err) {
                 console.error(err);
                 alert('Network Error');
+=======
+            const btn = event.currentTarget || event.target;
+            btn.dataset.oldText = btn.innerHTML;
+            btn.innerHTML = 'Saving...';
+            btn.disabled = true;
+
+            let savedOffline = false;
+
+            if (!navigator.onLine) {
+                savedOffline = true;
+            } else {
+                try {
+                    const res = await fetch('/results/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res.status === 401 || res.url.includes('/auth/login')) {
+                        alert('Session expired. Please log in again.');
+                        window.location.href = '/auth/login';
+                        return;
+                    }
+
+                    const data = await res.json().catch(() => ({}));
+                    if (data.success) {
+                        alert(data.message);
+                        if (status === 'submitted') location.reload();
+                    } else {
+                        alert('Error: ' + (data.message || 'Unknown error occurred'));
+                    }
+                } catch (err) {
+                    console.warn('Network request failed, falling back to offline storage:', err);
+                    savedOffline = true;
+                }
+            }
+
+            if (savedOffline) {
+                try {
+                    await window.NexusOffline.saveResultOffline(payload);
+                    alert('Saved Offline! Your changes have been saved locally and will sync when you are back online.');
+                } catch (err) {
+                    console.error('Offline Save Error:', err);
+                    alert('Error saving offline: ' + err.message);
+                } finally {
+                    btn.innerHTML = btn.dataset.oldText || 'Save';
+                    btn.disabled = false;
+                }
+            } else {
+                btn.innerHTML = btn.dataset.oldText;
+                btn.disabled = false;
+>>>>>>> local-master
             }
         }
 

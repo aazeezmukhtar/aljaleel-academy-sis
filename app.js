@@ -13,6 +13,10 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const session = require('express-session');
+<<<<<<< HEAD
+=======
+const SQLiteStore = require('connect-sqlite3')(session);
+>>>>>>> local-master
 const { isAuthenticated, injectUser, isAnyAuthenticated } = require('./middleware/authMiddleware');
 
 const app = express();
@@ -26,6 +30,7 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+<<<<<<< HEAD
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
@@ -48,15 +53,50 @@ if (DB_TYPE === 'postgres') {
     });
     console.log('[Session] Using SQLite Store');
 }
+=======
+
+// Serve uploaded passport photos
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+app.use('/uploads', express.static(uploadDir));
+
+// Static files serving
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Session Middleware
+const isPostgres = process.env.DB_TYPE === 'postgres' || !!process.env.DATABASE_URL;
+
+const sessionStore = isPostgres
+    ? new (require('connect-pg-simple')(session))({
+        conString: process.env.DATABASE_URL,
+        createTableIfMissing: true,
+        ttl: 5 * 60 * 60, // 5 hours in seconds
+        autoRemove: 'interval',
+        autoRemoveInterval: 60, // run cleanup each minute
+        pgOptions: {
+            max: 100,               // increased pool size for higher concurrency
+            idleTimeoutMillis: 30000, // release idle connections after 30s
+            ssl: { rejectUnauthorized: false }
+        }
+    })
+    : new SQLiteStore({ db: 'database.sqlite', dir: '.' });
+>>>>>>> local-master
 
 app.use(session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET || 'nexus-sis-secret-key-offline-first',
     resave: false,
     saveUninitialized: false,
+<<<<<<< HEAD
     cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // 1 week
 }));
 
+=======
+    rolling: true, // reset expiry on each request
+    cookie: { maxAge: 5 * 60 * 60 * 1000, sameSite: 'lax', secure: false }
+}));
+
+app.use(require('./middleware/autoLogout'));
+>>>>>>> local-master
 app.use(injectUser);
 
 const homeController = require('./controllers/homeController');
@@ -66,9 +106,15 @@ const { isStudentAuthenticated, injectStudent } = require('./middleware/studentA
 // Settings injection and global vars
 app.use(settingsMiddleware);
 
+<<<<<<< HEAD
 // Run non-destructive migrations on startup
 const { runMigrations } = require('./utils/migrateOnStartup');
 runMigrations().catch(err => console.error('[migrate] Migration error:', err.message));
+=======
+// Run non-destructive startup migrations (creates sections, enrollments tables etc.)
+const { runMigrations } = require('./utils/migrateOnStartup');
+runMigrations().catch(err => console.error('[migrate] Startup migration error:', err.message));
+>>>>>>> local-master
 
 // Routes
 app.use('/auth', authRoutes);
@@ -78,6 +124,7 @@ app.get('/', (req, res) => {
     res.redirect('/auth/login');
 });
 
+<<<<<<< HEAD
 // TEMPORARY DEBUG ROUTE
 app.get('/test-db', async (req, res) => {
     try {
@@ -104,6 +151,8 @@ app.get('/test-db', async (req, res) => {
     }
 });
 
+=======
+>>>>>>> local-master
 // Protected Staff/Admin Routes
 app.use('/dashboard', isAuthenticated, homeController.getDashboard);
 app.use('/students', isAuthenticated, studentRoutes);
@@ -122,10 +171,17 @@ app.use('/calendar', require('./routes/calendarRoutes'));
 app.use(injectStudent);
 app.use('/portal', isStudentAuthenticated, portalRoutes);
 
+<<<<<<< HEAD
 if (process.env.NODE_ENV !== 'production' || process.env.VITE_DEV_SERVER) {
     app.listen(PORT, () => {
         console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
         console.log(`Mode: ${DB_TYPE === 'postgres' ? 'Cloud' : 'Local'} Database`);
+=======
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
+        console.log(`Mode: LAN Access Only`);
+>>>>>>> local-master
     });
 }
 

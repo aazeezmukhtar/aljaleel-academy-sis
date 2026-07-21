@@ -101,7 +101,28 @@
                                                     class="form-control">
                                             </div>
 
+<<<<<<< HEAD
                                             <h4 style="margin-top: 30px; margin-bottom: 15px;">Report Settings</h4>
+=======
+                                            <div style="margin-top: 40px; padding-top: 20px; border-top: 1px dashed #ccc;">
+                                                <h4 style="color: #d32f2f;">Attendance Settings</h4>
+                                                <p class="text-muted" style="font-size: 0.8rem; margin-bottom: 15px;">Configure attendance thresholds for the system.</p>
+                                                <div class="form-group" style="margin-bottom: 15px;">
+                                                    <label>Minimum Attendance Percentage</label>
+                                                    <input type="number" name="attendance_minimum_percentage" min="0" max="100" value="<%= settings['attendance.minimum_percentage'] || '75' %>" class="form-control" />
+                                                </div>
+                                                <div class="form-group" style="margin-bottom: 15px;">
+                                                    <label>Consecutive Absence Alert Limit (days)</label>
+                                                    <input type="number" name="attendance_consecutive_absence_limit" min="1" value="<%= settings['attendance.consecutive_absence_limit'] || '3' %>" class="form-control" />
+                                                </div>
+                                                <div class="form-group" style="margin-bottom: 15px;">
+                                                    <label>Total Absence Alert Limit per Term (days)</label>
+                                                    <input type="number" name="attendance_term_absence_limit" min="1" value="<%= settings['attendance.term_absence_limit'] || '10' %>" class="form-control" />
+                                                </div>
+                                            </div>
+
+                                            <h4 style="margin-top: 30px; margin-bottom: 15px;">Report & Branding Settings</h4>
+>>>>>>> local-master
                                             <div class="form-group" style="margin-bottom: 20px;">
                                                 <label>Next Term Starts</label>
                                                 <input type="text" name="next_term_start_date"
@@ -120,6 +141,15 @@
 
                                             <button type="submit" class="btn btn-primary"
                                                 style="width: 100%; margin-top: 20px;">Save Changes</button>
+<<<<<<< HEAD
+=======
+                                            
+                                            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px dashed #ccc;">
+                                                <h4 style="color: #d32f2f;">Advanced: Session Transition</h4>
+                                                <p class="text-muted" style="font-size: 14px;">End the current academic year and promote students to their next classes.</p>
+                                                <a href="/settings/promotion" class="btn btn-outline" style="width: 100%; border-color: #d32f2f; color: #d32f2f;">Open Promotion Manager</a>
+                                            </div>
+>>>>>>> local-master
                                         </form>
                                     </section>
 
@@ -192,8 +222,52 @@
                                                 </div>
                                             </div>
                                         </div>
+<<<<<<< HEAD
                                     </section>
                                 </div>
+=======
+
+                                   <div style="margin-top: 40px;">
+                                    <!-- Section Calendar Card -->
+                                    <section class="card">
+                                        <h3><i class="bi bi-calendar3"></i> Section Academic Calendar</h3>
+                                        <p class="text-muted" style="font-size: 0.85rem; margin-bottom: 20px;">Set the current session and term for each section independently.</p>
+                                        <form action="/settings/section-calendar" method="POST">
+                                            <% sections.forEach(sec => { %>
+                                                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                                                    <h4 style="margin-bottom: 15px; color: #1e293b;">
+                                                        <span style="background: <%= sec.name === 'Academy' ? '#e0e7ff' : '#fef3c7' %>; color: <%= sec.name === 'Academy' ? '#4338ca' : '#92400e' %>; padding: 3px 12px; border-radius: 20px; font-size: 0.85rem;">
+                                                            <%= sec.name %>
+                                                        </span>
+                                                    </h4>
+                                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                                        <div class="form-group">
+                                                            <label>Session</label>
+                                                            <input type="text" name="sections_<%= sec.id %>_session" list="available-sessions-sec-<%= sec.id %>" value="<%= sec.current_session || '' %>" class="form-control" placeholder="e.g. 2024/2025" autocomplete="off" required>
+                                                            <datalist id="available-sessions-sec-<%= sec.id %>">
+                                                                <% available_sessions.forEach(s => { %>
+                                                                    <option value="<%= s %>">
+                                                                <% }) %>
+                                                            </datalist>
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label>Current Term</label>
+                                                            <select name="sections_<%= sec.id %>_term" class="form-control" required>
+                                                                <% available_terms.forEach(t => { %>
+                                                                    <option value="<%= t %>" <%= sec.current_term === t ? 'selected' : '' %>><%= t %></option>
+                                                                <% }) %>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <% }) %>
+                                            <button type="submit" class="btn btn-primary" style="width: 100%;">Update Section Calendars</button>
+                                        </form>
+                                    </section>
+                                </div>
+                             </section>
+                                 </div>
+>>>>>>> local-master
             </main>
     </div>
 

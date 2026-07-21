@@ -198,6 +198,7 @@
                 </div>
             </div>
             <div class="session-details">
+<<<<<<< HEAD
                 <div class="session-stat">
                     <span>Class</span>
                     <strong><%= student.class_name %></strong>
@@ -210,6 +211,26 @@
                     <span>Term</span>
                     <strong><%= currentTerm %></strong>
                 </div>
+=======
+                <% if (sectionInfo && sectionInfo.length > 0) { %>
+                    <% sectionInfo.forEach(sec => { %>
+                        <div class="session-stat" style="border-left: 3px solid rgba(255,255,255,0.4); padding-left: 12px;">
+                            <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.75;"><%= sec.section_name || 'Section' %></span>
+                            <strong style="font-size: 0.85rem;"><%= sec.class_name %></strong>
+                            <span style="font-size: 0.75rem; opacity: 0.85;"><%= sec.current_term %> &bull; <%= sec.current_session %></span>
+                        </div>
+                    <% }) %>
+                <% } else { %>
+                    <div class="session-stat">
+                        <span>Session</span>
+                        <strong><%= currentSession %></strong>
+                    </div>
+                    <div class="session-stat">
+                        <span>Term</span>
+                        <strong><%= currentTerm %></strong>
+                    </div>
+                <% } %>
+>>>>>>> local-master
             </div>
         </section>
 
@@ -246,7 +267,11 @@
                 <div class="p-card-body">
                     <% if (classPosts && classPosts.length > 0) { %>
                         <% classPosts.forEach(post => { %>
+<<<<<<< HEAD
                             <div class="item-row">
+=======
+                            <a href="/portal/assignment/<%= post.id %>" class="item-row assignment-card" style="text-decoration:none;color:inherit;transition:all 0.2s;padding:12px 10px;border-radius:12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:15px;">
+>>>>>>> local-master
                                 <div class="item-icon" style="background: <%= post.post_type === 'Assignment' ? '#fef2f2' : '#f0fdf4' %>; color: <%= post.post_type === 'Assignment' ? '#ef4444' : '#16a34a' %>;">
                                     <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-chat-left-text' %>"></i>
                                 </div>
@@ -278,6 +303,7 @@
                 <div class="p-card-body">
                     <% if (results && results.length > 0) { %>
                         <% results.forEach(result => { %>
+<<<<<<< HEAD
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding: 12px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
                                 <div>
                                     <strong style="display: block; font-size: 0.9rem;"><%= result.term %></strong>
@@ -291,6 +317,36 @@
                         <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>" target="_blank" style="display: block; text-align: center; padding: 10px; background: var(--school-primary); color: white; border-radius: 10px; text-decoration: none; font-weight: 700; font-size: 0.85rem; margin-top: 10px;">
                             VIEW SESSIONAL CUMULATIVE
                         </a>
+=======
+                            <div style="margin-bottom: 15px; padding: 15px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+                                <div style="margin-bottom: 10px;">
+                                    <strong style="display: block; font-size: 1rem;"><%= result.term %></strong>
+                                    <span style="font-size: 0.8rem; color: #64748b;"><%= result.session %></span>
+                                </div>
+                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                    <% if (student.class_name && student.class_name !== 'Not Enrolled') { %>
+                                        <% student.class_name.split(', ').forEach(className => { %>
+                                            <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 6px 12px;">
+                                                <i class="bi bi-file-text"></i> <%= className %> Termly
+                                            </a>
+                                        <% }) %>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }) %>
+                        <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+                            <h4 style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px; text-transform: uppercase;">Cumulative Reports</h4>
+                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                <% if (student.class_name && student.class_name !== 'Not Enrolled') { %>
+                                    <% student.class_name.split(', ').forEach(className => { %>
+                                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="btn btn-primary" style="font-size: 0.8rem; padding: 8px 15px; font-weight: 600;">
+                                            <i class="bi bi-bar-chart-fill"></i> <%= className %> Cumulative
+                                        </a>
+                                    <% }) %>
+                                <% } %>
+                            </div>
+                        </div>
+>>>>>>> local-master
                     <% } else { %>
                         <p class="text-muted" style="text-align: center; padding: 20px;">No reports published yet.</p>
                     <% } %>

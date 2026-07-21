@@ -43,6 +43,7 @@
                                     </label>
                                     <select name="term" id="term" class="form-control" required
                                         style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+<<<<<<< HEAD
                                         <option value="">-- Select Term --</option>
                                         <option value="1st Term" <%=filters.term==='1st Term' ? 'selected' : '' %>>1st
                                             Term</option>
@@ -53,6 +54,12 @@
                                         <option value="Cumulative" <%=filters.term==='Cumulative' ? 'selected' : '' %>>Cumulative
                                             (Full Session)</option>
                                     </select>
+=======
+                                <% available_terms.forEach(t => { %>
+                                    <option value="<%= t %>" <%= (typeof filters !== 'undefined' ? filters.term : (typeof query !== 'undefined' ? query.term : (typeof school !== 'undefined' ? school.current_term : '1st Term'))) === t ? 'selected' : '' %>><%= t %></option>
+                                <% }) %>
+                            </select>
+>>>>>>> local-master
                                 </div>
 
                                 <div class="form-group" style="margin-bottom: 25px;">
@@ -62,6 +69,7 @@
                                     </label>
                                     <select name="session" id="session" class="form-control" required
                                         style="width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 0.95rem;">
+<<<<<<< HEAD
                                         <option value="">-- Select Session --</option>
                                         <option value="2024/2025" <%=filters.session==='2024/2025' ? 'selected' : '' %>
                                             >2024/2025</option>
@@ -70,6 +78,12 @@
                                         <option value="2026/2027" <%=filters.session==='2026/2027' ? 'selected' : '' %>
                                             >2026/2027</option>
                                     </select>
+=======
+                                <% available_sessions.forEach(s => { %>
+                                    <option value="<%= s %>" <%= (typeof filters !== 'undefined' ? filters.session : (typeof query !== 'undefined' ? query.session : (typeof school !== 'undefined' ? school.current_session : '2024/2025'))) === s ? 'selected' : '' %>><%= s %></option>
+                                <% }) %>
+                            </select>
+>>>>>>> local-master
                                 </div>
 
                                 <% if (typeof user !== 'undefined' && user.role === 'Admin') { %>

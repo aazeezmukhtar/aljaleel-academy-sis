@@ -2,7 +2,12 @@ const db = require('../utils/db');
 
 const getAcademicDashboard = async (req, res) => {
     try {
+<<<<<<< HEAD
         const classes = await db.all('SELECT * FROM classes');
+=======
+        const sections = await db.all('SELECT * FROM sections ORDER BY name');
+        const classes = await db.all('SELECT c.*, s.name as section_name FROM classes c LEFT JOIN sections s ON c.section_id = s.id ORDER BY s.name, c.name');
+>>>>>>> local-master
         const subjects = await db.all('SELECT * FROM subjects');
         const teachers = await db.all("SELECT id, first_name, last_name, staff_id FROM staff WHERE status != 'inactive' ORDER BY last_name");
         const assignments = await db.all(`
@@ -16,6 +21,10 @@ const getAcademicDashboard = async (req, res) => {
 
         res.render('academics/index', {
             title: 'Academic Management',
+<<<<<<< HEAD
+=======
+            sections,
+>>>>>>> local-master
             classes,
             subjects,
             teachers,
@@ -29,9 +38,15 @@ const getAcademicDashboard = async (req, res) => {
 
 // Class Management
 const addClass = async (req, res) => {
+<<<<<<< HEAD
     const { name } = req.body;
     try {
         await db.run('INSERT INTO classes (name) VALUES (?)', [name]);
+=======
+    const { name, section_id } = req.body;
+    try {
+        await db.run('INSERT INTO classes (name, section_id) VALUES (?, ?)', [name, section_id || null]);
+>>>>>>> local-master
         res.redirect('/academics');
     } catch (err) {
         console.error('Add Class Error:', err);
@@ -50,6 +65,10 @@ const deleteClass = async (req, res) => {
             `, [id]);
             
             await db.run('UPDATE students SET current_class_id = NULL WHERE current_class_id = ?', [id]);
+<<<<<<< HEAD
+=======
+            await db.run('DELETE FROM student_enrollments WHERE class_id = ?', [id]);
+>>>>>>> local-master
             await db.run('DELETE FROM class_assignments WHERE class_id = ?', [id]);
             await db.run('DELETE FROM subject_assignments WHERE class_id = ?', [id]);
             await db.run('DELETE FROM class_posts WHERE class_id = ?', [id]);

@@ -13,10 +13,17 @@
                     </h1>
                 </header>
 
+<<<<<<< HEAD
                 <div class="dashboard-grid" style="grid-template-columns: 2fr 1fr; gap: 30px;">
                     <div class="card">
                         <h3>Assigned Fees</h3>
                         <div class="table-container" style="margin-top: 20px;">
+=======
+                <div class="grid-main-aside" style="gap: 30px;">
+                    <div class="card">
+                        <h3>Assigned Fees</h3>
+                        <div class="table-container mobile-cards" style="margin-top: 20px;">
+>>>>>>> local-master
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -33,6 +40,7 @@
                                         <% fees.forEach(f=> { %>
                                             <% const balance=f.total_amount - f.paid_amount; %>
                                                 <tr>
+<<<<<<< HEAD
                                                     <td><strong>
                                                             <%= f.fee_name %>
                                                         </strong></td>
@@ -44,11 +52,19 @@
                                                             balance.toLocaleString() %>
                                                     </td>
                                                     <td>
+=======
+                                                    <td data-label="Fee Type"><strong><%= f.fee_name %></strong></td>
+                                                    <td data-label="Amount">₦<%= f.total_amount.toLocaleString() %></td>
+                                                    <td data-label="Paid" style="color: #2e7d32;">₦<%= f.paid_amount.toLocaleString() %></td>
+                                                    <td data-label="Balance" style="color: <%= balance > 0 ? '#d32f2f' : '#2e7d32' %>;">₦<%= balance.toLocaleString() %></td>
+                                                    <td data-label="Status">
+>>>>>>> local-master
                                                         <span class="badge"
                                                             style="background: <%= f.status === 'Paid' ? '#e8f5e9' : f.status === 'Partial' ? '#fff3e0' : '#ffebee' %>; color: <%= f.status === 'Paid' ? '#2e7d32' : f.status === 'Partial' ? '#ef6c00' : '#c62828' %>;">
                                                             <%= f.status %>
                                                         </span>
                                                     </td>
+<<<<<<< HEAD
                                                     <td style="text-align: right;">
                                                         <% if (balance> 0) { %>
                                                             <a href="/fees/pay/<%= f.id %>" class="btn btn-sm">Record
@@ -57,6 +73,14 @@
                                                                 <span style="color: #2e7d32; font-weight: bold;">✓
                                                                     CLEARED</span>
                                                                 <% } %>
+=======
+                                                    <td data-label="Action" style="text-align: right;">
+                                                        <% if (balance > 0) { %>
+                                                            <a href="/fees/pay/<%= f.id %>" class="btn btn-sm">Record Payment</a>
+                                                        <% } else { %>
+                                                            <span style="color: #2e7d32; font-weight: bold;">✓ CLEARED</span>
+                                                        <% } %>
+>>>>>>> local-master
                                                     </td>
                                                 </tr>
                                                 <% }); %>

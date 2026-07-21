@@ -12,7 +12,11 @@
                     <a href="/attendance/report" class="btn btn-outline">View Reports</a>
                 </header>
 
+<<<<<<< HEAD
                 <section class="grid-2">
+=======
+                <section style="max-width: 600px; margin: 0 auto;">
+>>>>>>> local-master
                     <div class="card">
                         <h3>Take Student Attendance</h3>
                         <p style="margin-bottom: 20px; color: var(--text-muted);">Select a class and date to start
@@ -46,6 +50,7 @@
                         </form>
                     </div>
 
+<<<<<<< HEAD
                     <div class="card" style="background: linear-gradient(135deg, #4f46e5, #4338ca); color: white;">
                         <h3>Staff Attendance</h3>
                         <p style="margin-top: 10px; opacity: 0.9;">Manage attendance for teachers and staff members.</p>
@@ -63,4 +68,92 @@
             </main>
     </div>
 
+=======
+                </section>
+<% if (flaggedStudents && Object.keys(flaggedStudents).length > 0) { %>
+<section style="max-width: 800px; margin: 30px auto 0;">
+    <div class="card" style="border-left: 4px solid #ef4444;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+            <div style="width: 40px; height: 40px; background: #fef2f2; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-exclamation-triangle-fill" style="color: #ef4444; font-size: 1.1rem;"></i>
+            </div>
+            <div>
+                <h3 style="margin: 0; color: #dc2626;">Early Warning &mdash; Flagged Students</h3>
+                <p style="margin: 2px 0 0; font-size: 0.82rem; color: var(--text-muted);">
+                    Students exceeding term limit (&ge; <%= termAbsenceLimit %> absences) or consecutive threshold (&ge; <%= consecutiveAbsenceLimit %> consecutive absences).
+                </p>
+            </div>
+        </div>
+        <% for (const [classId, data] of Object.entries(flaggedStudents)) { %>
+            <div style="margin-bottom: 20px;">
+                <h4 style="font-size: 0.9rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">
+                    <%= data.class.name %>
+                    <span style="background: #fef2f2; color: #dc2626; font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; margin-left: 8px;">
+                        <%= data.students.length %> flagged
+                    </span>
+                </h4>
+                <div style="display: grid; gap: 8px;">
+                    <% data.students.forEach(s => { %>
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #fef2f2; border-radius: 8px; border: 1px solid #fee2e2;">
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <span style="font-weight: 500;"><%= s.first_name %> <%= s.last_name %></span>
+                                <% if (s.parent_phone) { 
+                                    if (s.absences_without_reason > 0) {
+                                        const formattedPhone = s.parent_phone.replace(/\D/g, '').replace(/^0/, '234');
+                                        const textMessage = `Dear Parent/Guardian, this is Al-Jaleel Academy. We noticed that your child, ${s.first_name} ${s.last_name}, has some absences recorded without a documented reason. Kindly contact the class teacher or school administration at your earliest convenience. Thank you.`;
+                                        const encodedText = encodeURIComponent(textMessage);
+                                %>
+                                        <a href="https://wa.me/<%= formattedPhone %>?text=<%= encodedText %>" target="_blank" class="btn btn-xs" style="background: #25d366; color: white; border: none; display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; font-size: 0.72rem; border-radius: 6px; width: fit-content; text-decoration: none; margin-top: 2px;">
+                                            <i class="bi bi-whatsapp"></i> Notify Parent
+                                        </a>
+                                    <% } else { %>
+                                        <span style="color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 4px; width: fit-content; margin-top: 2px; font-weight: 500;">
+                                            <i class="bi bi-check-circle"></i> All reasons documented
+                                        </span>
+                                    <% } %>
+                                <% } else { %>
+                                    <small style="color: var(--text-muted); font-size: 0.7rem;"><i class="bi bi-telephone-x"></i> No parent number</small>
+                                <% } %>
+                            </div>
+                            <span style="font-size: 0.82rem; font-weight: 600; color: #dc2626; display: flex; gap: 10px; align-items: center;">
+                                <% s.flag_reason.forEach(reason => { %>
+                                    <span style="background: #fee2e2; padding: 2px 8px; border-radius: 4px; border: 1px solid #fecaca; font-size: 0.75rem;"><%= reason %></span>
+                                <% }) %>
+                            </span>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+        <% } %>
+    </div>
+</section>
+<% } %>
+
+            </main>
+    </div>
+
+    <script>
+        // Pre-fetch assigned classes for offline use when online
+        if (navigator.onLine && 'serviceWorker' in navigator) {
+            document.addEventListener('DOMContentLoaded', () => {
+                const classSelect = document.querySelector('select[name="class_id"]');
+                if (classSelect) {
+                    const classIds = Array.from(classSelect.options)
+                        .map(opt => opt.value)
+                        .filter(val => val !== "");
+                    
+                    const today = new Date().toISOString().split('T')[0];
+                    classIds.forEach(classId => {
+                        fetch(`/attendance/take?class_id=${classId}&date=${today}`)
+                            .then(res => {
+                                if (res.ok) console.log(`[Offline Prep] Pre-cached attendance for class ${classId}`);
+                            })
+                            .catch(err => console.warn(`[Offline Prep] Failed to pre-cache class ${classId}:`, err));
+                    });
+                }
+            });
+        }
+    </script>
+
+>>>>>>> local-master
     <%- include('../partials/footer') %>

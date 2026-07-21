@@ -13,6 +13,7 @@
 
                 <div class="stats-grid">
                     <div class="stat-card">
+<<<<<<< HEAD
                         <div class="stat-value">
                             <%= classes.length %>
                         </div>
@@ -22,6 +23,13 @@
                         <div class="stat-value">
                             <%= subjects.length %>
                         </div>
+=======
+                        <div class="stat-value"><%= classes.length %></div>
+                        <div class="stat-label">Total Classes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value"><%= subjects.length %></div>
+>>>>>>> local-master
                         <div class="stat-label">Subjects Offered</div>
                     </div>
                 </div>
@@ -29,6 +37,7 @@
                 <div class="dashboard-grid" style="grid-template-columns: 1fr; gap: 30px;">
                     <!-- Classes Section -->
                     <div class="activity-feed">
+<<<<<<< HEAD
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3>Classes</h3>
@@ -48,6 +57,33 @@
                                     <button type="submit" class="btn">Save Class</button>
                                     <button type="button" class="btn btn-outline"
                                         onclick="this.parentElement.parentElement.parentElement.style.display='none'">Cancel</button>
+=======
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Classes</h3>
+                            <button class="btn btn-sm" onclick="document.getElementById('add-class-form').style.display='block'">+ Add Class</button>
+                        </div>
+
+                        <div id="add-class-form" style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                            <form action="/academics/classes/add" method="POST">
+                                <div class="grid-2">
+                                    <div class="form-group">
+                                        <label>Class Name (e.g., JSS 1)</label>
+                                        <input type="text" name="name" required placeholder="Enter class name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Section</label>
+                                        <select name="section_id" required class="form-control">
+                                            <option value="">-- Choose Section --</option>
+                                            <% sections.forEach(sec => { %>
+                                                <option value="<%= sec.id %>"><%= sec.name %></option>
+                                            <% }) %>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                    <button type="submit" class="btn">Save Class</button>
+                                    <button type="button" class="btn btn-outline" onclick="document.getElementById('add-class-form').style.display='none'">Cancel</button>
+>>>>>>> local-master
                                 </div>
                             </form>
                         </div>
@@ -57,10 +93,15 @@
                                 <thead>
                                     <tr>
                                         <th>Name</th>
+<<<<<<< HEAD
+=======
+                                        <th>Section</th>
+>>>>>>> local-master
                                         <th style="text-align: right;">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
+<<<<<<< HEAD
                                     <% classes.forEach(c=> { %>
                                         <tr>
                                             <td><strong>
@@ -75,6 +116,27 @@
                                             </td>
                                         </tr>
                                         <% }); %>
+=======
+                                    <% classes.forEach(c => { %>
+                                        <tr>
+                                            <td><strong><%= c.name %></strong></td>
+                                            <td>
+                                                <% if (c.section_name) { %>
+                                                    <span style="background: <%= c.section_name === 'Academy' ? '#e0e7ff' : '#fef3c7' %>; color: <%= c.section_name === 'Academy' ? '#4338ca' : '#92400e' %>; font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; font-weight: 600;">
+                                                        <%= c.section_name %>
+                                                    </span>
+                                                <% } else { %>
+                                                    <span style="color: #94a3b8; font-size: 0.8rem;">Unassigned</span>
+                                                <% } %>
+                                            </td>
+                                            <td style="text-align: right;">
+                                                <form action="/academics/classes/delete/<%= c.id %>" method="POST" onsubmit="return confirm('Delete this class?')">
+                                                    <button type="submit" style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+>>>>>>> local-master
                                 </tbody>
                             </table>
                         </div>
@@ -84,6 +146,7 @@
                 <div class="dashboard-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                     <!-- Subjects Section -->
                     <div class="activity-feed">
+<<<<<<< HEAD
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3>Subjects</h3>
@@ -94,6 +157,14 @@
 
                         <div id="add-subject-form"
                             style="display: none; background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+=======
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <h3>Subjects</h3>
+                            <button class="btn btn-sm" onclick="document.getElementById('add-subject-form').style.display='block'">+ Add Subject</button>
+                        </div>
+
+                        <div id="add-subject-form" style="display: none; background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+>>>>>>> local-master
                             <form action="/academics/subjects/add" method="POST" class="grid-2">
                                 <div class="form-group">
                                     <label>Subject Name</label>
@@ -105,8 +176,12 @@
                                 </div>
                                 <div style="grid-column: span 2; display: flex; gap: 10px;">
                                     <button type="submit" class="btn">Save Subject</button>
+<<<<<<< HEAD
                                     <button type="button" class="btn btn-outline"
                                         onclick="document.getElementById('add-subject-form').style.display='none'">Cancel</button>
+=======
+                                    <button type="button" class="btn btn-outline" onclick="document.getElementById('add-subject-form').style.display='none'">Cancel</button>
+>>>>>>> local-master
                                 </div>
                             </form>
                         </div>
@@ -121,6 +196,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+<<<<<<< HEAD
                                     <% subjects.forEach(s=> { %>
                                         <tr>
                                             <td><code
@@ -141,10 +217,25 @@
                                             </td>
                                         </tr>
                                         <% }); %>
+=======
+                                    <% subjects.forEach(s => { %>
+                                        <tr>
+                                            <td><code style="background: var(--accent-soft); padding: 2px 6px; border-radius: 4px; font-weight: bold;"><%= s.code %></code></td>
+                                            <td><strong><%= s.name %></strong></td>
+                                            <td style="text-align: right; display: flex; gap: 10px; justify-content: flex-end;">
+                                                <a href="/academics/subjects/edit/<%= s.id %>" style="color: var(--primary); text-decoration: none; font-weight: 600;">Edit</a>
+                                                <form action="/academics/subjects/delete/<%= s.id %>" method="POST" onsubmit="return confirm('Delete this subject?')">
+                                                    <button type="submit" style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Delete</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    <% }); %>
+>>>>>>> local-master
                                 </tbody>
                             </table>
                         </div>
                     </div>
+<<<<<<< HEAD
                     <div class="dashboard-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
                         <!-- Subject Assignments Section -->
                         <div class="activity-feed">
@@ -160,26 +251,51 @@
                                 style="display: none; background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
                                 <form action="/academics/assignments/add" method="POST" class="grid-4"
                                     style="align-items: end;">
+=======
+
+                    <div class="dashboard-grid" style="grid-template-columns: 1fr; margin-top: 30px;">
+                        <!-- Subject Assignments Section -->
+                        <div class="activity-feed">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3>Subject Assignments</h3>
+                                <button class="btn btn-sm" onclick="document.getElementById('add-assignment-form').style.display='block'">+ Assign Teacher</button>
+                            </div>
+
+                            <div id="add-assignment-form" style="display: none; background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                                <form action="/academics/assignments/add" method="POST" class="grid-4" style="align-items: end;">
+>>>>>>> local-master
                                     <div class="form-group">
                                         <label>Select Teacher</label>
                                         <select name="teacher_id" required>
                                             <option value="">-- Choose Teacher --</option>
+<<<<<<< HEAD
                                             <% teachers.forEach(t=> { %>
                                                 <option value="<%= t.id %>">
                                                     <%= t.first_name %> <%= t.last_name %>
                                                 </option>
                                                 <% }); %>
+=======
+                                            <% teachers.forEach(t => { %>
+                                                <option value="<%= t.id %>"><%= t.first_name %> <%= t.last_name %></option>
+                                            <% }); %>
+>>>>>>> local-master
                                         </select>
                                     </div>
                                     <div class="form-group">
                                         <label>Select Subject</label>
                                         <select name="subject_id" required>
                                             <option value="">-- Choose Subject --</option>
+<<<<<<< HEAD
                                             <% subjects.forEach(s=> { %>
                                                 <option value="<%= s.id %>">
                                                     <%= s.name %>
                                                 </option>
                                                 <% }); %>
+=======
+                                            <% subjects.forEach(s => { %>
+                                                <option value="<%= s.id %>"><%= s.name %></option>
+                                            <% }); %>
+>>>>>>> local-master
                                         </select>
                                     </div>
                                     <div class="form-group">
@@ -187,11 +303,17 @@
                                         <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
                                         <select name="class_id" required>
                                             <option value="">-- Choose Class --</option>
+<<<<<<< HEAD
                                             <% classes.forEach(c=> { %>
                                                 <option value="<%= c.id %>">
                                                     <%= c.name %>
                                                 </option>
                                                 <% }); %>
+=======
+                                            <% classes.forEach(c => { %>
+                                                <option value="<%= c.id %>"><%= c.name %><%= c.section_name ? ' (' + c.section_name + ')' : '' %></option>
+                                            <% }); %>
+>>>>>>> local-master
                                         </select>
                                         <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
                                         <input type="hidden" name="class_id" value="<%= classes[0].id %>">
@@ -201,6 +323,7 @@
                                     <div class="form-group">
                                         <label>Session</label>
                                         <select name="session" required>
+<<<<<<< HEAD
                                             <option value="2025/2026">2025/2026</option>
                                         </select>
                                     </div>
@@ -208,6 +331,16 @@
                                         <button type="submit" class="btn">Save Assignment</button>
                                         <button type="button" class="btn btn-outline"
                                             onclick="document.getElementById('add-assignment-form').style.display='none'">Cancel</button>
+=======
+                                <% available_sessions.forEach(s => { %>
+                                    <option value="<%= s %>" <%= (typeof filters !== 'undefined' ? filters.session : (typeof query !== 'undefined' ? query.session : (typeof school !== 'undefined' ? school.current_session : '2024/2025'))) === s ? 'selected' : '' %>><%= s %></option>
+                                <% }) %>
+                            </select>
+                                    </div>
+                                    <div style="grid-column: span 4; display: flex; gap: 10px; margin-top: 10px;">
+                                        <button type="submit" class="btn">Save Assignment</button>
+                                        <button type="button" class="btn btn-outline" onclick="document.getElementById('add-assignment-form').style.display='none'">Cancel</button>
+>>>>>>> local-master
                                     </div>
                                 </form>
                             </div>
@@ -224,6 +357,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
+<<<<<<< HEAD
                                         <% if (assignments.length> 0) { %>
                                             <% assignments.forEach(a=> { %>
                                                 <tr>
@@ -258,11 +392,36 @@
                                                                 No assignments found.</td>
                                                         </tr>
                                                         <% } %>
+=======
+                                        <% if (assignments.length > 0) { %>
+                                            <% assignments.forEach(a => { %>
+                                                <tr>
+                                                    <td><strong><a href="/staff/edit/<%= a.teacher_id %>" style="color: var(--primary); text-decoration: underline;"><%= a.first_name %> <%= a.last_name %></a></strong></td>
+                                                    <td><%= a.subject_name %></td>
+                                                    <td><%= a.class_name %></td>
+                                                    <td><%= a.session %></td>
+                                                    <td style="text-align: right;">
+                                                        <form action="/academics/assignments/delete/<%= a.id %>" method="POST" onsubmit="return confirm('Remove this assignment?')">
+                                                            <button type="submit" style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Remove</button>
+                                                        </form>
+                                                    </td>
+                                                </tr>
+                                            <% }); %>
+                                        <% } else { %>
+                                            <tr>
+                                                <td colspan="5" style="text-align: center; padding: 40px; color: var(--text-muted);">No assignments found.</td>
+                                            </tr>
+                                        <% } %>
+>>>>>>> local-master
                                     </tbody>
                                 </table>
                             </div>
                         </div>
                     </div>
+<<<<<<< HEAD
+=======
+                </div>
+>>>>>>> local-master
             </main>
     </div>
 

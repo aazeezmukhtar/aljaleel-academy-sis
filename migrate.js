@@ -52,6 +52,9 @@ try {
     const insertSetting = db.prepare("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)");
     insertSetting.run('next_term_start_date', '2026-05-04');
     insertSetting.run('show_watermark', 'false');
+    // Attendance threshold defaults
+    insertSetting.run('attendance.term_absence_limit', '10');
+    insertSetting.run('attendance.consecutive_absence_limit', '3');
     console.log("Updated settings.");
 
     // 5. Clean up Gender (Replace 'Other' with 'Male' to satisfy new constraint if we were to enforce it strictly)

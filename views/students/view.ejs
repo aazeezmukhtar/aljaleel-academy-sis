@@ -101,6 +101,7 @@
 
                                 <div class="profile-header">
                                     <% if (student.passport_photo_path) { %>
+<<<<<<< HEAD
                                         <img src="<%= student.passport_photo_path %>" alt="Student Photo"
                                             style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
                                         <% } else { %>
@@ -109,6 +110,15 @@
                                                     <%= student.last_name[0] %>
                                             </div>
                                             <% } %>
+=======
+    <img src="<%= student.passport_photo_path %>" alt="Student Photo"
+        style="width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 4px solid white; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+<% } else { %>
+    <div class="avatar-placeholder" style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #6b73ff 0%, #000dff 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: 600; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);">
+        <%= student.first_name.charAt(0).toUpperCase() + student.last_name.charAt(0).toUpperCase() %>
+    </div>
+<% } %>
+>>>>>>> local-master
                                                 <div class="profile-info" style="flex-grow: 1;">
                                                     <h1>
                                                         <%= student.first_name %> <%= student.last_name %>
@@ -122,18 +132,75 @@
                                                         </span>
                                                     </div>
                                                 </div>
+<<<<<<< HEAD
                                                 <div style="display:flex; flex-direction:column; gap:10px; align-items:flex-end;">
+=======
+                                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+>>>>>>> local-master
                                                     <a href="/students/edit/<%= student.id %>" class="btn btn-primary">
                                                         <i class="bi bi-pencil-square"></i> Edit Profile
                                                     </a>
                                                     <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+<<<<<<< HEAD
                                                     <button class="btn btn-outline" style="font-size:0.82rem; color:#b91c1c; border-color:#fecaca;" onclick="resetStudentPassword(<%= student.id %>)">
                                                         <i class="bi bi-shield-lock"></i> Reset Password
                                                     </button>
+=======
+                                                        <button onclick="resetPassword('<%= student.id %>')" class="btn btn-outline"
+                                                            style="border-color: var(--school-secondary); color: var(--school-secondary);">
+                                                            <i class="bi bi-shield-lock"></i> Reset Password
+                                                        </button>
+                                                        <button onclick="deleteStudent('<%= student.id %>')" class="btn btn-danger"
+                                                            style="background: #ef4444; color: white;">
+                                                            <i class="bi bi-trash"></i> Delete
+                                                        </button>
+>>>>>>> local-master
                                                     <% } %>
                                                 </div>
                                 </div>
 
+<<<<<<< HEAD
+=======
+                                <script>
+                                     async function resetPassword(id) {
+                                         if (!confirm('Are you sure you want to reset this student\'s password to default? The student will be able to log in using their Student ID/Student ID as the password.')) return;
+
+                                         try {
+                                             const response = await fetch(`/students/reset-password/${id}`, { method: 'POST' });
+                                             const result = await response.json();
+
+                                             if (result.success) {
+                                                 alert(result.message);
+                                             } else {
+                                                 alert('Error: ' + result.message);
+                                             }
+                                         } catch (err) {
+                                             console.error(err);
+                                             alert('Network error occurred.');
+                                         }
+                                     }
+
+                                     async function deleteStudent(id) {
+                                         if (!confirm('Are you sure you want to PERMANENTLY delete this student? This will remove all their records including attendance, results, fees, etc.')) return;
+
+                                         try {
+                                             const response = await fetch(`/students/delete/${id}`, { method: 'POST' });
+                                             const result = await response.json();
+
+                                             if (result.success) {
+                                                 alert(result.message);
+                                                 window.location.href = '/students';
+                                             } else {
+                                                 alert('Error: ' + result.message);
+                                             }
+                                         } catch (err) {
+                                             console.error(err);
+                                             alert('Network error occurred.');
+                                         }
+                                     }
+                                 </script>
+
+>>>>>>> local-master
                                 <div class="grid-2" style="margin-top: 30px;">
                                     <div class="card">
                                         <h3>Personal Information</h3>
@@ -147,9 +214,13 @@
                                             <div class="detail-item">
                                                 <strong>Date of Birth</strong>
                                                 <span>
+<<<<<<< HEAD
                                                     <% if (student.dob) { const d = new Date(student.dob); %>
                                                         <%= isNaN(d.getTime()) ? 'Not Set' : d.toLocaleDateString() %>
                                                     <% } else { %>Not Set<% } %>
+=======
+                                                    <%= new Date(student.dob).toLocaleDateString() %>
+>>>>>>> local-master
                                                 </span>
                                             </div>
                                             <div class="detail-item">
@@ -359,6 +430,7 @@
                                 <script>
                                     function openHealthModal() { document.getElementById('healthModal').style.display = 'flex'; }
                                     function closeHealthModal() { document.getElementById('healthModal').style.display = 'none'; }
+<<<<<<< HEAD
 
                                     async function resetStudentPassword(studentId) {
                                         if (!confirm('Reset this student\'s password to their admission number?')) return;
@@ -375,6 +447,8 @@
                                             alert('Failed to reset password.');
                                         }
                                     }
+=======
+>>>>>>> local-master
                                 </script>
     </div>
 

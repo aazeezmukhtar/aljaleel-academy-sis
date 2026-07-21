@@ -1,0 +1,116 @@
+<%- include('../partials/header') %>
+
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+
+    <main class="main-content">
+        <header style="margin-bottom: 30px;">
+            <a href="/settings" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to Settings</a>
+            <h1 style="margin-top: 20px;">Session Transition & Promotion</h1>
+            <p class="text-muted">Manage the transition of students from their current classes to the next level.</p>
+        </header>
+
+        <% if (success) { %>
+            <div class="alert alert-success"><%= success %></div>
+        <% } %>
+        <% if (error) { %>
+            <div class="alert alert-danger"><%= error %></div>
+        <% } %>
+
+        <div class="alert alert-warning" style="border-left: 5px solid #f39c12; background: #fff8e1; color: #856404; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+            <h4 style="margin: 0 0 10px 0;"><i class="bi bi-exclamation-triangle-fill"></i> Critical Operation</h4>
+            <p style="margin: 0;">Promotion should only be performed <strong>once at the end of the academic session</strong> after all results have been finalized and reports issued. This action will update the current class for all active students.</p>
+        </div>
+
+        <section class="card shadow-sm">
+            <form action="/settings/promotion" method="POST" id="promotionForm">
+                <table class="table" style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left;">Current Class</th>
+                            <th style="text-align: center;">Students</th>
+                            <th style="text-align: left;">Promote To...</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% 
+                        // Group classes by section name
+                        let sectionsMap = {};
+                        classes.forEach(cls => {
+                            const secName = cls.section_name || 'General';
+                            if (!sectionsMap[secName]) {
+                                sectionsMap[secName] = {
+                                    session: cls.currentSession,
+                                    classes: []
+                                };
+                            }
+                            sectionsMap[secName].classes.push(cls);
+                        });
+                        
+                        for (const [secName, secData] of Object.entries(sectionsMap)) {
+                        %>
+                            <tr style="background-color: #f8f9fa; font-weight: bold;">
+                                <td colspan="3" style="padding: 12px 15px; border-bottom: 2px solid #dee2e6; border-top: 2px solid #dee2e6;">
+                                    <span style="font-size: 1.1em; color: var(--primary);"><%= secName %> Section</span> 
+                                    <span class="text-muted" style="font-weight: normal; margin-left: 10px;">(Current Session: <%= secData.session %>)</span>
+                                </td>
+                            </tr>
+                            <% secData.classes.forEach(cls => { %>
+                                <tr>
+                                    <td style="padding-left: 30px;"><strong><%= cls.name %></strong></td>
+                                    <td style="text-align: center;"><span class="badge" style="background: #e3f2fd; color: #1976d2;"><%= cls.studentCount %> Students</span></td>
+                                    <td>
+                                        <select name="mapping[<%= cls.id %>]" class="form-control" style="max-width: 300px;">
+                                            <option value="none">-- No Change --</option>
+                                            <option value="graduate" style="color: #d32f2f; font-weight: 600;">🎓 Graduating / Alumni</option>
+                                            
+                                            <% 
+                                            // Group target options by section
+                                            for (const [targetSecName, targetSecData] of Object.entries(sectionsMap)) { 
+                                                const filteredTargets = targetSecData.classes.filter(t => t.id !== cls.id);
+                                                if (filteredTargets.length > 0) {
+                                            %>
+                                                <optgroup label="<%= targetSecName %> Classes:">
+                                                    <% filteredTargets.forEach(target => { %>
+                                                        <option value="<%= target.id %>"><%= target.name %></option>
+                                                    <% }) %>
+                                                </optgroup>
+                                            <% 
+                                                }
+                                            } 
+                                            %>
+                                        </select>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 40px; padding: 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 15px;">
+                    <a href="/settings" class="btn btn-outline">Cancel</a>
+                    <button type="button" class="btn btn-primary" onclick="confirmPromotion()">Commit Session Transition</button>
+                </div>
+            </form>
+        </section>
+    </main>
+</div>
+
+<script>
+    function confirmPromotion() {
+        const hasSelection = Array.from(document.querySelectorAll('select')).some(s => s.value !== 'none');
+        
+        if (!hasSelection) {
+            alert('Please select at least one class to promote.');
+            return;
+        }
+
+        if (confirm('CRITICAL WARNING: You are about to update student class assignments for the entire school. This action cannot be easily undone.\n\nAre you sure you want to proceed?')) {
+            if (confirm('Final confirmation: Are you ABSOLUTELY sure? Please double-check all mappings before clicking OK.')) {
+                document.getElementById('promotionForm').submit();
+            }
+        }
+    }
+</script>
+
+<%- include('../partials/footer') %>

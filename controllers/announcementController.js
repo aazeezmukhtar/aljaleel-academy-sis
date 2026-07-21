@@ -1,7 +1,11 @@
 const db = require('../utils/db');
 
 exports.getIndex = async (req, res) => {
+<<<<<<< HEAD
     const announcements = await db.all('SELECT * FROM announcements ORDER BY created_at DESC');
+=======
+    const announcements = await db.all('SELECT a.*, s.name as section_name FROM announcements a LEFT JOIN sections s ON a.section_id = s.id ORDER BY a.created_at DESC');
+>>>>>>> local-master
     
     res.render('announcements/index', {
         title: 'Announcement Management',
@@ -10,22 +14,40 @@ exports.getIndex = async (req, res) => {
     });
 };
 
+<<<<<<< HEAD
 exports.createAnnouncement = (req, res) => {
     res.render('announcements/form', {
         title: 'Create Announcement',
         path: '/announcements'
+=======
+exports.createAnnouncement = async (req, res) => {
+    const sections = await db.all('SELECT * FROM sections');
+    res.render('announcements/form', {
+        title: 'Create Announcement',
+        path: '/announcements',
+        sections
+>>>>>>> local-master
     });
 };
 
 exports.storeAnnouncement = async (req, res) => {
     try {
+<<<<<<< HEAD
         const { title, content, target_role, is_published, type, event_date } = req.body;
+=======
+        const { title, content, target_role, is_published, type, event_date, section_id } = req.body;
+>>>>>>> local-master
         const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
         const image_path = req.file ? req.file.filename : null;
 
         await db.run(`
+<<<<<<< HEAD
             INSERT INTO announcements (title, slug, content, target_role, image_path, is_published, type, event_date)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+=======
+            INSERT INTO announcements (title, slug, content, target_role, image_path, is_published, type, event_date, section_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+>>>>>>> local-master
         `, [
             title, 
             slug, 
@@ -34,7 +56,12 @@ exports.storeAnnouncement = async (req, res) => {
             image_path, 
             is_published === '1' ? 1 : 0,
             type || 'Announcement',
+<<<<<<< HEAD
             (type === 'Event' && event_date) ? event_date : null
+=======
+            (type === 'Event' && event_date) ? event_date : null,
+            section_id || null
+>>>>>>> local-master
         ]);
 
         res.redirect('/announcements?success=Announcement created successfully');

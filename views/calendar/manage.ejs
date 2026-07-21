@@ -6,6 +6,7 @@
     <main class="main-content">
         <header class="content-header">
             <div>
+<<<<<<< HEAD
                 <h1>Manage Calendar</h1>
                 <p class="text-muted">Create and manage upcoming school events.</p>
             </div>
@@ -99,9 +100,304 @@
                         </tbody>
                     </table>
                 </div>
+=======
+                <h1>Academic Term Planner</h1>
+                <p class="text-muted">Set milestones and schedule events for <strong><%= school.current_session %> - <%= school.current_term %></strong></p>
+            </div>
+            <div class="header-actions">
+                <a href="/calendar" class="btn btn-outline">
+                    <i class="bi bi-eye"></i> Public View
+                </a>
+            </div>
+        </header>
+
+        <!-- Quick Milestones Section -->
+        <section style="margin-bottom: 40px;">
+            <h3 style="margin-bottom: 20px;"><i class="bi bi-flag-fill" style="color: #6366f1;"></i> Key Milestones</h3>
+            <div class="grid-4">
+                <div class="card milestone-quick-card" onclick="openEventModal('Term Resumption', 'Holiday')">
+                    <div class="icon-circle" style="background: #eef2ff; color: #6366f1;"><i class="bi bi-door-open"></i></div>
+                    <h4>Resumption</h4>
+                    <p>Start of term</p>
+                </div>
+                <div class="card milestone-quick-card" onclick="openEventModal('Mid-Term Break', 'Holiday')">
+                    <div class="icon-circle" style="background: #f0fdf4; color: #10b981;"><i class="bi bi-sun"></i></div>
+                    <h4>Mid-Term</h4>
+                    <p>Break period</p>
+                </div>
+                <div class="card milestone-quick-card" onclick="openEventModal('Examination Period', 'Exam')">
+                    <div class="icon-circle" style="background: #fef2f2; color: #ef4444;"><i class="bi bi-pencil-square"></i></div>
+                    <h4>Exams</h4>
+                    <p>Main assessments</p>
+                </div>
+                <div class="card milestone-quick-card" onclick="openEventModal('Vacation / Closing', 'Holiday')">
+                    <div class="icon-circle" style="background: #fff7ed; color: #f59e0b;"><i class="bi bi-house-door"></i></div>
+                    <h4>Vacation</h4>
+                    <p>End of term</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="dashboard-grid" style="grid-template-columns: 1.2fr 0.8fr; gap: 30px;">
+            <!-- Timeline View -->
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h3><i class="bi bi-list-task"></i> Scheduled Timeline</h3>
+                    <button class="btn btn-primary btn-sm" onclick="openEventModal()">
+                        <i class="bi bi-plus-lg"></i> Custom Event
+                    </button>
+                </div>
+
+                <div class="timeline-container">
+                    <% if (events && events.length > 0) { 
+                        // Group by month for management too
+                        const months = {};
+                        events.forEach(e => {
+                            const m = new Date(e.event_date).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                            if(!months[m]) months[m] = [];
+                            months[m].push(e);
+                        });
+                    %>
+                        <% Object.keys(months).forEach(month => { %>
+                            <div class="timeline-month">
+                                <div class="month-label"><%= month %></div>
+                                <div class="timeline-items">
+                                    <% months[month].forEach(event => { %>
+                                        <div class="timeline-item-card">
+                                            <div class="item-date">
+                                                <span class="day"><%= new Date(event.event_date).getDate() %></span>
+                                                <span class="weekday"><%= new Date(event.event_date).toLocaleDateString('en-US', { weekday: 'short' }) %></span>
+                                            </div>
+                                            <div class="item-content">
+                                                <div style="display: flex; justify-content: space-between;">
+                                                    <strong><%= event.title %></strong>
+                                                    <div style="display: flex; gap: 5px;">
+                                                        <% if (event.section_name) { %>
+                                                            <span class="badge" style="background: #e0e7ff; color: #4338ca;"><%= event.section_name %></span>
+                                                        <% } else { %>
+                                                            <span class="badge" style="background: #f1f5f9; color: #64748b;">Global</span>
+                                                        <% } %>
+                                                        <span class="badge badge-outline"><%= event.type %></span>
+                                                    </div>
+                                                </div>
+                                                <p><%= event.description || 'No description' %></p>
+                                            </div>
+                                            <div class="item-actions">
+                                                <form action="/calendar/delete/<%= event.id %>" method="POST" onsubmit="return confirm('Remove this event?')">
+                                                    <button type="submit" class="btn-delete"><i class="bi bi-trash"></i></button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <div style="text-align: center; padding: 60px; color: #94a3b8;">
+                            <i class="bi bi-calendar-event" style="font-size: 3rem; display: block; margin-bottom: 15px;"></i>
+                            <p>Your timeline is empty. Use the milestones above or add a custom event.</p>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+
+            <!-- Calendar Context Info -->
+            <div class="card" style="background: #f8fafc; border: 1px dashed #cbd5e1;">
+                <h3><i class="bi bi-info-circle"></i> Planning Guide</h3>
+                <div style="margin-top: 20px;">
+                    <ul class="guide-list">
+                        <li><i class="bi bi-check2-circle"></i> Events are visible to <strong>Staff</strong>, <strong>Students</strong>, and <strong>Parents</strong> instantly.</li>
+                        <li><i class="bi bi-check2-circle"></i> <strong>Exams</strong> appear highlighted in red on all dashboards.</li>
+                        <li><i class="bi bi-check2-circle"></i> Use clear titles for milestones like "Term Resumption".</li>
+                    </ul>
+                </div>
+                
+                <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
+                    <h4 style="margin-bottom: 10px;">Term Statistics</h4>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem;">
+                        <span>Total Events</span>
+                        <strong><%= events.length %></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.9rem; margin-top: 8px;">
+                        <span>Exam Periods</span>
+                        <strong><%= events.filter(e => e.type === 'Exam').length %></strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Event Creation Modal -->
+        <div id="eventModal" class="modal-overlay" style="display: none;">
+            <div class="modal-content" style="max-width: 500px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px;">
+                    <h3 id="modalTitle">Schedule Event</h3>
+                    <button class="btn-close" onclick="closeEventModal()"><i class="bi bi-x-lg"></i></button>
+                </div>
+                <form action="/calendar/add" method="POST">
+                    <input type="hidden" name="session" value="<%= school.current_session %>">
+                    <input type="hidden" name="term" value="<%= school.current_term %>">
+                    
+                    <div class="form-group">
+                        <label>Title</label>
+                        <input type="text" name="title" id="form_title" required class="form-control" placeholder="e.g. Mid-Term Break">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Target Section</label>
+                        <select name="section_id" class="form-control">
+                            <option value="">All Sections (Global)</option>
+                            <% sections.forEach(sec => { %>
+                                <option value="<%= sec.id %>"><%= sec.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Event Type</label>
+                            <select name="type" id="form_type" class="form-control">
+                                <option value="Announcement">Announcement</option>
+                                <option value="Exam">Exam / Test</option>
+                                <option value="Holiday">Holiday / Break</option>
+                                <option value="Deadline">Deadline / Fee</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Date</label>
+                            <input type="date" name="event_date" required class="form-control">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes / Details</label>
+                        <textarea name="description" rows="3" class="form-control" placeholder="Any extra information for students and staff..."></textarea>
+                    </div>
+
+                    <div style="margin-top: 30px; display: flex; gap: 10px;">
+                        <button type="submit" class="btn btn-primary" style="flex: 1;">Save to Calendar</button>
+                        <button type="button" class="btn btn-outline" style="flex: 1;" onclick="closeEventModal()">Cancel</button>
+                    </div>
+                </form>
+>>>>>>> local-master
             </div>
         </div>
     </main>
 </div>
 
+<<<<<<< HEAD
+=======
+<style>
+    .milestone-quick-card {
+        text-align: center;
+        padding: 25px 15px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid transparent;
+    }
+    .milestone-quick-card:hover {
+        transform: translateY(-5px);
+        border-color: #6366f1;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+    }
+    .icon-circle {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 15px;
+        font-size: 1.5rem;
+    }
+    .milestone-quick-card h4 { margin-bottom: 5px; color: #1e293b; }
+    .milestone-quick-card p { font-size: 0.8rem; color: #64748b; margin: 0; }
+
+    /* Timeline */
+    .timeline-month {
+        margin-bottom: 30px;
+        position: relative;
+    }
+    .month-label {
+        font-weight: 800;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: 0.1em;
+        margin-bottom: 15px;
+        padding-left: 10px;
+        border-left: 3px solid #cbd5e1;
+    }
+    .timeline-items { display: flex; flex-direction: column; gap: 12px; }
+    .timeline-item-card {
+        display: flex;
+        align-items: center;
+        background: white;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        gap: 20px;
+        transition: 0.2s;
+    }
+    .timeline-item-card:hover { border-color: #6366f1; background: #f8fafc; }
+    
+    .item-date {
+        text-align: center;
+        min-width: 50px;
+        padding-right: 20px;
+        border-right: 1px solid #e2e8f0;
+    }
+    .item-date .day { display: block; font-size: 1.25rem; font-weight: 800; color: #1e293b; }
+    .item-date .weekday { font-size: 0.7rem; color: #64748b; text-transform: uppercase; }
+    
+    .item-content { flex: 1; }
+    .item-content strong { color: #1e293b; font-size: 0.95rem; }
+    .item-content p { font-size: 0.85rem; color: #64748b; margin: 4px 0 0; }
+    
+    .btn-delete { background: none; border: none; color: #94a3b8; cursor: pointer; padding: 8px; border-radius: 6px; transition: 0.2s; }
+    .btn-delete:hover { color: #ef4444; background: #fef2f2; }
+
+    .badge-outline { background: none; border: 1px solid #e2e8f0; color: #64748b; }
+    
+    .guide-list { list-style: none; padding: 0; margin: 0; }
+    .guide-list li { display: flex; gap: 10px; font-size: 0.85rem; color: #64748b; margin-bottom: 12px; line-height: 1.4; }
+    .guide-list li i { color: #10b981; }
+
+    /* Modal */
+    .modal-overlay {
+        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(8px);
+        display: flex; align-items: center; justify-content: center; z-index: 2000;
+    }
+    .modal-content { background: white; padding: 30px; border-radius: 20px; width: 90%; }
+    .btn-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #64748b; }
+</style>
+
+<script>
+    function openEventModal(title = '', type = 'Announcement') {
+        document.getElementById('eventModal').style.display = 'flex';
+        if (title) {
+            document.getElementById('form_title').value = title;
+            document.getElementById('form_type').value = type;
+            document.getElementById('modalTitle').textContent = 'Set ' + title;
+        } else {
+            document.getElementById('form_title').value = '';
+            document.getElementById('form_type').value = 'Announcement';
+            document.getElementById('modalTitle').textContent = 'Schedule Custom Event';
+        }
+    }
+
+    function closeEventModal() {
+        document.getElementById('eventModal').style.display = 'none';
+    }
+
+    // Close modal on escape
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeEventModal();
+    });
+</script>
+
+    </main>
+</div>
+
+>>>>>>> local-master
 <%- include('../partials/footer') %>

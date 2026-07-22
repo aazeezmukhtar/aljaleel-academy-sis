@@ -20,8 +20,7 @@ router.get('/calendar', portalController.getCalendar);
 // Announcements
 router.get('/announcement/:id', portalController.viewAnnouncement);
 
-<<<<<<< HEAD
-=======
+// Assignments / Class posts
 router.get('/assignment/:id', portalController.viewAssignment);
->>>>>>> local-master
+
 module.exports = router;

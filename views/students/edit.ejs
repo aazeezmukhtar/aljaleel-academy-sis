@@ -52,20 +52,25 @@
                             </div>
                             <div class="form-group">
                                 <label>Date of Birth</label>
-<<<<<<< HEAD
-                                <input type="date" name="dob" class="form-control" value="<%= student.dob %>" required>
-=======
                                 <%
                                   let formattedDob = '';
-                                  if (student.dob) {
-                                      const d = new Date(student.dob);
-                                      if (!isNaN(d.getTime())) {
-                                          formattedDob = d.toISOString().split('T')[0];
+                                  if (student.dob && String(student.dob).trim() !== '' && String(student.dob) !== 'null') {
+                                      const str = String(student.dob).trim();
+                                      const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                                      if (match) {
+                                          formattedDob = `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+                                      } else {
+                                          const d = new Date(student.dob);
+                                          if (!isNaN(d.getTime())) {
+                                              const day = String(d.getUTCDate()).padStart(2, '0');
+                                              const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                                              const year = d.getUTCFullYear();
+                                              formattedDob = `${year}-${month}-${day}`;
+                                          }
                                       }
                                   }
                                 %>
-                                <input type="date" name="dob" class="form-control" value="<%= formattedDob %>" required>
->>>>>>> local-master
+                                <input type="date" name="dob" class="form-control" value="<%= formattedDob %>">
                             </div>
                         </div>
 

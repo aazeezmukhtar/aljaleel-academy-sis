@@ -214,13 +214,25 @@
                                             <div class="detail-item">
                                                 <strong>Date of Birth</strong>
                                                 <span>
-<<<<<<< HEAD
-                                                    <% if (student.dob) { const d = new Date(student.dob); %>
-                                                        <%= isNaN(d.getTime()) ? 'Not Set' : d.toLocaleDateString() %>
-                                                    <% } else { %>Not Set<% } %>
-=======
-                                                    <%= new Date(student.dob).toLocaleDateString() %>
->>>>>>> local-master
+                                                    <% 
+                                                        let formattedDob = 'Not Set';
+                                                        if (student.dob && String(student.dob).trim() !== '' && String(student.dob) !== 'null') {
+                                                            const str = String(student.dob).trim();
+                                                            const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                                                            if (match) {
+                                                                formattedDob = `${match[3].padStart(2, '0')}/${match[2].padStart(2, '0')}/${match[1]}`;
+                                                            } else {
+                                                                const d = new Date(student.dob);
+                                                                if (!isNaN(d.getTime())) {
+                                                                    const day = String(d.getUTCDate()).padStart(2, '0');
+                                                                    const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                                                                    const year = d.getUTCFullYear();
+                                                                    formattedDob = `${day}/${month}/${year}`;
+                                                                }
+                                                            }
+                                                        }
+                                                    %>
+                                                    <%= formattedDob %>
                                                 </span>
                                             </div>
                                             <div class="detail-item">

@@ -34,15 +34,14 @@
                         <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
                         <% } %>
                     </div>
-                    <!-- Arm Selection Logic could be improved with JS, keeping simple for now -->
                 </form>
             </div>
 
-            <% if (students.length> 0) { %>
+            <% if (students && students.length > 0) { %>
                 <div class="report-paper">
                     <div class="report-header">
                         <h2>
-                            <%= students[0].class_name %> Class List
+                            <%= students[0].class_name || 'Class' %> List
                         </h2>
                         <p>Generated on <%= new Date().toLocaleDateString('en-GB') %>
                         </p>
@@ -51,56 +50,43 @@
                     <table class="report-table">
                         <thead>
                             <tr>
-<<<<<<< HEAD
                                 <th style="width: 50px;">S/N</th>
-                                <th>Registration No.</th>
-                                <th>Name</th>
-                                <th>Gender</th>
-=======
                                 <th>Student ID</th>
                                 <th>Name</th>
                                 <th>Gender</th>
                                 <th>Date of Birth</th>
->>>>>>> local-master
                                 <th>Guardian Phone</th>
                             </tr>
                         </thead>
                         <tbody>
-<<<<<<< HEAD
-                            <% students.forEach((student, index)=> { %>
+                            <% students.forEach((student, index) => { 
+                                let formattedDob = '-';
+                                const rawDob = student.dob || student.date_of_birth;
+                                if (rawDob && String(rawDob).trim() !== '' && String(rawDob) !== 'null' && String(rawDob) !== 'undefined') {
+                                    const str = String(rawDob).trim();
+                                    const match = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                                    if (match) {
+                                        formattedDob = `${match[3].padStart(2, '0')}/${match[2].padStart(2, '0')}/${match[1]}`;
+                                    } else {
+                                        const d = new Date(rawDob);
+                                        if (!isNaN(d.getTime())) {
+                                            const day = String(d.getUTCDate()).padStart(2, '0');
+                                            const month = String(d.getUTCMonth() + 1).padStart(2, '0');
+                                            const year = d.getUTCFullYear();
+                                            formattedDob = `${day}/${month}/${year}`;
+                                        }
+                                    }
+                                }
+                            %>
                                 <tr>
-                                    <td>
-                                        <%= index + 1 %>
-                                    </td>
-                                    <td>
-                                        <%= student.admission_number %>
-                                    </td>
-                                    <td>
-                                        <%= student.last_name.toUpperCase() %>, <%= student.first_name %>
-=======
-                            <% students.forEach(student => { %>
-                                <tr>
-                                    <td>
-                                        <%= student.admission_number || '-' %>
-                                    </td>
-                                    <td>
-                                        <%= student.first_name %> <%= student.last_name %>
->>>>>>> local-master
-                                    </td>
-                                    <td>
-                                        <%= student.gender %>
-                                    </td>
-                                    <td>
-<<<<<<< HEAD
-=======
-                                        <%= new Date(student.date_of_birth).toLocaleDateString('en-GB') %>
-                                    </td>
-                                    <td>
->>>>>>> local-master
-                                        <%= student.guardian_phone || '-' %>
-                                    </td>
+                                    <td><%= index + 1 %></td>
+                                    <td><%= student.admission_number || '-' %></td>
+                                    <td><%= student.last_name ? student.last_name.toUpperCase() + ', ' + student.first_name : student.first_name %></td>
+                                    <td><%= student.gender || '-' %></td>
+                                    <td><%= formattedDob %></td>
+                                    <td><%= student.guardian_phone || student.parent_phone || '-' %></td>
                                 </tr>
-                                <% }) %>
+                            <% }) %>
                         </tbody>
                     </table>
 
@@ -116,11 +102,10 @@
                         <i class="bi bi-people"></i>
                         <p>No students found for this class.</p>
                     </div>
-                    <% } %>
+                <% } %>
         </main>
 
         <style>
-            /* Screen Styles */
             .filter-form {
                 display: flex;
                 gap: 20px;
@@ -133,7 +118,6 @@
                 border-radius: 4px;
                 box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
                 max-width: 210mm;
-                /* A4 Width */
                 margin: 0 auto;
             }
 
@@ -185,60 +169,26 @@
                 padding-top: 10px;
             }
 
-            /* Print Styles */
             @media print {
-<<<<<<< HEAD
                 @page {
                     size: A4;
                     margin: 10mm;
                 }
 
-                body * {
-                    visibility: hidden;
+                .no-print { display: none !important; }
+                .report-paper { display: block !important; width: 100% !important; margin: 0 !important; box-shadow: none !important; padding: 0 !important; }
+                .report-paper * { visibility: visible !important; }
+                
+                .report-table { display: table !important; width: 100% !important; }
+                .report-table thead { display: table-header-group !important; }
+                .report-table tbody { display: table-row-group !important; }
+                .report-table tr { display: table-row !important; }
+                .report-table th, .report-table td { 
+                    display: table-cell !important; 
+                    text-align: left !important;
+                    padding: 8px !important;
+                    border: 1px solid #ddd !important;
                 }
-
-                .report-paper,
-                .report-paper * {
-                    visibility: visible;
-                }
-
-                .report-paper {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    box-shadow: none;
-                    padding: 0;
-                    margin: 0;
-                }
-
-                .main-content {
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-
-                .no-print {
-                    display: none !important;
-                }
-=======
-              .no-print { display: none !important; }
-              .report-paper { display: block !important; width: 100% !important; margin: 0 !important; }
-              .report-paper * { visibility: visible !important; }
-              
-              /* Force Tabular Layout for both Portrait and Landscape */
-              .report-table { display: table !important; width: 100% !important; }
-              .report-table thead { display: table-header-group !important; position: static !important; width: auto !important; height: auto !important; overflow: visible !important; }
-              .report-table thead tr { position: static !important; }
-              .report-table tbody { display: table-row-group !important; }
-              .report-table tr { display: table-row !important; margin: 0 !important; border: none !important; box-shadow: none !important; }
-              .report-table th, .report-table td { 
-                  display: table-cell !important; 
-                  text-align: left !important;
-                  padding: 8px !important;
-                  border: 1px solid #ddd !important;
-              }
-              .report-table td:before { content: none !important; display: none !important; }
->>>>>>> local-master
             }
         </style>
 

@@ -204,9 +204,10 @@ const getResultManager = async (req, res) => {
             subjects = await db.all(`
                 SELECT DISTINCT s.* FROM subjects s
                 JOIN subject_assignments sa ON s.id = sa.subject_id
-                LEFT JOIN class_assignments ca ON sa.class_id = ca.class_id AND ca.staff_id = ?
-                WHERE sa.teacher_id = ? OR ca.id IS NOT NULL
-            `, [user.id, user.id]);
+                WHERE sa.class_id IN (
+                    SELECT class_id FROM class_assignments WHERE staff_id = ?
+                )
+            `, [user.id]);
         }
 
         let students = [];

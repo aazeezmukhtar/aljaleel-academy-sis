@@ -2,11 +2,7 @@ const db = require('../utils/db');
 const path = require('path');
 const { computeResult, getGrade } = require('../utils/resultHelper');
 const { logAction } = require('../utils/logger');
-<<<<<<< HEAD
-const { getClassSection, getSectionResultConfig, getEnrolledStudents } = require('../utils/enrollmentHelper');
-=======
 const { getEnrolledStudents } = require('../utils/enrollmentHelper');
->>>>>>> local-master
 
 const getOrdinal = (n) => {
     const s = ['th', 'st', 'nd', 'rd'];
@@ -25,12 +21,6 @@ const getSchoolSettings = async () => {
     const configArr = await db.all('SELECT * FROM result_config');
     const settings = {};
     settingsArr.forEach(s => settings[s.key] = s.value);
-<<<<<<< HEAD
-    configArr.forEach(c => settings[c.key] = c.value); 
-    return settings;
-};
-
-=======
     configArr.forEach(c => settings[c.key] = c.value);
     return settings;
 };
@@ -79,15 +69,11 @@ const getSectionAcademicContext = async (class_id) => {
     };
 };
 
->>>>>>> local-master
 const getGradingSystem = async (req, res) => {
     try {
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
         const config = await getSchoolSettings();
         const sections = await db.all('SELECT * FROM sections ORDER BY name');
-<<<<<<< HEAD
-        const sectionConfigs = await db.all('SELECT * FROM section_result_config');
-=======
 
         // Load per-section configs
         const sectionConfigs = {};
@@ -96,7 +82,6 @@ const getGradingSystem = async (req, res) => {
             sectionConfigs[sec.id] = { ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
             rows.forEach(r => { sectionConfigs[sec.id][r.key] = r.value; });
         }
->>>>>>> local-master
 
         if (req && res) {
             res.render('results/setup', {
@@ -107,41 +92,13 @@ const getGradingSystem = async (req, res) => {
                 sectionConfigs
             });
         }
-<<<<<<< HEAD
-        return { grading, config, sections, sectionConfigs };
-=======
         return { grading, config };
->>>>>>> local-master
     } catch (err) {
         console.error('Get Grading Error:', err);
         if (res) res.status(500).send('Database Error');
     }
 };
 
-<<<<<<< HEAD
-const saveSectionConfig = async (req, res) => {
-    const { section_id, ca_count, ca1_max, ca2_max, exam_max } = req.body;
-    try {
-        const sql = `
-            INSERT INTO section_result_config (section_id, ca_count, ca1_max, ca2_max, exam_max)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(section_id) DO UPDATE SET
-            ca_count = excluded.ca_count,
-            ca1_max = excluded.ca1_max,
-            ca2_max = excluded.ca2_max,
-            exam_max = excluded.exam_max
-        `;
-        await db.run(sql, [
-            parseInt(section_id),
-            parseInt(ca_count) || 2,
-            parseInt(ca1_max) || 0,
-            parseInt(ca2_max) || 0,
-            parseInt(exam_max) || 0
-        ]);
-        res.json({ success: true, message: 'Section assessment limits updated.' });
-    } catch (err) {
-        console.error('Save Section Config Error:', err);
-=======
 // POST /results/setup/section-config  — save per-section CA weights
 const saveResultConfigForSection = async (req, res) => {
     const { section_id, ca_count, ca1_max, ca2_max, exam_max } = req.body;
@@ -160,15 +117,10 @@ const saveResultConfigForSection = async (req, res) => {
         res.json({ success: true, message: 'Section config saved.' });
     } catch (err) {
         console.error('saveResultConfigForSection Error:', err);
->>>>>>> local-master
         res.status(500).json({ success: false, message: 'Failed to save section config.' });
     }
 };
 
-<<<<<<< HEAD
-
-=======
->>>>>>> local-master
 const saveResultConfig = async (req, res) => {
     const { ca1_max, ca2_max, exam_max } = req.body;
     try {
@@ -218,13 +170,6 @@ const saveGradingSystem = async (req, res) => {
 
 const getResultManager = async (req, res) => {
     const user = req.session.staff;
-<<<<<<< HEAD
-    const settings = await getSchoolSettings();
-    const activeSession = req.query.session || settings.current_session || '2025/2026';
-    const activeTerm = req.query.term || settings.current_term || '1st Term';
-    const { class_id, subject_id } = req.query;
-
-=======
     const { class_id, subject_id } = req.query;
 
     // Derive session/term from the selected class's section (falls back to global)
@@ -236,18 +181,10 @@ const getResultManager = async (req, res) => {
     // Section-specific result config (ca weights, exam max)
     const resultConfig = await getSectionResultConfig(class_id || null);
 
->>>>>>> local-master
     try {
         let classes, subjects;
 
         if (user.role === 'Admin' || user.role === 'Examination Officer') {
-<<<<<<< HEAD
-            classes = await db.all('SELECT * FROM classes');
-            subjects = await db.all('SELECT * FROM subjects');
-        } else {
-            classes = await db.all(`
-                SELECT DISTINCT c.* FROM classes c
-=======
             classes = await db.all(`
                 SELECT c.*, s.current_session as sec_session, s.current_term as sec_term 
                 FROM classes c 
@@ -259,7 +196,6 @@ const getResultManager = async (req, res) => {
                 SELECT DISTINCT c.*, s.current_session as sec_session, s.current_term as sec_term 
                 FROM classes c
                 LEFT JOIN sections s ON c.section_id = s.id
->>>>>>> local-master
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 WHERE sa.id IS NOT NULL OR ca.id IS NOT NULL
@@ -268,42 +204,23 @@ const getResultManager = async (req, res) => {
             subjects = await db.all(`
                 SELECT DISTINCT s.* FROM subjects s
                 JOIN subject_assignments sa ON s.id = sa.subject_id
-                WHERE sa.teacher_id = ?
-            `, [user.id]);
+                LEFT JOIN class_assignments ca ON sa.class_id = ca.class_id AND ca.staff_id = ?
+                WHERE sa.teacher_id = ? OR ca.id IS NOT NULL
+            `, [user.id, user.id]);
         }
 
         let students = [];
 
         if (class_id && subject_id) {
-<<<<<<< HEAD
-            const classIdNum = Number(class_id);
-            const subjectIdNum = Number(subject_id);
-
-=======
->>>>>>> local-master
             if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
                 const hasAccess = await db.get(`
-                    SELECT id FROM subject_assignments 
-                    WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
-<<<<<<< HEAD
-                `, [Number(user.id), classIdNum, subjectIdNum]);
-                if (!hasAccess) return res.redirect('/results?error=Access Denied to this Subject/Class combination');
-            }
-
-            const enrolledStudents = await getEnrolledStudents(classIdNum, activeSession);
-            if (enrolledStudents.length > 0) {
-                const studentIds = enrolledStudents.map(s => s.id);
-                students = await db.all(`
-                    SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
-                           r.ca1, r.ca2, r.exam, r.total, r.grade, r.status, r.teacher_remark
-                    FROM students s 
-                    LEFT JOIN results r ON s.id = r.student_id 
-                        AND r.subject_id = ? AND r.term = ? AND r.session = ?
-                    WHERE s.id IN (${studentIds.map(() => '?').join(',')})
-                    ORDER BY s.last_name, s.first_name
-                `, [subjectIdNum, activeTerm, activeSession, ...studentIds]);
-=======
-                `, [user.id, class_id, subject_id]);
+                    SELECT 1
+                    WHERE EXISTS (
+                        SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
+                    ) OR EXISTS (
+                        SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
+                    )
+                `, [user.id, class_id, subject_id, user.id, class_id]);
                 if (!hasAccess) return res.redirect('/results?error=Access Denied to this Subject/Class combination');
             }
 
@@ -320,7 +237,6 @@ const getResultManager = async (req, res) => {
                     WHERE s.id IN (${studentIds.map(() => '?').join(',')})
                     ORDER BY s.first_name, s.last_name
                 `, [subject_id, activeTerm, activeSession, ...studentIds]);
->>>>>>> local-master
             }
         }
 
@@ -333,10 +249,7 @@ const getResultManager = async (req, res) => {
             students,
             filters: { class_id, subject_id, term: activeTerm, session: activeSession },
             school: settings,
-<<<<<<< HEAD
-=======
             resultConfig,
->>>>>>> local-master
             grading
         });
     } catch (err) {
@@ -354,28 +267,18 @@ const saveResults = async (req, res) => {
     }
 
     try {
-<<<<<<< HEAD
-        const classIdNum = Number(class_id);
-        const subjectIdNum = Number(subject_id);
-        const userIdNum = Number(user.id);
-
-=======
->>>>>>> local-master
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
             const hasAccess = await db.get(`
-                SELECT id FROM subject_assignments 
-                WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
-<<<<<<< HEAD
-            `, [userIdNum, classIdNum, subjectIdNum]);
-            if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
-
-            const checkLock = await db.get("SELECT status FROM results WHERE student_id = ? AND subject_id = ? AND term = ? AND session = ?", [Number(results[0]?.student_id), subjectIdNum, term, session]);
-=======
-            `, [user.id, class_id, subject_id]);
+                SELECT 1
+                WHERE EXISTS (
+                    SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
+                ) OR EXISTS (
+                    SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
+                )
+            `, [user.id, class_id, subject_id, user.id, class_id]);
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
             const checkLock = await db.get("SELECT status FROM results WHERE student_id = ? AND subject_id = ? AND term = ? AND session = ?", [results[0]?.student_id, subject_id, term, session]);
->>>>>>> local-master
             if (checkLock && (checkLock.status === 'locked' || checkLock.status === 'published' || checkLock.status === 'approved')) {
                 return res.status(403).json({ success: false, message: 'Results are LOCKED or PUBLISHED and cannot be edited.' });
             }
@@ -393,11 +296,7 @@ const saveResults = async (req, res) => {
         await db.transaction(async () => {
             for (const item of results) {
                 await db.run(sql, [
-<<<<<<< HEAD
-                    Number(item.student_id), subjectIdNum, term, session,
-=======
                     item.student_id, subject_id, term, session,
->>>>>>> local-master
                     item.ca1 || 0, item.ca2 || 0, item.exam || 0,
                     item.total || 0, (item.grade || '').trim(), (item.remark || '').trim(),
                     status || 'draft'
@@ -418,50 +317,6 @@ const getReportCard = async (req, res) => {
 
     try {
         const school = await getSchoolSettings();
-<<<<<<< HEAD
-        const studentIdNum = Number(student_id);
-        const student = await db.get(`
-            SELECT s.*, c.name as class_name 
-            FROM students s
-            LEFT JOIN classes c ON s.current_class_id = c.id
-            WHERE s.id = ?
-        `, [studentIdNum]);
-
-        if (!student) return res.status(404).send('Student not found');
-
-        // Fetch section result config
-        const section = student.current_class_id ? await getClassSection(student.current_class_id) : null;
-        const sectionConfig = await getSectionResultConfig(section ? section.id : null);
-
-        const enrolledStudents = await getEnrolledStudents(student.current_class_id, session);
-        const studentIds = enrolledStudents.map(s => s.id);
-
-        let results = [];
-        let classPerformance = [];
-        if (studentIds.length > 0) {
-            // Results with subject rank using student_enrollments with fallback
-            results = await db.all(`
-                SELECT r.*, s.name as subject_name,
-                (SELECT COUNT(*) + 1 FROM results r2 
-                 WHERE r2.subject_id = r.subject_id AND r2.term = r.term 
-                 AND r2.session = r.session AND r2.total > r.total
-                 AND r2.student_id IN (${studentIds.map(() => '?').join(',')})) as subject_rank
-                FROM results r
-                JOIN subjects s ON r.subject_id = s.id
-                WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-            `, [...studentIds, studentIdNum, term, session]);
-
-            // Overall Position with multi-class enrollment fallback
-            classPerformance = await db.all(`
-                SELECT student_id, SUM(total) as student_total
-                FROM results
-                WHERE term = ? AND session = ? 
-                AND student_id IN (${studentIds.map(() => '?').join(',')})
-                GROUP BY student_id
-                ORDER BY student_total DESC
-            `, [term, session, ...studentIds]);
-        }
-=======
         const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
         if (!student) return res.status(404).send('Student not found');
 
@@ -510,7 +365,6 @@ const getReportCard = async (req, res) => {
             GROUP BY r.student_id
             ORDER BY student_total DESC
         `, [target_class_id, session, term, session, target_class_id, session]);
->>>>>>> local-master
 
         const studentPerf = classPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -520,21 +374,13 @@ const getReportCard = async (req, res) => {
         const attendance = await db.get(`
             SELECT COUNT(*) as present_count FROM attendance 
             WHERE student_id = ? AND status = 'Present'
-<<<<<<< HEAD
-        `, [studentIdNum]) || { present_count: 0 };
-=======
         `, [student_id]) || { present_count: 0 };
->>>>>>> local-master
 
         // Traits
         const traitRows = await db.all(`
             SELECT trait_name, score FROM affective_psychomotor
             WHERE student_id = ? AND term = ? AND session = ?
-<<<<<<< HEAD
-        `, [studentIdNum, term, session]) || [];
-=======
         `, [student_id, term, session]) || [];
->>>>>>> local-master
         const traits = {};
         traitRows.forEach(t => traits[t.trait_name] = t.score);
 
@@ -575,12 +421,7 @@ const getReportCard = async (req, res) => {
             position,
             classCount,
             grading,
-<<<<<<< HEAD
-            caCount: sectionConfig.ca_count || 2,
-            sectionConfig,
-=======
             caCount: resultConfig.ca_count || 2,
->>>>>>> local-master
             marksAnalysis
         });
     } catch (err) {
@@ -595,18 +436,6 @@ const getCumulativeReport = async (req, res) => {
 
     try {
         const school = await getSchoolSettings();
-<<<<<<< HEAD
-        const studentIdNum = Number(student_id);
-        const student = await db.get(`
-            SELECT s.*, c.name as class_name 
-            FROM students s
-            LEFT JOIN classes c ON s.current_class_id = c.id
-            WHERE s.id = ?
-        `, [studentIdNum]);
-
-        if (!student) return res.status(404).send('Student not found');
-
-=======
         const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
         if (!student) return res.status(404).send('Student not found');
 
@@ -630,19 +459,13 @@ const getCumulativeReport = async (req, res) => {
         student.class_name = classObj.name;
         const target_class_id = classObj.id;
 
->>>>>>> local-master
         const rawResults = await db.all(`
             SELECT r.*, s.name as subject_name
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
-<<<<<<< HEAD
-            WHERE r.student_id = ? AND r.session = ?
-        `, [studentIdNum, session]);
-=======
             JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
             WHERE r.student_id = ? AND r.session = ?
         `, [target_class_id, session, student_id, session]);
->>>>>>> local-master
 
         const subjectMap = {};
         rawResults.forEach(r => {
@@ -654,21 +477,6 @@ const getCumulativeReport = async (req, res) => {
 
         const subjects = Object.values(subjectMap);
 
-<<<<<<< HEAD
-        const enrolledStudents = await getEnrolledStudents(student.current_class_id, session);
-        const studentIds = enrolledStudents.map(s => s.id);
-        
-        let sessionPerformance = [];
-        if (studentIds.length > 0) {
-            sessionPerformance = await db.all(`
-                SELECT student_id, AVG(total) as session_avg
-                FROM results
-                WHERE session = ? AND student_id IN (${studentIds.map(() => '?').join(',')})
-                GROUP BY student_id
-                ORDER BY session_avg DESC
-            `, [session, ...studentIds]);
-        }
-=======
         const sessionPerformance = await db.all(`
             SELECT r.student_id, AVG(r.total) as session_avg
             FROM results r
@@ -677,7 +485,6 @@ const getCumulativeReport = async (req, res) => {
             GROUP BY r.student_id
             ORDER BY session_avg DESC
         `, [target_class_id, session, session, target_class_id, session]);
->>>>>>> local-master
 
         const studentPerf = sessionPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? sessionPerformance.indexOf(studentPerf) + 1 : 0;
@@ -755,36 +562,6 @@ const getBulkReport = async (req, res) => {
         }
 
         const school = await getSchoolSettings();
-<<<<<<< HEAD
-        const classIdNum = Number(class_id);
-        const students = await getEnrolledStudents(classIdNum, session);
-        const classInfo = await db.get('SELECT name FROM classes WHERE id = ?', [classIdNum]);
-        const className = classInfo ? classInfo.name : 'Class';
-
-        const studentsData = [];
-        if (students.length > 0) {
-            const studentIds = students.map(s => s.id);
-            const classPerformance = await db.all(`
-                SELECT student_id, SUM(total) as student_total
-                FROM results
-                WHERE term = ? AND session = ? 
-                AND student_id IN (${studentIds.map(() => '?').join(',')})
-                GROUP BY student_id
-                ORDER BY student_total DESC
-            `, [term, session, ...studentIds]);
-
-            for (const student of students) {
-                const results = await db.all(`
-                    SELECT r.*, s.name as subject_name,
-                    (SELECT COUNT(*) + 1 FROM results r2 
-                     WHERE r2.subject_id = r.subject_id AND r2.term = r.term 
-                     AND r2.session = r.session AND r2.total > r.total
-                     AND r2.student_id IN (${studentIds.map(() => '?').join(',')})) as subject_rank
-                    FROM results r
-                    JOIN subjects s ON r.subject_id = s.id
-                    WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-                `, [...studentIds, student.id, term, session]);
-=======
         const resultConfig = await getSectionResultConfig(class_id);
         // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
         const students = await getEnrolledStudents(class_id, session);
@@ -813,7 +590,6 @@ const getBulkReport = async (req, res) => {
                 JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
                 WHERE r.student_id = ? AND r.term = ? AND r.session = ?
             `, [class_id, session, class_id, session, student.id, term, session]);
->>>>>>> local-master
 
             const studentPerf = classPerformance.find(p => p.student_id == student.id);
             const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -860,14 +636,8 @@ const getBulkReport = async (req, res) => {
                 marksAnalysis
             });
         }
-<<<<<<< HEAD
-    }
-
-    const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
-=======
 
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
->>>>>>> local-master
 
         res.render('results/bulk_report', {
             title: `Bulk Report - ${className}`,
@@ -877,11 +647,7 @@ const getBulkReport = async (req, res) => {
             school,
             grading,
             classCount: classPerformance.length,
-<<<<<<< HEAD
-            caCount: school.ca_count || 2
-=======
             caCount: resultConfig.ca_count || 2
->>>>>>> local-master
         });
     } catch (err) {
         console.error('Bulk Report Error:', err);
@@ -894,32 +660,6 @@ const getBulkCumulative = async (req, res) => {
     const { class_id, session } = req.query;
     try {
         const school = await getSchoolSettings();
-<<<<<<< HEAD
-        const classIdNum = Number(class_id);
-        const students = await getEnrolledStudents(classIdNum, session);
-        const classInfo = await db.get('SELECT name FROM classes WHERE id = ?', [classIdNum]);
-        const className = classInfo ? classInfo.name : 'Class';
-
-        const studentsData = [];
-        let sessionPerformance = [];
-        if (students.length > 0) {
-            const studentIds = students.map(s => s.id);
-            sessionPerformance = await db.all(`
-                SELECT student_id, AVG(total) as session_avg
-                FROM results
-                WHERE session = ? AND student_id IN (${studentIds.map(() => '?').join(',')})
-                GROUP BY student_id
-                ORDER BY session_avg DESC
-            `, [session, ...studentIds]);
-
-            for (const student of students) {
-                const rawResults = await db.all(`
-                    SELECT r.*, s.name as subject_name
-                    FROM results r
-                    JOIN subjects s ON r.subject_id = s.id
-                    WHERE r.student_id = ? AND r.session = ?
-                `, [student.id, session]);
-=======
         // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
         const students = await getEnrolledStudents(class_id, session);
         const classInfo = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);
@@ -941,7 +681,6 @@ const getBulkCumulative = async (req, res) => {
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.session = ?
             `, [student.id, session]);
->>>>>>> local-master
 
             const subjectMap = {};
             rawResults.forEach(r => {
@@ -982,14 +721,8 @@ const getBulkCumulative = async (req, res) => {
                 marksAnalysis
             });
         }
-<<<<<<< HEAD
-    }
-
-    const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
-=======
 
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
->>>>>>> local-master
 
         res.render('results/bulk_cumulative', {
             title: `Bulk Cumulative - ${className}`,
@@ -1031,30 +764,18 @@ const getTraitsForm = async (req, res) => {
                 if (!isAssigned) return res.redirect('/results/traits?error=Access Denied');
             }
 
-<<<<<<< HEAD
-            const enrolledStudents = await getEnrolledStudents(Number(class_id), session || '2025/2026');
-            if (enrolledStudents.length > 0) {
-                const studentIds = enrolledStudents.map(s => s.id);
-=======
             // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
             const enrolledForTraits = await getEnrolledStudents(class_id, session);
             if (enrolledForTraits.length > 0) {
                 const traitIds = enrolledForTraits.map(s => Number(s.id));
->>>>>>> local-master
                 students = await db.all(`
                     SELECT s.id, s.first_name, s.last_name, s.admission_number,
                            ap.trait_name, ap.score
                     FROM students s
                     LEFT JOIN affective_psychomotor ap ON s.id = ap.student_id AND ap.term = ? AND ap.session = ?
-<<<<<<< HEAD
-                    WHERE s.id IN (${studentIds.map(() => '?').join(',')})
-                    ORDER BY s.last_name, s.first_name
-                `, [term, session || '2025/2026', ...studentIds]);
-=======
                     WHERE s.id IN (${traitIds.map(() => '?').join(',')})
                     ORDER BY s.first_name, s.last_name
                 `, [term, session, ...traitIds]);
->>>>>>> local-master
             }
         }
 
@@ -1087,11 +808,7 @@ const saveTraits = async (req, res) => {
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
             const isAssigned = await db.get(`
                 SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
-<<<<<<< HEAD
-            `, [Number(user.id), Number(class_id)]);
-=======
             `, [user.id, class_id]);
->>>>>>> local-master
             if (!isAssigned) return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
 
@@ -1124,26 +841,12 @@ const approveResults = async (req, res) => {
     if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
-<<<<<<< HEAD
-        const enrolledStudents = await getEnrolledStudents(Number(class_id), session);
-        if (enrolledStudents.length === 0) {
-            return res.json({ success: true, message: `Approved 0 results.` });
-        }
-        const studentIds = enrolledStudents.map(s => s.id);
-        const info = await db.run(`
-            UPDATE results 
-            SET status = 'approved', approved_by = ?
-            WHERE subject_id = ? AND term = ? AND session = ? 
-            AND student_id IN (${studentIds.map(() => '?').join(',')})
-        `, [Number(user.id), Number(subject_id), term, session, ...studentIds]);
-=======
         const info = await db.run(`
             UPDATE results
             SET status = 'approved', approved_by = ?
             WHERE subject_id = ? AND term = ? AND session = ?
             AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
         `, [user.id, subject_id, term, session, class_id, session]);
->>>>>>> local-master
         res.json({ success: true, message: `Approved ${info.changes} results.` });
     } catch (err) {
         console.error('Approve Error:', err);
@@ -1158,26 +861,12 @@ const lockResults = async (req, res) => {
     if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
-<<<<<<< HEAD
-        const enrolledStudents = await getEnrolledStudents(Number(class_id), session);
-        if (enrolledStudents.length === 0) {
-            return res.json({ success: true, message: `Locked 0 results.` });
-        }
-        const studentIds = enrolledStudents.map(s => s.id);
-        const info = await db.run(`
-            UPDATE results 
-            SET status = 'locked'
-            WHERE subject_id = ? AND term = ? AND session = ? 
-            AND student_id IN (${studentIds.map(() => '?').join(',')})
-        `, [Number(subject_id), term, session, ...studentIds]);
-=======
         const info = await db.run(`
             UPDATE results
             SET status = 'locked'
             WHERE subject_id = ? AND term = ? AND session = ?
             AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
         `, [subject_id, term, session, class_id, session]);
->>>>>>> local-master
         res.json({ success: true, message: `Locked ${info.changes} results. Editing is now disabled.` });
     } catch (err) {
         console.error('Lock Error:', err);
@@ -1194,36 +883,18 @@ const publishBulkResults = async (req, res) => {
     try {
         let info;
         if (class_id) {
-<<<<<<< HEAD
-            const enrolledStudents = await getEnrolledStudents(Number(class_id), session);
-            if (enrolledStudents.length === 0) {
-                return res.json({ success: true, message: `Published 0 results.` });
-            }
-            const studentIds = enrolledStudents.map(s => s.id);
-            info = await db.run(`
-                UPDATE results 
-                SET status = 'published', approved_by = ?
-                WHERE term = ? AND session = ? 
-                AND student_id IN (${studentIds.map(() => '?').join(',')})
-            `, [Number(user.id), term, session, ...studentIds]);
-=======
             info = await db.run(`
                 UPDATE results
                 SET status = 'published', approved_by = ?
                 WHERE term = ? AND session = ?
                 AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
             `, [user.id, term, session, class_id, session]);
->>>>>>> local-master
         } else {
             info = await db.run(`
                 UPDATE results 
                 SET status = 'published', approved_by = ?
                 WHERE term = ? AND session = ? 
-<<<<<<< HEAD
-            `, [Number(user.id), term, session]);
-=======
             `, [user.id, term, session]);
->>>>>>> local-master
         }
         res.json({ success: true, message: `Successfully published ${info.changes} result entries across the system.` });
     } catch (err) {
@@ -1244,11 +915,7 @@ module.exports = {
     saveTraits,
     getGradingSystem,
     saveResultConfig,
-<<<<<<< HEAD
-    saveSectionConfig,
-=======
     saveResultConfigForSection,
->>>>>>> local-master
     saveGradingSystem,
     approveResults,
     lockResults,

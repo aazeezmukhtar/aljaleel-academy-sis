@@ -181,8 +181,7 @@ const getResultManager = async (req, res) => {
     // Section-specific result config (ca weights, exam max)
     const resultConfig = await getSectionResultConfig(class_id || null);
 
-    try {
-        // Determine subjects to display:
+    try {        // Determine subjects to display:
         // If a class is selected, load subjects that are linked to that class via subject_assignments.
         // This ensures a class teacher sees all subjects for their class, even if they aren't directly assigned to each subject.
         let subjects = [];
@@ -195,7 +194,7 @@ const getResultManager = async (req, res) => {
                 const placeholders = subjectIds.map(() => '?').join(',');
                 subjects = await db.all(`SELECT * FROM subjects WHERE id IN (${placeholders})`, subjectIds);
             } else {
-                // No specific assignments, fall back to all subjects
+                // No specific assignments, fall back to all subjects (class teacher can still edit any)
                 subjects = await db.all('SELECT * FROM subjects');
             }
         } else {

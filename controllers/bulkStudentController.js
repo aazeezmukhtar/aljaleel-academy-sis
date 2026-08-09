@@ -3,14 +3,11 @@ const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const { generateUniqueID } = require('../utils/idHelper');
-<<<<<<< HEAD
-=======
 const bcrypt = require('bcryptjs');
->>>>>>> local-master
 
 const getBulkImportPage = async (req, res) => {
     try {
-        const classes = await db.all('SELECT * FROM classes');
+        const classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
         res.render('students/bulk-import', {
             title: 'Bulk Student Import',
             classes
@@ -33,7 +30,6 @@ const processBulkImport = async (req, res) => {
         let studentsData = [];
         const fileExtension = path.extname(file.originalname).toLowerCase();
 
-        // Parse XLSX files
         if (fileExtension === '.xlsx' || fileExtension === '.xls') {
             const workbook = xlsx.readFile(file.path);
             const sheetName = workbook.SheetNames[0];
@@ -55,16 +51,14 @@ const processBulkImport = async (req, res) => {
             });
         }
 
-        // Validation and duplicate detection
         const errors = [];
         const duplicates = [];
         const validStudents = [];
         const admissionNumbers = [];
 
         studentsData.forEach((student, index) => {
-            const rowNum = index + 2; // Excel row number (accounting for header)
+            const rowNum = index + 2;
 
-            // Validate required fields
             if (!student.first_name) {
                 errors.push(`Row ${rowNum}: Missing First Name`);
                 return;
@@ -78,14 +72,12 @@ const processBulkImport = async (req, res) => {
                 return;
             }
 
-            // Validate gender
             const validGenders = ['Male', 'Female', 'Other', 'male', 'female', 'other', 'M', 'F'];
             if (!validGenders.includes(student.gender)) {
                 errors.push(`Row ${rowNum}: Invalid Gender (must be Male, Female, or Other)`);
                 return;
             }
 
-            // Normalize gender
             const genderMap = {
                 'male': 'Male', 'M': 'Male', 'm': 'Male',
                 'female': 'Female', 'F': 'Female', 'f': 'Female',
@@ -93,7 +85,6 @@ const processBulkImport = async (req, res) => {
             };
             student.gender = genderMap[student.gender] || student.gender;
 
-            // Format date if needed
             if (typeof student.dob === 'number') {
                 const excelEpoch = new Date(1899, 11, 30);
                 const date = new Date(excelEpoch.getTime() + student.dob * 86400000);
@@ -110,13 +101,8 @@ const processBulkImport = async (req, res) => {
             validStudents.push({ ...student, rowNum });
         });
 
-        // Check for duplicates in database
         if (admissionNumbers.length > 0) {
-<<<<<<< HEAD
             const placeholders = admissionNumbers.map(() => '?').join(',');
-=======
-            const placeholders = admissionNumbers.map((_, i) => `$${i + 1}`).join(',');
->>>>>>> local-master
             const existingAdmissions = await db.all(
                 `SELECT admission_number FROM students WHERE admission_number IN (${placeholders})`,
                 admissionNumbers.map(a => a.number)
@@ -135,7 +121,6 @@ const processBulkImport = async (req, res) => {
             });
         }
 
-        // If there are validation errors or duplicates, return them
         if (errors.length > 0 || duplicates.length > 0) {
             fs.unlinkSync(file.path);
             return res.status(400).json({
@@ -146,19 +131,11 @@ const processBulkImport = async (req, res) => {
             });
         }
 
-<<<<<<< HEAD
-        await db.transaction(async () => {
-            for (const student of validStudents) {
-                const admission_number = student.admission_number || generateUniqueID();
-                await db.run(`
-                    INSERT INTO students (
-                        first_name, last_name, gender, dob, admission_number,
-                        current_class_id, status
-                    ) VALUES (?, ?, ?, ?, ?, ?, 'active')
-=======
-        // Get current session for enrollments
-        const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = sessionRow ? sessionRow.value : '2024/2025';
+        let currentSession = '2024/2025';
+        try {
+            const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+            if (sessionRow && sessionRow.value) currentSession = sessionRow.value;
+        } catch (e) {}
 
         await db.transaction(async () => {
             for (const student of validStudents) {
@@ -169,17 +146,12 @@ const processBulkImport = async (req, res) => {
                         first_name, last_name, gender, dob, admission_number,
                         current_class_id, password, status
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
->>>>>>> local-master
                 `, [
                     student.first_name,
                     student.last_name,
                     student.gender,
                     student.dob || null,
                     admission_number,
-<<<<<<< HEAD
-                    student.class_id || null
-                ]);
-=======
                     student.class_id || null,
                     hashedPassword
                 ]);
@@ -190,7 +162,6 @@ const processBulkImport = async (req, res) => {
                         await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, currentSession]);
                     }
                 }
->>>>>>> local-master
             }
         });
 
@@ -213,3 +184,4 @@ const processBulkImport = async (req, res) => {
 };
 
 module.exports = { getBulkImportPage, processBulkImport };
+

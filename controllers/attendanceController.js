@@ -7,10 +7,7 @@ const getAssignedClasses = async (user) => {
     if (user.role === 'Admin') {
         return await db.all('SELECT * FROM classes ORDER BY name ASC');
     }
-<<<<<<< HEAD
     const staffId = Number(user.id);
-=======
->>>>>>> local-master
     return await db.all(`
         SELECT DISTINCT c.* 
         FROM classes c
@@ -18,19 +15,11 @@ const getAssignedClasses = async (user) => {
         LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
         WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
         ORDER BY c.name ASC
-<<<<<<< HEAD
     `, [staffId, staffId, staffId]);
-};
-
-// Helper: get current academic settings
-const getAcademicSettings = async () => {
-=======
-    `, [user.id, user.id, user.id]);
 };
 
 // Helper: get current academic settings (section-aware)
 const getAcademicSettings = async (class_id = null) => {
-    // If a class is provided, derive term/session from its section
     if (class_id) {
         const sec = await db.get(`
             SELECT s.current_session, s.current_term 
@@ -42,19 +31,12 @@ const getAcademicSettings = async (class_id = null) => {
             return { session: sec.current_session, term: sec.current_term };
         }
     }
-    // Fallback to global settings
->>>>>>> local-master
     const school = await db.all('SELECT key, value FROM settings');
     const settings = {};
     school.forEach(s => settings[s.key] = s.value);
     return {
-<<<<<<< HEAD
-        session: settings.current_session || '2025/2026',
-        term: settings.current_term || 'First Term'
-=======
         session: settings.current_session || '2024/2025',
         term: settings.current_term || '1st Term'
->>>>>>> local-master
     };
 };
 
@@ -64,29 +46,24 @@ const getIndex = async (req, res) => {
         const user = req.session.staff;
         const classes = await getAssignedClasses(user);
 
-        // Fetch thresholds from settings
         const limitRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.term_absence_limit'");
         const termAbsenceLimit = Number(limitRow ? limitRow.value : 10);
 
         const consecutiveRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.consecutive_absence_limit'");
         const consecutiveAbsenceLimit = Number(consecutiveRow ? consecutiveRow.value : 3);
 
-        // Prepare flagged students list per class (uses per-section term/session)
         const flaggedStudents = {};
         for (const cls of classes) {
-            // Use section-aware academic settings so term/session match what was recorded
             const academicSettings = await getAcademicSettings(cls.id);
 
-            // Fetch all student attendance records for this class & term/session
             const attendanceRecords = await db.all(`
-                SELECT a.student_id, a.status, a.date, s.first_name, s.last_name, s.parent_phone
+                SELECT a.student_id, a.status, a.date, s.first_name, s.last_name, s.parent_phone, a.reason
                 FROM attendance a
                 JOIN students s ON a.student_id = s.id
                 WHERE a.class_id = ? AND a.term = ? AND a.session = ?
                 ORDER BY a.student_id, a.date ASC
             `, [cls.id, academicSettings.term, academicSettings.session]);
 
-            // Group by student and evaluate consecutive absences
             const studentStats = {};
             for (const record of attendanceRecords) {
                 if (!studentStats[record.student_id]) {
@@ -116,10 +93,8 @@ const getIndex = async (req, res) => {
                 } else if (record.status === 'Present' || record.status === 'Late') {
                     stats.current_streak = 0;
                 }
-                // 'Leave' status is ignored (does not count as absent, nor breaks consecutive streak)
             }
 
-            // Filter students meeting either threshold
             const flagged = Object.values(studentStats).filter(s => {
                 s.flag_reason = [];
                 if (s.total_absent_days >= termAbsenceLimit) {
@@ -142,7 +117,6 @@ const getIndex = async (req, res) => {
             flaggedStudents,
             termAbsenceLimit,
             consecutiveAbsenceLimit
->>>>>>> local-master
         });
     } catch (err) {
         console.error('Attendance Index Error:', err);
@@ -166,42 +140,22 @@ const getTakeAttendance = async (req, res) => {
             if (!hasAccess) return res.redirect('/attendance?error=Access Denied');
         }
 
-<<<<<<< HEAD
         const clazz = await db.get('SELECT * FROM classes WHERE id = ?', [Number(class_id)]);
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
-        const settings = await getAcademicSettings();
-        const session = settings.session || '2025/2026';
+        const settings = await getAcademicSettings(Number(class_id));
 
-        const enrolledStudents = await getEnrolledStudents(Number(class_id), session);
-        let students = [];
-        if (enrolledStudents.length > 0) {
-            const studentIds = enrolledStudents.map(s => s.id);
-            students = await db.all(`
-                SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
-=======
-        const clazz = await db.get('SELECT * FROM classes WHERE id = ?', [class_id]);
-        if (!clazz) return res.redirect('/attendance?error=Class not found');
-
-        const settings = await getAcademicSettings(class_id);
-
-        // Use centralized helper (handles student_enrollments + current_class_id fallback + case-insensitive status)
-        const enrolledStudents = await getEnrolledStudents(class_id, settings.session);
+        const enrolledStudents = await getEnrolledStudents(Number(class_id), settings.session);
         let students = [];
         if (enrolledStudents.length > 0) {
             const studentIds = enrolledStudents.map(s => Number(s.id));
             students = await db.all(`
                 SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
->>>>>>> local-master
                        a.status
                 FROM students s
                 LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
                 WHERE s.id IN (${studentIds.map(() => '?').join(',')})
-<<<<<<< HEAD
                 ORDER BY s.last_name, s.first_name
-=======
-                ORDER BY s.first_name, s.last_name
->>>>>>> local-master
             `, [date, Number(class_id), ...studentIds]);
         }
 
@@ -222,11 +176,7 @@ const getTakeAttendance = async (req, res) => {
 
 // POST /attendance/save - Save student attendance records
 const saveAttendance = async (req, res) => {
-<<<<<<< HEAD
-    const { class_id, date, session, term, attendance } = req.body;
-=======
     const { class_id, date, session, term, attendance, reasons = {}, custom_reasons = {} } = req.body;
->>>>>>> local-master
     const user = req.session.staff;
 
     if (!user) {
@@ -241,33 +191,23 @@ const saveAttendance = async (req, res) => {
         }
 
         const sql = `
-<<<<<<< HEAD
-            INSERT INTO attendance (student_id, class_id, date, status, session, term)
-            VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT(student_id, date, session, term) DO UPDATE SET status = excluded.status, class_id = excluded.class_id
-=======
             INSERT INTO attendance (student_id, class_id, date, status, session, term, reason, reason_type, custom_reason)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(student_id, date, session, term)
             DO UPDATE SET status = excluded.status, class_id = excluded.class_id, 
                           reason = excluded.reason, reason_type = excluded.reason_type, 
                           custom_reason = excluded.custom_reason
->>>>>>> local-master
         `;
 
         await db.transaction(async () => {
             for (const [studentIdStr, status] of Object.entries(attendance || {})) {
                 const student_id = Number(studentIdStr);
                 if (isNaN(student_id)) continue;
-<<<<<<< HEAD
-                await db.run(sql, [student_id, Number(class_id), date, status, session || '2025/2026', term || 'First Term']);
-=======
                 const settings = await getAcademicSettings(class_id);
                 
                 const rawReason = reasons[studentIdStr] || null;
                 const customReason = custom_reasons[studentIdStr] || null;
                 
-                // Set main reason text
                 let reason = rawReason;
                 if (rawReason === 'Other' && customReason) {
                     reason = customReason;
@@ -284,7 +224,6 @@ const saveAttendance = async (req, res) => {
                     rawReason,
                     customReason
                 ]);
->>>>>>> local-master
             }
         });
 
@@ -332,13 +271,8 @@ const getReport = async (req, res) => {
                     JOIN attendance a ON s.id = a.student_id
                     WHERE a.class_id = ? AND a.date BETWEEN ? AND ?
                     GROUP BY s.id
-<<<<<<< HEAD
                     ORDER BY s.last_name, s.first_name
                 `, [Number(class_id), start_date, end_date]);
-=======
-                    ORDER BY s.first_name, s.last_name
-                `, [class_id, start_date, end_date]);
->>>>>>> local-master
             }
         }
 
@@ -370,11 +304,7 @@ const getStaffAttendance = async (req, res) => {
             SELECT s.*, sa.status 
             FROM staff s
             LEFT JOIN staff_attendance sa ON s.id = sa.teacher_id AND sa.date = ?
-<<<<<<< HEAD
             ORDER BY s.last_name, s.first_name
-=======
-            ORDER BY s.first_name, s.last_name
->>>>>>> local-master
         `, [targetDate]);
 
         res.render('attendance/staff', {
@@ -422,3 +352,4 @@ const saveStaffAttendance = async (req, res) => {
 };
 
 module.exports = { getIndex, getTakeAttendance, saveAttendance, getReport, getStaffAttendance, saveStaffAttendance };
+

@@ -13,10 +13,6 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const session = require('express-session');
-<<<<<<< HEAD
-=======
-const SQLiteStore = require('connect-sqlite3')(session);
->>>>>>> local-master
 const { isAuthenticated, injectUser, isAnyAuthenticated } = require('./middleware/authMiddleware');
 
 const app = express();
@@ -30,9 +26,9 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-<<<<<<< HEAD
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'public', 'uploads')));
 
 // Session Middleware
 const DB_TYPE = process.env.DB_TYPE || (process.env.DATABASE_URL ? 'postgres' : 'sqlite');
@@ -42,7 +38,15 @@ if (DB_TYPE === 'postgres') {
     const PostgresStore = require('connect-pg-simple')(session);
     sessionStore = new PostgresStore({ 
         conString: process.env.DATABASE_URL,
-        createTableIfMissing: true
+        createTableIfMissing: true,
+        ttl: 5 * 60 * 60,
+        autoRemove: 'interval',
+        autoRemoveInterval: 60,
+        pgOptions: {
+            max: 100,
+            idleTimeoutMillis: 30000,
+            ssl: { rejectUnauthorized: false }
+        }
     });
     console.log('[Session] Using PostgreSQL Store');
 } else {
@@ -53,50 +57,15 @@ if (DB_TYPE === 'postgres') {
     });
     console.log('[Session] Using SQLite Store');
 }
-=======
-
-// Serve uploaded passport photos
-const uploadDir = path.join(__dirname, 'public', 'uploads');
-app.use('/uploads', express.static(uploadDir));
-
-// Static files serving
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Session Middleware
-const isPostgres = process.env.DB_TYPE === 'postgres' || !!process.env.DATABASE_URL;
-
-const sessionStore = isPostgres
-    ? new (require('connect-pg-simple')(session))({
-        conString: process.env.DATABASE_URL,
-        createTableIfMissing: true,
-        ttl: 5 * 60 * 60, // 5 hours in seconds
-        autoRemove: 'interval',
-        autoRemoveInterval: 60, // run cleanup each minute
-        pgOptions: {
-            max: 100,               // increased pool size for higher concurrency
-            idleTimeoutMillis: 30000, // release idle connections after 30s
-            ssl: { rejectUnauthorized: false }
-        }
-    })
-    : new SQLiteStore({ db: 'database.sqlite', dir: '.' });
->>>>>>> local-master
 
 app.use(session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET || 'nexus-sis-secret-key-offline-first',
     resave: false,
     saveUninitialized: false,
-<<<<<<< HEAD
-    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 } // 1 week
+    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
 }));
 
-=======
-    rolling: true, // reset expiry on each request
-    cookie: { maxAge: 5 * 60 * 60 * 1000, sameSite: 'lax', secure: false }
-}));
-
-app.use(require('./middleware/autoLogout'));
->>>>>>> local-master
 app.use(injectUser);
 
 const homeController = require('./controllers/homeController');
@@ -106,15 +75,9 @@ const { isStudentAuthenticated, injectStudent } = require('./middleware/studentA
 // Settings injection and global vars
 app.use(settingsMiddleware);
 
-<<<<<<< HEAD
 // Run non-destructive migrations on startup
 const { runMigrations } = require('./utils/migrateOnStartup');
 runMigrations().catch(err => console.error('[migrate] Migration error:', err.message));
-=======
-// Run non-destructive startup migrations (creates sections, enrollments tables etc.)
-const { runMigrations } = require('./utils/migrateOnStartup');
-runMigrations().catch(err => console.error('[migrate] Startup migration error:', err.message));
->>>>>>> local-master
 
 // Routes
 app.use('/auth', authRoutes);
@@ -124,35 +87,6 @@ app.get('/', (req, res) => {
     res.redirect('/auth/login');
 });
 
-<<<<<<< HEAD
-// TEMPORARY DEBUG ROUTE
-app.get('/test-db', async (req, res) => {
-    try {
-        const db = require('./utils/db');
-        const { getEnrolledStudents } = require('./utils/enrollmentHelper');
-        const classId = req.query.class_id || 10;
-        const session = req.query.session || '2025/2026';
-        
-        const students = await getEnrolledStudents(classId, session);
-        const rawClass = await db.all('SELECT * FROM students WHERE current_class_id = ?', [Number(classId)]);
-        
-        res.json({
-            success: true,
-            classId,
-            session,
-            enrolledHelperCount: students.length,
-            rawClassCount: rawClass.length,
-            dbType: db.DB_TYPE,
-            enrolledStudents: students,
-            rawClassStudents: rawClass
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message, stack: err.stack });
-    }
-});
-
-=======
->>>>>>> local-master
 // Protected Staff/Admin Routes
 app.use('/dashboard', isAuthenticated, homeController.getDashboard);
 app.use('/students', isAuthenticated, studentRoutes);
@@ -171,18 +105,12 @@ app.use('/calendar', require('./routes/calendarRoutes'));
 app.use(injectStudent);
 app.use('/portal', isStudentAuthenticated, portalRoutes);
 
-<<<<<<< HEAD
-if (process.env.NODE_ENV !== 'production' || process.env.VITE_DEV_SERVER) {
+if (require.main === module || process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
         console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
         console.log(`Mode: ${DB_TYPE === 'postgres' ? 'Cloud' : 'Local'} Database`);
-=======
-if (require.main === module) {
-    app.listen(PORT, () => {
-        console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
-        console.log(`Mode: LAN Access Only`);
->>>>>>> local-master
     });
 }
 
 module.exports = app;
+

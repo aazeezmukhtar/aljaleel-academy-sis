@@ -2,17 +2,14 @@ const express = require('express');
 const router = express.Router();
 const studentController = require('../controllers/studentController');
 const bulkStudentController = require('../controllers/bulkStudentController');
-<<<<<<< HEAD
-const multer = require('multer');
-const upload = multer({ dest: 'uploads/' });
-=======
 const { isAdmin } = require('../middleware/authMiddleware');
 const multer = require('multer');
-const os = require('os');
+const fs = require('fs');
 const path = require('path');
+
 const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!require('fs').existsSync(uploadDir)) {
-    require('fs').mkdirSync(uploadDir, { recursive: true });
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 const storage = multer.diskStorage({
     destination: uploadDir,
@@ -22,7 +19,6 @@ const storage = multer.diskStorage({
     }
 });
 const upload = multer({ storage });
->>>>>>> local-master
 
 // GET /students
 router.get('/', studentController.getStudents);
@@ -42,16 +38,11 @@ router.get('/edit/:id', studentController.getEditForm);
 // POST /students/update/:id
 router.post('/update/:id', upload.single('passport'), studentController.updateStudent);
 
-<<<<<<< HEAD
-// POST /students/reset-password/:id  (Admin only)
-router.post('/reset-password/:id', studentController.resetStudentPassword);
-=======
 // POST /students/delete/:id
 router.post('/delete/:id', isAdmin, studentController.deleteStudent);
 
 // POST /students/reset-password/:id
 router.post('/reset-password/:id', isAdmin, studentController.resetStudentPassword);
->>>>>>> local-master
 
 // Bulk Import Routes
 router.get('/bulk-import', bulkStudentController.getBulkImportPage);
@@ -61,3 +52,4 @@ router.post('/bulk-import', upload.single('studentFile'), bulkStudentController.
 router.post('/health', studentController.saveHealthRecord);
 
 module.exports = router;
+

@@ -25,18 +25,13 @@ const saveStaff = async (req, res) => {
 
     try {
         await db.run(`
-<<<<<<< HEAD
             INSERT INTO staff (first_name, last_name, staff_id, role, designation, password, avatar_image, public_bio, show_on_website, status)
-=======
-            INSERT INTO staff (first_name, last_name, staff_id, role, designation, password_hash, avatar_image, public_bio, show_on_website, status)
->>>>>>> local-master
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `, [first_name, last_name, staff_id.toLowerCase(), role, designation, defaultPassword, avatar_image, public_bio || null, show_on_website ? 1 : 0]);
 
         res.redirect('/staff');
     } catch (err) {
         console.error('saveStaff Error:', err);
-        // Likely a duplicate staff_id
         res.redirect('/staff/add?error=Staff ID already exists. Please choose a unique ID.');
     }
 };
@@ -211,18 +206,12 @@ const getClassBoard = async (req, res) => {
             WHERE sa.teacher_id = ?
         `, [user.id]);
 
-<<<<<<< HEAD
-        const students = await db.all(`SELECT id, first_name, last_name, current_class_id as class_id FROM students WHERE status = 'active'`);
-=======
         const students = await db.all(`
-            SELECT DISTINCT s.id, s.first_name, s.last_name, se.class_id
+            SELECT DISTINCT s.id, s.first_name, s.last_name, COALESCE(se.class_id, s.current_class_id) as class_id
             FROM students s
-            JOIN student_enrollments se ON s.id = se.student_id
-            JOIN classes c ON se.class_id = c.id
-            JOIN sections sec ON c.section_id = sec.id
-            WHERE s.status = 'active' AND se.session = sec.current_session
+            LEFT JOIN student_enrollments se ON s.id = se.student_id
+            WHERE s.status = 'active' OR s.status IS NULL OR s.status = 'Active'
         `);
->>>>>>> local-master
 
         const posts = classes.length > 0 ? await db.all(`
             SELECT cp.*, c.name as class_name, s.name as subject_name,
@@ -277,3 +266,4 @@ const deleteClassBoardPost = async (req, res) => {
 };
 
 module.exports = { getAllStaff, addStaffForm, saveStaff, getStaffProfile, getEditForm, updateStaff, assignClass, assignSubject, deleteAssignment, deleteStaff, getClassBoard, postClassBoard, deleteClassBoardPost };
+

@@ -1,13 +1,8 @@
 const db = require('../utils/db');
-<<<<<<< HEAD
-const { logAction } = require('../utils/logger');
-const { generateUniqueID } = require('../utils/idHelper');
-=======
 const { getAcademicContext, getSectionContext } = require('../utils/sessionHelper');
 const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
->>>>>>> local-master
 
 const getStudents = async (req, res) => {
     const user = req.session.staff;
@@ -15,7 +10,7 @@ const getStudents = async (req, res) => {
 
     let classes;
     if (user.role === 'Admin' || user.role === 'Registrar') {
-        classes = await db.all('SELECT * FROM classes WHERE id != 0');
+        classes = await db.all('SELECT * FROM classes WHERE id != 0 ORDER BY name ASC');
     } else {
         classes = await db.all(`
             SELECT DISTINCT c.* 
@@ -28,11 +23,6 @@ const getStudents = async (req, res) => {
     }
 
     let query = `
-<<<<<<< HEAD
-        SELECT s.*, c.name as class_name 
-        FROM students s
-        LEFT JOIN classes c ON s.current_class_id = c.id
-=======
         SELECT s.*, c.name as class_name, se.class_id as enrolled_class_id
         FROM students s
         LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.session = (
@@ -41,8 +31,7 @@ const getStudents = async (req, res) => {
             JOIN classes cl ON cl.section_id = sec.id 
             WHERE cl.id = se.class_id
         )
-        LEFT JOIN classes c ON se.class_id = c.id
->>>>>>> local-master
+        LEFT JOIN classes c ON (se.class_id = c.id OR s.current_class_id = c.id)
         WHERE 1=1
     `;
     const params = [];
@@ -51,54 +40,26 @@ const getStudents = async (req, res) => {
     if (user.role !== 'Admin' && user.role !== 'Registrar') {
         myClasses = classes.map(c => c.id);
         if (myClasses.length > 0) {
-<<<<<<< HEAD
-            query += ` AND s.current_class_id IN (${myClasses.join(',')})`;
+            query += ` AND (se.class_id IN (${myClasses.join(',')}) OR s.current_class_id IN (${myClasses.join(',')}))`;
         } else {
             query += ` AND s.current_class_id = -1`; // Return none
         }
     }
 
-    if (search) {
-        query += ` AND (s.first_name LIKE ? OR s.last_name LIKE ? OR s.admission_number LIKE ?)`;
-        params.push(`%${search}%`, `%${search}%`, `%${search}%`);
-    }
-
     if (class_id) {
-        if (user.role === 'Admin' || user.role === 'Registrar' || myClasses.includes(parseInt(class_id))) {
-            query += ` AND s.current_class_id = ?`;
-            params.push(class_id);
-        } else if (user.role !== 'Admin' && user.role !== 'Registrar') {
-            query += ` AND s.current_class_id = -1`; 
-=======
-            query += ` AND se.class_id IN (${myClasses.join(',')})`;
-        } else {
-            query += ` AND se.class_id = -1`; // Return none
->>>>>>> local-master
-        }
+        query += ` AND (se.class_id = ? OR s.current_class_id = ?)`;
+        params.push(class_id, class_id);
     }
 
     if (status) {
         query += ` AND s.status = ?`;
         params.push(status);
-<<<<<<< HEAD
     }
 
-    query += ` ORDER BY s.last_name ASC, s.first_name ASC`;
-
-    try {
-        const students = await db.all(query, params);
-=======
-        // Apply class filter if provided (overrides or further restricts)
-        if (class_id) {
-            query += ` AND se.class_id = ?`;
-            params.push(class_id);
-        }
-        // Apply search filter on name or admission number
-        if (search) {
-            query += ` AND (s.first_name LIKE ? OR s.last_name LIKE ? OR s.admission_number LIKE ?)`;
-            const like = `%${search}%`;
-            params.push(like, like, like);
-        }
+    if (search) {
+        query += ` AND (s.first_name LIKE ? OR s.last_name LIKE ? OR s.admission_number LIKE ?)`;
+        const like = `%${search}%`;
+        params.push(like, like, like);
     }
 
     query += ` ORDER BY s.first_name ASC, s.last_name ASC`;
@@ -106,8 +67,6 @@ const getStudents = async (req, res) => {
     try {
         const rows = await db.all(query, params);
 
-        // Always group by student ID to prevent duplicate listings in directory
-        // and to collect all classes for dual class assignments.
         const studentMap = new Map();
         for (const row of rows) {
             if (!studentMap.has(row.id)) {
@@ -127,11 +86,10 @@ const getStudents = async (req, res) => {
         }
         
         const students = Array.from(studentMap.values()).map(s => {
-            s.class_name = s.class_names.length > 0 ? s.class_names.join(', ') : 'Not Enrolled';
+            s.class_name = s.class_names.length > 0 ? s.class_names.join(', ') : (s.class_name || 'Not Enrolled');
             s.enrolled_class_ids = s.class_ids.join(',');
             return s;
         });
->>>>>>> local-master
 
         res.render('students/index', {
             title: 'Student Management',
@@ -151,20 +109,12 @@ const getEnrollmentForm = async (req, res) => {
         const user = req.session.staff;
         let classes;
         if (user.role === 'Admin' || user.role === 'Registrar') {
-<<<<<<< HEAD
-            classes = await db.all('SELECT * FROM classes');
-        } else {
-            classes = await db.all(`
-                SELECT DISTINCT c.* 
-                FROM classes c
-=======
-            classes = await db.all('SELECT c.*, s.name as section_name FROM classes c LEFT JOIN sections s ON c.section_id = s.id');
+            classes = await db.all('SELECT c.*, s.name as section_name FROM classes c LEFT JOIN sections s ON c.section_id = s.id ORDER BY c.name ASC');
         } else {
             classes = await db.all(`
                 SELECT DISTINCT c.*, s.name as section_name 
                 FROM classes c
                 LEFT JOIN sections s ON c.section_id = s.id
->>>>>>> local-master
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
@@ -187,46 +137,28 @@ const enrollStudent = async (req, res) => {
         last_name,
         gender,
         dob,
-<<<<<<< HEAD
-        current_class_id,
-=======
         academy_class_id,
         tahfeez_class_id,
->>>>>>> local-master
+        current_class_id,
         parent_phone,
         parent_address
     } = req.body;
     
-<<<<<<< HEAD
-    const admission_number = generateUniqueID();
-    const passport_photo_path = req.file ? `/uploads/${req.file.filename}` : null;
-
-    try {
-        const sql = `
-            INSERT INTO students (first_name, last_name, gender, dob, current_class_id, parent_phone, parent_address, admission_number, passport_photo_path, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-        `;
-        await db.run(sql, [first_name, last_name, gender, dob, current_class_id, parent_phone, parent_address, admission_number, passport_photo_path]);
-        
-        logAction(req.session.staff.id, 'ENROLL_STUDENT', 'STUDENT', { first_name, last_name, class_id: current_class_id }, req.ip);
-=======
     const admission_number = await generateUniqueID();
     const passport_photo_path = req.file ? `/uploads/${req.file.filename}` : null;
 
     try {
-        const primary_class_id = academy_class_id || tahfeez_class_id || null;
+        const primary_class_id = academy_class_id || tahfeez_class_id || current_class_id || null;
         const hashedPassword = await bcrypt.hash(admission_number, 10);
         const sql = `
             INSERT INTO students (first_name, last_name, gender, dob, current_class_id, parent_phone, parent_address, admission_number, passport_photo_path, password, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `;
-        const insertResult = await db.run(sql, [first_name, last_name, gender, dob, primary_class_id, parent_phone, parent_address, admission_number, passport_photo_path, hashedPassword]);
+        await db.run(sql, [first_name, last_name, gender, dob, primary_class_id, parent_phone, parent_address, admission_number, passport_photo_path, hashedPassword]);
         
-        // Postgres returns lastInsertRowid as null, we need to fetch by admission_number
         const studentRow = await db.get("SELECT id FROM students WHERE admission_number = ?", [admission_number]);
         const studentId = studentRow.id;
         
-        // Insert Enrollments
         if (academy_class_id) {
             const context = await getAcademicContext(academy_class_id);
             await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentId, academy_class_id, context.session]);
@@ -237,7 +169,6 @@ const enrollStudent = async (req, res) => {
         }
         
         logAction(req.session.staff.id, 'ENROLL_STUDENT', 'STUDENT', { first_name, last_name }, req.ip);
->>>>>>> local-master
         res.redirect('/students?success=true');
     } catch (err) {
         console.error('Enroll Error:', err);
@@ -248,16 +179,6 @@ const enrollStudent = async (req, res) => {
 const getStudentProfile = async (req, res) => {
     const { id } = req.params;
     try {
-<<<<<<< HEAD
-        const student = await db.get(`
-            SELECT s.*, c.name as class_name 
-            FROM students s 
-            LEFT JOIN classes c ON s.current_class_id = c.id 
-            WHERE s.id = ?
-        `, [id]);
-
-        if (!student) return res.status(404).send('Student not found');
-=======
         const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
         if (!student) return res.status(404).send('Student not found');
 
@@ -269,8 +190,7 @@ const getStudentProfile = async (req, res) => {
             WHERE se.student_id = ? AND se.session = sec.current_session
         `, [id]);
 
-        student.class_name = enrollments.map(e => e.class_name).join(', ') || 'Not Enrolled';
->>>>>>> local-master
+        student.class_name = enrollments.map(e => e.class_name).join(', ') || student.class_name || 'Not Enrolled';
 
         const feeRow = await db.get(`
             SELECT COALESCE(SUM(total_amount), 0) as total_owed, COALESCE(SUM(paid_amount), 0) as total_paid
@@ -294,12 +214,8 @@ const getStudentProfile = async (req, res) => {
             health,
             academicTerms,
             success,
-<<<<<<< HEAD
-            error
-=======
             error,
             user: req.session.staff
->>>>>>> local-master
         });
     } catch (err) {
         console.error('Fetch Profile Error:', err);
@@ -312,26 +228,13 @@ const getEditForm = async (req, res) => {
     const user = req.session.staff;
     try {
         const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
-<<<<<<< HEAD
-        // Format DOB to YYYY-MM-DD for the date input (Postgres returns a Date object)
         if (student && student.dob) {
             const d = new Date(student.dob);
             if (!isNaN(d.getTime())) {
                 student.dob = d.toISOString().slice(0, 10);
-            } else {
-                student.dob = '';
             }
         }
-        let classes;
-        if (user.role === 'Admin' || user.role === 'Registrar') {
-            classes = await db.all('SELECT * FROM classes');
-        } else {
-            classes = await db.all(`
-                SELECT DISTINCT c.* 
-                FROM classes c
-=======
         
-        // Get current session enrollments
         const enrollments = await db.all(`
             SELECT se.class_id 
             FROM student_enrollments se
@@ -343,13 +246,12 @@ const getEditForm = async (req, res) => {
 
         let classes;
         if (user.role === 'Admin' || user.role === 'Registrar') {
-            classes = await db.all('SELECT c.*, s.name as section_name FROM classes c LEFT JOIN sections s ON c.section_id = s.id');
+            classes = await db.all('SELECT c.*, s.name as section_name FROM classes c LEFT JOIN sections s ON c.section_id = s.id ORDER BY c.name ASC');
         } else {
             classes = await db.all(`
                 SELECT DISTINCT c.*, s.name as section_name 
                 FROM classes c
                 LEFT JOIN sections s ON c.section_id = s.id
->>>>>>> local-master
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
@@ -359,12 +261,8 @@ const getEditForm = async (req, res) => {
         res.render('students/edit', {
             title: `Edit Student: ${student.first_name} ${student.last_name}`,
             student,
-<<<<<<< HEAD
-            classes
-=======
             classes,
             enrolledClassIds
->>>>>>> local-master
         });
     } catch (err) {
         console.error('Fetch Edit Form Error:', err);
@@ -380,32 +278,21 @@ const updateStudent = async (req, res) => {
         gender,
         dob,
         admission_number,
-<<<<<<< HEAD
-        current_class_id,
-=======
         academy_class_id,
         tahfeez_class_id,
->>>>>>> local-master
+        current_class_id,
         parent_phone,
         parent_address,
         status
     } = req.body;
 
-<<<<<<< HEAD
-    let passport_photo_path = req.body.existing_photo;
-=======
-    // Preserve existing photo if no new file is uploaded. If the hidden field is empty, keep the current DB value unchanged (null).
     let passport_photo_path = req.body.existing_photo && req.body.existing_photo.trim() !== '' ? req.body.existing_photo : null;
->>>>>>> local-master
     if (req.file) {
         passport_photo_path = `/uploads/${req.file.filename}`;
     }
 
     try {
-<<<<<<< HEAD
-=======
-        const primary_class_id = academy_class_id || tahfeez_class_id || null;
->>>>>>> local-master
+        const primary_class_id = academy_class_id || tahfeez_class_id || current_class_id || null;
         const sql = `
             UPDATE students SET
                 first_name = ?, last_name = ?, gender = ?, dob = ?, 
@@ -417,11 +304,7 @@ const updateStudent = async (req, res) => {
         await db.run(sql, [
             first_name, last_name, gender, dob,
             admission_number || null,
-<<<<<<< HEAD
-            current_class_id || null,
-=======
             primary_class_id,
->>>>>>> local-master
             parent_phone || null,
             parent_address || null,
             passport_photo_path,
@@ -429,9 +312,6 @@ const updateStudent = async (req, res) => {
             id
         ]);
 
-<<<<<<< HEAD
-=======
-        // Clear and update enrollments based on section sessions
         const academyCtx = await getSectionContext(1);
         if (academyCtx) {
             await db.run(`
@@ -460,7 +340,6 @@ const updateStudent = async (req, res) => {
             }
         }
 
->>>>>>> local-master
         res.json({ success: true, message: 'Student updated successfully.' });
 
         logAction(req.session.staff.id, 'UPDATE_STUDENT', 'STUDENT', {
@@ -509,28 +388,6 @@ const saveHealthRecord = async (req, res) => {
     }
 };
 
-<<<<<<< HEAD
-const bcrypt = require('bcryptjs');
-
-const resetStudentPassword = async (req, res) => {
-    const { id } = req.params;
-    const user = req.session.staff;
-    if (!user || user.role !== 'Admin') {
-        return res.status(403).json({ success: false, message: 'Admin access required.' });
-    }
-    try {
-        const student = await db.get('SELECT admission_number FROM students WHERE id = ?', [id]);
-        if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
-
-        const hashed = await bcrypt.hash(student.admission_number, 10);
-        await db.run('UPDATE students SET password = ? WHERE id = ?', [hashed, id]);
-
-        logAction(user.id, 'RESET_STUDENT_PASSWORD', 'STUDENT', { student_id: id }, req.ip);
-        res.json({ success: true, message: `Password reset to admission number: ${student.admission_number}` });
-    } catch (err) {
-        console.error('Reset Password Error:', err);
-        res.status(500).json({ success: false, message: 'Failed to reset password.' });
-=======
 const deleteStudent = async (req, res) => {
     const { id } = req.params;
     try {
@@ -576,16 +433,11 @@ const resetStudentPassword = async (req, res) => {
     } catch (err) {
         console.error('Reset Student Password Error:', err);
         res.status(500).json({ success: false, message: 'Failed to reset student password.' });
->>>>>>> local-master
     }
 };
 
 module.exports = {
     enrollStudent, getStudents, getEnrollmentForm,
-<<<<<<< HEAD
-    getStudentProfile, getEditForm, updateStudent, saveHealthRecord,
-    resetStudentPassword
-=======
     getStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
->>>>>>> local-master
 };
+

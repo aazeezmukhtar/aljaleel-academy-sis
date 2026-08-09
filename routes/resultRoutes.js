@@ -3,16 +3,14 @@ const router = express.Router();
 const resultController = require('../controllers/resultController');
 const importController = require('../controllers/importController');
 const multer = require('multer');
-<<<<<<< HEAD
-const upload = multer({ dest: 'uploads/' });
-=======
-const os = require('os');
-const uploadDir = os.platform() === 'win32' ? 'uploads/' : '/tmp/uploads';
-if (!require('fs').existsSync(uploadDir)) {
-    require('fs').mkdirSync(uploadDir, { recursive: true });
+const fs = require('fs');
+const path = require('path');
+
+const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 const upload = multer({ dest: uploadDir });
->>>>>>> local-master
 
 // GET /results - Dashboard
 router.get('/', resultController.getResultsDashboard);
@@ -26,11 +24,7 @@ router.post('/save', resultController.saveResults);
 // Admin Setup Routes
 router.get('/setup', resultController.getGradingSystem);
 router.post('/setup/config', resultController.saveResultConfig);
-<<<<<<< HEAD
-router.post('/setup/section-config', resultController.saveSectionConfig);
-=======
-router.post('/setup/section-config', resultController.saveResultConfigForSection);
->>>>>>> local-master
+router.post('/setup/section-config', resultController.saveResultConfigForSection || resultController.saveSectionConfig);
 router.post('/setup/grading', resultController.saveGradingSystem);
 router.post('/approve', resultController.approveResults);
 router.post('/lock', resultController.lockResults);
@@ -50,4 +44,5 @@ router.get('/bulk-import/template', importController.downloadTemplate);
 router.post('/bulk-import', upload.single('resultFile'), importController.processImport);
 
 module.exports = router;
+
 

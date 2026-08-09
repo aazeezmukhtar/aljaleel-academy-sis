@@ -7,18 +7,12 @@ const getSettingsPage = async (req, res) => {
         const settings = {};
         settingsArr.forEach(s => settings[s.key] = s.value);
 
-<<<<<<< HEAD
-        res.render('settings', {
-            title: 'School Settings',
-            settings,
-=======
         const sections = await db.all('SELECT * FROM sections ORDER BY name');
 
         res.render('settings', {
             title: 'School Settings',
             settings,
             sections,
->>>>>>> local-master
             success: req.query.success,
             error: req.query.error
         });
@@ -30,9 +24,6 @@ const getSettingsPage = async (req, res) => {
 
 // Update Settings
 const updateSettings = async (req, res) => {
-<<<<<<< HEAD
-    const { school_name, school_motto, primary_color, secondary_color, address, phone, next_term_start_date, show_watermark } = req.body;
-=======
     const { 
         school_name, school_motto, primary_color, secondary_color, 
         address, phone, next_term_start_date, show_watermark,
@@ -41,7 +32,6 @@ const updateSettings = async (req, res) => {
         attendance_consecutive_absence_limit,
         attendance_term_absence_limit
     } = req.body;
->>>>>>> local-master
     const logoFile = req.file;
 
     const updates = [
@@ -52,16 +42,12 @@ const updateSettings = async (req, res) => {
         { key: 'address', value: address },
         { key: 'phone', value: phone },
         { key: 'next_term_start_date', value: next_term_start_date },
-<<<<<<< HEAD
-        { key: 'show_watermark', value: show_watermark === 'true' ? 'true' : 'false' }
-=======
         { key: 'show_watermark', value: show_watermark === 'true' ? 'true' : 'false' },
         { key: 'current_session', value: current_session },
         { key: 'current_term', value: current_term },
         { key: 'attendance.minimum_percentage', value: attendance_minimum_percentage },
         { key: 'attendance.consecutive_absence_limit', value: attendance_consecutive_absence_limit },
         { key: 'attendance.term_absence_limit', value: attendance_term_absence_limit }
->>>>>>> local-master
     ];
 
     if (logoFile) {
@@ -72,19 +58,11 @@ const updateSettings = async (req, res) => {
     try {
         await db.transaction(async () => {
             for (const item of updates) {
-<<<<<<< HEAD
-                if (item.value) { // Only update if value is provided
-                    await db.run(`
-                        INSERT INTO settings (key, value) VALUES (?, ?)
-                        ON CONFLICT(key) DO UPDATE SET value = excluded.value
-                    `, [item.key, item.value]);
-=======
                 if (item.value !== undefined && item.value !== null && item.value !== '') { // Only update if value is provided
                     await db.run(`
                         INSERT INTO settings (key, value) VALUES (?, ?)
                         ON CONFLICT(key) DO UPDATE SET value = excluded.value
                     `, [item.key, String(item.value)]);
->>>>>>> local-master
                 }
             }
         });
@@ -96,9 +74,6 @@ const updateSettings = async (req, res) => {
     }
 };
 
-<<<<<<< HEAD
-module.exports = { getSettingsPage, updateSettings };
-=======
 // GET /settings/promotion
 const getPromotionPage = async (req, res) => {
     try {
@@ -242,4 +217,3 @@ const updateSectionCalendar = async (req, res) => {
 };
 
 module.exports = { getSettingsPage, updateSettings, updateSectionCalendar, getPromotionPage, processPromotion };
->>>>>>> local-master

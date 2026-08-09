@@ -3,21 +3,16 @@ const router = express.Router();
 const staffController = require('../controllers/staffController');
 const { isAdmin } = require('../middleware/authMiddleware');
 const path = require('path');
+const fs = require('fs');
 const multer = require('multer');
 
-<<<<<<< HEAD
-const storage = multer.diskStorage({
-    destination: './uploads/',
-=======
-const os = require('os');
-const uploadDir = os.platform() === 'win32' ? './uploads/' : '/tmp/uploads/';
-if (!require('fs').existsSync(uploadDir)) {
-    require('fs').mkdirSync(uploadDir, { recursive: true });
+const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 const storage = multer.diskStorage({
     destination: uploadDir,
->>>>>>> local-master
     filename: (req, file, cb) => {
         const prefix = file.fieldname === 'avatar_image' ? 'staff-' : 'board-';
         cb(null, prefix + Date.now() + path.extname(file.originalname));
@@ -42,3 +37,4 @@ router.post('/board/post', upload.single('attachment'), staffController.postClas
 router.post('/board/post/delete/:id', staffController.deleteClassBoardPost);
 
 module.exports = router;
+

@@ -1,15 +1,9 @@
 const db = require('../utils/db');
-<<<<<<< HEAD
 const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const { computeResult } = require('../utils/resultHelper');
 const { getEnrolledStudents } = require('../utils/enrollmentHelper');
-=======
-const xlsx = require('xlsx');
-const fs = require('fs');
-const { computeResult } = require('../utils/resultHelper');
->>>>>>> local-master
 
 const downloadTemplate = async (req, res) => {
     const { class_id, subject_id } = req.query;
@@ -22,35 +16,13 @@ const downloadTemplate = async (req, res) => {
         configArr.forEach(c => settings[c.key] = c.value);
         const caCount = parseInt(settings.ca_count || '2');
 
-<<<<<<< HEAD
         const settingsRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = settingsRow ? settingsRow.value : '2025/2026';
+        const currentSession = settingsRow ? settingsRow.value : '2024/2025';
 
         const students = await getEnrolledStudents(Number(class_id), currentSession);
 
         const subject = await db.get('SELECT name FROM subjects WHERE id = ?', [Number(subject_id)]);
         const className = await db.get('SELECT name FROM classes WHERE id = ?', [Number(class_id)]);
-=======
-        // Retrieve class's section current session dynamically
-        const secRow = await db.get(`
-            SELECT s.current_session 
-            FROM sections s 
-            JOIN classes c ON c.section_id = s.id 
-            WHERE c.id = ?
-        `, [class_id]);
-        const session = secRow ? secRow.current_session : '2024/2025';
-
-        const students = await db.all(`
-            SELECT s.admission_number, s.first_name, s.last_name 
-            FROM students s
-            JOIN student_enrollments se ON s.id = se.student_id
-            WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-            ORDER BY s.first_name, s.last_name
-        `, [class_id, session]);
-
-        const subject = await db.get('SELECT name FROM subjects WHERE id = ?', [subject_id]);
-        const className = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);
->>>>>>> local-master
 
         if (!students.length) return res.status(404).send('No active students found in this class.');
 
@@ -58,7 +30,7 @@ const downloadTemplate = async (req, res) => {
             const row = {
                 'student_id': s.admission_number,
                 'name': `${s.first_name} ${s.last_name}`,
-                'subject': subject.name,
+                'subject': subject ? subject.name : '',
                 'ca1': ''
             };
             if (caCount === 2) row['ca2'] = '';
@@ -66,33 +38,17 @@ const downloadTemplate = async (req, res) => {
             return row;
         });
 
-<<<<<<< HEAD
-        // Use xlsx to write buffer
-        const wb = xlsx.utils.book_new();
-        const ws = xlsx.utils.json_to_sheet(data);
-
-        // Auto-width columns
-        const wscols = [
-            { wch: 15 }, // Adm No
-            { wch: 30 }, // Name
-            { wch: 10 }, // CA1
-            { wch: 10 }, // CA2 (will be skipped if not in data, but index might shift)
-            { wch: 10 }  // Exam
-        ];
-        if (caCount === 1) wscols.splice(3, 1); // Remove CA2 column width def if 1 CA
-=======
         const wb = xlsx.utils.book_new();
         const ws = xlsx.utils.json_to_sheet(data);
 
         const wscols = [
-            { wch: 15 }, 
-            { wch: 30 }, 
-            { wch: 10 }, 
-            { wch: 10 }, 
+            { wch: 15 },
+            { wch: 30 },
+            { wch: 10 },
+            { wch: 10 },
             { wch: 10 }
         ];
         if (caCount === 1) wscols.splice(3, 1);
->>>>>>> local-master
 
         ws['!cols'] = wscols;
 
@@ -100,7 +56,7 @@ const downloadTemplate = async (req, res) => {
 
         const buffer = xlsx.write(wb, { type: 'buffer', bookType: 'xlsx' });
 
-        res.setHeader('Content-Disposition', `attachment; filename="Result_Template_${className.name}_${subject.name}.xlsx"`);
+        res.setHeader('Content-Disposition', `attachment; filename="Result_Template_${className ? className.name : 'Class'}_${subject ? subject.name : 'Subject'}.xlsx"`);
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.send(buffer);
 
@@ -112,8 +68,8 @@ const downloadTemplate = async (req, res) => {
 
 const getImportPage = async (req, res) => {
     try {
-        const classes = await db.all('SELECT * FROM classes');
-        const subjects = await db.all('SELECT * FROM subjects');
+        const classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
+        const subjects = await db.all('SELECT * FROM subjects ORDER BY name ASC');
 
         res.render('results/import', {
             title: 'Bulk Result Import',
@@ -130,6 +86,11 @@ const processImport = async (req, res) => {
     const { class_id, subject_id, term, session } = req.body;
     const file = req.file;
 
+    // Validate required import parameters
+    if (!term || !session) {
+        return res.status(400).json({ success: false, message: 'Term and session are required for import.' });
+    }
+
     if (!file) {
         return res.status(400).json({ success: false, message: 'No file uploaded.' });
     }
@@ -142,60 +103,31 @@ const processImport = async (req, res) => {
         const errors = [];
         const resultsToSave = [];
 
-<<<<<<< HEAD
-        for (let index = 0; index < data.length; index++) {
-            const row = data[index];
-=======
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
->>>>>>> local-master
             const admissionNo = row['student_id'] || row['Admission Number'] || row['ADMISSION NUMBER'];
             const subjectName = row['subject'] || row['SUBJECT'];
             const ca1 = parseFloat(row['ca1'] || row['CA1'] || 0);
             const ca2 = parseFloat(row['ca2'] || row['CA2'] || 0);
             const exam = parseFloat(row['exam'] || row['Exam'] || row['EXAM'] || 0);
 
-<<<<<<< HEAD
-            // Validation
-            if (!admissionNo) {
-                errors.push(`Row ${index + 2}: Student ID is missing.`);
-=======
             if (!admissionNo) {
                 errors.push(`Row ${i + 2}: Student ID is missing.`);
->>>>>>> local-master
                 continue;
             }
 
             const student = await db.get('SELECT id FROM students WHERE admission_number = ?', [admissionNo.toString()]);
             if (!student) {
-<<<<<<< HEAD
-                errors.push(`Row ${index + 2}: Student with ID ${admissionNo} not found.`);
-                continue;
-            }
-
-            // If we want to allow cross-subject import, we'd need to find subject_id by name
-            // For now, we trust the subject_id from the form if the row doesn't specify or matches.
-            let activeSubjectId = Number(subject_id);
-            if (subjectName) {
-                const sub = await db.get('SELECT id FROM subjects WHERE LOWER(name) = LOWER(?)', [subjectName]);
-                if (sub) activeSubjectId = sub.id;
-                else {
-                    errors.push(`Row ${index + 2}: Subject "${subjectName}" not found in system.`);
-=======
                 errors.push(`Row ${i + 2}: Student with ID ${admissionNo} not found.`);
                 continue;
             }
 
             let activeSubjectId = subject_id;
             if (subjectName) {
-                const subQuery = db.DB_TYPE === 'postgres' 
-                    ? 'SELECT id FROM subjects WHERE name ILIKE ?'
-                    : 'SELECT id FROM subjects WHERE name = ? COLLATE NOCASE';
-                const sub = await db.get(subQuery, [subjectName]);
+                const sub = await db.get('SELECT id FROM subjects WHERE LOWER(name) = LOWER(?)', [subjectName]);
                 if (sub) activeSubjectId = sub.id;
                 else {
                     errors.push(`Row ${i + 2}: Subject "${subjectName}" not found in system.`);
->>>>>>> local-master
                     continue;
                 }
             }
@@ -209,14 +141,13 @@ const processImport = async (req, res) => {
         }
 
         if (errors.length > 0) {
-<<<<<<< HEAD
-            fs.unlinkSync(file.path); // Delete uploaded file
+            fs.unlinkSync(file.path);
             return res.status(400).json({ success: false, errors });
         }
 
         const insertSql = `
             INSERT INTO results (student_id, subject_id, term, session, ca1, ca2, exam, total, grade)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?::int, ?::int, ?::text, ?::text, ?::float, ?::float, ?::float, ?::float, ?::text)
             ON CONFLICT(student_id, subject_id, term, session) DO UPDATE SET
             ca1=excluded.ca1, ca2=excluded.ca2, exam=excluded.exam, 
             total=excluded.total, grade=excluded.grade
@@ -228,46 +159,15 @@ const processImport = async (req, res) => {
             }
         });
 
-        fs.unlinkSync(file.path); // Delete uploaded file
-
-=======
-            fs.unlinkSync(file.path);
-            return res.status(400).json({ success: false, errors });
-        }
-
-        // Transaction handling
-        await db.transaction(async (client) => {
-            for (const item of resultsToSave) {
-                const sql = `
-                    INSERT INTO results (student_id, subject_id, term, session, ca1, ca2, exam, total, grade)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    ON CONFLICT(student_id, subject_id, term, session) DO UPDATE SET
-                    ca1=excluded.ca1, ca2=excluded.ca2, exam=excluded.exam, 
-                    total=excluded.total, grade=excluded.grade
-                `;
-                const params = [item.student_id, item.subject_id, term, session, item.ca1, item.ca2, item.exam, item.total, item.grade];
-                
-                if (db.DB_TYPE === 'postgres') {
-                    await client.query(sql.replace(/\?/g, (val, j) => `$${j + 1}`), params);
-                } else {
-                    db.run(sql, params); // Note: inside transaction callback, better use client if provided, but our db.js for sqlite uses sqliteDb directly
-                }
-            }
-        });
-
         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
->>>>>>> local-master
         res.json({ success: true, message: `Successfully imported ${resultsToSave.length} results.` });
 
     } catch (err) {
         console.error('Process Import Error:', err);
-<<<<<<< HEAD
-        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
-=======
         if (file && fs.existsSync(file.path)) fs.unlinkSync(file.path);
->>>>>>> local-master
         res.status(500).json({ success: false, message: 'Internal Server Error' });
     }
 };
 
 module.exports = { getImportPage, processImport, downloadTemplate };
+

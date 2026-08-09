@@ -211,28 +211,32 @@ const getResultManager = async (req, res) => {
                 LEFT JOIN sections s ON c.section_id = s.id
             `);
         } else {
+            // Include classes where user is: form teacher, class-assigned teacher, or subject teacher
             classes = await db.all(`
                 SELECT DISTINCT c.*, s.current_session as sec_session, s.current_term as sec_term 
                 FROM classes c
                 LEFT JOIN sections s ON c.section_id = s.id
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
-                WHERE sa.id IS NOT NULL OR ca.id IS NOT NULL
-            `, [user.id, user.id]);
+                WHERE c.form_teacher_id = ? OR sa.id IS NOT NULL OR ca.id IS NOT NULL
+            `, [user.id, user.id, user.id]);
         }
 
         let students = [];
 
         if (class_id && subject_id) {
             if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
+                // Allow if: subject teacher, class-assigned teacher, OR form/class teacher of this class
                 const hasAccess = await db.get(`
                     SELECT 1
                     WHERE EXISTS (
                         SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
                     ) OR EXISTS (
                         SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
+                    ) OR EXISTS (
+                        SELECT id FROM classes WHERE id = ? AND form_teacher_id = ?
                     )
-                `, [user.id, class_id, subject_id, user.id, class_id]);
+                `, [user.id, class_id, subject_id, user.id, class_id, class_id, user.id]);
                 if (!hasAccess) return res.redirect('/results?error=Access Denied to this Subject/Class combination');
             }
 
@@ -280,6 +284,7 @@ const saveResults = async (req, res) => {
 
     try {
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
+            // Allow if: direct subject teacher, class-assigned teacher with subject in class, OR form/class teacher
             const hasAccess = await db.get(`
             SELECT 1
             WHERE (
@@ -288,8 +293,12 @@ const saveResults = async (req, res) => {
                     EXISTS (SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?)
                     AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
                 )
+                OR (
+                    EXISTS (SELECT id FROM classes WHERE id = ? AND form_teacher_id = ?)
+                    AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
+                )
             )
-        `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id]);
+        `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id, class_id, user.id, class_id, subject_id]);
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
             const checkLock = await db.get("SELECT status FROM results WHERE student_id = ? AND subject_id = ? AND term = ? AND session = ?", [results[0]?.student_id, subject_id, term, session]);

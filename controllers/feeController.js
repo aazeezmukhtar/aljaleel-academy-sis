@@ -1,12 +1,9 @@
 const db = require('../utils/db');
-<<<<<<< HEAD
-=======
 const { getAcademicContext } = require('../utils/sessionHelper');
->>>>>>> local-master
 
 const getSetup = async (req, res) => {
     try {
-        const classes = await db.all('SELECT * FROM classes');
+        const classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
         const feeCategories = await db.all(`
             SELECT fc.*, c.name as class_name 
             FROM fee_categories fc
@@ -45,49 +42,33 @@ const getFeeManager = async (req, res) => {
     try {
         let classes;
         if (user.role === 'Admin' || user.role === 'Bursar') {
-            classes = await db.all('SELECT * FROM classes ORDER BY name');
+            classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
         } else {
             classes = await db.all(`
                 SELECT DISTINCT c.* FROM classes c
                 JOIN class_assignments ca ON c.id = ca.class_id
                 WHERE ca.staff_id = ?
-                ORDER BY c.name
+                ORDER BY c.name ASC
             `, [user.id]);
         }
 
         let students = [];
         if (class_id) {
-            // Access control check
             if (user.role !== 'Admin' && user.role !== 'Bursar') {
                 const isAssigned = classes.find(c => String(c.id) === String(class_id));
                 if (!isAssigned) return res.redirect('/fees/manager?error=Unauthorized Access');
             }
 
-<<<<<<< HEAD
-=======
-            const context = await getAcademicContext(class_id);
-            const currentSession = context.session;
-
->>>>>>> local-master
             students = await db.all(`
                 SELECT s.id, s.first_name, s.last_name, s.admission_number,
                        COALESCE(SUM(sf.total_amount), 0) as total_owed,
                        COALESCE(SUM(sf.paid_amount), 0) as total_paid
                 FROM students s
-<<<<<<< HEAD
                 LEFT JOIN student_fees sf ON s.id = sf.student_id
-                WHERE s.current_class_id = ? AND s.status = 'active'
+                WHERE (s.current_class_id = ? OR s.id IN (SELECT student_id FROM student_enrollments WHERE class_id = ?)) AND (s.status = 'active' OR s.status IS NULL OR s.status = 'Active')
                 GROUP BY s.id
                 ORDER BY s.last_name, s.first_name
-            `, [class_id]);
-=======
-                JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
-                LEFT JOIN student_fees sf ON s.id = sf.student_id
-                WHERE se.class_id = ? AND s.status = 'active'
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number
-                ORDER BY s.first_name, s.last_name
-            `, [currentSession, class_id]);
->>>>>>> local-master
+            `, [class_id, class_id]);
         }
 
         res.render('fees/manager', {
@@ -109,23 +90,16 @@ const getStudentFees = async (req, res) => {
         const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
         if (!student) return res.status(404).send('Student not found');
 
-<<<<<<< HEAD
-        // Access control check
-        if (user.role !== 'Admin' && user.role !== 'Bursar') {
-            const isAssigned = await db.get(`
-                SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
-            `, [user.id, student.current_class_id]);
-=======
         const enrollments = await db.all(`
             SELECT se.class_id 
             FROM student_enrollments se
-            JOIN classes c ON se.class_id = c.id
-            JOIN sections sec ON c.section_id = sec.id
-            WHERE se.student_id = ? AND se.session = sec.current_session
+            WHERE se.student_id = ?
         `, [student_id]);
         const enrolledClassIds = enrollments.map(e => e.class_id);
+        if (student.current_class_id && !enrolledClassIds.includes(student.current_class_id)) {
+            enrolledClassIds.push(student.current_class_id);
+        }
 
-        // Access control check
         if (user.role !== 'Admin' && user.role !== 'Bursar') {
             if (enrolledClassIds.length === 0) {
                 return res.redirect('/fees/manager?error=Unauthorized Access to this student');
@@ -134,7 +108,6 @@ const getStudentFees = async (req, res) => {
             const isAssigned = await db.get(`
                 SELECT id FROM class_assignments WHERE staff_id = ? AND class_id IN (${placeholders})
             `, [user.id, ...enrolledClassIds]);
->>>>>>> local-master
             if (!isAssigned) return res.redirect('/fees/manager?error=Unauthorized Access to this student');
         }
 
@@ -145,13 +118,6 @@ const getStudentFees = async (req, res) => {
             WHERE sf.student_id = ?
         `, [student_id]);
 
-<<<<<<< HEAD
-        const availableFees = await db.all(`
-            SELECT * FROM fee_categories 
-            WHERE (class_id = ? OR class_id = 0)
-            AND id NOT IN (SELECT fee_category_id FROM student_fees WHERE student_id = ?)
-        `, [student.current_class_id, student_id]);
-=======
         let availableFees = [];
         if (enrolledClassIds.length > 0) {
             const placeholders = enrolledClassIds.map(() => '?').join(',');
@@ -167,7 +133,6 @@ const getStudentFees = async (req, res) => {
                 AND id NOT IN (SELECT fee_category_id FROM student_fees WHERE student_id = ?)
             `, [student_id]);
         }
->>>>>>> local-master
 
         res.render('fees/student-details', {
             title: 'Student Fee Details',
@@ -281,3 +246,4 @@ module.exports = {
     processPayment,
     getReceipt
 };
+

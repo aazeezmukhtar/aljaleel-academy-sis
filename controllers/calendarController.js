@@ -19,12 +19,6 @@ exports.getManageCalendar = async (req, res) => {
     if (!user || user.role !== 'Admin') return res.status(403).send('Access Denied');
     
     try {
-<<<<<<< HEAD
-        const events = await db.all('SELECT * FROM term_events ORDER BY event_date DESC');
-        res.render('calendar/manage', {
-            title: 'Manage Calendar',
-            events
-=======
         const events = await db.all('SELECT e.*, s.name as section_name FROM term_events e LEFT JOIN sections s ON e.section_id = s.id ORDER BY event_date DESC');
         const sections = await db.all('SELECT * FROM sections ORDER BY name');
         const school = {};
@@ -34,7 +28,6 @@ exports.getManageCalendar = async (req, res) => {
             events,
             sections,
             school
->>>>>>> local-master
         });
     } catch (err) {
         console.error('Calendar Manage Error:', err);
@@ -43,21 +36,11 @@ exports.getManageCalendar = async (req, res) => {
 };
 
 exports.createEvent = async (req, res) => {
-<<<<<<< HEAD
-    const { title, description, event_date, type, session, term } = req.body;
-=======
     const { title, description, event_date, type, section_id } = req.body;
->>>>>>> local-master
     const user = req.session.staff;
     if (!user || user.role !== 'Admin') return res.status(403).send('Access Denied');
 
     try {
-<<<<<<< HEAD
-        await db.run(`
-            INSERT INTO term_events (title, description, event_date, type, session, term)
-            VALUES (?, ?, ?, ?, ?, ?)
-        `, [title, description, event_date, type, session, term]);
-=======
         // Derive session and term from the chosen section (or global if no section)
         let session, term;
         if (section_id) {
@@ -76,7 +59,6 @@ exports.createEvent = async (req, res) => {
             INSERT INTO term_events (title, description, event_date, type, session, term, section_id)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         `, [title, description, event_date, type, session, term, section_id || null]);
->>>>>>> local-master
         res.redirect('/calendar/manage?success=Event added');
     } catch (err) {
         console.error('Create Event Error:', err);

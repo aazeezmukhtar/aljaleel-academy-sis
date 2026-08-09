@@ -124,35 +124,58 @@ const getDemographicsReport = async (req, res) => {
             GROUP BY gender
         `);
 
-        let ageQuery = db.DB_TYPE === 'postgres'
-            ? `SELECT 
-                CASE 
-                    WHEN (EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM dob)) < 10 THEN 'Under 10'
-                    WHEN (EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM dob)) BETWEEN 10 AND 12 THEN '10-12 Years'
-                    WHEN (EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM dob)) BETWEEN 13 AND 15 THEN '13-15 Years'
-                    WHEN (EXTRACT(YEAR FROM CURRENT_DATE) - EXTRACT(YEAR FROM dob)) > 15 THEN '16+ Years'
-                    ELSE 'Unknown'
-                END as age_range,
-                COUNT(*) as count
-               FROM students
-               WHERE status = 'active'
-               GROUP BY age_range
-               ORDER BY age_range`
-            : `SELECT 
-                CASE 
-                    WHEN (strftime('%Y', 'now') - strftime('%Y', dob)) < 10 THEN 'Under 10'
-                    WHEN (strftime('%Y', 'now') - strftime('%Y', dob)) BETWEEN 10 AND 12 THEN '10-12 Years'
-                    WHEN (strftime('%Y', 'now') - strftime('%Y', dob)) BETWEEN 13 AND 15 THEN '13-15 Years'
-                    WHEN (strftime('%Y', 'now') - strftime('%Y', dob)) > 15 THEN '16+ Years'
-                    ELSE 'Unknown'
-                END as age_range,
-                COUNT(*) as count
-               FROM students
-               WHERE status = 'active'
-               GROUP BY age_range
-               ORDER BY age_range`;
+        const students = await db.all("SELECT dob FROM students WHERE status = 'active'");
+        const today = new Date();
 
-        const ageDistribution = await db.all(ageQuery);
+        const ageMap = {
+            'Below 5': 0,
+            '6-10': 0,
+            '11-15': 0,
+            '16-20': 0,
+            '20+': 0
+        };
+
+        students.forEach(s => {
+            if (!s.dob || String(s.dob).trim() === '' || String(s.dob) === 'null' || String(s.dob) === 'undefined' || String(s.dob) === 'Invalid Date') {
+                return;
+            }
+            const str = String(s.dob).trim();
+            let dobDate;
+            const ymdMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+            const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
+            if (ymdMatch) {
+                dobDate = new Date(parseInt(ymdMatch[1]), parseInt(ymdMatch[2]) - 1, parseInt(ymdMatch[3]));
+            } else if (dmyMatch) {
+                dobDate = new Date(parseInt(dmyMatch[3]), parseInt(dmyMatch[2]) - 1, parseInt(dmyMatch[1]));
+            } else {
+                dobDate = new Date(str);
+            }
+
+            if (isNaN(dobDate.getTime())) return;
+
+            let age = today.getFullYear() - dobDate.getFullYear();
+            const m = today.getMonth() - dobDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < dobDate.getDate())) {
+                age--;
+            }
+
+            if (age <= 5) {
+                ageMap['Below 5']++;
+            } else if (age >= 6 && age <= 10) {
+                ageMap['6-10']++;
+            } else if (age >= 11 && age <= 15) {
+                ageMap['11-15']++;
+            } else if (age >= 16 && age <= 20) {
+                ageMap['16-20']++;
+            } else if (age > 20) {
+                ageMap['20+']++;
+            }
+        });
+
+        const ageDistribution = Object.keys(ageMap).map(range => ({
+            age_range: range,
+            count: ageMap[range]
+        }));
 
         res.render('reports/student/demographics', {
             title: 'Student Demographics',

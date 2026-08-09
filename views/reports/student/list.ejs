@@ -62,20 +62,14 @@
                             <% students.forEach((student, index) => { 
                                 let formattedDob = '-';
                                 const rawDob = student.dob || student.date_of_birth;
-                                if (rawDob && String(rawDob).trim() !== '' && String(rawDob) !== 'null' && String(rawDob) !== 'undefined' && String(rawDob) !== 'Invalid Date') {
+                                if (rawDob && String(rawDob).trim() !== '' && String(rawDob) !== 'null' && String(rawDob) !== 'undefined') {
                                     const str = String(rawDob).trim();
                                     const ymdMatch = str.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
                                     const dmyMatch = str.match(/^(\d{1,2})[-/](\d{1,2})[-/](\d{4})/);
                                     if (ymdMatch) {
-                                        const day = ymdMatch[3].padStart(2, '0');
-                                        const month = ymdMatch[2].padStart(2, '0');
-                                        const year = ymdMatch[1];
-                                        formattedDob = `${day}/${month}/${year}`;
+                                        formattedDob = `${ymdMatch[3].padStart(2, '0')}/${ymdMatch[2].padStart(2, '0')}/${ymdMatch[1]}`;
                                     } else if (dmyMatch) {
-                                        const day = dmyMatch[1].padStart(2, '0');
-                                        const month = dmyMatch[2].padStart(2, '0');
-                                        const year = dmyMatch[3];
-                                        formattedDob = `${day}/${month}/${year}`;
+                                        formattedDob = `${dmyMatch[1].padStart(2, '0')}/${dmyMatch[2].padStart(2, '0')}/${dmyMatch[3]}`;
                                     } else {
                                         const d = new Date(str);
                                         if (!isNaN(d.getTime())) {

@@ -35,20 +35,15 @@ const DB_TYPE = process.env.DB_TYPE || (process.env.DATABASE_URL ? 'postgres' : 
 let sessionStore;
 
 if (DB_TYPE === 'postgres') {
+    const db = require('./utils/db');
     const PostgresStore = require('connect-pg-simple')(session);
     sessionStore = new PostgresStore({ 
-        conString: process.env.DATABASE_URL,
+        pool: db.pool,
         createTableIfMissing: true,
         ttl: 5 * 60 * 60,
-        autoRemove: 'interval',
-        autoRemoveInterval: 60,
-        pgOptions: {
-            max: 100,
-            idleTimeoutMillis: 30000,
-            ssl: { rejectUnauthorized: false }
-        }
+        pruneSessionInterval: 300
     });
-    console.log('[Session] Using PostgreSQL Store');
+    console.log('[Session] Using PostgreSQL Store (shared pool)');
 } else {
     const SQLiteStore = require('connect-sqlite3')(session);
     sessionStore = new SQLiteStore({ 

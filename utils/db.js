@@ -19,11 +19,11 @@ if (DB_TYPE === 'postgres') {
         pool = new Pool({
             connectionString,
             ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false },
-            max: 200,
-            idleTimeoutMillis: 30000,
+            max: 5,
+            idleTimeoutMillis: 10000,
             connectionTimeoutMillis: 5000
         });
-        console.log('[Database] PostgreSQL pool initialized.');
+        console.log('[Database] PostgreSQL pool initialized (max: 5).');
     }
 } else if (DB_TYPE === 'sqlite') {
     if (isVercel) {
@@ -155,6 +155,7 @@ module.exports = {
     get,
     run,
     transaction,
-    DB_TYPE
+    DB_TYPE,
+    pool
 };
 

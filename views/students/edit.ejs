@@ -27,20 +27,12 @@
                             <div class="form-group">
                                 <label>First Name</label>
                                 <input type="text" name="first_name" class="form-control"
-<<<<<<< HEAD
                                     value="<%= student.first_name %>" required placeholder="e.g. John">
-=======
-                                    value="<%= student.first_name %>" required placeholder="e.g. Musa">
->>>>>>> local-master
                             </div>
                             <div class="form-group">
                                 <label>Last Name</label>
                                 <input type="text" name="last_name" class="form-control"
-<<<<<<< HEAD
                                     value="<%= student.last_name %>" required placeholder="e.g. Doe">
-=======
-                                    value="<%= student.last_name %>" required placeholder="e.g. Bala">
->>>>>>> local-master
                             </div>
                             <div class="form-group">
                                 <label>Gender</label>
@@ -85,7 +77,6 @@
                                     value="<%= student.admission_number %>" placeholder="e.g. ADM/2024/001">
                             </div>
                             <div class="form-group">
-<<<<<<< HEAD
                                 <label>Class</label>
                                 <select name="current_class_id" class="form-control">
                                     <option value="">Select Class</option>
@@ -94,27 +85,6 @@
                                             %>><%= c.name %>
                                         </option>
                                         <% }) %>
-=======
-                                <label>Academy Class (Western)</label>
-                                <select name="academy_class_id" class="form-control">
-                                    <option value="">None / Unassigned</option>
-                                    <% classes.filter(c => c.section_name === 'Academy' || !c.section_name).forEach(c => { %>
-                                        <option value="<%= c.id %>" <%= enrolledClassIds.includes(c.id) ? 'selected' : '' %>>
-                                            <%= c.name %>
-                                        </option>
-                                    <% }) %>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Tahfeez Class (Arabic)</label>
-                                <select name="tahfeez_class_id" class="form-control">
-                                    <option value="">None / Unassigned</option>
-                                    <% classes.filter(c => c.section_name === 'Tahfeez').forEach(c => { %>
-                                        <option value="<%= c.id %>" <%= enrolledClassIds.includes(c.id) ? 'selected' : '' %>>
-                                            <%= c.name %>
-                                        </option>
-                                    <% }) %>
->>>>>>> local-master
                                 </select>
                             </div>
                             <div class="form-group">

@@ -122,10 +122,10 @@ const processImport = async (req, res) => {
                 continue;
             }
 
-            let activeSubjectId = subject_id;
+            let activeSubjectId = Number(subject_id);
             if (subjectName) {
                 const sub = await db.get('SELECT id FROM subjects WHERE LOWER(name) = LOWER(?)', [subjectName]);
-                if (sub) activeSubjectId = sub.id;
+                if (sub) activeSubjectId = Number(sub.id);
                 else {
                     errors.push(`Row ${i + 2}: Subject "${subjectName}" not found in system.`);
                     continue;
@@ -147,7 +147,7 @@ const processImport = async (req, res) => {
 
         const insertSql = `
             INSERT INTO results (student_id, subject_id, term, session, ca1, ca2, exam, total, grade)
-            VALUES (?::int, ?::int, ?::text, ?::text, ?::float, ?::float, ?::float, ?::float, ?::text)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(student_id, subject_id, term, session) DO UPDATE SET
             ca1=excluded.ca1, ca2=excluded.ca2, exam=excluded.exam, 
             total=excluded.total, grade=excluded.grade
@@ -155,7 +155,17 @@ const processImport = async (req, res) => {
 
         await db.transaction(async () => {
             for (const item of resultsToSave) {
-                await db.run(insertSql, [item.student_id, item.subject_id, term, session, item.ca1, item.ca2, item.exam, item.total, item.grade]);
+                await db.run(insertSql, [
+                    Number(item.student_id),
+                    Number(item.subject_id),
+                    String(term),
+                    String(session),
+                    Number(item.ca1) || 0,
+                    Number(item.ca2) || 0,
+                    Number(item.exam) || 0,
+                    Number(item.total) || 0,
+                    String(item.grade || '')
+                ]);
             }
         });
 

@@ -182,8 +182,27 @@ const getResultManager = async (req, res) => {
     const resultConfig = await getSectionResultConfig(class_id || null);
 
     try {
-        // Fetch all subjects unconditionally so all users, including class teachers, see the full subject list
-        const subjects = await db.all('SELECT * FROM subjects');
+        // Determine subjects to display:
+        // If a class is selected, load subjects that are linked to that class via subject_assignments.
+        // This ensures a class teacher sees all subjects for their class, even if they aren't directly assigned to each subject.
+        let subjects = [];
+        if (class_id) {
+            // Get distinct subject IDs for the class
+            const subjectIdRows = await db.all('SELECT DISTINCT subject_id FROM subject_assignments WHERE class_id = ?', [class_id]);
+            const subjectIds = subjectIdRows.map(r => r.subject_id);
+            if (subjectIds.length > 0) {
+                // Fetch subject details for those IDs
+                const placeholders = subjectIds.map(() => '?').join(',');
+                subjects = await db.all(`SELECT * FROM subjects WHERE id IN (${placeholders})`, subjectIds);
+            } else {
+                // No specific assignments, fall back to all subjects
+                subjects = await db.all('SELECT * FROM subjects');
+            }
+        } else {
+            // No class filter, show all subjects
+            subjects = await db.all('SELECT * FROM subjects');
+        }
+
         let classes;
         
         if (user.role === 'Admin' || user.role === 'Examination Officer') {
@@ -263,13 +282,15 @@ const saveResults = async (req, res) => {
     try {
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
             const hasAccess = await db.get(`
-                SELECT 1
-                WHERE EXISTS (
-                    SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
-                ) OR EXISTS (
-                    SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
-                )
-            `, [user.id, class_id, subject_id, user.id, class_id]);
+            SELECT 1
+            WHERE EXISTS (
+                SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
+            ) OR EXISTS (
+                SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
+            ) OR EXISTS (
+                SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?
+            )
+        `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id]);
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
             const checkLock = await db.get("SELECT status FROM results WHERE student_id = ? AND subject_id = ? AND term = ? AND session = ?", [results[0]?.student_id, subject_id, term, session]);

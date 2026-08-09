@@ -283,12 +283,12 @@ const saveResults = async (req, res) => {
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
             const hasAccess = await db.get(`
             SELECT 1
-            WHERE EXISTS (
-                SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
-            ) OR EXISTS (
-                SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
-            ) OR EXISTS (
-                SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?
+            WHERE (
+                EXISTS (SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?)
+                OR (
+                    EXISTS (SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?)
+                    AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
+                )
             )
         `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id]);
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });

@@ -153,7 +153,7 @@ const processImport = async (req, res) => {
             total=excluded.total, grade=excluded.grade
         `;
 
-        await db.transaction(async () => {
+        await db.transaction(async (txClient) => {
             for (const item of resultsToSave) {
                 await db.run(insertSql, [
                     Number(item.student_id),
@@ -165,7 +165,7 @@ const processImport = async (req, res) => {
                     Number(item.exam) || 0,
                     Number(item.total) || 0,
                     String(item.grade || '')
-                ]);
+                ], txClient);
             }
         });
 

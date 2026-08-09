@@ -97,8 +97,9 @@ async function get(sql, params = []) {
  * Executes a query (INSERT, UPDATE, DELETE).
  * @param {string} sql 
  * @param {Array} params 
+ * @param {Object} [client] Optional pg client (for transactions)
  */
-async function run(sql, params = []) {
+async function run(sql, params = [], client = null) {
     if (DB_TYPE === 'postgres') {
         let counter = 1;
         let pgSql = sql.replace(/\?/g, () => `$${counter++}`);
@@ -110,7 +111,8 @@ async function run(sql, params = []) {
             if (p === undefined) return null;
             return p;
         });
-        const result = await pool.query(pgSql, pgParams);
+        const queryExecutor = client || pool;
+        const result = await queryExecutor.query(pgSql, pgParams);
         return { changes: result.rowCount, lastInsertRowid: null };
     } else {
         const info = sqliteDb.prepare(sql).run(params);

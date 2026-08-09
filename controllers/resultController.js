@@ -182,15 +182,16 @@ const getResultManager = async (req, res) => {
     const resultConfig = await getSectionResultConfig(class_id || null);
 
     try {
-        let classes, subjects;
-
+        // Fetch all subjects unconditionally so all users, including class teachers, see the full subject list
+        const subjects = await db.all('SELECT * FROM subjects');
+        let classes;
+        
         if (user.role === 'Admin' || user.role === 'Examination Officer') {
             classes = await db.all(`
                 SELECT c.*, s.current_session as sec_session, s.current_term as sec_term 
                 FROM classes c 
                 LEFT JOIN sections s ON c.section_id = s.id
             `);
-            subjects = await db.all('SELECT * FROM subjects');
         } else {
             classes = await db.all(`
                 SELECT DISTINCT c.*, s.current_session as sec_session, s.current_term as sec_term 
@@ -200,14 +201,6 @@ const getResultManager = async (req, res) => {
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 WHERE sa.id IS NOT NULL OR ca.id IS NOT NULL
             `, [user.id, user.id]);
-
-            subjects = await db.all(`
-                SELECT DISTINCT s.* FROM subjects s
-                JOIN subject_assignments sa ON s.id = sa.subject_id
-                WHERE sa.class_id IN (
-                    SELECT class_id FROM class_assignments WHERE staff_id = ?
-                )
-            `, [user.id]);
         }
 
         let students = [];

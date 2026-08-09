@@ -128,11 +128,11 @@ const getDemographicsReport = async (req, res) => {
         const today = new Date();
 
         const ageMap = {
-            'Below 5': 0,
-            '6-10': 0,
+            'Under 5': 0,
+            '5-10': 0,
             '11-15': 0,
             '16-20': 0,
-            '20+': 0
+            'Above 20 years': 0
         };
 
         students.forEach(s => {
@@ -159,16 +159,16 @@ const getDemographicsReport = async (req, res) => {
                 age--;
             }
 
-            if (age <= 5) {
-                ageMap['Below 5']++;
-            } else if (age >= 6 && age <= 10) {
-                ageMap['6-10']++;
+            if (age < 5) {
+                ageMap['Under 5']++;
+            } else if (age >= 5 && age <= 10) {
+                ageMap['5-10']++;
             } else if (age >= 11 && age <= 15) {
                 ageMap['11-15']++;
             } else if (age >= 16 && age <= 20) {
                 ageMap['16-20']++;
             } else if (age > 20) {
-                ageMap['20+']++;
+                ageMap['Above 20 years']++;
             }
         });
 

@@ -3,6 +3,7 @@ const path = require('path');
 const { computeResult, getGrade } = require('../utils/resultHelper');
 const { logAction } = require('../utils/logger');
 const { getEnrolledStudents } = require('../utils/enrollmentHelper');
+const { getAvailableSessions } = require('../utils/sessionHelper');
 
 const getOrdinal = (n) => {
     const s = ['th', 'st', 'nd', 'rd'];
@@ -257,12 +258,14 @@ const getResultManager = async (req, res) => {
         }
 
         const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+        const availableSessions = await getAvailableSessions();
 
         res.render('results/manager', {
             title: 'Result Management',
             classes,
             subjects,
             students,
+            sessions: availableSessions,
             filters: { class_id, subject_id, term: activeTerm, session: activeSession },
             school: settings,
             resultConfig,

@@ -37,43 +37,37 @@
                                 </button>
                             </div>
 
-                            <!-- Primary Direct Filters -->
-                            <div class="direct-filters-group">
-                                <!-- Class Filter -->
-                                <select name="class_id" id="classFilter" class="form-control filter-select">
-                                    <option value="">All Classes</option>
-                                    <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
-                                        <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>>
-                                            <%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %>
-                                        </option>
-                                    <% }); } %>
-                                </select>
+                            <!-- Icon Filters -->
+                            <div class="icon-filters">
+                                <button type="button" class="icon-filter-btn" data-target="classFilter" title="Class"><i class="bi bi-building"></i></button>
+                                <button type="button" class="icon-filter-btn" data-target="genderFilter" title="Gender"><i class="bi bi-gender-ambiguous"></i></button>
+                                <button type="button" class="icon-filter-btn" data-target="statusFilter" title="Status"><i class="bi bi-info-circle"></i></button>
+                                <button type="button" id="moreFiltersBtn" class="btn btn-outline more-filters-btn">
+                                    <i class="bi bi-sliders"></i>
+                                    <span>More</span>
+                                    <span id="moreFilterBadge" class="filter-count-badge" style="display:none;">0</span>
+                                </button>
+                            </div>
 
-                                <!-- Gender Filter -->
-                                <select name="gender" id="genderFilter" class="form-control filter-select">
-                                    <option value="">All Genders</option>
-                                    <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
-                                    <option value="Female" <%= filters.gender === 'Female' ? 'selected' : '' %>>Female</option>
-                                    <option value="Other" <%= filters.gender === 'Other' ? 'selected' : '' %>>Other</option>
-                                </select>
-
-                                <!-- Status Filter -->
-                                <select name="status" id="statusFilter" class="form-control filter-select">
-                                    <option value="">All Statuses</option>
-                                    <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
-                                        <option value="<%= st %>" <%= filters.status === st ? 'selected' : '' %>>
-                                            <%= st.charAt(0).toUpperCase() + st.slice(1) %>
-                                        </option>
-                                    <% }); } %>
-                                </select>
-
-                                <!-- More Filters Popover Trigger -->
-                                <div class="more-filters-dropdown">
-                                    <button type="button" id="moreFiltersBtn" class="btn btn-outline more-filters-btn">
-                                        <i class="bi bi-sliders"></i>
-                                        <span>More</span>
-                                        <span id="moreFilterBadge" class="filter-count-badge" style="display:none;">0</span>
-                                    </button>
+                            <!-- Hidden Selects (state persistence) -->
+                            <select name="class_id" id="classFilter" class="hidden-select">
+                                <option value="">All Classes</option>
+                                <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
+                                    <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %></option>
+                                <% }); } %>
+                            </select>
+                            <select name="gender" id="genderFilter" class="hidden-select">
+                                <option value="">All Genders</option>
+                                <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
+                                <option value="Female" <%= filters.gender === 'Female' ? 'selected' : '' %>>Female</option>
+                                <option value="Other" <%= filters.gender === 'Other' ? 'selected' : '' %>>Other</option>
+                            </select>
+                            <select name="status" id="statusFilter" class="hidden-select">
+                                <option value="">All Statuses</option>
+                                <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
+                                    <option value="<%= st %>" <%= filters.status === st ? 'selected' : '' %>><%= st.charAt(0).toUpperCase() + st.slice(1) %></option>
+                                <% }); } %>
+                            </select>                                    
                                     
                                     <!-- Popover Menu -->
                                     <div id="moreFiltersPopover" class="more-filters-popover">
@@ -267,14 +261,36 @@
                 fetchFilteredStudents();
             });
 
-            // Change events on select dropdowns
-            [classFilter, genderFilter, statusFilter, sectionFilter, yearFilter].forEach(elem => {
-                if (elem) {
-                    elem.addEventListener('change', () => {
-                        fetchFilteredStudents();
-                    });
-                }
+            // Icon Filter Click Handlers (cycle through options)
+            document.querySelectorAll('.icon-filter-btn').forEach(btn => {
+                const targetId = btn.dataset.target;
+                if (!targetId) return;
+                btn.addEventListener('click', () => {
+                    const sel = document.getElementById(targetId);
+                    if (!sel) return;
+                    const options = Array.from(sel.options);
+                    // Find current selected index
+                    let currentIdx = options.findIndex(o => o.value === sel.value);
+                    // Move to next (skip placeholder at index 0 on first click)
+                    let nextIdx = (currentIdx + 1) % options.length;
+                    sel.value = options[nextIdx].value;
+                    // Update button active state
+                    btn.classList.toggle('active', sel.value !== '');
+                    fetchFilteredStudents();
+                });
             });
+
+            // Initialize active states for icon buttons based on current filters
+            function initIconStates() {
+                ['classFilter', 'genderFilter', 'statusFilter'].forEach(id => {
+                    const sel = document.getElementById(id);
+                    const btn = document.querySelector(`.icon-filter-btn[data-target="${id}"]`);
+                    if (btn && sel) {
+                        btn.classList.toggle('active', sel.value !== '');
+                    }
+                });
+            }
+            initIconStates();
 
             // Initial render of chips
             renderChips();
@@ -406,6 +422,7 @@
                 statusFilter.value = '';
                 sectionFilter.value = '';
                 yearFilter.value = '';
+                initIconStates();
                 fetchFilteredStudents();
             };
 
@@ -486,11 +503,38 @@
     </script>
 
     <style>
-        .search-filter-card {
+        .icon-filters {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .icon-filter-btn {
+            width: 38px;
+            height: 38px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            color: #334155;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .icon-filter-btn:hover {
             background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
+            border-color: #94a3b8;
+        }
+        .icon-filter-btn.active {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+        .hidden-select { display: none; }
+        @media (max-width: 768px) {
+            .filter-main-bar { flex-direction: column; align-items: stretch; }
+            .icon-filters { justify-content: flex-start; margin-top: 8px; }
         }
 
         .filter-main-bar {
@@ -516,20 +560,24 @@
             pointer-events: none;
         }
 
-        .search-input {
-            padding-left: 40px;
-            padding-right: 36px;
-            height: 42px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e1;
-            font-size: 0.92rem;
-            transition: all 0.2s ease;
-        }
-
-        .search-input:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-        }
+            .search-input {
+                padding-left: 40px;
+                padding-right: 36px;
+                height: 44px;
+                border-radius: 12px;
+                border: 1px solid #cbd5e1;
+                font-size: 0.95rem;
+                background: linear-gradient(135deg, #ffffff, #f9fafb);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+                transition: all 0.2s ease;
+            }
+            .search-input::placeholder {
+                color: #9ca3af;
+            }
+            .search-input:focus {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+            }
 
         .clear-search-btn {
             position: absolute;

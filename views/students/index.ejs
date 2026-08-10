@@ -24,7 +24,8 @@
 
                 <!-- Polished Search & Filter Suite -->
                 <div class="card search-filter-card" style="margin-bottom: 25px; padding: 20px;">
-                    <form id="studentSearchForm" action="/students" method="GET" onsubmit="event.preventDefault();">
+                    <form id="studentSearchForm" action="/students" method="GET">
+
                         <!-- Main Bar: Search + Direct Filters -->
                         <div class="filter-main-bar">
                             <!-- Search Input -->
@@ -37,38 +38,34 @@
                                 </button>
                             </div>
 
-                            <!-- Icon Filters -->
-                            <div class="icon-filters">
-                                <button type="button" class="icon-filter-btn" data-target="classFilter" title="Class"><i class="bi bi-building"></i></button>
-                                <button type="button" class="icon-filter-btn" data-target="genderFilter" title="Gender"><i class="bi bi-gender-ambiguous"></i></button>
-                                <button type="button" class="icon-filter-btn" data-target="statusFilter" title="Status"><i class="bi bi-info-circle"></i></button>
-                                <button type="button" id="moreFiltersBtn" class="btn btn-outline more-filters-btn">
-                                    <i class="bi bi-sliders"></i>
-                                    <span>More</span>
-                                    <span id="moreFilterBadge" class="filter-count-badge" style="display:none;">0</span>
-                                </button>
-                            </div>
+                            <!-- Direct Dropdown Filters -->
+                            <div class="direct-filters-group">
+                                <select name="class_id" id="classFilter" class="filter-select" title="Class">
+                                    <option value="">All Classes</option>
+                                    <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
+                                        <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %></option>
+                                    <% }); } %>
+                                </select>
+                                <select name="gender" id="genderFilter" class="filter-select" title="Gender">
+                                    <option value="">All Genders</option>
+                                    <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
+                                    <option value="Female" <%= filters.gender === 'Female' ? 'selected' : '' %>>Female</option>
+                                    <option value="Other" <%= filters.gender === 'Other' ? 'selected' : '' %>>Other</option>
+                                </select>
+                                <select name="status" id="statusFilter" class="filter-select" title="Status">
+                                    <option value="">All Statuses</option>
+                                    <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
+                                        <option value="<%= st %>" <%= filters.status === st ? 'selected' : '' %>><%= st.charAt(0).toUpperCase() + st.slice(1) %></option>
+                                    <% }); } %>
+                                </select>
 
-                            <!-- Hidden Selects (state persistence) -->
-                            <select name="class_id" id="classFilter" class="hidden-select">
-                                <option value="">All Classes</option>
-                                <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
-                                    <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %></option>
-                                <% }); } %>
-                            </select>
-                            <select name="gender" id="genderFilter" class="hidden-select">
-                                <option value="">All Genders</option>
-                                <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
-                                <option value="Female" <%= filters.gender === 'Female' ? 'selected' : '' %>>Female</option>
-                                <option value="Other" <%= filters.gender === 'Other' ? 'selected' : '' %>>Other</option>
-                            </select>
-                            <select name="status" id="statusFilter" class="hidden-select">
-                                <option value="">All Statuses</option>
-                                <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
-                                    <option value="<%= st %>" <%= filters.status === st ? 'selected' : '' %>><%= st.charAt(0).toUpperCase() + st.slice(1) %></option>
-                                <% }); } %>
-                            </select>                                    
-                                    
+                                <!-- More Filters Dropdown -->
+                                <div class="more-filters-dropdown">
+                                    <button type="button" id="moreFiltersBtn" class="btn btn-outline more-filters-btn">
+                                        <i class="bi bi-sliders"></i>
+                                        <span>More</span>
+                                        <span id="moreFilterBadge" class="filter-count-badge" style="display:none;">0</span>
+                                    </button>
                                     <!-- Popover Menu -->
                                     <div id="moreFiltersPopover" class="more-filters-popover">
                                         <div class="popover-header">
@@ -214,19 +211,19 @@
             const searchInput = document.getElementById('searchInput');
             const clearSearchBtn = document.getElementById('clearSearchBtn');
             const classFilter = document.getElementById('classFilter');
-            const genderFilter = document.getElementById('genderFilter');
-            const statusFilter = document.getElementById('statusFilter');
-            const sectionFilter = document.getElementById('sectionFilter');
+            const studentCountBadge = document.getElementById('studentCountBadge');
+            const studentTableBody = document.getElementById('studentTableBody');
             const yearFilter = document.getElementById('yearFilter');
             
             const moreFiltersBtn = document.getElementById('moreFiltersBtn');
             const moreFiltersPopover = document.getElementById('moreFiltersPopover');
             const closePopoverBtn = document.getElementById('closePopoverBtn');
+            const genderFilter = document.getElementById('genderFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const sectionFilter = document.getElementById('sectionFilter');
             const moreFilterBadge = document.getElementById('moreFilterBadge');
             
             const filterChipsContainer = document.getElementById('filterChipsContainer');
-            const studentCountBadge = document.getElementById('studentCountBadge');
-            const studentTableBody = document.getElementById('studentTableBody');
 
             let debounceTimer = null;
 
@@ -261,36 +258,18 @@
                 fetchFilteredStudents();
             });
 
-            // Icon Filter Click Handlers (cycle through options)
-            document.querySelectorAll('.icon-filter-btn').forEach(btn => {
-                const targetId = btn.dataset.target;
-                if (!targetId) return;
-                btn.addEventListener('click', () => {
-                    const sel = document.getElementById(targetId);
-                    if (!sel) return;
-                    const options = Array.from(sel.options);
-                    // Find current selected index
-                    let currentIdx = options.findIndex(o => o.value === sel.value);
-                    // Move to next (skip placeholder at index 0 on first click)
-                    let nextIdx = (currentIdx + 1) % options.length;
-                    sel.value = options[nextIdx].value;
-                    // Update button active state
-                    btn.classList.toggle('active', sel.value !== '');
+            // Dropdown Filter Change Handlers
+            [classFilter, genderFilter, statusFilter].forEach(sel => {
+                sel.addEventListener('change', () => {
                     fetchFilteredStudents();
                 });
             });
 
-            // Initialize active states for icon buttons based on current filters
-            function initIconStates() {
-                ['classFilter', 'genderFilter', 'statusFilter'].forEach(id => {
-                    const sel = document.getElementById(id);
-                    const btn = document.querySelector(`.icon-filter-btn[data-target="${id}"]`);
-                    if (btn && sel) {
-                        btn.classList.toggle('active', sel.value !== '');
-                    }
+            [sectionFilter, yearFilter].forEach(sel => {
+                sel.addEventListener('change', () => {
+                    fetchFilteredStudents();
                 });
-            }
-            initIconStates();
+            });
 
             // Initial render of chips
             renderChips();
@@ -304,24 +283,8 @@
                 if (sectionFilter.value) params.set('section_id', sectionFilter.value);
                 if (yearFilter.value) params.set('admission_year', yearFilter.value);
 
-                // Update URL state without page reload
                 const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-                window.history.replaceState(null, '', newUrl);
-
-                renderChips();
-
-                try {
-                    const response = await fetch(newUrl, {
-                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                    const data = await response.json();
-
-                    if (data.success) {
-                        updateTable(data.students, data.count);
-                    }
-                } catch (err) {
-                    console.error('Filter fetch error:', err);
-                }
+                window.location.href = newUrl;
             }
 
             function renderChips() {
@@ -422,7 +385,6 @@
                 statusFilter.value = '';
                 sectionFilter.value = '';
                 yearFilter.value = '';
-                initIconStates();
                 fetchFilteredStudents();
             };
 

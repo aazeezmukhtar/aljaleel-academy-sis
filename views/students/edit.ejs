@@ -77,28 +77,54 @@
                                     value="<%= student.admission_number %>" placeholder="e.g. ADM/2024/001">
                             </div>
                             <div class="form-group">
-                                <label>Class</label>
-                                <select name="current_class_id" class="form-control">
-                                    <option value="">Select Class</option>
-                                    <% classes.forEach(c=> { %>
-                                        <option value="<%= c.id %>" <%=student.current_class_id==c.id ? 'selected' : ''
-                                            %>><%= c.name %>
-                                        </option>
-                                        <% }) %>
-                                </select>
-                            </div>
-                            <div class="form-group">
                                 <label>Status</label>
                                 <select name="status" class="form-control" required>
-                                    <option value="active" <%=student.status==='active' ? 'selected' : '' %>>Active
-                                    </option>
-                                    <option value="withdrawn" <%=student.status==='withdrawn' ? 'selected' : '' %>
-                                        >Withdrawn</option>
-                                    <option value="graduated" <%=student.status==='graduated' ? 'selected' : '' %>
-                                        >Graduated</option>
+                                    <option value="active" <%=student.status==='active' ? 'selected' : '' %>>Active</option>
+                                    <option value="withdrawn" <%=student.status==='withdrawn' ? 'selected' : '' %>>Withdrawn</option>
+                                    <option value="graduated" <%=student.status==='graduated' ? 'selected' : '' %>>Graduated</option>
                                 </select>
                             </div>
                         </div>
+
+                        <% if (typeof sections !== 'undefined' && sections && sections.length > 0) { %>
+                        <h4 style="margin-top: 24px; margin-bottom: 14px; color: #475569; font-size: 0.95rem; font-weight: 600;">
+                            <i class="bi bi-building"></i> Class Assignment by Section
+                        </h4>
+                        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 16px;">
+                            Assign the student to a class in each section. Leave blank to unenroll from that section.
+                        </p>
+                        <div class="form-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <% sections.forEach(sec => {
+                                const sectionClasses = classes.filter(c => c.section_id === sec.id);
+                                if (sectionClasses.length === 0) return;
+                                const fieldName = sec.id === 1 ? 'academy_class_id' : (sec.id === 2 ? 'tahfeez_class_id' : `section_${sec.id}_class_id`);
+                                const currentEnrolledId = enrolledClassIds.find(cid => sectionClasses.some(sc => sc.id === cid));
+                            %>
+                            <div class="form-group">
+                                <label style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--primary);"></span>
+                                    <%= sec.name %> Class
+                                </label>
+                                <select name="<%= fieldName %>" class="form-control">
+                                    <option value="">— Not Enrolled —</option>
+                                    <% sectionClasses.forEach(c => { %>
+                                        <option value="<%= c.id %>" <%= currentEnrolledId == c.id ? 'selected' : '' %>><%= c.name %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <% }); %>
+                        </div>
+                        <% } else { %>
+                        <div class="form-group" style="margin-top: 16px;">
+                            <label>Class</label>
+                            <select name="current_class_id" class="form-control">
+                                <option value="">Select Class</option>
+                                <% classes.forEach(c => { %>
+                                    <option value="<%= c.id %>" <%= student.current_class_id == c.id ? 'selected' : '' %>><%= c.name %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <% } %>
 
                         <h3
                             style="margin-top: 30px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">

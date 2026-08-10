@@ -55,7 +55,7 @@ const getStudents = async (req, res) => {
     if (user.role !== 'Admin' && user.role !== 'Registrar') {
         myClasses = classes.map(c => c.id);
         if (myClasses.length > 0) {
-            query += ` AND (se.class_id IN (${myClasses.join(',')}) OR s.current_class_id IN (${myClasses.join(',')}))`;
+            query += ` AND (se.class_id IN (${myClasses.join(',')}) OR s.current_class_id IN (${myClasses.join(',')})`;
         } else {
             query += ` AND s.current_class_id = -1`; // Return none
         }
@@ -324,10 +324,13 @@ const getEditForm = async (req, res) => {
                 ORDER BY c.name ASC
             `, [user.id, user.id, user.id]);
         }
+        const sections = await db.all('SELECT * FROM sections ORDER BY name ASC');
+
         res.render('students/edit', {
             title: `Edit Student: ${student.first_name} ${student.last_name}`,
             student,
             classes,
+            sections,
             enrolledClassIds
         });
     } catch (err) {
@@ -378,31 +381,36 @@ const updateStudent = async (req, res) => {
             id
         ]);
 
-        const academyCtx = await getSectionContext(1);
-        if (academyCtx) {
-            await db.run(`
-                DELETE FROM student_enrollments 
-                WHERE student_id = ? 
-                  AND class_id IN (SELECT id FROM classes WHERE section_id = 1) 
-                  AND session = ?
-            `, [id, academyCtx.session]);
-            
-            if (academy_class_id) {
-                await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [id, academy_class_id, academyCtx.session]);
+        // Dynamically handle all sections
+        const allSections = await db.all('SELECT * FROM sections ORDER BY id ASC');
+        for (const sec of allSections) {
+            // Determine which field name this section maps to
+            let chosenClassId = null;
+            if (sec.id === 1) {
+                chosenClassId = academy_class_id || null;
+            } else if (sec.id === 2) {
+                chosenClassId = tahfeez_class_id || null;
+            } else {
+                chosenClassId = req.body[`section_${sec.id}_class_id`] || null;
             }
-        }
 
-        const tahfeezCtx = await getSectionContext(2);
-        if (tahfeezCtx) {
-            await db.run(`
-                DELETE FROM student_enrollments 
-                WHERE student_id = ? 
-                  AND class_id IN (SELECT id FROM classes WHERE section_id = 2) 
-                  AND session = ?
-            `, [id, tahfeezCtx.session]);
-            
-            if (tahfeez_class_id) {
-                await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [id, tahfeez_class_id, tahfeezCtx.session]);
+            const ctx = await getSectionContext(sec.id);
+            if (ctx) {
+                // Remove existing enrollment for this section
+                await db.run(`
+                    DELETE FROM student_enrollments 
+                    WHERE student_id = ? 
+                      AND class_id IN (SELECT id FROM classes WHERE section_id = ?) 
+                      AND session = ?
+                `, [id, sec.id, ctx.session]);
+
+                // Re-enroll if a class was chosen
+                if (chosenClassId) {
+                    await db.run(
+                        "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
+                        [id, chosenClassId, ctx.session]
+                    );
+                }
             }
         }
 

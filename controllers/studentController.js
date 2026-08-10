@@ -6,15 +6,16 @@ const bcrypt = require('bcryptjs');
 
 const getStudents = async (req, res) => {
     const user = req.session.staff;
-    const { search, class_id, status } = req.query;
+    const { search, class_id, gender, status, section_id, admission_year } = req.query;
 
     let classes;
     if (user.role === 'Admin' || user.role === 'Registrar') {
-        classes = await db.all('SELECT * FROM classes WHERE id != 0 ORDER BY name ASC');
+        classes = await db.all('SELECT c.*, s.name as section_name FROM classes c LEFT JOIN sections s ON c.section_id = s.id WHERE c.id != 0 ORDER BY c.name ASC');
     } else {
         classes = await db.all(`
-            SELECT DISTINCT c.* 
+            SELECT DISTINCT c.*, s.name as section_name 
             FROM classes c
+            LEFT JOIN sections s ON c.section_id = s.id
             LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
             LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
             WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
@@ -22,8 +23,22 @@ const getStudents = async (req, res) => {
         `, [user.id, user.id, user.id]);
     }
 
+    const sections = await db.all('SELECT * FROM sections ORDER BY name ASC');
+
+    // Fetch distinct statuses in DB
+    const statusRows = await db.all("SELECT DISTINCT status FROM students WHERE status IS NOT NULL AND status != '' ORDER BY status ASC");
+    const statuses = statusRows.map(r => r.status);
+    if (!statuses.includes('active')) statuses.unshift('active');
+
+    // Fetch distinct admission years
+    const yearSql = db.DB_TYPE === 'postgres'
+        ? "SELECT DISTINCT EXTRACT(YEAR FROM admission_date)::text as year FROM students WHERE admission_date IS NOT NULL ORDER BY year DESC"
+        : "SELECT DISTINCT strftime('%Y', admission_date) as year FROM students WHERE admission_date IS NOT NULL AND strftime('%Y', admission_date) IS NOT NULL ORDER BY year DESC";
+    const yearRows = await db.all(yearSql).catch(() => []);
+    const admissionYears = yearRows.map(r => r.year).filter(Boolean);
+
     let query = `
-        SELECT s.*, c.name as class_name, se.class_id as enrolled_class_id
+        SELECT s.*, c.name as class_name, c.section_id as class_section_id, se.class_id as enrolled_class_id
         FROM students s
         LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.session = (
             SELECT sec.current_session 
@@ -51,15 +66,44 @@ const getStudents = async (req, res) => {
         params.push(class_id, class_id);
     }
 
+    if (gender) {
+        query += ` AND s.gender = ?`;
+        params.push(gender);
+    }
+
     if (status) {
         query += ` AND s.status = ?`;
         params.push(status);
     }
 
-    if (search) {
-        query += ` AND (s.first_name LIKE ? OR s.last_name LIKE ? OR s.admission_number LIKE ?)`;
-        const like = `%${search}%`;
-        params.push(like, like, like);
+    if (section_id) {
+        query += ` AND c.section_id = ?`;
+        params.push(section_id);
+    }
+
+    if (admission_year) {
+        if (db.DB_TYPE === 'postgres') {
+            query += ` AND EXTRACT(YEAR FROM s.admission_date)::text = ?`;
+        } else {
+            query += ` AND strftime('%Y', s.admission_date) = ?`;
+        }
+        params.push(admission_year);
+    }
+
+    if (search && search.trim() !== '') {
+        const like = `%${search.trim()}%`;
+        query += ` AND (
+            s.first_name LIKE ? 
+            OR s.last_name LIKE ? 
+            OR (s.first_name || ' ' || s.last_name) LIKE ?
+            OR (s.last_name || ' ' || s.first_name) LIKE ?
+            OR (s.last_name || ', ' || s.first_name) LIKE ?
+            OR s.admission_number LIKE ?
+            OR s.id LIKE ?
+            OR s.parent_phone LIKE ?
+            OR s.parent_address LIKE ?
+        )`;
+        params.push(like, like, like, like, like, like, like, like, like);
     }
 
     query += ` ORDER BY s.first_name ASC, s.last_name ASC`;
@@ -91,15 +135,37 @@ const getStudents = async (req, res) => {
             return s;
         });
 
+        // Handle AJAX JSON request for smooth client-side filtering without full page reload
+        if (req.xhr || req.headers.accept?.includes('application/json')) {
+            return res.json({
+                success: true,
+                count: students.length,
+                students
+            });
+        }
+
         res.render('students/index', {
             title: 'Student Management',
             students,
             classes,
+            sections,
+            statuses,
+            admissionYears,
             user,
-            filters: { search, class_id: class_id || '', status: status || '' }
+            filters: {
+                search: search || '',
+                class_id: class_id || '',
+                gender: gender || '',
+                status: status || '',
+                section_id: section_id || '',
+                admission_year: admission_year || ''
+            }
         });
     } catch (err) {
         console.error('Fetch Students Error:', err);
+        if (req.xhr || req.headers.accept?.includes('application/json')) {
+            return res.status(500).json({ success: false, message: 'Database Error' });
+        }
         res.status(500).send('Database Error');
     }
 };

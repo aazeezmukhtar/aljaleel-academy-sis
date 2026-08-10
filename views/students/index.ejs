@@ -22,30 +22,106 @@
                     </div>
                 </header>
 
-                <div class="card" style="margin-bottom: 30px;">
-                    <form action="/students" method="GET" class="grid-main-aside" style="gap: 15px;">
-                        <div style="flex-grow: 1; position: relative;">
-                            <i class="bi bi-search"
-                                style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: #9ca3af;"></i>
-                            <input type="text" name="search" placeholder="Search students..."
-                                value="<%= filters.search || '' %>" class="form-control" style="padding-left: 40px;">
-                        </div>
-                        <div style="display: flex; gap: 10px;">
-                            <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
-                                <select name="class_id" class="form-control" style="flex: 1;">
+                <!-- Polished Search & Filter Suite -->
+                <div class="card search-filter-card" style="margin-bottom: 25px; padding: 20px;">
+                    <form id="studentSearchForm" action="/students" method="GET" onsubmit="event.preventDefault();">
+                        <!-- Main Bar: Search + Direct Filters -->
+                        <div class="filter-main-bar">
+                            <!-- Search Input -->
+                            <div class="search-input-wrapper">
+                                <i class="bi bi-search search-icon"></i>
+                                <input type="text" id="searchInput" name="search" placeholder="Search by name, ID, admission #, guardian info..."
+                                    value="<%= filters.search || '' %>" class="form-control search-input" autocomplete="off">
+                                <button type="button" id="clearSearchBtn" class="clear-search-btn" style="<%= filters.search ? 'display:flex;' : 'display:none;' %>">
+                                    <i class="bi bi-x-circle-fill"></i>
+                                </button>
+                            </div>
+
+                            <!-- Primary Direct Filters -->
+                            <div class="direct-filters-group">
+                                <!-- Class Filter -->
+                                <select name="class_id" id="classFilter" class="form-control filter-select">
                                     <option value="">All Classes</option>
                                     <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
-                                        <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %></option>
+                                        <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>>
+                                            <%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %>
+                                        </option>
                                     <% }); } %>
                                 </select>
-                            <% } %>
-                            <button type="submit" class="btn btn-primary">Search</button>
+
+                                <!-- Gender Filter -->
+                                <select name="gender" id="genderFilter" class="form-control filter-select">
+                                    <option value="">All Genders</option>
+                                    <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
+                                    <option value="Female" <%= filters.gender === 'Female' ? 'selected' : '' %>>Female</option>
+                                    <option value="Other" <%= filters.gender === 'Other' ? 'selected' : '' %>>Other</option>
+                                </select>
+
+                                <!-- Status Filter -->
+                                <select name="status" id="statusFilter" class="form-control filter-select">
+                                    <option value="">All Statuses</option>
+                                    <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
+                                        <option value="<%= st %>" <%= filters.status === st ? 'selected' : '' %>>
+                                            <%= st.charAt(0).toUpperCase() + st.slice(1) %>
+                                        </option>
+                                    <% }); } %>
+                                </select>
+
+                                <!-- More Filters Popover Trigger -->
+                                <div class="more-filters-dropdown">
+                                    <button type="button" id="moreFiltersBtn" class="btn btn-outline more-filters-btn">
+                                        <i class="bi bi-sliders"></i>
+                                        <span>More</span>
+                                        <span id="moreFilterBadge" class="filter-count-badge" style="display:none;">0</span>
+                                    </button>
+                                    
+                                    <!-- Popover Menu -->
+                                    <div id="moreFiltersPopover" class="more-filters-popover">
+                                        <div class="popover-header">
+                                            <span>More Filters</span>
+                                            <button type="button" class="popover-close-btn" id="closePopoverBtn"><i class="bi bi-x"></i></button>
+                                        </div>
+                                        <div class="popover-body">
+                                            <div class="form-group" style="margin-bottom: 12px;">
+                                                <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Section</label>
+                                                <select name="section_id" id="sectionFilter" class="form-control" style="font-size: 0.85rem;">
+                                                    <option value="">All Sections</option>
+                                                    <% if (typeof sections !== 'undefined' && sections) { sections.forEach(sec => { %>
+                                                        <option value="<%= sec.id %>" <%= filters.section_id == sec.id ? 'selected' : '' %>><%= sec.name %></option>
+                                                    <% }); } %>
+                                                </select>
+                                            </div>
+                                            <div class="form-group" style="margin-bottom: 0;">
+                                                <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Admission Year</label>
+                                                <select name="admission_year" id="yearFilter" class="form-control" style="font-size: 0.85rem;">
+                                                    <option value="">All Years</option>
+                                                    <% if (typeof admissionYears !== 'undefined' && admissionYears) { admissionYears.forEach(yr => { %>
+                                                        <option value="<%= yr %>" <%= filters.admission_year == yr ? 'selected' : '' %>><%= yr %></option>
+                                                    <% }); } %>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Filter Chips & Active Summary Bar -->
+                        <div id="filterSummaryBar" class="filter-summary-bar" style="margin-top: 15px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                            <div id="filterChipsContainer" class="filter-chips-container" style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                                <!-- Chips dynamically injected here -->
+                            </div>
+                            <div class="results-count-display">
+                                <span id="studentCountBadge" class="count-text">
+                                    <strong><%= students.length %></strong> <%= students.length === 1 ? 'student' : 'students' %>
+                                </span>
+                            </div>
                         </div>
                     </form>
                 </div>
 
                 <div class="table-container student-mobile-cards">
-                    <table class="data-table">
+                    <table class="data-table" id="studentTable">
                         <thead>
                             <tr>
                                 <th>Student Name</th>
@@ -56,21 +132,21 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <% if (students.length> 0) { %>
-                                <% students.forEach(student=> { %>
-                                    <tr>
+                        <tbody id="studentTableBody">
+                            <% if (students.length > 0) { %>
+                                <% students.forEach(student => { %>
+                                    <tr data-student-id="<%= student.id %>">
                                         <td data-label="Name">
                                             <div style="display: flex; align-items: center; gap: 15px;">
                                                 <div
-                                                    style="width: 44px; height: 44px; background: #f3f4f6; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow-sm);">
+                                                    style="width: 44px; height: 44px; background: #f3f4f6; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow-sm); flex-shrink: 0;">
                                                     <% if (student.passport_photo_path) { %>
                                                         <img src="<%= student.passport_photo_path %>" alt="Photo"
                                                             style="width: 100%; height: 100%; object-fit: cover;">
-                                                        <% } else { %>
-                                                            <i class="bi bi-person-fill"
-                                                                style="color: #9ca3af; font-size: 1.25rem;"></i>
-                                                            <% } %>
+                                                    <% } else { %>
+                                                        <i class="bi bi-person-fill"
+                                                            style="color: #9ca3af; font-size: 1.25rem;"></i>
+                                                    <% } %>
                                                 </div>
                                                 <span
                                                     style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">
@@ -93,24 +169,24 @@
                                                     style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
                                                     <%= student.class_name %>
                                                 </span>
-                                                <% } else { %>
-                                                    <span class="text-muted">Unassigned</span>
-                                                    <% } %>
+                                            <% } else { %>
+                                                <span class="text-muted">Unassigned</span>
+                                            <% } %>
                                         </td>
                                         <td data-label="Status">
-                                            <% if (student.status==='active' ) { %>
+                                            <% if (student.status === 'active') { %>
                                                 <span
                                                     style="color: var(--success); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
                                                     <i class="bi bi-check-circle-fill" style="font-size: 0.8rem;"></i>
                                                     Active
                                                 </span>
-                                                <% } else { %>
-                                                    <span
-                                                        style="color: var(--danger); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                                                        <i class="bi bi-x-circle-fill" style="font-size: 0.8rem;"></i>
-                                                        <%= student.status %>
-                                                    </span>
-                                                    <% } %>
+                                            <% } else { %>
+                                                <span
+                                                    style="color: var(--danger); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                                                    <i class="bi bi-x-circle-fill" style="font-size: 0.8rem;"></i>
+                                                    <%= student.status %>
+                                                </span>
+                                            <% } %>
                                         </td>
                                         <td data-label="Action">
                                             <a href="/students/view/<%= student.id %>" class="btn btn-outline"
@@ -119,33 +195,540 @@
                                             </a>
                                         </td>
                                     </tr>
-                                    <% }); %>
-                                        <% } else { %>
-                                            <tr>
-                                                <td colspan="6" style="text-align: center; padding: 60px;">
-                                                    <div style="color: var(--text-muted); margin-bottom: 15px;">
-                                                        <i class="bi bi-search"
-                                                            style="font-size: 2rem; opacity: 0.5;"></i>
-                                                    </div>
-                                                    <p>No students found matching your criteria.</p>
-                                                    <% if (filters.search) { %>
-                                                        <a href="/students"
-                                                            style="color: var(--primary); font-weight: 500;">Clear
-                                                            filters</a>
-                                                        <% } %>
-                                                </td>
-                                            </tr>
-                                            <% } %>
+                                <% }); %>
+                            <% } else { %>
+                                <tr id="noResultsRow">
+                                    <td colspan="6" style="text-align: center; padding: 60px;">
+                                        <div style="color: var(--text-muted); margin-bottom: 15px;">
+                                            <i class="bi bi-search" style="font-size: 2rem; opacity: 0.5;"></i>
+                                        </div>
+                                        <h3 style="font-size: 1.1rem; color: #475569; margin: 0 0 6px 0;">No students found</h3>
+                                        <p style="color: #94a3b8; font-size: 0.9rem; margin: 0 0 15px 0;">Try adjusting your search query or clear active filters.</p>
+                                        <button type="button" onclick="resetAllFilters()" class="btn btn-outline btn-sm">Clear all filters</button>
+                                    </td>
+                                </tr>
+                            <% } %>
                         </tbody>
                     </table>
                 </div>
-
-                <!-- Pagination could go here -->
             </main>
     </div>
 
+    <!-- Live Search & Filter Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const searchInput = document.getElementById('searchInput');
+            const clearSearchBtn = document.getElementById('clearSearchBtn');
+            const classFilter = document.getElementById('classFilter');
+            const genderFilter = document.getElementById('genderFilter');
+            const statusFilter = document.getElementById('statusFilter');
+            const sectionFilter = document.getElementById('sectionFilter');
+            const yearFilter = document.getElementById('yearFilter');
+            
+            const moreFiltersBtn = document.getElementById('moreFiltersBtn');
+            const moreFiltersPopover = document.getElementById('moreFiltersPopover');
+            const closePopoverBtn = document.getElementById('closePopoverBtn');
+            const moreFilterBadge = document.getElementById('moreFilterBadge');
+            
+            const filterChipsContainer = document.getElementById('filterChipsContainer');
+            const studentCountBadge = document.getElementById('studentCountBadge');
+            const studentTableBody = document.getElementById('studentTableBody');
+
+            let debounceTimer = null;
+
+            // Toggle More Filters Popover
+            moreFiltersBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                moreFiltersPopover.classList.toggle('active');
+            });
+
+            closePopoverBtn.addEventListener('click', () => {
+                moreFiltersPopover.classList.remove('active');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!moreFiltersPopover.contains(e.target) && !moreFiltersBtn.contains(e.target)) {
+                    moreFiltersPopover.classList.remove('active');
+                }
+            });
+
+            // Debounced Input for Search
+            searchInput.addEventListener('input', () => {
+                clearSearchBtn.style.display = searchInput.value.trim() ? 'flex' : 'none';
+                clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(() => {
+                    fetchFilteredStudents();
+                }, 300);
+            });
+
+            clearSearchBtn.addEventListener('click', () => {
+                searchInput.value = '';
+                clearSearchBtn.style.display = 'none';
+                fetchFilteredStudents();
+            });
+
+            // Change events on select dropdowns
+            [classFilter, genderFilter, statusFilter, sectionFilter, yearFilter].forEach(elem => {
+                if (elem) {
+                    elem.addEventListener('change', () => {
+                        fetchFilteredStudents();
+                    });
+                }
+            });
+
+            // Initial render of chips
+            renderChips();
+
+            async function fetchFilteredStudents() {
+                const params = new URLSearchParams();
+                if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
+                if (classFilter.value) params.set('class_id', classFilter.value);
+                if (genderFilter.value) params.set('gender', genderFilter.value);
+                if (statusFilter.value) params.set('status', statusFilter.value);
+                if (sectionFilter.value) params.set('section_id', sectionFilter.value);
+                if (yearFilter.value) params.set('admission_year', yearFilter.value);
+
+                // Update URL state without page reload
+                const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
+                window.history.replaceState(null, '', newUrl);
+
+                renderChips();
+
+                try {
+                    const response = await fetch(newUrl, {
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        updateTable(data.students, data.count);
+                    }
+                } catch (err) {
+                    console.error('Filter fetch error:', err);
+                }
+            }
+
+            function renderChips() {
+                filterChipsContainer.innerHTML = '';
+                let activeCount = 0;
+                let moreCount = 0;
+
+                const searchVal = searchInput.value.trim();
+                const classVal = classFilter.value;
+                const classText = classFilter.options[classFilter.selectedIndex]?.text || '';
+                const genderVal = genderFilter.value;
+                const statusVal = statusFilter.value;
+                const sectionVal = sectionFilter.value;
+                const sectionText = sectionFilter.options[sectionFilter.selectedIndex]?.text || '';
+                const yearVal = yearFilter.value;
+
+                if (searchVal) {
+                    activeCount++;
+                    addChip(`Search: "${searchVal}"`, () => {
+                        searchInput.value = '';
+                        clearSearchBtn.style.display = 'none';
+                        fetchFilteredStudents();
+                    });
+                }
+
+                if (classVal) {
+                    activeCount++;
+                    addChip(`Class: ${classText}`, () => {
+                        classFilter.value = '';
+                        fetchFilteredStudents();
+                    });
+                }
+
+                if (genderVal) {
+                    activeCount++;
+                    addChip(`Gender: ${genderVal}`, () => {
+                        genderFilter.value = '';
+                        fetchFilteredStudents();
+                    });
+                }
+
+                if (statusVal) {
+                    activeCount++;
+                    addChip(`Status: ${statusVal}`, () => {
+                        statusFilter.value = '';
+                        fetchFilteredStudents();
+                    });
+                }
+
+                if (sectionVal) {
+                    activeCount++;
+                    moreCount++;
+                    addChip(`Section: ${sectionText}`, () => {
+                        sectionFilter.value = '';
+                        fetchFilteredStudents();
+                    });
+                }
+
+                if (yearVal) {
+                    activeCount++;
+                    moreCount++;
+                    addChip(`Year: ${yearVal}`, () => {
+                        yearFilter.value = '';
+                        fetchFilteredStudents();
+                    });
+                }
+
+                if (moreCount > 0) {
+                    moreFilterBadge.textContent = moreCount;
+                    moreFilterBadge.style.display = 'inline-flex';
+                } else {
+                    moreFilterBadge.style.display = 'none';
+                }
+
+                if (activeCount > 0) {
+                    const clearAllBtn = document.createElement('button');
+                    clearAllBtn.type = 'button';
+                    clearAllBtn.className = 'clear-all-chips-btn';
+                    clearAllBtn.innerHTML = 'Clear all';
+                    clearAllBtn.onclick = resetAllFilters;
+                    filterChipsContainer.appendChild(clearAllBtn);
+                }
+            }
+
+            function addChip(label, onRemove) {
+                const chip = document.createElement('div');
+                chip.className = 'filter-chip';
+                chip.innerHTML = `<span>${escapeHtml(label)}</span><button type="button" class="chip-remove-btn">&times;</button>`;
+                chip.querySelector('.chip-remove-btn').addEventListener('click', onRemove);
+                filterChipsContainer.appendChild(chip);
+            }
+
+            window.resetAllFilters = function() {
+                searchInput.value = '';
+                clearSearchBtn.style.display = 'none';
+                classFilter.value = '';
+                genderFilter.value = '';
+                statusFilter.value = '';
+                sectionFilter.value = '';
+                yearFilter.value = '';
+                fetchFilteredStudents();
+            };
+
+            function updateTable(students, count) {
+                studentCountBadge.innerHTML = `<strong>${count}</strong> ${count === 1 ? 'student found' : 'students found'}`;
+
+                if (!students || students.length === 0) {
+                    studentTableBody.innerHTML = `
+                        <tr id="noResultsRow">
+                            <td colspan="6" style="text-align: center; padding: 60px;">
+                                <div style="color: var(--text-muted); margin-bottom: 15px;">
+                                    <i class="bi bi-search" style="font-size: 2rem; opacity: 0.5;"></i>
+                                </div>
+                                <h3 style="font-size: 1.1rem; color: #475569; margin: 0 0 6px 0;">No students found</h3>
+                                <p style="color: #94a3b8; font-size: 0.9rem; margin: 0 0 15px 0;">Try adjusting your search query or clear active filters.</p>
+                                <button type="button" onclick="resetAllFilters()" class="btn btn-outline btn-sm">Clear all filters</button>
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                const rowsHtml = students.map(s => {
+                    const passportHtml = s.passport_photo_path 
+                        ? `<img src="${escapeHtml(s.passport_photo_path)}" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">`
+                        : `<i class="bi bi-person-fill" style="color: #9ca3af; font-size: 1.25rem;"></i>`;
+
+                    const classBadgeHtml = s.class_name 
+                        ? `<span class="badge" style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.class_name)}</span>`
+                        : `<span class="text-muted">Unassigned</span>`;
+
+                    const statusHtml = s.status === 'active'
+                        ? `<span style="color: var(--success); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill" style="font-size: 0.8rem;"></i> Active</span>`
+                        : `<span style="color: var(--danger); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-x-circle-fill" style="font-size: 0.8rem;"></i> ${escapeHtml(s.status)}</span>`;
+
+                    return `
+                        <tr data-student-id="${s.id}">
+                            <td data-label="Name">
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <div style="width: 44px; height: 44px; background: #f3f4f6; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow-sm); flex-shrink: 0;">
+                                        ${passportHtml}
+                                    </div>
+                                    <span style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">
+                                        ${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}
+                                    </span>
+                                </div>
+                            </td>
+                            <td data-label="ID">
+                                <span style="font-family: monospace; background: #f9fafb; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e5eb;">
+                                    ${escapeHtml(s.admission_number || 'PENDING')}
+                                </span>
+                            </td>
+                            <td data-label="Gender">${escapeHtml(s.gender || '-')}</td>
+                            <td data-label="Class">${classBadgeHtml}</td>
+                            <td data-label="Status">${statusHtml}</td>
+                            <td data-label="Action">
+                                <a href="/students/view/${s.id}" class="btn btn-outline" style="padding: 4px 12px; font-size: 0.85rem;">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+
+                studentTableBody.innerHTML = rowsHtml;
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return String(str)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+        });
+    </script>
+
     <style>
+        .search-filter-card {
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        .filter-main-bar {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            flex: 1;
+            min-width: 260px;
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 1rem;
+            pointer-events: none;
+        }
+
+        .search-input {
+            padding-left: 40px;
+            padding-right: 36px;
+            height: 42px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.92rem;
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+        }
+
+        .clear-search-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            transition: color 0.15s;
+        }
+
+        .clear-search-btn:hover {
+            color: #64748b;
+        }
+
+        .direct-filters-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .filter-select {
+            height: 42px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            font-size: 0.88rem;
+            padding: 0 12px;
+            min-width: 130px;
+            background-color: #f8fafc;
+            color: #334155;
+            cursor: pointer;
+        }
+
+        .filter-select:hover {
+            background-color: #ffffff;
+            border-color: #94a3b8;
+        }
+
+        .more-filters-dropdown {
+            position: relative;
+        }
+
+        .more-filters-btn {
+            height: 42px;
+            padding: 0 14px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+
+        .filter-count-badge {
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .more-filters-popover {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            right: 0;
+            width: 260px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #e2e8f0;
+            z-index: 100;
+            padding: 14px;
+        }
+
+        .more-filters-popover.active {
+            display: block;
+        }
+
+        .popover-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: #1e293b;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .popover-close-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            color: #94a3b8;
+            cursor: pointer;
+            line-height: 1;
+        }
+
+        .popover-close-btn:hover {
+            color: #475569;
+        }
+
+        .filter-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e0e7ff;
+            color: #3730a3;
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid #c7d2fe;
+        }
+
+        .chip-remove-btn {
+            background: none;
+            border: none;
+            color: #4338ca;
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+        }
+
+        .chip-remove-btn:hover {
+            color: #1e1b4b;
+        }
+
+        .clear-all-chips-btn {
+            background: none;
+            border: none;
+            color: #ef4444;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 4px 8px;
+            text-decoration: underline;
+        }
+
+        .clear-all-chips-btn:hover {
+            color: #b91c1c;
+        }
+
+        .results-count-display {
+            font-size: 0.88rem;
+            color: #64748b;
+        }
+
         @media (max-width: 768px) {
+            .filter-main-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-input-wrapper {
+                width: 100%;
+                min-width: unset;
+            }
+
+            .direct-filters-group {
+                width: 100%;
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .more-filters-dropdown {
+                grid-column: span 2;
+            }
+
+            .more-filters-btn {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .more-filters-popover {
+                right: 0;
+                left: 0;
+                width: 100%;
+            }
+
             .student-mobile-cards table,
             .student-mobile-cards tbody,
             .student-mobile-cards tr,
@@ -217,18 +800,15 @@
                 align-items: center;
             }
             
-            /* Action button full width on very small screens, but we keep it small here */
             .student-mobile-cards td[data-label="Action"] .btn {
                 padding: 6px 16px !important;
                 border-radius: 8px !important;
             }
 
-            /* Hide Gender to save vertical space */
             .student-mobile-cards td[data-label="Gender"] {
                 display: none !important;
             }
             
-            /* Format labels for remaining items to give context without bulky table headers */
             .student-mobile-cards td[data-label="ID"]::before {
                 content: 'ID:';
                 display: inline-block !important;

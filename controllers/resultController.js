@@ -77,11 +77,12 @@ const getGradingSystem = async (req, res) => {
         const sections = await db.all('SELECT * FROM sections ORDER BY name');
 
         // Load per-section configs
-        const sectionConfigs = {};
+        const sectionConfigs = [];
         for (const sec of sections) {
             const rows = await db.all('SELECT key, value FROM section_result_config WHERE section_id = ?', [sec.id]);
-            sectionConfigs[sec.id] = { ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
-            rows.forEach(r => { sectionConfigs[sec.id][r.key] = r.value; });
+            const cfg = { section_id: sec.id, ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
+            rows.forEach(r => { cfg[r.key] = r.value; });
+            sectionConfigs.push(cfg);
         }
 
         if (req && res) {

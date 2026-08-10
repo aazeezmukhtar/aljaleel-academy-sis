@@ -19,7 +19,7 @@ if (DB_TYPE === 'postgres') {
         pool = new Pool({
             connectionString,
             ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false },
-            max: 5,
+            max: 20,
             idleTimeoutMillis: 10000,
             connectionTimeoutMillis: 5000
         });

@@ -39,9 +39,9 @@ if (DB_TYPE === 'postgres') {
     const PostgresStore = require('connect-pg-simple')(session);
     sessionStore = new PostgresStore({ 
         pool: db.pool,
-        createTableIfMissing: true,
+        createTableIfMissing: false,
         ttl: 5 * 60 * 60,
-        pruneSessionInterval: 300
+        pruneSessionInterval: false
     });
     console.log('[Session] Using PostgreSQL Store (shared pool)');
 } else {

@@ -16,14 +16,18 @@ if (DB_TYPE === 'postgres') {
     if (!connectionString) {
         console.error('[Database] ERROR: DATABASE_URL is required for postgres mode.');
     } else {
+        const poolMax = parseInt(process.env.DB_POOL_MAX || (isVercel ? '5' : '10'), 10);
         pool = new Pool({
             connectionString,
             ssl: connectionString.includes('localhost') ? false : { rejectUnauthorized: false },
-            max: 20,
+            max: poolMax,
             idleTimeoutMillis: 10000,
-            connectionTimeoutMillis: 5000
+            connectionTimeoutMillis: 10000
         });
-        console.log('[Database] PostgreSQL pool initialized (max: 5).');
+        pool.on('error', (err) => {
+            console.error('[Database] Unexpected error on idle client:', err);
+        });
+        console.log(`[Database] PostgreSQL pool initialized (max: ${poolMax}).`);
     }
 } else if (DB_TYPE === 'sqlite') {
     if (isVercel) {

@@ -99,7 +99,7 @@ const getStudents = async (req, res) => {
             OR (s.last_name || ' ' || s.first_name) LIKE ?
             OR (s.last_name || ', ' || s.first_name) LIKE ?
             OR s.admission_number LIKE ?
-            OR s.id LIKE ?
+            OR CAST(s.id AS TEXT) LIKE ?
             OR s.parent_phone LIKE ?
             OR s.parent_address LIKE ?
         )`;

@@ -91,17 +91,17 @@ const getStudents = async (req, res) => {
     }
 
     if (search && search.trim() !== '') {
-        const like = `%${search.trim()}%`;
+        const like = `%${search.trim().toLowerCase()}%`;
         query += ` AND (
-            s.first_name LIKE ? 
-            OR s.last_name LIKE ? 
-            OR (s.first_name || ' ' || s.last_name) LIKE ?
-            OR (s.last_name || ' ' || s.first_name) LIKE ?
-            OR (s.last_name || ', ' || s.first_name) LIKE ?
-            OR s.admission_number LIKE ?
+            LOWER(s.first_name) LIKE ? 
+            OR LOWER(s.last_name) LIKE ? 
+            OR LOWER(s.first_name || ' ' || s.last_name) LIKE ?
+            OR LOWER(s.last_name || ' ' || s.first_name) LIKE ?
+            OR LOWER(s.last_name || ', ' || s.first_name) LIKE ?
+            OR LOWER(s.admission_number) LIKE ?
             OR CAST(s.id AS TEXT) LIKE ?
-            OR s.parent_phone LIKE ?
-            OR s.parent_address LIKE ?
+            OR LOWER(s.parent_phone) LIKE ?
+            OR LOWER(s.parent_address) LIKE ?
         )`;
         params.push(like, like, like, like, like, like, like, like, like);
     }

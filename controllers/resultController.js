@@ -369,7 +369,9 @@ const getReportCard = async (req, res) => {
 
         const resultConfig = await getSectionResultConfig(target_class_id);
 
-        // Results with subject rank
+        // Results with subject rank — fetch ALL results for the student in this term/session
+        // Do NOT filter by subject_assignments, because subjects may have results entered
+        // without a formal subject_assignment row for this class/session.
         const results = await db.all(`
             SELECT r.*, s.name as subject_name,
             (SELECT COUNT(*) + 1 FROM results r2 
@@ -378,20 +380,18 @@ const getReportCard = async (req, res) => {
              AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
-            JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-        `, [target_class_id, session, target_class_id, session, student_id, term, session]);
+        `, [target_class_id, session, student_id, term, session]);
 
-        // Overall Position
+        // Overall Position — sum all results for enrolled students, not just SA-matched ones
         const classPerformance = await db.all(`
             SELECT r.student_id, SUM(r.total) as student_total
             FROM results r
-            JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
             WHERE r.term = ? AND r.session = ? 
             AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
             GROUP BY r.student_id
             ORDER BY student_total DESC
-        `, [target_class_id, session, term, session, target_class_id, session]);
+        `, [term, session, target_class_id, session]);
 
         const studentPerf = classPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -490,9 +490,8 @@ const getCumulativeReport = async (req, res) => {
             SELECT r.*, s.name as subject_name
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
-            JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
             WHERE r.student_id = ? AND r.session = ?
-        `, [target_class_id, session, student_id, session]);
+        `, [student_id, session]);
 
         const subjectMap = {};
         rawResults.forEach(r => {
@@ -507,11 +506,10 @@ const getCumulativeReport = async (req, res) => {
         const sessionPerformance = await db.all(`
             SELECT r.student_id, AVG(r.total) as session_avg
             FROM results r
-            JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
             WHERE r.session = ? AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
             GROUP BY r.student_id
             ORDER BY session_avg DESC
-        `, [target_class_id, session, session, target_class_id, session]);
+        `, [session, target_class_id, session]);
 
         const studentPerf = sessionPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? sessionPerformance.indexOf(studentPerf) + 1 : 0;
@@ -614,9 +612,8 @@ const getBulkReport = async (req, res) => {
                  AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
-                JOIN subject_assignments sa ON sa.subject_id = r.subject_id AND sa.class_id = ? AND sa.session = ?
                 WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-            `, [class_id, session, class_id, session, student.id, term, session]);
+            `, [class_id, session, student.id, term, session]);
 
             const studentPerf = classPerformance.find(p => p.student_id == student.id);
             const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;

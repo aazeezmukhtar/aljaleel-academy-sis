@@ -184,19 +184,14 @@
                                     </div>
                                     <div class="form-group">
                                         <label>Select Class</label>
-                                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
-                                        <select name="class_id" required>
-                                            <option value="">-- Choose Class --</option>
-                                            <% classes.forEach(c=> { %>
-                                                <option value="<%= c.id %>">
-                                                    <%= c.name %>
-                                                </option>
+                                        <select name="class_id" class="form-control" required>
+                                            <option value="">Select Class</option>
+                                            <% if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                                                <% classes.forEach(c => { %>
+                                                    <option value="<%= c.id %>"><%= c.name %></option>
                                                 <% }); %>
+                                            <% } %>
                                         </select>
-                                        <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
-                                        <input type="hidden" name="class_id" value="<%= classes[0].id %>">
-                                        <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
-                                        <% } %>
                                     </div>
                                     <div class="form-group">
                                         <label>Session</label>

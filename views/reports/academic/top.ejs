@@ -21,18 +21,14 @@
                 <form action="/reports/academic/top" method="GET" class="filter-form">
                     <div class="form-group">
                         <label>Class</label>
-                        <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
                         <select name="class_id" required>
                             <option value="">Select Class</option>
-                            <% classes.forEach(c=> { %>
-                                <option value="<%= c.id %>" <%=query.class_id==c.id ? 'selected' : '' %>><%= c.name %>
-                                </option>
-                                <% }) %>
+                            <% if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
+                                <% classes.forEach(c => { %>
+                                    <option value="<%= c.id %>" <%= query.class_id == c.id ? 'selected' : '' %>><%= c.name %></option>
+                                <% }); %>
+                            <% } %>
                         </select>
-                        <% } else if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
-                        <input type="hidden" name="class_id" value="<%= classes[0].id %>">
-                        <input type="text" disabled class="form-control" value="Pre-selected: <%= classes[0].name %>" style="background:#e5e7eb;">
-                        <% } %>
                     </div>
                     <div class="form-group">
                         <label>Term</label>

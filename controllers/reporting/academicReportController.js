@@ -1,4 +1,5 @@
 const db = require('../../utils/db');
+const sessionHelper = require('../../utils/sessionHelper');
 
 const getAcademicDashboard = async (req, res) => {
     const user = req.session.staff;
@@ -92,11 +93,14 @@ const getBroadsheet = async (req, res) => {
         };
     }
 
+    const availableSessions = await sessionHelper.getAvailableSessions();
+
     res.render('reports/academic/broadsheet', {
         title: 'Master Broadsheet',
         classes,
         subjects,
         reportData,
+        availableSessions,
         user,
         query: { class_id, term, session }
     });
@@ -120,9 +124,12 @@ const getSubjectAnalysis = async (req, res) => {
         `, [user.id, user.id, user.id]);
     }
 
+    const availableSessions = await sessionHelper.getAvailableSessions();
+
     res.render('reports/academic/analysis', {
         title: 'Subject Analysis',
         classes,
+        availableSessions,
         user,
         query: { class_id, term, session }
     });
@@ -166,10 +173,13 @@ const getTopPerformers = async (req, res) => {
         `, [class_id, term, session, limit || 10]);
     }
 
+    const availableSessions = await sessionHelper.getAvailableSessions();
+
     res.render('reports/academic/top', {
         title: 'Top Performers',
         classes,
         topStudents,
+        availableSessions,
         user,
         query: { class_id, term, session, limit: limit || 10 }
     });

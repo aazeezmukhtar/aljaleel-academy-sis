@@ -30,10 +30,17 @@
                     <div class="form-group">
                         <label>Session</label>
                         <select name="session" required>
-                            <option value="2024/2025" <%=query.session==='2024/2025' ? 'selected' : '' %>>2024/2025
-                            </option>
-                            <option value="2025/2026" <%=query.session==='2025/2026' ? 'selected' : '' %>>2025/2026
-                            </option>
+                            <option value="">Select Session</option>
+                            <% 
+                            const sessList = (typeof availableSessions !== 'undefined' && availableSessions && availableSessions.length > 0) 
+                                ? availableSessions 
+                                : ((typeof available_sessions !== 'undefined' && available_sessions && available_sessions.length > 0) 
+                                    ? available_sessions 
+                                    : ['2024/2025', '2025/2026']);
+                            sessList.forEach(s => { 
+                            %>
+                                <option value="<%= s %>" <%= query.session === s ? 'selected' : '' %>><%= s %></option>
+                            <% }); %>
                         </select>
                     </div>
                     <button type="submit" class="btn btn-primary">Analyze</button>

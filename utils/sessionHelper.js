@@ -17,6 +17,10 @@ async function getAvailableSessions() {
         const sectionSessions = await db.all('SELECT DISTINCT current_session FROM sections WHERE current_session IS NOT NULL');
         sectionSessions.forEach(s => sessions.add(s.current_session));
 
+        // Get sessions from student_enrollments table
+        const enrollmentSessions = await db.all('SELECT DISTINCT session FROM student_enrollments WHERE session IS NOT NULL');
+        enrollmentSessions.forEach(e => sessions.add(e.session));
+
         // Get current session from settings
         const currentSession = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
         if (currentSession && currentSession.value) {

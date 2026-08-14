@@ -147,13 +147,22 @@ const getSubjectAnalysis = async (req, res) => {
         `, [class_id, term, session]);
     }
 
+    const totalStudentsResult = await db.get(`
+        SELECT COUNT(DISTINCT r.student_id) AS total_students
+        FROM results r
+        JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
+        WHERE se.class_id = ? AND r.term = ? AND r.session = ?
+    `, [class_id, term, session]);
+    const totalStudents = totalStudentsResult ? totalStudentsResult.total_students : 0;
+
     res.render('reports/academic/analysis', {
         title: 'Subject Analysis',
         classes,
         availableSessions,
         user,
         query: { class_id, term, session },
-        analysis
+        analysis,
+        totalStudents
     });
 };
 

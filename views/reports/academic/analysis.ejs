@@ -66,7 +66,7 @@
                         </p>
                         <% if (analysis && analysis.length) { %>
                             <p><strong>Class:</strong> <%= analysis[0].class_name %></p>
-                        <p><strong>Students:</strong> <%= analysis.reduce((sum, r) => sum + r.students_count, 0) %></p>
+                        <p><strong>Students:</strong> <%= totalStudents %></p>
                         <% } %>
                     </div>
 

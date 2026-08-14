@@ -126,12 +126,34 @@ const getSubjectAnalysis = async (req, res) => {
 
     const availableSessions = await sessionHelper.getAvailableSessions();
 
+    // Fetch analysis data if filters are provided
+    let analysis = [];
+    if (class_id && term && session) {
+        analysis = await db.all(`
+            SELECT s.name AS subject_name,
+                   c.name AS class_name,
+                   COUNT(DISTINCT r.student_id) AS students_count,
+                   AVG(r.total) AS average_score,
+                   MAX(r.total) AS highest_score,
+                   MIN(r.total) AS lowest_score,
+                   SUM(CASE WHEN r.total >= 50 THEN 1 ELSE 0 END) AS pass_count
+            FROM results r
+            JOIN subjects s ON r.subject_id = s.id
+            JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
+            JOIN classes c ON se.class_id = c.id
+            WHERE se.class_id = ? AND r.term = ? AND r.session = ?
+            GROUP BY s.id, s.name, c.name
+            ORDER BY s.name;
+        `, [class_id, term, session]);
+    }
+
     res.render('reports/academic/analysis', {
         title: 'Subject Analysis',
         classes,
         availableSessions,
         user,
-        query: { class_id, term, session }
+        query: { class_id, term, session },
+        analysis
     });
 };
 

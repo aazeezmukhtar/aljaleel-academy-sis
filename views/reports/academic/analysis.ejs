@@ -66,6 +66,7 @@
                         </p>
                         <% if (analysis && analysis.length) { %>
                             <p><strong>Class:</strong> <%= analysis[0].class_name %></p>
+                        <p><strong>Students:</strong> <%= analysis.reduce((sum, r) => sum + r.students_count, 0) %></p>
                         <% } %>
                     </div>
 
@@ -73,7 +74,7 @@
                         <thead>
                             <tr>
                                 <th>Subject</th>
-                                <th>Students</th>
+
                                 <th>Average</th>
                                 <th>Highest</th>
                                 <th>Lowest</th>
@@ -87,9 +88,7 @@
                                         <%= record.subject_name %>
                                     </td>
 
-                                    <td>
-                                        <%= record.students_count %>
-                                    </td>
+
                                     <td>
                                         <%= Number(record.average_score).toFixed(1) %>
                                     </td>

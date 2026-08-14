@@ -431,16 +431,18 @@
 }
 
     @media print {
-        body { background: white !important; }
+        @page { size: A4 landscape; margin: 10mm; }
+        .no-print { display: none !important; }
         .report-paper {
-            width: 210mm !important;
-            max-width: 210mm !important;
+            position: static !important;
+            width: 100% !important;
+            max-width: 100% !important;
             margin: 0 !important;
+            padding: 0 !important;
             box-shadow: none !important;
-            padding: 12mm 15mm !important;
             border-radius: 0 !important;
+            page-break-after: auto !important;
         }
-        /* Ensure report card container prints correctly */
         .report-card { display: block !important; page-break-after: auto !important; }
         .card { display: block !important; }
         .report-table { width: 100% !important; border-collapse: collapse !important; }

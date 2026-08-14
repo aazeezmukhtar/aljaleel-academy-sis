@@ -19,14 +19,24 @@
 
             <div class="card no-print settings-card">
                 <form action="/reports/academic/analysis" method="GET" class="filter-form">
-                    <div class="form-group">
-                        <label>Term</label>
-                        <select name="term" required>
-                            <option value="1st Term" <%=query.term==='1st Term' ? 'selected' : '' %>>1st Term</option>
-                            <option value="2nd Term" <%=query.term==='2nd Term' ? 'selected' : '' %>>2nd Term</option>
-                            <option value="3rd Term" <%=query.term==='3rd Term' ? 'selected' : '' %>>3rd Term</option>
-                        </select>
-                    </div>
+                     <div class="form-group">
+                         <label>Class</label>
+                         <select name="class_id" required>
+                             <option value="">Select Class</option>
+                             <% classes.forEach(cls => { %>
+                                 <option value="<%= cls.id %>" <%= query.class_id == cls.id ? 'selected' : '' %>><%= cls.name %></option>
+                             <% }) %>
+                         </select>
+                     </div>
+                     <div class="form-group">
+                         <label>Term</label>
+                         <select name="term" required>
+                             <option value="">Select Term</option>
+                             <option value="1st Term" <%= query.term==='1st Term' ? 'selected' : '' %>>1st Term</option>
+                             <option value="2nd Term" <%= query.term==='2nd Term' ? 'selected' : '' %>>2nd Term</option>
+                             <option value="3rd Term" <%= query.term==='3rd Term' ? 'selected' : '' %>>3rd Term</option>
+                         </select>
+                     </div>
                     <div class="form-group">
                         <label>Session</label>
                         <select name="session" required>

@@ -101,30 +101,32 @@
         </div>
 
         <!-- RESULTS TABLE -->
-        <table class="rc-table">
-            <thead>
-                <tr>
-                    <th class="rc-th-subject">Subject</th>
-                    <th>1st Term</th>
-                    <th>2nd Term</th>
-                    <th>3rd Term</th>
-                    <th>Avg</th>
-                    <th>Remark</th>
-                </tr>
-            </thead>
-            <tbody>
-                <% subjects.forEach(function(row, idx) { %>
-                    <tr class="<%= idx % 2 === 0 ? 'rc-row-even' : '' %>">
-                        <td class="rc-td-subject"><%= row.name %></td>
-                        <td class="rc-td-center"><%= row.terms['1st Term'] || '-' %></td>
-                        <td class="rc-td-center"><%= row.terms['2nd Term'] || '-' %></td>
-                        <td class="rc-td-center"><%= row.terms['3rd Term'] || '-' %></td>
-                        <td class="rc-td-center rc-td-bold"><%= row.avg.toFixed(1) %></td>
-                        <td class="rc-td-remark"><%= getGradeRemark(row.avg) %></td>
+        <div class="rc-table-wrapper">
+            <table class="rc-table">
+                <thead>
+                    <tr>
+                        <th class="rc-th-subject">Subject</th>
+                        <th>1st Term</th>
+                        <th>2nd Term</th>
+                        <th>3rd Term</th>
+                        <th>Avg</th>
+                        <th>Remark</th>
                     </tr>
-                <% }); %>
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    <% subjects.forEach(function(row, idx) { %>
+                        <tr class="<%= idx % 2 === 0 ? 'rc-row-even' : '' %>">
+                            <td class="rc-td-subject"><%= row.name %></td>
+                            <td class="rc-td-center"><%= row.terms['1st Term'] || '-' %></td>
+                            <td class="rc-td-center"><%= row.terms['2nd Term'] || '-' %></td>
+                            <td class="rc-td-center"><%= row.terms['3rd Term'] || '-' %></td>
+                            <td class="rc-td-center rc-td-bold"><%= row.avg.toFixed(1) %></td>
+                            <td class="rc-td-remark"><%= getGradeRemark(row.avg) %></td>
+                        </tr>
+                    <% }); %>
+                </tbody>
+            </table>
+        </div>
 
         <!-- BOTTOM SECTION -->
         <div class="rc-bottom">

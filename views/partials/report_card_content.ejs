@@ -83,17 +83,26 @@
                         </span>
                     </div>
                 </div>
+                <div class="rc-bio-row">
+                    <div class="rc-bio-cell">
+                        <span class="rc-bio-label">Term:</span>
+                        <span class="rc-bio-value">
+                            <%= term %>
+                        </span>
+                    </div>
                     <div class="rc-bio-cell">
                         <span class="rc-bio-label">Next Term:</span>
                         <span class="rc-bio-value">
                             <%= school.next_term_start_date || 'TBA' %>
                         </span>
                     </div>
+                </div>
             </div>
         </div>
 
         <!-- RESULTS TABLE -->
-        <table class="rc-table">
+        <div class="rc-table-wrapper">
+            <table class="rc-table">
             <thead>
                 <tr>
                     <th class="rc-th-subject">Subject</th>
@@ -133,6 +142,7 @@
                     <% }); %>
             </tbody>
         </table>
+        </div>
 
         <!-- BOTTOM SECTION -->
         <div class="rc-bottom">

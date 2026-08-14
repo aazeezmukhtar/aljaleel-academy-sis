@@ -1,7 +1,8 @@
 /* ===== REPORT CARD CONTAINER ===== */
 .report-card {
     background: var(--report-bg);
-    width: 210mm;
+    width: 100%;
+    max-width: 210mm;
     min-height: 297mm;
     margin: 10mm auto;
     padding: 12mm 15mm;
@@ -312,8 +313,132 @@
 .status-satisfactory { color: #16a34a; font-weight: 700; }
 .status-na { color: #dc2626; font-weight: 700; }
 
+/* Table Wrapper for Horizontal Scrolling on Mobile */
+.rc-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 6mm 0 4mm;
+}
+
+.rc-table-wrapper .rc-table {
+    margin: 0;
+}
+
+/* Mobile Responsiveness */
+@media screen and (max-width: 768px) {
+    .report-card {
+        /* Scale down to fit screen while keeping A4 dimensions */
+        transform: scale(0.85);
+        transform-origin: top left;
+        width: 210mm; /* retain A4 width */
+        margin: 10px auto;
+        overflow-x: auto;
+    }
+    .rc-table-wrapper {
+        /* Allow horizontal scroll for the results table */
+        overflow-x: auto;
+    }
+}
+
+    .rc-school-info h1 {
+        font-size: 16pt !important;
+        line-height: 1.2 !important;
+    }
+
+    .rc-motto {
+        font-size: 8.5pt !important;
+    }
+
+    .rc-logo img {
+        height: 45px !important;
+    }
+
+    .rc-title-badge span {
+        font-size: 8pt !important;
+        padding: 1.5mm 5mm !important;
+    }
+
+    .rc-bio-wrapper {
+        flex-direction: column !important;
+        align-items: center !important;
+        gap: 10px !important;
+    }
+
+    .rc-passport {
+        width: 75px !important;
+        height: 85px !important;
+        margin: 0 auto !important;
+    }
+
+    .rc-bio-grid {
+        width: 100% !important;
+    }
+
+    .rc-bio-row {
+        grid-template-columns: 1fr !important;
+        border-bottom: 1px dotted #e2e8f0 !important;
+    }
+
+    .rc-bio-cell {
+        padding: 6px 10px !important;
+        border-right: none !important;
+        justify-content: space-between !important;
+    }
+
+    .rc-bio-label {
+        font-size: 8pt !important;
+    }
+
+    .rc-bio-value {
+        font-size: 8.5pt !important;
+        text-align: right !important;
+    }
+
+    .rc-table-wrapper {
+        margin: 12px 0 8px !important;
+    }
+
+    .rc-table {
+        min-width: 480px !important;
+        font-size: 8.5pt !important;
+    }
+
+    .rc-table th, .rc-table td {
+        padding: 5px 3px !important;
+    }
+
+    .rc-bottom {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    .rc-traits-section {
+        grid-template-columns: 1fr !important;
+        gap: 10px !important;
+    }
+
+    .rc-signatures {
+        flex-direction: column !important;
+        gap: 15px !important;
+        align-items: center !important;
+        margin-top: 20px !important;
+    }
+
+    .rc-sig-block {
+        width: 160px !important;
+    }
+}
+
 @media print {
-    body { background: white; }
-    .report-card { margin: 0; box-shadow: none; }
-    .no-print { display: none; }
+    body { background: white !important; }
+    .report-card { 
+        width: 210mm !important; 
+        max-width: 210mm !important;
+        margin: 0 !important; 
+        box-shadow: none !important; 
+        padding: 12mm 15mm !important;
+        border-radius: 0 !important;
+    }
+    .no-print { display: none !important; }
 }

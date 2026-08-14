@@ -173,38 +173,9 @@
             }
 
             @media print {
-                @page {
-                    size: A4;
-                    margin: 10mm;
-                }
-
-                body * {
-                    visibility: hidden;
-                }
-
-                .report-paper,
-                .report-paper * {
-                    visibility: visible;
-                }
-
-                .report-paper {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    box-shadow: none;
-                    padding: 0;
-                    margin: 0;
-                }
-
-                .main-content {
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-
-                .no-print {
-                    display: none !important;
-                }
+                @page { size: A4; margin: 10mm; }
+                .no-print { display: none !important; }
+                .report-paper { position: static; width: 100%; box-shadow: none; padding: 0; margin: 0; }
             }
         </style>
 

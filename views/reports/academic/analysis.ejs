@@ -64,13 +64,15 @@
                         <p>
                             <%= query.term %>, <%= query.session %> Session
                         </p>
+                        <% if (analysis && analysis.length) { %>
+                            <p><strong>Class:</strong> <%= analysis[0].class_name %></p>
+                        <% } %>
                     </div>
 
                     <table class="report-table">
                         <thead>
                             <tr>
                                 <th>Subject</th>
-                                <th>Class</th>
                                 <th>Students</th>
                                 <th>Average</th>
                                 <th>Highest</th>
@@ -84,9 +86,7 @@
                                     <td>
                                         <%= record.subject_name %>
                                     </td>
-                                    <td>
-                                        <%= record.class_name %>
-                                    </td>
+
                                     <td>
                                         <%= record.students_count %>
                                     </td>

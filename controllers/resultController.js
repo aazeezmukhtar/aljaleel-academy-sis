@@ -321,15 +321,24 @@ const saveResults = async (req, res) => {
         `;
 
         await db.transaction(async () => {
-            for (const item of results) {
-                await db.run(sql, [
-                    item.student_id, subject_id, term, session,
-                    item.ca1 || 0, item.ca2 || 0, item.exam || 0,
-                    item.total || 0, (item.grade || '').trim(), (item.remark || '').trim(),
-                    status || 'draft'
-                ]);
-            }
-        });
+                for (const item of results) {
+                    // Compute total and grade server-side to avoid client reliance
+                    const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
+                    await db.run(sql, [
+                        item.student_id,
+                        subject_id,
+                        term,
+                        session,
+                        item.ca1 || 0,
+                        item.ca2 || 0,
+                        item.exam || 0,
+                        total,
+                        grade,
+                        (item.remark || '').trim(),
+                        status || 'draft'
+                    ]);
+                }
+            });
 
         res.json({ success: true, message: `Results ${status === 'submitted' ? 'submitted' : 'saved'} successfully.` });
     } catch (err) {

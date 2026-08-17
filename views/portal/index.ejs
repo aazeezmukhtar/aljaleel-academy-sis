@@ -256,21 +256,23 @@
                 <div class="p-card-body">
                     <% if (classPosts && classPosts.length > 0) { %>
                         <% classPosts.forEach(post => { %>
-                            <a href="/portal/assignment/<%= post.id %>" class="item-row assignment-card" style="text-decoration:none;color:inherit;transition:all 0.2s;padding:12px 10px;border-radius:12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:15px;">
-                                <div class="item-icon" style="background: <%= post.post_type === 'Assignment' ? '#fef2f2' : '#f0fdf4' %>; color: <%= post.post_type === 'Assignment' ? '#ef4444' : '#16a34a' %>;">
-                                    <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-chat-left-text' %>"></i>
-                                </div>
-                                <div class="item-content">
-                                    <span class="item-title"><%= post.title %></span>
-                                    <span class="item-meta">
-                                        <% if(post.due_date) { %>
-                                            Due: <%= new Date(post.due_date).toLocaleDateString() %>
-                                        <% } else { %>
-                                            Posted by Tr. <%= post.last_name %>
-                                        <% } %>
-                                    </span>
-                                </div>
-                            </a>
+                            <% if (!post.student_id || post.student_id == student.id) { %>
+                                <a href="/portal/assignment/<%= post.id %>" class="item-row assignment-card" style="text-decoration:none;color:inherit;transition:all 0.2s;padding:12px 10px;border-radius:12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:15px;">
+                                    <div class="item-icon" style="background: <%= post.post_type === 'Assignment' ? '#fef2f2' : '#f0fdf4' %>; color: <%= post.post_type === 'Assignment' ? '#ef4444' : '#16a34a' %>;">
+                                        <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-chat-left-text' %>"></i>
+                                    </div>
+                                    <div class="item-content">
+                                        <span class="item-title"><%= post.title %></span>
+                                        <span class="item-meta">
+                                            <% if(post.due_date) { %>
+                                                Due: <%= new Date(post.due_date).toLocaleDateString() %>
+                                            <% } else { %>
+                                                Posted by Tr. <%= post.last_name %>
+                                            <% } %>
+                                        </span>
+                                    </div>
+                                </a>
+                            <% } %>
                         <% }) %>
                     <% } else { %>
                         <p class="text-muted" style="text-align: center; padding: 20px;">Class board is empty.</p>

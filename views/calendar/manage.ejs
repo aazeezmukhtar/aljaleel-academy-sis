@@ -34,19 +34,32 @@
                             <option value="Deadline">Deadline / Fee Due</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label>Target Section</label>
+                        <select name="section_id">
+                            <option value="">All Sections (Global)</option>
+                            <% if (typeof sections !== 'undefined' && sections) { sections.forEach(sec => { %>
+                                <option value="<%= sec.id %>"><%= sec.name %></option>
+                            <% }); } %>
+                        </select>
+                    </div>
                     <div class="grid-2">
                         <div class="form-group">
                             <label>Session</label>
                             <select name="session">
-                                <option value="2025/2026">2025/2026</option>
+                                <% if (typeof sessionList !== 'undefined' && sessionList) { sessionList.forEach(s => { %>
+                                    <option value="<%= s.name %>" <%= s.name === (school.current_session || '') ? 'selected' : '' %>><%= s.name %></option>
+                                <% }); } else { %>
+                                    <option value="<%= school.current_session || '2025/2026' %>"><%= school.current_session || '2025/2026' %></option>
+                                <% } %>
                             </select>
                         </div>
                         <div class="form-group">
                             <label>Term</label>
                             <select name="term">
-                                <option value="1st Term">1st Term</option>
-                                <option value="2nd Term">2nd Term</option>
-                                <option value="3rd Term">3rd Term</option>
+                                <option value="1st Term" <%= (school.current_term === '1st Term') ? 'selected' : '' %>>1st Term</option>
+                                <option value="2nd Term" <%= (school.current_term === '2nd Term') ? 'selected' : '' %>>2nd Term</option>
+                                <option value="3rd Term" <%= (school.current_term === '3rd Term') ? 'selected' : '' %>>3rd Term</option>
                             </select>
                         </div>
                     </div>
@@ -66,7 +79,7 @@
                         <thead>
                             <tr>
                                 <th>Date</th>
-                                <th>Title</th>
+                                <th>Title & Section</th>
                                 <th>Type</th>
                                 <th style="text-align: right;">Action</th>
                             </tr>
@@ -74,11 +87,28 @@
                         <tbody>
                             <% if (events && events.length > 0) { %>
                                 <% events.forEach(event => { %>
+                                    <% 
+                                        let eventDateDisplay = event.event_date;
+                                        if (event.event_date) {
+                                            const parts = event.event_date.toString().split('T')[0].split('-');
+                                            if (parts.length === 3) {
+                                                const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                                                eventDateDisplay = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                                            }
+                                        }
+                                    %>
                                     <tr>
-                                        <td data-label="Date"><strong><%= new Date(event.event_date).toLocaleDateString() %></strong></td>
-                                        <td data-label="Title"><%= event.title %></td>
+                                        <td data-label="Date"><strong><%= eventDateDisplay %></strong></td>
+                                        <td data-label="Title">
+                                            <div style="font-weight: 600;"><%= event.title %></div>
+                                            <% if (event.section_name) { %>
+                                                <small style="color: var(--primary); font-weight: 600;"><i class="bi bi-layers-fill"></i> <%= event.section_name %></small>
+                                            <% } else { %>
+                                                <small class="text-muted">All Sections</small>
+                                            <% } %>
+                                        </td>
                                         <td data-label="Type">
-                                            <span class="badge <%= event.type === 'Exam' ? 'badge-danger' : event.type === 'Holiday' ? 'badge-success' : 'badge-primary' %>" style="font-size: 0.7rem;">
+                                            <span class="badge <%= event.type === 'Exam' ? 'badge-danger' : event.type === 'Holiday' ? 'badge-success' : event.type === 'Deadline' ? 'badge-warning' : 'badge-primary' %>" style="font-size: 0.7rem;">
                                                 <%= event.type %>
                                             </span>
                                         </td>

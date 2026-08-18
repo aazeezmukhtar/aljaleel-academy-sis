@@ -77,9 +77,19 @@
                     <tbody>
                         <% if (events && events.length > 0) { %>
                             <% events.forEach(event => { %>
+                                <% 
+                                    let dateDisplay = event.event_date;
+                                    if (event.event_date) {
+                                        const parts = event.event_date.toString().split('T')[0].split('-');
+                                        if (parts.length === 3) {
+                                            const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+                                            dateDisplay = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                                        }
+                                    }
+                                %>
                                 <tr>
                                     <td style="font-weight: 600; vertical-align: top;">
-                                        <%= new Date(event.event_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) %>
+                                        <%= dateDisplay %>
                                     </td>
                                     <td>
                                         <div style="font-weight: 700; color: #1e293b; font-size: 1.05rem; margin-bottom: 4px;"><%= event.title %></div>

@@ -21,12 +21,17 @@ exports.getManageCalendar = async (req, res) => {
     try {
         const events = await db.all('SELECT e.*, s.name as section_name FROM term_events e LEFT JOIN sections s ON e.section_id = s.id ORDER BY event_date DESC');
         const sections = await db.all('SELECT * FROM sections ORDER BY name');
+        const sessionRows = await db.all('SELECT * FROM sessions ORDER BY name DESC').catch(() => []);
         const school = {};
         (await db.all('SELECT key, value FROM settings')).forEach(r => school[r.key] = r.value);
+        
+        const sessionList = sessionRows.length > 0 ? sessionRows : [{ name: school.current_session || '2025/2026' }];
+        
         res.render('calendar/manage', {
             title: 'Manage Calendar',
             events,
             sections,
+            sessionList,
             school
         });
     } catch (err) {

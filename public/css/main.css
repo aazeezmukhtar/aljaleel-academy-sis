@@ -263,6 +263,12 @@ a {
     gap: 24px;
 }
 
+.settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 32px;
+}
+
 .grid-2, .grid-3, .grid-4 {
     display: grid;
     grid-template-columns: 1fr;
@@ -380,7 +386,7 @@ a {
         overflow-x: hidden;
     }
 
-    .grid-2, .grid-3, .grid-4, .grid-main-aside {
+    .grid-2, .grid-3, .grid-4, .grid-main-aside, .settings-grid {
         grid-template-columns: 1fr;
     }
     

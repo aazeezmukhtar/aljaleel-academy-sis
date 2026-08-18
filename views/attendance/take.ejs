@@ -85,6 +85,16 @@
                 <button class="btn btn-primary btn-block" onclick="window.location.href='/attendance'">Back to Dashboard</button>
             </div>
         </div>
+
+        <!-- Sticky Save Bar (mobile only) -->
+        <div class="sticky-save-bar">
+            <a href="/attendance" class="btn btn-outline" style="flex:0; padding: 12px 16px;">
+                <i class="bi bi-arrow-left"></i>
+            </a>
+            <button type="submit" form="attendance-form" class="btn btn-primary">
+                <i class="bi bi-cloud-check-fill"></i> Save Records
+            </button>
+        </div>
     </main>
 </div>
 
@@ -253,11 +263,13 @@
 
     document.getElementById('attendance-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        const submitBtn = document.querySelector('button[form="attendance-form"]');
-        const originalText = submitBtn.innerHTML;
+        const submitBtns = document.querySelectorAll('button[form="attendance-form"]');
+        const originalText = submitBtns[0] ? submitBtns[0].innerHTML : '<i class="bi bi-cloud-check-fill"></i> Save Records';
 
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
+        submitBtns.forEach(btn => {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
+        });
 
         const formData = new FormData(e.target);
         const data = {
@@ -308,8 +320,10 @@
             console.error('Fetch Error:', err);
             alert('System Error: ' + err.message);
         } finally {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
+            submitBtns.forEach(btn => {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            });
         }
     });
 </script>

@@ -1,0 +1,148 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/main.css">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <style>
+        :root { --school-primary: <%= (school && school.primary_color) ? school.primary_color : '#6366f1' %>; }
+        body { background: #f8fafc; color: #1e293b; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+        .portal-nav { background: var(--school-primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
+        .portal-nav h2 { margin: 0; font-family: 'Playfair Display', serif; font-size: 1.4rem; }
+        .nav-links { display: flex; align-items: center; gap: 20px; }
+        .nav-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; opacity: 0.9; transition: opacity 0.2s; }
+        .nav-links a:hover { opacity: 1; }
+        .portal-main { max-width: 800px; margin: 40px auto; padding: 0 20px; }
+        .photo-section { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 30px; }
+        .photo-wrapper { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; border: 4px solid var(--school-primary); background: #e2e8f0; display: flex; align-items: center; justify-content: center; }
+        .photo-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+        .photo-placeholder { font-size: 3rem; color: #94a3b8; }
+        .photo-hint { font-size: 0.8rem; color: #94a3b8; }
+        .card { background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); overflow: hidden; }
+        .card-header { background: var(--school-primary); color: white; padding: 20px 30px; display: flex; align-items: center; gap: 12px; }
+        .card-header i { font-size: 1.4rem; }
+        .card-header h2 { margin: 0; font-size: 1.2rem; font-weight: 700; }
+        .card-body { padding: 30px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .form-group { margin-bottom: 22px; }
+        .form-group label { display: block; font-weight: 600; font-size: 0.88rem; color: #475569; margin-bottom: 6px; }
+        .form-group .form-control { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; color: #1e293b; background: #f8fafc; transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box; }
+        .form-group .form-control:focus { border-color: var(--school-primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); outline: none; background: white; }
+        textarea.form-control { resize: vertical; min-height: 90px; }
+        .file-input-wrapper { position: relative; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; background: #f8fafc; transition: border-color 0.2s; }
+        .file-input-wrapper:hover { border-color: var(--school-primary); }
+        .file-input-wrapper input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+        .file-input-wrapper i { font-size: 1.5rem; color: #94a3b8; }
+        .file-input-wrapper p { margin: 6px 0 0; font-size: 0.82rem; color: #94a3b8; }
+        .section-divider { display: flex; align-items: center; gap: 10px; margin: 28px 0 20px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .section-divider span { white-space: nowrap; color: #64748b; }
+        .section-divider::before, .section-divider::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+        .btn-save { background: var(--school-primary); color: white; border: none; border-radius: 10px; padding: 13px 30px; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s; }
+        .btn-save:hover { opacity: 0.88; }
+        .alert { padding: 14px 18px; border-radius: 10px; margin-bottom: 22px; font-size: 0.93rem; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+        .alert-danger  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+        .info-strip { background: #f1f5f9; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px 30px; }
+        .info-strip .info-item { display: flex; flex-direction: column; gap: 2px; }
+        .info-strip .info-label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+        .info-strip .info-value { font-size: 0.95rem; font-weight: 600; color: #1e293b; }
+        @media (max-width: 640px) { .portal-nav { padding: 15px 20px; } .form-row { grid-template-columns: 1fr; } .card-body { padding: 20px; } }
+    </style>
+</head>
+<body>
+<nav class="portal-nav">
+    <div><h2>Nexus Scholar</h2></div>
+    <div class="nav-links">
+        <a href="/portal"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+        <a href="/portal/calendar"><i class="bi bi-calendar3"></i> Calendar</a>
+        <a href="/portal/change-password"><i class="bi bi-shield-lock"></i> Password</a>
+        <a href="/auth/student-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
+    </div>
+</nav>
+<main class="portal-main">
+    <% if (typeof error !== 'undefined' && error) { %>
+        <div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill"></i> <%= error %></div>
+    <% } %>
+    <% if (typeof success !== 'undefined' && success) { %>
+        <div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> <%= success %></div>
+    <% } %>
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-person-circle"></i>
+            <h2>My Profile &amp; Settings</h2>
+        </div>
+        <div class="card-body">
+            <div class="info-strip">
+                <div class="info-item">
+                    <span class="info-label">Full Name</span>
+                    <span class="info-value"><%= student.first_name %> <%= student.last_name %></span>
+                </div>
+                <div class="info-item">
+                    <span class="info-label">Admission No.</span>
+                    <span class="info-value"><%= student.admission_number %></span>
+                </div>
+            </div>
+            <form action="/portal/profile" method="POST" enctype="multipart/form-data">
+                <div class="photo-section">
+                    <div class="photo-wrapper" id="photoPreviewWrap">
+                        <% if (student.passport_photo_path) { %>
+                            <img id="photoPreview" src="<%= student.passport_photo_path %>" alt="Profile Photo">
+                        <% } else { %>
+                            <i class="bi bi-person-fill photo-placeholder"></i>
+                        <% } %>
+                    </div>
+                    <div class="file-input-wrapper" style="width: 260px;">
+                        <i class="bi bi-camera"></i>
+                        <p>Click to change profile photo</p>
+                        <input type="file" name="passport" accept="image/*" id="photoInput">
+                    </div>
+                    <span class="photo-hint">JPG, PNG or GIF &middot; Max 5MB</span>
+                </div>
+                <div class="section-divider"><span>Personal Details</span></div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="dob"><i class="bi bi-calendar-heart"></i> Date of Birth</label>
+                        <input type="date" id="dob" name="dob" class="form-control" value="<%= student.formatted_dob || '' %>">
+                    </div>
+                    <div class="form-group">
+                        <label for="phone"><i class="bi bi-telephone"></i> Phone Number</label>
+                        <input type="tel" id="phone" name="phone" class="form-control" placeholder="e.g. 08012345678" value="<%= student.phone || '' %>">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="email"><i class="bi bi-envelope"></i> Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" placeholder="e.g. student@email.com" value="<%= student.email || '' %>">
+                </div>
+                <div class="form-group">
+                    <label for="address"><i class="bi bi-geo-alt"></i> Home Address</label>
+                    <textarea id="address" name="address" class="form-control" placeholder="Enter your home address"><%= student.address || '' %></textarea>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 10px;">
+                    <a href="/portal/change-password" style="color: var(--school-primary); font-weight: 600; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+                        <i class="bi bi-shield-lock"></i> Change Password
+                    </a>
+                    <button type="submit" class="btn-save">
+                        <i class="bi bi-floppy"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+<script>
+    document.getElementById('photoInput').addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            document.getElementById('photoPreviewWrap').innerHTML =
+                `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;" alt="Preview">`;
+        };
+        reader.readAsDataURL(file);
+    });
+</script>
+</body>
+</html>

@@ -12,7 +12,7 @@
                     <a href="/attendance/report" class="btn btn-outline">View Reports</a>
                 </header>
 
-                <section class="grid-2" style="margin-bottom: 25px;">
+                <section class="<%= (typeof user !== 'undefined' && user && user.role === 'Admin') ? 'grid-2' : '' %>" style="margin-bottom: 25px;">
                     <div class="card">
                         <h3>Take Student Attendance</h3>
                         <p style="margin-bottom: 20px; color: var(--text-muted);">Select a class and date to start
@@ -46,6 +46,7 @@
                         </form>
                     </div>
 
+                    <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
                     <div class="card" style="background: linear-gradient(135deg, #4f46e5, #4338ca); color: white;">
                         <h3>Staff Attendance</h3>
                         <p style="margin-top: 10px; opacity: 0.9;">Manage attendance for teachers and staff members.</p>
@@ -59,6 +60,7 @@
                             Includes Present, Absent, Late, and Leave statuses.
                         </div>
                     </div>
+                    <% } %>
                 </section>
 
                 <!-- Flagged / At-Risk Students Section -->

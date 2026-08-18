@@ -180,6 +180,63 @@ exports.viewCumulativeResult = async (req, res) => {
     await resultController.getCumulativeReport(req, res);
 };
 
+exports.getProfile = async (req, res) => {
+    const studentId = req.session.student.id;
+    try {
+        const student = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+        if (!student) return res.redirect('/portal?error=Student not found');
+        
+        let formattedDob = '';
+        if (student.dob) {
+            const d = new Date(student.dob);
+            if (!isNaN(d.getTime())) {
+                formattedDob = d.toISOString().slice(0, 10);
+            }
+        }
+        student.formatted_dob = formattedDob;
+
+        res.render('portal/profile', {
+            title: 'My Profile & Settings',
+            student,
+            school: await getSettings(),
+            error: req.query.error,
+            success: req.query.success
+        });
+    } catch (err) {
+        console.error('Portal Get Profile Error:', err);
+        res.status(500).send('Database Error');
+    }
+};
+
+exports.postUpdateProfile = async (req, res) => {
+    const studentId = req.session.student.id;
+    const { dob, phone, email, address } = req.body;
+    let passport_photo_path = null;
+    if (req.file) {
+        passport_photo_path = `/uploads/${req.file.filename}`;
+    }
+
+    try {
+        if (passport_photo_path) {
+            await db.run(
+                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ?, passport_photo_path = ? WHERE id = ?',
+                [dob || null, phone || null, email || null, address || null, passport_photo_path, studentId]
+            );
+            req.session.student.passport_photo_path = passport_photo_path;
+        } else {
+            await db.run(
+                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ? WHERE id = ?',
+                [dob || null, phone || null, email || null, address || null, studentId]
+            );
+        }
+
+        res.redirect('/portal/profile?success=Profile updated successfully');
+    } catch (err) {
+        console.error('Portal Update Profile Error:', err);
+        res.redirect('/portal/profile?error=Failed to update profile');
+    }
+};
+
 exports.getChangePassword = (req, res) => {
     res.render('portal/change_password', {
         title: 'Change Password - Scholar Portal',

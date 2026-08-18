@@ -185,6 +185,32 @@ async function runMigrations() {
         }
     }
 
+    // 11. Add email, phone, address columns to students table
+    try {
+        await db.run("ALTER TABLE students ADD COLUMN email TEXT");
+        console.log('[migrate] Added email to students');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] students.email failed:', e.message);
+        }
+    }
+    try {
+        await db.run("ALTER TABLE students ADD COLUMN phone TEXT");
+        console.log('[migrate] Added phone to students');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] students.phone failed:', e.message);
+        }
+    }
+    try {
+        await db.run("ALTER TABLE students ADD COLUMN address TEXT");
+        console.log('[migrate] Added address to students');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] students.address failed:', e.message);
+        }
+    }
+
     console.log('[migrate] Startup migrations complete.');
 }
 

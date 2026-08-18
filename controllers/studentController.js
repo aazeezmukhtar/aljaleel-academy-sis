@@ -352,6 +352,9 @@ const updateStudent = async (req, res) => {
         current_class_id,
         parent_phone,
         parent_address,
+        email,
+        phone,
+        address,
         status
     } = req.body;
 
@@ -366,7 +369,7 @@ const updateStudent = async (req, res) => {
             UPDATE students SET
                 first_name = ?, last_name = ?, gender = ?, dob = ?, 
                 admission_number = ?, current_class_id = ?, 
-                parent_phone = ?, parent_address = ?, passport_photo_path = ?, status = ?
+                parent_phone = ?, parent_address = ?, email = ?, phone = ?, address = ?, passport_photo_path = ?, status = ?
             WHERE id = ?
         `;
 
@@ -376,6 +379,9 @@ const updateStudent = async (req, res) => {
             primary_class_id,
             parent_phone || null,
             parent_address || null,
+            email || null,
+            phone || null,
+            address || null,
             passport_photo_path,
             status,
             id

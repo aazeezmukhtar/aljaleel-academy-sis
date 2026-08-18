@@ -73,6 +73,9 @@ CREATE TABLE IF NOT EXISTS students (
     status TEXT DEFAULT 'active',
     parent_phone TEXT,
     parent_address TEXT,
+    email TEXT,
+    phone TEXT,
+    address TEXT,
     password TEXT
 );
 

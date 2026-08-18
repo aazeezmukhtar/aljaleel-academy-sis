@@ -848,27 +848,42 @@
                 width: 100% !important;
             }
 
+            .student-mobile-cards.table-container {
+                overflow-x: visible !important;
+                background: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+            }
+
             .student-mobile-cards table,
-            .student-mobile-cards tbody,
-            .student-mobile-cards tr,
-            .student-mobile-cards td {
+            .student-mobile-cards .data-table {
+                min-width: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                display: block !important;
+            }
+
+            .student-mobile-cards tbody {
                 display: block !important;
                 width: 100% !important;
-                box-sizing: border-box !important;
             }
+
             .student-mobile-cards thead { display: none !important; }
             
             .student-mobile-cards tr {
-                padding: 16px !important;
+                padding: 14px !important;
                 border: 1px solid #e2e8f0 !important;
                 border-radius: 16px !important;
-                margin-bottom: 16px !important;
+                margin-bottom: 12px !important;
                 background: white !important;
                 display: grid !important;
                 grid-template-columns: 1fr auto !important;
                 grid-template-rows: auto auto auto !important;
-                gap: 12px 8px !important;
-                box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05) !important;
+                gap: 10px 8px !important;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.04) !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
             }
             
             .student-mobile-cards td {

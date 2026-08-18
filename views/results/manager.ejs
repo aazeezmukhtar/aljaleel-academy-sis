@@ -212,7 +212,7 @@
                                                                 <%= isLocked ? 'disabled' : '' %>>
                                                         </td>
                                                         <td data-label="Total" class="total fw-bold"><%= s.total || 0 %></td>
-                                                        <td data-label="Grade" class="grade fw-bold"><%= s.grade || '-' %></td>
+                                                        <td data-label="Grade" class="grade fw-bold" data-grade="<%= s.grade || '' %>"><%= s.grade || '-' %></td>
                                         </tr>
                                         <% }) %>
                                 </tbody>
@@ -343,25 +343,27 @@
 
         .total {
             text-align: center;
-            font-size: 1.1em;
+            font-size: 1.05rem;
+            font-weight: 700;
+            vertical-align: middle;
         }
 
         .grade {
             text-align: center;
-            font-weight: bold;
+            font-weight: 800;
+            font-size: 1.05rem;
+            vertical-align: middle;
         }
 
-        .grade[data-grade^="A"] {
-            color: #16a34a;
-        }
-
-        .grade[data-grade^="F"] {
-            color: #dc2626;
-        }
+        .grade[data-grade^="A"] { color: #16a34a; }
+        .grade[data-grade^="B"] { color: #2563eb; }
+        .grade[data-grade^="C"] { color: #d97706; }
+        .grade[data-grade^="D"] { color: #ea580c; }
+        .grade[data-grade^="E"] { color: #9333ea; }
+        .grade[data-grade^="F"] { color: #dc2626; }
 
         .total, .grade {
-            min-width: 60px;
-            display: inline-block;
+            min-width: 65px;
         }
 
         @media (max-width: 768px) {
@@ -441,7 +443,7 @@
     </style>
 
     <script>
-        // Logic: Auto-Calculate totals and grades on input
+        // Logic: Auto-Calculate totals and grades on input and page load
         const grid = document.getElementById('resultGrid');
         if (grid) {
             grid.addEventListener('input', (e) => {
@@ -451,6 +453,9 @@
                     validateInput(e.target);
                 }
             });
+
+            // Initial calculation for existing rows
+            grid.querySelectorAll('tbody tr').forEach(row => calculateRow(row));
         }
 
         function validateInput(input) {
@@ -462,30 +467,39 @@
             const val = parseFloat(input.value);
             if (val > max) {
                 input.classList.add('error');
-                // Optional: Tooltip or toast?
             } else {
                 input.classList.remove('error');
             }
         }
 
         function calculateRow(row) {
-            const ca1 = parseFloat(row.querySelector('.ca1').value) || 0;
-            const ca2 = parseFloat(row.querySelector('.ca2').value) || 0;
-            const exam = parseFloat(row.querySelector('.exam').value) || 0;
+            const ca1El = row.querySelector('.ca1');
+            const ca2El = row.querySelector('.ca2');
+            const examEl = row.querySelector('.exam');
+            if (!ca1El && !examEl) return;
 
-            const total = (ca1 + ca2 + exam).toFixed(1);
+            const ca1 = parseFloat(ca1El ? ca1El.value : 0) || 0;
+            const ca2 = parseFloat(ca2El ? ca2El.value : 0) || 0;
+            const exam = parseFloat(examEl ? examEl.value : 0) || 0;
+
+            const numTotal = ca1 + ca2 + exam;
+            const cleanTotal = Number.isInteger(numTotal) ? numTotal : parseFloat(numTotal.toFixed(1));
             const totalCell = row.querySelector('.total');
             const gradeCell = row.querySelector('.grade');
 
-            totalCell.textContent = total;
+            if (totalCell) {
+                totalCell.textContent = cleanTotal;
+            }
 
-            // Determine Grade
-            if (typeof GRADING !== 'undefined' && GRADING.length > 0) {
-                const gradeObj = GRADING.find(g => total >= g.min_score && total <= g.max_score);
+            // Determine Grade & apply color attribute
+            if (gradeCell && typeof GRADING !== 'undefined' && GRADING.length > 0) {
+                const gradeObj = GRADING.find(g => cleanTotal >= g.min_score && cleanTotal <= g.max_score);
                 if (gradeObj) {
                     gradeCell.textContent = gradeObj.grade;
+                    gradeCell.setAttribute('data-grade', gradeObj.grade);
                 } else {
                     gradeCell.textContent = '-';
+                    gradeCell.removeAttribute('data-grade');
                 }
             }
         }

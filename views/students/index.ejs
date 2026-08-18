@@ -40,24 +40,34 @@
 
                             <!-- Direct Dropdown Filters -->
                             <div class="direct-filters-group">
-                                <select name="class_id" id="classFilter" class="filter-select" title="Class">
-                                    <option value="">All Classes</option>
-                                    <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
-                                        <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %></option>
-                                    <% }); } %>
-                                </select>
-                                <select name="gender" id="genderFilter" class="filter-select" title="Gender">
-                                    <option value="">All Genders</option>
-                                    <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
-                                    <option value="Female" <%= filters.gender === 'Female' ? 'selected' : '' %>>Female</option>
-                                    <option value="Other" <%= filters.gender === 'Other' ? 'selected' : '' %>>Other</option>
-                                </select>
-                                <select name="status" id="statusFilter" class="filter-select" title="Status">
-                                    <option value="">All Statuses</option>
-                                    <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
-                                        <option value="<%= st %>" <%= filters.status === st ? 'selected' : '' %>><%= st.charAt(0).toUpperCase() + st.slice(1) %></option>
-                                    <% }); } %>
-                                </select>
+                                <div class="filter-pill-wrapper" title="Class">
+                                    <i class="bi bi-door-open-fill filter-icon"></i>
+                                    <select name="class_id" id="classFilter" class="filter-select">
+                                        <option value="">All Classes</option>
+                                        <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
+                                            <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %></option>
+                                        <% }); } %>
+                                    </select>
+                                </div>
+
+                                <div class="filter-pill-wrapper" title="Gender">
+                                    <i class="bi bi-people-fill filter-icon"></i>
+                                    <select name="gender" id="genderFilter" class="filter-select">
+                                        <option value="">All Genders</option>
+                                        <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
+                                        <option value="Female" <%= filters.gender === 'Female' ? 'selected' : '' %>>Female</option>
+                                    </select>
+                                </div>
+
+                                <div class="filter-pill-wrapper" title="Status">
+                                    <i class="bi bi-activity filter-icon"></i>
+                                    <select name="status" id="statusFilter" class="filter-select">
+                                        <option value="">All Statuses</option>
+                                        <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
+                                            <option value="<%= st %>" <%= filters.status === st ? 'selected' : '' %>><%= st.charAt(0).toUpperCase() + st.slice(1) %></option>
+                                        <% }); } %>
+                                    </select>
+                                </div>
 
                                 <!-- More Filters Dropdown -->
                                 <div class="more-filters-dropdown">
@@ -69,12 +79,14 @@
                                     <!-- Popover Menu -->
                                     <div id="moreFiltersPopover" class="more-filters-popover">
                                         <div class="popover-header">
-                                            <span>More Filters</span>
+                                            <span><i class="bi bi-sliders" style="margin-right: 6px; color: var(--primary);"></i>More Filters</span>
                                             <button type="button" class="popover-close-btn" id="closePopoverBtn"><i class="bi bi-x"></i></button>
                                         </div>
                                         <div class="popover-body">
                                             <div class="form-group" style="margin-bottom: 12px;">
-                                                <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Section</label>
+                                                <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                                                    <i class="bi bi-layers-fill" style="color: var(--primary);"></i> Section
+                                                </label>
                                                 <select name="section_id" id="sectionFilter" class="form-control" style="font-size: 0.85rem;">
                                                     <option value="">All Sections</option>
                                                     <% if (typeof sections !== 'undefined' && sections) { sections.forEach(sec => { %>
@@ -83,7 +95,9 @@
                                                 </select>
                                             </div>
                                             <div class="form-group" style="margin-bottom: 0;">
-                                                <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: block;">Admission Year</label>
+                                                <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                                                    <i class="bi bi-calendar-event" style="color: var(--primary);"></i> Admission Year
+                                                </label>
                                                 <select name="admission_year" id="yearFilter" class="form-control" style="font-size: 0.85rem;">
                                                     <option value="">All Years</option>
                                                     <% if (typeof admissionYears !== 'undefined' && admissionYears) { admissionYears.forEach(yr => { %>
@@ -569,21 +583,41 @@
             flex-wrap: wrap;
         }
 
+        .filter-pill-wrapper {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .filter-pill-wrapper .filter-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--primary);
+            font-size: 0.95rem;
+            pointer-events: none;
+            z-index: 2;
+        }
+
         .filter-select {
             height: 42px;
-            border-radius: 8px;
+            border-radius: 10px;
             border: 1px solid #cbd5e1;
             font-size: 0.88rem;
-            padding: 0 12px;
-            min-width: 130px;
+            font-weight: 600;
+            padding: 0 12px 0 34px !important;
+            min-width: 135px;
             background-color: #f8fafc;
             color: #334155;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
 
-        .filter-select:hover {
+        .filter-select:hover, .filter-select:focus {
             background-color: #ffffff;
-            border-color: #94a3b8;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
         }
 
         .more-filters-dropdown {

@@ -32,7 +32,7 @@
                 </header>
 
                 <div class="stats-grid">
-                    <div class="stat-card">
+                    <a href="/students" class="stat-card stat-card-link" style="text-decoration: none; color: inherit;" title="View Students in My Assigned Classes">
                         <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
                             <i class="bi bi-door-open-fill"></i>
                         </div>
@@ -40,9 +40,9 @@
                             <h3>
                                 <%= stats.assignedClasses %>
                             </h3>
-                            <p>Assigned Classes</p>
+                            <p>Assigned Classes <i class="bi bi-arrow-right" style="margin-left: 2px; opacity: 0.8;"></i></p>
                         </div>
-                    </div>
+                    </a>
 
                     <div class="stat-card">
                         <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
@@ -92,17 +92,17 @@
                         <div class="list-group">
                             <% if (assignedClasses && assignedClasses.length> 0) { %>
                                 <% assignedClasses.forEach(cls=> { %>
-                                    <div class="list-item"
-                                        style="padding: 15px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;">
+                                    <a href="/students?class_id=<%= cls.id %>" class="list-item clickable-class-item"
+                                        style="padding: 15px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: inherit;">
                                         <div>
-                                            <strong style="font-size: 1.1rem;">
+                                            <strong style="font-size: 1.1rem; color: #1e293b;">
                                                 <%= cls.name %>
                                             </strong>
                                             <p class="text-muted" style="font-size: 0.85rem; margin: 0;">Class Teacher
                                             </p>
                                         </div>
                                         <i class="bi bi-chevron-right text-muted"></i>
-                                    </div>
+                                    </a>
                                     <% }); %>
                                         <% } else { %>
                                             <p class="text-muted" style="padding: 20px; text-align: center;">No classes
@@ -207,7 +207,28 @@
     </div>
 
     <style>
-        /* Seamless UX for Announcements */
+        /* Seamless UX for Announcements & Class Links */
+        .stat-card-link {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .stat-card-link:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px -5px rgba(99, 102, 241, 0.25);
+        }
+        .clickable-class-item {
+            transition: all 0.15s ease;
+        }
+        .clickable-class-item:hover {
+            background-color: #f8fafc;
+            padding-left: 10px !important;
+            padding-right: 10px !important;
+            border-radius: 8px;
+        }
+        .clickable-class-item:hover i {
+            color: var(--primary) !important;
+            transform: translateX(3px);
+        }
         .announcement-card:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px -4px rgba(0,0,0,0.05);

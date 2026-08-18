@@ -8,11 +8,21 @@ const getSettingsPage = async (req, res) => {
         settingsArr.forEach(s => settings[s.key] = s.value);
 
         const sections = await db.all('SELECT * FROM sections ORDER BY name');
+        const sessionRows = await db.all('SELECT * FROM sessions ORDER BY name DESC').catch(() => []);
+        
+        let available_sessions = sessionRows.map(s => s.name);
+        ['2024/2025', '2025/2026', '2026/2027'].forEach(s => {
+            if (!available_sessions.includes(s)) available_sessions.push(s);
+        });
+
+        const available_terms = ['1st Term', '2nd Term', '3rd Term'];
 
         res.render('settings', {
             title: 'School Settings',
             settings,
             sections,
+            available_sessions,
+            available_terms,
             success: req.query.success,
             error: req.query.error
         });

@@ -210,6 +210,59 @@
                                             </div>
                                         </div>
                                     </section>
+
+                                    <!-- Section Academic Calendar Card -->
+                                    <section class="card" style="grid-column: 1 / -1; margin-top: 10px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 20px;">
+                                            <div>
+                                                <h3><i class="bi bi-calendar3" style="color: var(--primary);"></i> Section Academic Calendar</h3>
+                                                <p class="text-muted" style="font-size: 0.88rem; margin: 2px 0 0 0;">Set the active session and term for each school section independently.</p>
+                                            </div>
+                                            <a href="/calendar/manage" class="btn btn-outline btn-sm">
+                                                <i class="bi bi-calendar-event"></i> Manage School Events
+                                            </a>
+                                        </div>
+
+                                        <form action="/settings/section-calendar" method="POST">
+                                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                                                <% if (typeof sections !== 'undefined' && sections) { %>
+                                                    <% sections.forEach(sec => { %>
+                                                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px;">
+                                                            <h4 style="margin-bottom: 15px; color: #1e293b; display: flex; align-items: center; gap: 8px;">
+                                                                <i class="bi bi-layers-fill" style="color: var(--primary);"></i>
+                                                                <span style="background: #e0e7ff; color: #4338ca; padding: 3px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;">
+                                                                    <%= sec.name %>
+                                                                </span>
+                                                            </h4>
+                                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                                                <div class="form-group">
+                                                                    <label>Current Session</label>
+                                                                    <select name="sections_<%= sec.id %>_session" class="form-control" required>
+                                                                        <% if (typeof available_sessions !== 'undefined' && available_sessions) { %>
+                                                                            <% available_sessions.forEach(s => { %>
+                                                                                <option value="<%= s %>" <%= sec.current_session === s ? 'selected' : '' %>><%= s %></option>
+                                                                            <% }); %>
+                                                                        <% } %>
+                                                                    </select>
+                                                                </div>
+                                                                <div class="form-group">
+                                                                    <label>Current Term</label>
+                                                                    <select name="sections_<%= sec.id %>_term" class="form-control" required>
+                                                                        <% if (typeof available_terms !== 'undefined' && available_terms) { %>
+                                                                            <% available_terms.forEach(t => { %>
+                                                                                <option value="<%= t %>" <%= sec.current_term === t ? 'selected' : '' %>><%= t %></option>
+                                                                            <% }); %>
+                                                                        <% } %>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    <% }); %>
+                                                <% } %>
+                                            </div>
+                                            <button type="submit" class="btn btn-primary" style="width: 100%;">Update Section Calendars</button>
+                                        </form>
+                                    </section>
                                 </div>
             </main>
     </div>

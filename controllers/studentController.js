@@ -55,7 +55,7 @@ const getStudents = async (req, res) => {
     if (user.role !== 'Admin' && user.role !== 'Registrar') {
         myClasses = classes.map(c => c.id);
         if (myClasses.length > 0) {
-            query += ` AND (se.class_id IN (${myClasses.join(',')}) OR s.current_class_id IN (${myClasses.join(',')})`;
+            query += ` AND (se.class_id IN (${myClasses.join(',')}) OR s.current_class_id IN (${myClasses.join(',')}))`;
         } else {
             query += ` AND s.current_class_id = -1`; // Return none
         }

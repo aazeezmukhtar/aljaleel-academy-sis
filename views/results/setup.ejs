@@ -52,15 +52,21 @@
                     <div id="section-weights" class="tab-content tab-hidden">
                         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px;">
                             <% if (typeof sections !== 'undefined' && sections && sections.length > 0) { %>
-                                <% sections.forEach(sec => { 
+                                <% sections.forEach((sec, idx) => { 
                                     const secCfg = (typeof sectionConfigs !== 'undefined' && sectionConfigs) 
                                         ? sectionConfigs.find(c => c.section_id === sec.id) || { ca_count: 2, ca1_max: 20, ca2_max: 20, exam_max: 60 }
                                         : { ca_count: 2, ca1_max: 20, ca2_max: 20, exam_max: 60 };
+                                    
+                                    const theme = (sec.name === 'Academy' || sec.id === 1 || idx === 0)
+                                        ? { bg: '#e0e7ff', text: '#4338ca', border: '#c7d2fe', icon: '#6366f1' }
+                                        : { bg: '#d1fae5', text: '#065f46', border: '#a7f3d0', icon: '#059669' };
                                 %>
                                     <div class="card">
                                         <h3 style="display: flex; align-items: center; gap: 8px;">
-                                            <i class="bi bi-diagram-3-fill text-primary"></i>
-                                            <%= sec.name %> Section
+                                            <i class="bi bi-diagram-3-fill" style="color: <%= theme.icon %>;"></i>
+                                            <span style="background: <%= theme.bg %>; color: <%= theme.text %>; border: 1px solid <%= theme.border %>; padding: 3px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 700;">
+                                                <%= sec.name %> Section
+                                            </span>
                                         </h3>
                                         <p class="text-muted">Configure weight limits specifically for classes in the <%= sec.name %> section.</p>
                                         

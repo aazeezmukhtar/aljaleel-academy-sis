@@ -5,141 +5,377 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><%= title %></title>
     <link rel="stylesheet" href="/css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
     <style>
-        :root { --school-primary: <%= (school && school.primary_color) ? school.primary_color : '#6366f1' %>; }
-        body { background: #f8fafc; color: #1e293b; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
-        .portal-nav { background: var(--school-primary); color: white; padding: 15px 40px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.1); position: sticky; top: 0; z-index: 100; }
-        .portal-nav h2 { margin: 0; font-family: 'Playfair Display', serif; font-size: 1.4rem; }
-        .nav-links { display: flex; align-items: center; gap: 20px; }
-        .nav-links a { color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; opacity: 0.9; transition: opacity 0.2s; }
-        .nav-links a:hover { opacity: 1; }
-        .portal-main { max-width: 800px; margin: 40px auto; padding: 0 20px; }
-        .photo-section { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-bottom: 30px; }
-        .photo-wrapper { width: 110px; height: 110px; border-radius: 50%; overflow: hidden; border: 4px solid var(--school-primary); background: #e2e8f0; display: flex; align-items: center; justify-content: center; }
-        .photo-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .photo-placeholder { font-size: 3rem; color: #94a3b8; }
-        .photo-hint { font-size: 0.8rem; color: #94a3b8; }
-        .card { background: white; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.06); overflow: hidden; }
-        .card-header { background: var(--school-primary); color: white; padding: 20px 30px; display: flex; align-items: center; gap: 12px; }
-        .card-header i { font-size: 1.4rem; }
-        .card-header h2 { margin: 0; font-size: 1.2rem; font-weight: 700; }
-        .card-body { padding: 30px; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-        .form-group { margin-bottom: 22px; }
-        .form-group label { display: block; font-weight: 600; font-size: 0.88rem; color: #475569; margin-bottom: 6px; }
-        .form-group .form-control { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: 10px; font-size: 0.95rem; font-family: 'Inter', sans-serif; color: #1e293b; background: #f8fafc; transition: border-color 0.2s, box-shadow 0.2s; box-sizing: border-box; }
-        .form-group .form-control:focus { border-color: var(--school-primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.12); outline: none; background: white; }
-        textarea.form-control { resize: vertical; min-height: 90px; }
-        .file-input-wrapper { position: relative; border: 2px dashed #cbd5e1; border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; background: #f8fafc; transition: border-color 0.2s; }
-        .file-input-wrapper:hover { border-color: var(--school-primary); }
-        .file-input-wrapper input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
-        .file-input-wrapper i { font-size: 1.5rem; color: #94a3b8; }
-        .file-input-wrapper p { margin: 6px 0 0; font-size: 0.82rem; color: #94a3b8; }
-        .section-divider { display: flex; align-items: center; gap: 10px; margin: 28px 0 20px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
-        .section-divider span { white-space: nowrap; color: #64748b; }
-        .section-divider::before, .section-divider::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
-        .btn-save { background: var(--school-primary); color: white; border: none; border-radius: 10px; padding: 13px 30px; font-size: 0.95rem; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s; }
-        .btn-save:hover { opacity: 0.88; }
-        .alert { padding: 14px 18px; border-radius: 10px; margin-bottom: 22px; font-size: 0.93rem; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        :root { --primary: <%= (school && school.primary_color) ? school.primary_color : '#6366f1' %>; }
+
+        *, *::before, *::after { box-sizing: border-box; }
+        body { background: #f0f4ff; color: #1e293b; font-family: 'Inter', sans-serif; margin: 0; padding: 0; min-height: 100vh; }
+
+        /* ── Top bar ── */
+        .portal-nav {
+            background: var(--primary);
+            color: white;
+            padding: 14px 36px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        .nav-brand { display: flex; align-items: center; gap: 10px; color: white; text-decoration: none; }
+        .nav-brand i { font-size: 1.9rem; }
+        .nav-brand .brand-text { font-weight: 700; font-size: 0.95rem; line-height: 1.25; }
+        .nav-brand .brand-sub { font-size: 0.72rem; font-weight: 500; opacity: 0.8; }
+        .nav-links { display: flex; align-items: center; gap: 22px; }
+        .nav-links a { color: rgba(255,255,255,0.88); text-decoration: none; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
+        .nav-links a:hover { color: white; }
+
+        /* ── Page wrapper ── */
+        .page { max-width: 860px; margin: 0 auto; padding: 36px 20px 60px; }
+
+        /* ── Hero banner ── */
+        .hero {
+            background: var(--primary);
+            border-radius: 20px;
+            padding: 36px 36px 70px;
+            position: relative;
+            overflow: hidden;
+            color: white;
+            margin-bottom: 0;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -40px; right: -40px;
+            width: 200px; height: 200px;
+            background: rgba(255,255,255,0.07);
+            border-radius: 50%;
+        }
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: -60px; left: -20px;
+            width: 260px; height: 260px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+        }
+        .hero-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; position: relative; z-index: 1; }
+        .hero-name { font-size: 1.6rem; font-weight: 800; margin: 0 0 4px; font-family: 'Playfair Display', serif; }
+        .hero-meta { font-size: 0.88rem; opacity: 0.85; display: flex; gap: 16px; flex-wrap: wrap; }
+        .hero-meta span { display: flex; align-items: center; gap: 5px; }
+        .hero-badge {
+            background: rgba(255,255,255,0.18);
+            border: 1px solid rgba(255,255,255,0.28);
+            border-radius: 30px;
+            padding: 6px 14px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            backdrop-filter: blur(6px);
+        }
+
+        /* ── Avatar overlapping hero ── */
+        .avatar-row {
+            position: relative;
+            z-index: 10;
+            display: flex;
+            align-items: flex-end;
+            gap: 20px;
+            margin-top: -52px;
+            padding: 0 32px;
+        }
+        .avatar-wrap {
+            width: 100px; height: 100px;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            background: #e2e8f0;
+            overflow: hidden;
+            cursor: pointer;
+            position: relative;
+            flex-shrink: 0;
+        }
+        .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; color: #94a3b8; background: #e2e8f0; }
+        .avatar-overlay {
+            position: absolute; inset: 0;
+            background: rgba(0,0,0,0.4);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; border-radius: 50%;
+            transition: opacity 0.25s;
+            color: white; font-size: 1.3rem;
+        }
+        .avatar-wrap:hover .avatar-overlay { opacity: 1; }
+        .avatar-meta { padding-bottom: 8px; }
+        .avatar-meta .id-badge {
+            display: inline-block;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 3px 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #475569;
+        }
+
+        /* ── Main card ── */
+        .main-card {
+            background: white;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.07);
+            padding: 60px 36px 36px;
+        }
+
+        /* ── Alerts ── */
+        .alert {
+            border-radius: 12px;
+            padding: 14px 18px;
+            margin-bottom: 28px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
         .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
         .alert-danger  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-        .info-strip { background: #f1f5f9; border-radius: 10px; padding: 14px 18px; margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px 30px; }
-        .info-strip .info-item { display: flex; flex-direction: column; gap: 2px; }
-        .info-strip .info-label { font-size: 0.75rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-        .info-strip .info-value { font-size: 0.95rem; font-weight: 600; color: #1e293b; }
-        @media (max-width: 640px) { .portal-nav { padding: 15px 20px; } .form-row { grid-template-columns: 1fr; } .card-body { padding: 20px; } }
+
+        /* ── Section label ── */
+        .section-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--primary);
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .section-label::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
+
+        /* ── Form grid ── */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+        .form-grid.full { grid-template-columns: 1fr; }
+
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        .field label { font-size: 0.82rem; font-weight: 600; color: #64748b; display: flex; align-items: center; gap: 6px; }
+        .field input, .field textarea {
+            padding: 11px 14px;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 0.93rem;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            background: #f8fafc;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+        .field input:focus, .field textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+            outline: none;
+            background: white;
+        }
+        .field textarea { resize: vertical; min-height: 84px; }
+
+        /* Hidden file input — triggered via avatar click */
+        #photoInput { display: none; }
+
+        /* ── Footer actions ── */
+        .form-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .btn-save {
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 13px 32px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            transition: opacity 0.2s, transform 0.1s;
+            box-shadow: 0 4px 14px rgba(99,102,241,0.3);
+        }
+        .btn-save:hover { opacity: 0.88; transform: translateY(-1px); }
+        .btn-save:active { transform: translateY(0); }
+
+        .link-btn {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: opacity 0.2s;
+        }
+        .link-btn:hover { opacity: 0.75; }
+
+        /* ── Photo hint toast ── */
+        .photo-hint {
+            position: fixed;
+            bottom: 24px; left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: #1e293b;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.83rem;
+            font-weight: 600;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s, transform 0.3s;
+            white-space: nowrap;
+            z-index: 999;
+        }
+        .photo-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        @media (max-width: 640px) {
+            .portal-nav { padding: 14px 18px; }
+            .nav-brand .brand-text { display: none; }
+            .hero { padding: 24px 20px 60px; }
+            .hero-name { font-size: 1.3rem; }
+            .avatar-row { padding: 0 18px; }
+            .main-card { padding: 52px 18px 24px; }
+            .form-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
+
 <nav class="portal-nav">
-    <div><h2>Nexus Scholar</h2></div>
+    <a href="/portal" class="nav-brand">
+        <i class="bi bi-grid-1x2-fill"></i>
+        <div>
+            <div class="brand-text">Student Portal</div>
+            <div class="brand-sub">Dashboard</div>
+        </div>
+    </a>
     <div class="nav-links">
-        <a href="/portal"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
-        <a href="/portal/calendar"><i class="bi bi-calendar3"></i> Calendar</a>
         <a href="/portal/change-password"><i class="bi bi-shield-lock"></i> Password</a>
         <a href="/auth/student-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
     </div>
 </nav>
-<main class="portal-main">
-    <% if (typeof error !== 'undefined' && error) { %>
-        <div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill"></i> <%= error %></div>
-    <% } %>
-    <% if (typeof success !== 'undefined' && success) { %>
-        <div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> <%= success %></div>
-    <% } %>
-    <div class="card">
-        <div class="card-header">
-            <i class="bi bi-person-circle"></i>
-            <h2>My Profile &amp; Settings</h2>
-        </div>
-        <div class="card-body">
-            <div class="info-strip">
-                <div class="info-item">
-                    <span class="info-label">Full Name</span>
-                    <span class="info-value"><%= student.first_name %> <%= student.last_name %></span>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Admission No.</span>
-                    <span class="info-value"><%= student.admission_number %></span>
-                </div>
-            </div>
-            <form action="/portal/profile" method="POST" enctype="multipart/form-data">
-                <div class="photo-section">
-                    <div class="photo-wrapper" id="photoPreviewWrap">
-                        <% if (student.passport_photo_path) { %>
-                            <img id="photoPreview" src="<%= student.passport_photo_path %>" alt="Profile Photo">
-                        <% } else { %>
-                            <i class="bi bi-person-fill photo-placeholder"></i>
+
+<% if (typeof error !== 'undefined' && error) { %>
+<div style="max-width:860px;margin:20px auto 0;padding:0 20px;">
+    <div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill"></i> <%= error %></div>
+</div>
+<% } %>
+<% if (typeof success !== 'undefined' && success) { %>
+<div style="max-width:860px;margin:20px auto 0;padding:0 20px;">
+    <div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> <%= success %></div>
+</div>
+<% } %>
+
+<div class="page">
+    <form action="/portal/profile" method="POST" enctype="multipart/form-data" id="profileForm">
+        <input type="file" name="passport" accept="image/*" id="photoInput">
+
+        <!-- Hero Banner -->
+        <div class="hero">
+            <div class="hero-top">
+                <div>
+                    <h1 class="hero-name"><%= student.first_name %> <%= student.last_name %></h1>
+                    <div class="hero-meta">
+                        <span><i class="bi bi-hash"></i> <%= student.admission_number %></span>
+                        <% if (student.class_name) { %>
+                        <span><i class="bi bi-mortarboard"></i> <%= student.class_name %></span>
                         <% } %>
                     </div>
-                    <div class="file-input-wrapper" style="width: 260px;">
-                        <i class="bi bi-camera"></i>
-                        <p>Click to change profile photo</p>
-                        <input type="file" name="passport" accept="image/*" id="photoInput">
-                    </div>
-                    <span class="photo-hint">JPG, PNG or GIF &middot; Max 5MB</span>
                 </div>
-                <div class="section-divider"><span>Personal Details</span></div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="dob"><i class="bi bi-calendar-heart"></i> Date of Birth</label>
-                        <input type="date" id="dob" name="dob" class="form-control" value="<%= student.formatted_dob || '' %>">
-                    </div>
-                    <div class="form-group">
-                        <label for="phone"><i class="bi bi-telephone"></i> Phone Number</label>
-                        <input type="tel" id="phone" name="phone" class="form-control" placeholder="e.g. 08012345678" value="<%= student.phone || '' %>">
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label for="email"><i class="bi bi-envelope"></i> Email Address</label>
-                    <input type="email" id="email" name="email" class="form-control" placeholder="e.g. student@email.com" value="<%= student.email || '' %>">
-                </div>
-                <div class="form-group">
-                    <label for="address"><i class="bi bi-geo-alt"></i> Home Address</label>
-                    <textarea id="address" name="address" class="form-control" placeholder="Enter your home address"><%= student.address || '' %></textarea>
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-top: 10px;">
-                    <a href="/portal/change-password" style="color: var(--school-primary); font-weight: 600; font-size: 0.9rem; text-decoration: none; display: flex; align-items: center; gap: 6px;">
-                        <i class="bi bi-shield-lock"></i> Change Password
-                    </a>
-                    <button type="submit" class="btn-save">
-                        <i class="bi bi-floppy"></i> Save Changes
-                    </button>
-                </div>
-            </form>
+                <span class="hero-badge"><i class="bi bi-person-check"></i> Active Student</span>
+            </div>
         </div>
-    </div>
-</main>
+
+        <!-- Avatar row overlapping hero/card -->
+        <div class="avatar-row">
+            <div class="avatar-wrap" id="avatarWrap" onclick="document.getElementById('photoInput').click()" title="Click to change photo">
+                <% if (student.passport_photo_path) { %>
+                    <img id="avatarImg" src="<%= student.passport_photo_path %>" alt="Profile Photo">
+                <% } else { %>
+                    <div class="avatar-placeholder" id="avatarPlaceholder"><i class="bi bi-person-fill"></i></div>
+                <% } %>
+                <div class="avatar-overlay"><i class="bi bi-camera"></i></div>
+            </div>
+            <div class="avatar-meta">
+                <span class="id-badge"><i class="bi bi-camera" style="margin-right:4px;"></i>Click photo to update</span>
+            </div>
+        </div>
+
+        <!-- Main Card -->
+        <div class="main-card">
+
+            <div class="section-label"><i class="bi bi-calendar-heart"></i> Personal Information</div>
+            <div class="form-grid">
+                <div class="field">
+                    <label for="dob"><i class="bi bi-calendar2"></i> Date of Birth</label>
+                    <input type="date" id="dob" name="dob" value="<%= student.formatted_dob || '' %>">
+                </div>
+                <div class="field">
+                    <label for="phone"><i class="bi bi-telephone"></i> Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="e.g. 08012345678" value="<%= student.phone || '' %>">
+                </div>
+            </div>
+
+            <div class="form-grid full">
+                <div class="field">
+                    <label for="email"><i class="bi bi-envelope"></i> Email Address</label>
+                    <input type="email" id="email" name="email" placeholder="e.g. student@email.com" value="<%= student.email || '' %>">
+                </div>
+            </div>
+
+            <div class="section-label" style="margin-top:24px;"><i class="bi bi-geo-alt"></i> Home Address</div>
+            <div class="form-grid full">
+                <div class="field">
+                    <label for="address"><i class="bi bi-house"></i> Address</label>
+                    <textarea id="address" name="address" placeholder="Enter your full home address"><%= student.address || '' %></textarea>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <a href="/portal/change-password" class="link-btn">
+                    <i class="bi bi-shield-lock-fill"></i> Change Password
+                </a>
+                <button type="submit" class="btn-save">
+                    <i class="bi bi-floppy2-fill"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Photo hint toast -->
+<div class="photo-hint" id="photoHint"><i class="bi bi-check-circle"></i> Photo selected — save to apply</div>
+
 <script>
     document.getElementById('photoInput').addEventListener('change', function () {
         const file = this.files[0];
         if (!file) return;
         const reader = new FileReader();
         reader.onload = function (e) {
-            document.getElementById('photoPreviewWrap').innerHTML =
-                `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;" alt="Preview">`;
+            const wrap = document.getElementById('avatarWrap');
+            wrap.innerHTML = `
+                <img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;" alt="Preview">
+                <div class="avatar-overlay"><i class="bi bi-camera"></i></div>`;
+            const hint = document.getElementById('photoHint');
+            hint.classList.add('show');
+            setTimeout(() => hint.classList.remove('show'), 3500);
         };
         reader.readAsDataURL(file);
     });

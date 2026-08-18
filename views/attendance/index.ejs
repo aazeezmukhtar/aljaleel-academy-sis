@@ -12,7 +12,7 @@
                     <a href="/attendance/report" class="btn btn-outline">View Reports</a>
                 </header>
 
-                <section class="grid-2">
+                <section class="grid-2" style="margin-bottom: 25px;">
                     <div class="card">
                         <h3>Take Student Attendance</h3>
                         <p style="margin-bottom: 20px; color: var(--text-muted);">Select a class and date to start
@@ -60,6 +60,74 @@
                         </div>
                     </div>
                 </section>
+
+                <!-- Flagged / At-Risk Students Section -->
+                <% if (typeof flaggedStudents !== 'undefined' && flaggedStudents && Object.keys(flaggedStudents).length > 0) { %>
+                <section class="card" style="border-top: 4px solid #ef4444; margin-top: 10px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                        <div>
+                            <h3 style="color: #dc2626; margin: 0; display: flex; align-items: center; gap: 8px;">
+                                <i class="bi bi-exclamation-triangle-fill"></i> At-Risk & Flagged Students
+                            </h3>
+                            <p style="color: var(--text-muted); margin: 4px 0 0 0; font-size: 0.9rem;">
+                                Students exceeding term absence limit (<%= termAbsenceLimit || 10 %> days) or consecutive absence limit (<%= consecutiveAbsenceLimit || 3 %> days).
+                            </p>
+                        </div>
+                    </div>
+
+                    <% Object.values(flaggedStudents).forEach(group => { %>
+                        <div style="margin-bottom: 20px; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 10px; padding: 15px;">
+                            <h4 style="margin: 0 0 10px 0; color: #991b1b; display: flex; align-items: center; gap: 6px;">
+                                <i class="bi bi-door-open-fill"></i> <%= group.class.name %>
+                            </h4>
+                            <div class="table-container mobile-cards">
+                                <table class="data-table" style="background: white;">
+                                    <thead>
+                                        <tr>
+                                            <th>Student Name</th>
+                                            <th>Parent Contact</th>
+                                            <th style="text-align: center;">Total Absences</th>
+                                            <th style="text-align: center;">Consecutive Streak</th>
+                                            <th>Flag Reason(s)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% group.students.forEach(st => { %>
+                                            <tr>
+                                                <td data-label="Student Name">
+                                                    <strong style="color: #1e293b;"><%= st.first_name %> <%= st.last_name %></strong>
+                                                </td>
+                                                <td data-label="Parent Contact">
+                                                    <% if (st.parent_phone) { %>
+                                                        <a href="tel:<%= st.parent_phone %>" style="color: #2563eb; text-decoration: none;">
+                                                            <i class="bi bi-telephone-fill"></i> <%= st.parent_phone %>
+                                                        </a>
+                                                    <% } else { %>
+                                                        <span class="text-muted">N/A</span>
+                                                    <% } %>
+                                                </td>
+                                                <td data-label="Total Absences" style="text-align: center;">
+                                                    <span style="font-weight: 700; color: #dc2626;"><%= st.total_absent_days %> days</span>
+                                                </td>
+                                                <td data-label="Consecutive Streak" style="text-align: center;">
+                                                    <span style="font-weight: 700; color: #d97706;"><%= st.consecutive_absent_days %> days</span>
+                                                </td>
+                                                <td data-label="Flag Reason(s)">
+                                                    <% st.flag_reason.forEach(reason => { %>
+                                                        <span class="badge" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 0.75rem; margin-right: 4px;">
+                                                            <%= reason %>
+                                                        </span>
+                                                    <% }); %>
+                                                </td>
+                                            </tr>
+                                        <% }); %>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    <% }); %>
+                </section>
+                <% } %>
             </main>
     </div>
 

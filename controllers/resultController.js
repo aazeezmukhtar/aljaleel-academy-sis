@@ -409,8 +409,8 @@ const getReportCard = async (req, res) => {
         // Attendance
         const attendance = await db.get(`
             SELECT COUNT(*) as present_count FROM attendance 
-            WHERE student_id = ? AND status = 'Present'
-        `, [student_id]) || { present_count: 0 };
+            WHERE student_id = ? AND status = 'Present' AND term = ? AND session = ?
+        `, [student_id, term, session]) || { present_count: 0 };
 
         // Traits
         const traitRows = await db.all(`
@@ -636,8 +636,8 @@ const getBulkReport = async (req, res) => {
 
             const attendance = await db.get(`
                 SELECT COUNT(*) as present_count FROM attendance 
-                WHERE student_id = ? AND status = 'Present'
-            `, [student.id]) || { present_count: 0 };
+                WHERE student_id = ? AND status = 'Present' AND term = ? AND session = ?
+            `, [student.id, term, session]) || { present_count: 0 };
 
             const myIndex = classPerformance.indexOf(studentPerf);
             const marksAnalysis = [];

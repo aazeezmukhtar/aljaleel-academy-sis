@@ -118,8 +118,26 @@
                                                 </label>
                                             </div>
 
-                                            <button type="submit" class="btn btn-primary"
-                                                style="width: 100%; margin-top: 20px;">Save Changes</button>
+                                             <h4 style="margin-top: 30px; margin-bottom: 15px;">Attendance Thresholds</h4>
+                                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                                                 <div class="form-group">
+                                                     <label>Term Absence Limit (Days)</label>
+                                                     <input type="number" name="attendance_term_absence_limit" 
+                                                         value="<%= settings['attendance.term_absence_limit'] || '10' %>" 
+                                                         min="1" max="100" class="form-control">
+                                                     <small class="text-muted">Flags students exceeding total absences in a term.</small>
+                                                 </div>
+                                                 <div class="form-group">
+                                                     <label>Consecutive Absence Limit</label>
+                                                     <input type="number" name="attendance_consecutive_absence_limit" 
+                                                         value="<%= settings['attendance.consecutive_absence_limit'] || '3' %>" 
+                                                         min="1" max="30" class="form-control">
+                                                     <small class="text-muted">Flags students absent for consecutive days.</small>
+                                                 </div>
+                                             </div>
+
+                                             <button type="submit" class="btn btn-primary"
+                                                 style="width: 100%; margin-top: 20px;">Save Changes</button>
                                         </form>
                                     </section>
 

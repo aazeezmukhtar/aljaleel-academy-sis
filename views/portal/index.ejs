@@ -50,7 +50,7 @@
                         const latestResult = results[0];
                         const average = latestResult.average_score ? latestResult.average_score.toFixed(1) : '0.0';
                     %>
-                    <a href="/portal/results/view-termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" class="acm-card acm-card-link" aria-label="View Results, Average <%= average %>%">
+                    <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" target="_blank" class="acm-card acm-card-link" aria-label="View Results, Average <%= average %>%">
                         <div class="acm-perf-score"><%= average %>%</div>
                         <p class="acm-perf-label">Average &middot; <%= latestResult.term %></p>
                         <div class="acm-card-action">
@@ -124,7 +124,7 @@
                             <i class="bi bi-file-earmark-check acm-attention-icon" aria-hidden="true"></i>
                             <div class="acm-attention-content">
                                 <p class="acm-attention-text">Your <%= latestResult.term %> report card is available.</p>
-                                <a href="/portal/results/view-termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" class="acm-attention-action">View Report Card &rarr;</a>
+                                <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" target="_blank" class="acm-attention-action">View Report Card &rarr;</a>
                             </div>
                         </div>
                         <% } %>

@@ -1,419 +1,178 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="/css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        :root {
-            --school-primary: <%= school.primary_color || '#6366f1' %>;
-        }
-        body {
-            background: #f1f5f9;
-            color: #1e293b;
-            font-family: 'Inter', sans-serif;
-            margin: 0; padding: 0;
-        }
-
-        .portal-nav {
-            background: var(--school-primary);
-            color: white;
-            padding: 15px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-
-        .portal-nav h2 { margin: 0; font-family: 'Playfair Display', serif; font-size: 1.4rem; }
-
-        .portal-main {
-            max-width: 1200px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
-
-        .dashboard-header {
-            margin-bottom: 30px;
-        }
-
-        .welcome-title {
-            font-size: 1.8rem;
-            font-weight: 800;
-            color: #0f172a;
-            margin-bottom: 5px;
-        }
-
-        .date-subtitle {
-            color: #64748b;
-            font-weight: 500;
-        }
-
-        .portal-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-            gap: 24px;
-        }
-
-        .p-card {
-            background: white;
-            border-radius: 20px;
-            padding: 24px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
-            border: 1px solid #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            height: fit-content;
-        }
-
-        .p-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .p-card-title {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #334155;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin: 0;
-        }
-
-        .p-card-title i {
-            font-size: 1.2rem;
-            color: var(--school-primary);
-        }
-
-        .btn-icon {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: #f1f5f9;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #64748b;
-            text-decoration: none;
-            transition: all 0.2s;
-        }
-
-        .btn-icon:hover {
-            background: var(--school-primary);
-            color: white;
-        }
-
-        .item-row {
-            display: flex;
-            gap: 15px;
-            padding: 12px 0;
-            border-bottom: 1px solid #f1f5f9;
-            align-items: center;
-        }
-
-        .item-row:last-child { border-bottom: none; }
-
-        .item-icon {
-            width: 40px; height: 40px;
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem;
-            flex-shrink: 0;
-        }
-
-        .item-content { flex: 1; min-width: 0; }
-        .item-title { font-weight: 600; font-size: 0.95rem; margin-bottom: 2px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .item-meta { font-size: 0.8rem; color: #94a3b8; display: block; }
-
-        .session-info {
-            background: linear-gradient(135deg, var(--school-primary), #4f46e5);
-            color: white;
-            border-radius: 20px;
-            padding: 24px;
-            margin-bottom: 30px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .session-details { display: flex; gap: 40px; }
-        .session-stat span { display: block; font-size: 0.75rem; opacity: 0.8; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
-        .session-stat strong { font-size: 1.2rem; font-weight: 800; }
-
-        @media (max-width: 768px) {
-            .session-info { flex-direction: column; text-align: center; gap: 20px; }
-            .session-details { gap: 20px; }
-            .portal-nav { padding: 15px 20px; }
-        }
-    </style>
+    <%- include('../partials/student_shell_head') %>
 </head>
 <body>
-    <%- include('../partials/notification_bar') %>
 
-    <nav class="portal-nav">
-        <div style="display: flex; align-items: center; gap: 12px;">
-            <a href="/portal/profile" style="color: white; text-decoration: none; display: flex; align-items: center; gap: 10px;">
-                <i class="bi bi-person-circle" style="font-size: 2rem;"></i>
-                <span style="font-weight: 700; font-size: 1rem;">
-                    <%= student.first_name %> <%= student.last_name %>
-                </span>
-            </a>
-        </div>
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <div class="notification-bell-container" onclick="toggleNotificationDropdown(event)">
-                <i class="bi bi-bell-fill" style="color: white; font-size: 1.2rem;"></i>
-                <span class="notification-badge">0</span>
-                <div class="notification-dropdown" style="color: #1e293b; text-align: left;">
-                    <div class="notification-header"><strong>Notifications</strong></div>
-                    <div class="notification-list"></div>
-                </div>
+<div class="acm-portal-shell">
+    
+    <%- include('../partials/student_shell_nav') %>
+    
+    <main class="acm-main-content">
+        <%- include('../partials/student_shell_header') %>
+
+        <!-- Desktop Header shown only when sidebar hides top header -->
+        <% 
+            const hour = new Date().getHours();
+            let greeting = 'Good evening';
+            if (hour < 12) greeting = 'Good morning';
+            else if (hour < 18) greeting = 'Good afternoon';
+            const studentName = student.first_name || (student.name ? student.name.split(' ')[0] : 'Student');
+        %>
+        <div class="acm-desktop-header">
+            <div class="acm-header-greeting">
+                <h1 class="acm-greeting-title"><%= greeting %>, <%= studentName %></h1>
+                <p class="acm-greeting-meta">
+                    <%= student.class_name %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+                </p>
             </div>
-            <a href="/auth/student-logout" style="color: white; text-decoration: none; font-weight: 600; font-size: 0.9rem;">
-                <i class="bi bi-box-arrow-right"></i> Logout
-            </a>
-        </div>
-    </nav>
-
-    <main class="portal-main">
-        <header class="dashboard-header">
-            <h1 class="welcome-title">Welcome Back, <%= student.first_name %></h1>
-            <p class="date-subtitle"><%= new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></p>
-        </header>
-
-        <section class="session-info">
-            <div style="display: flex; align-items: center; gap: 16px;">
-                <i class="bi bi-person-circle" style="font-size: 2.6rem; color: rgba(255,255,255,0.9); flex-shrink: 0;"></i>
-                <div>
-                    <p style="margin:0;font-size:0.72rem;text-transform:uppercase;letter-spacing:0.06em;opacity:0.7;font-weight:600;">Admission No.</p>
-                    <strong style="font-size:1rem;letter-spacing:0.02em;"><%= student.admission_number %></strong>
-                </div>
-            </div>
-            <div class="session-details">
-                <% if (sectionInfo && sectionInfo.length > 0) { %>
-                    <% sectionInfo.forEach(sec => { %>
-                        <div class="session-stat" style="border-left: 3px solid rgba(255,255,255,0.4); padding-left: 12px;">
-                            <span style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.75;"><%= sec.section_name || 'Section' %></span>
-                            <strong style="font-size: 0.85rem;"><%= sec.class_name %></strong>
-                            <span style="font-size: 0.75rem; opacity: 0.85;"><%= sec.current_term %> &bull; <%= sec.current_session %></span>
-                        </div>
-                    <% }) %>
-                <% } else { %>
-                    <div class="session-stat">
-                        <span>Class</span>
-                        <strong><%= student.class_name || 'Unassigned' %></strong>
-                    </div>
-                    <div class="session-stat">
-                        <span>Session</span>
-                        <strong><%= currentSession %></strong>
-                    </div>
-                    <div class="session-stat">
-                        <span>Term</span>
-                        <strong><%= currentTerm %></strong>
-                    </div>
-                <% } %>
-            </div>
-        </section>
-
-        <div class="portal-grid">
-            <!-- Announcements -->
-            <div class="p-card">
-                <div class="p-card-header">
-                    <h3 class="p-card-title"><i class="bi bi-megaphone"></i> Announcements</h3>
-                </div>
-                <div class="p-card-body">
-                    <% if (announcements && announcements.length > 0) { %>
-                        <% announcements.forEach(post => { %>
-                            <a href="/portal/announcement/<%= post.id %>" class="item-row announcement-card" data-id="<%= post.id %>" style="text-decoration: none; color: inherit; transition: all 0.2s; padding: 12px 10px; border-radius: 12px; border-bottom: 1px solid #f1f5f9;">
-                                <div class="item-icon" style="background: #eff6ff; color: #2563eb;">
-                                    <i class="bi bi-info-circle"></i>
-                                </div>
-                                <div class="item-content">
-                                    <span class="item-title post-title"><%= post.title %></span>
-                                    <span class="item-meta"><%= new Date(post.created_at).toLocaleDateString() %></span>
-                                </div>
-                            </a>
-                        <% }) %>
-                    <% } else { %>
-                        <p class="text-muted" style="text-align: center; padding: 20px;">No new announcements.</p>
+            <div class="acm-header-actions">
+                <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications<%= individualMessagesCount > 0 ? ', ' + individualMessagesCount + ' unread' : '' %>">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <% if (individualMessagesCount > 0) { %>
+                        <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
                     <% } %>
-                </div>
+                </a>
             </div>
+        </div>
 
-            <!-- Class Board -->
-            <div class="p-card">
-                <div class="p-card-header">
-                    <h3 class="p-card-title"><i class="bi bi-journal-text"></i> Class Board</h3>
-                </div>
-                <div class="p-card-body">
-                    <% if (classPosts && classPosts.length > 0) { %>
-                        <% classPosts.forEach(post => { %>
-                            <% if (!post.student_id || post.student_id == student.id) { %>
-                                <a href="/portal/assignment/<%= post.id %>" class="item-row assignment-card" style="text-decoration:none;color:inherit;transition:all 0.2s;padding:12px 10px;border-radius:12px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:15px;">
-                                    <div class="item-icon" style="background: <%= post.post_type === 'Assignment' ? '#fef2f2' : '#f0fdf4' %>; color: <%= post.post_type === 'Assignment' ? '#ef4444' : '#16a34a' %>;">
-                                        <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-chat-left-text' %>"></i>
-                                    </div>
-                                    <div class="item-content">
-                                        <span class="item-title"><%= post.title %></span>
-                                        <span class="item-meta">
-                                            <% if(post.due_date) { %>
-                                                Due: <%= new Date(post.due_date).toLocaleDateString() %>
-                                            <% } else { %>
-                                                Posted by Tr. <%= post.last_name %>
-                                            <% } %>
-                                        </span>
-                                    </div>
-                                </a>
+        <div class="acm-dashboard-grid">
+            
+            <!-- Left Column / Primary Content -->
+            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-20);">
+                
+                <!-- Section 1: Academic Performance -->
+                <section class="acm-section">
+                    <h2 class="acm-section-title">Academic Performance</h2>
+                    <% if (results && results.length > 0) { 
+                        // Use the most recent term's average score
+                        const latestResult = results[0];
+                        const average = latestResult.average_score ? latestResult.average_score.toFixed(1) : '0.0';
+                    %>
+                    <a href="/portal/results/view-termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" class="acm-card acm-card-link" aria-label="View Results, Average <%= average %>%">
+                        <div class="acm-perf-score"><%= average %>%</div>
+                        <p class="acm-perf-label">Average &middot; <%= latestResult.term %></p>
+                        <div class="acm-card-action">
+                            <span>View Results</span>
+                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                        </div>
+                    </a>
+                    <% } else { %>
+                    <div class="acm-card">
+                        <p class="acm-empty-state">Results haven't been published yet.</p>
+                    </div>
+                    <% } %>
+                </section>
+
+                <!-- Section 2: Quick Status Grid -->
+                <section class="acm-section">
+                    <h2 class="acm-section-title">Quick Status</h2>
+                    <div class="acm-quick-grid">
+                        
+                        <!-- Attendance -->
+                        <a href="/portal/attendance" class="acm-quick-card acm-card-link">
+                            <h3 class="acm-quick-title">Attendance</h3>
+                            <% if (attendancePercentage !== null) { %>
+                                <div class="acm-quick-value"><%= attendancePercentage %>%</div>
+                            <% } else { %>
+                                <div class="acm-quick-value">--</div>
                             <% } %>
-                        <% }) %>
-                    <% } else { %>
-                        <p class="text-muted" style="text-align: center; padding: 20px;">Class board is empty.</p>
-                    <% } %>
-                </div>
+                            <div class="acm-card-action">
+                                <span>View</span>
+                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                            </div>
+                        </a>
+
+                        <!-- Results -->
+                        <a href="/portal/academics" class="acm-quick-card acm-card-link">
+                            <h3 class="acm-quick-title">Academics</h3>
+                            <div class="acm-quick-value"><%= results && results.length > 0 ? results[0].subjects_taken + ' Subjects' : '--' %></div>
+                            <div class="acm-card-action">
+                                <span>View</span>
+                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                            </div>
+                        </a>
+
+                        <!-- Class Board -->
+                        <a href="/portal/academics" class="acm-quick-card acm-card-link acm-quick-card--full">
+                            <div class="acm-quick-content">
+                                <h3 class="acm-quick-title">Class Board</h3>
+                                <div class="acm-quick-value"><%= classPosts && classPosts.length > 0 ? classPosts.length + ' recent items' : 'No new items' %></div>
+                            </div>
+                            <div class="acm-card-action">
+                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                            </div>
+                        </a>
+                    </div>
+                </section>
+                
             </div>
 
-            <!-- Report Cards -->
-            <div class="p-card" style="background: #fafafa; border: 1px solid #e2e8f0;">
-                <div class="p-card-header">
-                    <h3 class="p-card-title"><i class="bi bi-file-earmark-bar-graph"></i> Report Cards</h3>
-                </div>
-                <div class="p-card-body">
-                    <% if (results && results.length > 0) { %>
-                        <% results.forEach(result => { %>
-                            <div style="margin-bottom: 15px; padding: 15px; background: white; border-radius: 12px; border: 1px solid #e2e8f0;">
-                                <div style="margin-bottom: 10px;">
-                                    <strong style="display: block; font-size: 1rem;"><%= result.term %></strong>
-                                    <span style="font-size: 0.8rem; color: #64748b;"><%= result.session %></span>
-                                </div>
-                                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                    <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
-                                        <% student.class_name.split(', ').forEach(className => { %>
-                                            <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 6px 12px;">
-                                                <i class="bi bi-file-text"></i> <%= className %> Termly
-                                            </a>
-                                        <% }) %>
-                                    <% } else { %>
-                                        <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>" target="_blank" class="btn btn-outline" style="font-size: 0.8rem; padding: 6px 12px;">
-                                            <i class="bi bi-file-text"></i> Termly Report
-                                        </a>
-                                    <% } %>
-                                </div>
-                            </div>
-                        <% }) %>
-                        <div style="margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 15px;">
-                            <h4 style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px; text-transform: uppercase;">Cumulative Reports</h4>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
-                                    <% student.class_name.split(', ').forEach(className => { %>
-                                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="btn btn-primary" style="font-size: 0.8rem; padding: 8px 15px; font-weight: 600;">
-                                            <i class="bi bi-bar-chart-fill"></i> <%= className %> Cumulative
-                                        </a>
-                                    <% }) %>
-                                <% } else { %>
-                                    <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>" target="_blank" class="btn btn-primary" style="font-size: 0.8rem; padding: 8px 15px; font-weight: 600;">
-                                        <i class="bi bi-bar-chart-fill"></i> Cumulative Report
-                                    </a>
-                                <% } %>
+            <!-- Right Column / Secondary Content -->
+            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-20);">
+                
+                <!-- Section 4: Needs Your Attention (Conditional) -->
+                <% if ((results && results.length > 0) || (classPosts && classPosts.length > 0)) { %>
+                <section class="acm-section">
+                    <h2 class="acm-section-title">Needs Your Attention</h2>
+                    <div style="display: flex; flex-direction: column; gap: var(--acm-sp-12);">
+                        <% if (results && results.length > 0) { 
+                            const latestResult = results[0];
+                        %>
+                        <div class="acm-attention-card">
+                            <i class="bi bi-file-earmark-check acm-attention-icon" aria-hidden="true"></i>
+                            <div class="acm-attention-content">
+                                <p class="acm-attention-text">Your <%= latestResult.term %> report card is available.</p>
+                                <a href="/portal/results/view-termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" class="acm-attention-action">View Report Card &rarr;</a>
                             </div>
                         </div>
-                    <% } else { %>
-                        <p class="text-muted" style="text-align: center; padding: 20px;">No reports published yet.</p>
-                    <% } %>
-                </div>
-            </div>
+                        <% } %>
 
-            <!-- Term Calendar -->
-            <div class="p-card">
-                <div class="p-card-header">
-                    <h3 class="p-card-title"><i class="bi bi-calendar3"></i> Term Calendar</h3>
-                    <a href="/portal/calendar" class="btn-icon"><i class="bi bi-eye"></i></a>
-                </div>
-                <div class="p-card-body">
-                    <% if (locals.upcomingEvents && upcomingEvents.length > 0) { %>
-                        <% upcomingEvents.forEach(event => { %>
-                            <div class="item-row">
-                                <div style="background: #f8fafc; padding: 5px 10px; border-radius: 8px; text-align: center; min-width: 50px;">
-                                    <span style="display: block; font-size: 0.65rem; font-weight: 800; color: var(--school-primary);"><%= new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' }) %></span>
-                                    <span style="display: block; font-size: 1rem; font-weight: 900; color: #1e293b;"><%= new Date(event.event_date).getDate() %></span>
-                                </div>
-                                <div class="item-content" style="padding-left: 5px;">
-                                    <span class="item-title"><%= event.title %></span>
-                                    <span class="item-meta"><%= event.type %></span>
-                                </div>
+                        <% if (classPosts && classPosts.length > 0) { %>
+                        <div class="acm-attention-card">
+                            <i class="bi bi-journal-text acm-attention-icon" aria-hidden="true"></i>
+                            <div class="acm-attention-content">
+                                <p class="acm-attention-text"><%= classPosts.length %> new class board <%= classPosts.length === 1 ? 'post' : 'posts' %>.</p>
+                                <a href="/portal/academics" class="acm-attention-action">View Class Board &rarr;</a>
                             </div>
-                        <% }) %>
-                    <% } else { %>
-                        <p class="text-muted" style="text-align: center; padding: 20px;">No upcoming events.</p>
-                    <% } %>
-                </div>
+                        </div>
+                        <% } %>
+                    </div>
+                </section>
+                <% } %>
+
+                <!-- Section 5: Announcements (Conditional) -->
+                <% if (announcements && announcements.length > 0) { 
+                    const latestAnn = announcements[0];
+                    const date = new Date(latestAnn.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                %>
+                <section class="acm-section">
+                    <h2 class="acm-section-title">Announcement</h2>
+                    <div class="acm-announcement-card">
+                        <div class="acm-announcement-meta">
+                            <span><%= date %></span>
+                            <% if (latestAnn.priority === 'High') { %>
+                                <span>&middot;</span>
+                                <span style="color: var(--acm-error); font-weight: var(--acm-fw-bold);">Important</span>
+                            <% } %>
+                        </div>
+                        <h3 class="acm-announcement-title"><%= latestAnn.title %></h3>
+                        <div class="acm-announcement-snippet"><%- latestAnn.content.replace(/<[^>]*>?/gm, '') %></div>
+                        <div class="acm-card-action" style="margin-top: var(--acm-sp-12);">
+                            <a href="/portal/notifications" style="color: inherit; text-decoration: none;">View all &rarr;</a>
+                        </div>
+                    </div>
+                </section>
+                <% } %>
+                
             </div>
+            
         </div>
     </main>
+</div>
 
-    <%- include('../partials/footer') %>
+<%- include('../partials/student_shell_footer') %>
 
-    <style>
-        .announcement-card:hover {
-            transform: translateY(-2px);
-            background: white;
-            box-shadow: 0 8px 20px -4px rgba(0,0,0,0.05);
-            border-color: #cbd5e1 !important;
-            z-index: 10;
-        }
-        .announcement-card.read {
-            opacity: 0.6;
-            background: #f8fafc !important;
-            border-color: transparent !important;
-            filter: grayscale(100%);
-        }
-        .announcement-card.read .post-title {
-            color: #64748b !important;
-            font-weight: 500;
-        }
-    </style>
-
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            const readPosts = JSON.parse(localStorage.getItem('read_announcements') || '[]');
-            
-            document.querySelectorAll('.announcement-card').forEach(card => {
-                const postId = card.dataset.id;
-                
-                if (readPosts.includes(postId)) {
-                    card.classList.add('read');
-                }
-                
-                card.addEventListener('click', () => {
-                    if (!readPosts.includes(postId)) {
-                        readPosts.push(postId);
-                        localStorage.setItem('read_announcements', JSON.stringify(readPosts));
-                    }
-                });
-            });
-        });
-
-        async function fetchNotifications() {
-            try {
-                const res = await fetch('/api/notifications');
-                const data = await res.json();
-                const badge = document.querySelector('.notification-badge');
-                if (data.unreadCount > 0) {
-                    badge.textContent = data.unreadCount;
-                    badge.style.display = 'flex';
-                } else {
-                    badge.style.display = 'none';
-                }
-            } catch (e) { console.error(e); }
-        }
-        fetchNotifications();
-    </script>
 </body>
 </html>

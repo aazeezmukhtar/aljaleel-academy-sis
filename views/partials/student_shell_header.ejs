@@ -1,0 +1,23 @@
+<% 
+    const hour = new Date().getHours();
+    let greeting = 'Good evening';
+    if (hour < 12) greeting = 'Good morning';
+    else if (hour < 18) greeting = 'Good afternoon';
+    const studentName = student.first_name || (student.name ? student.name.split(' ')[0] : 'Student');
+%>
+<header class="acm-shell-header">
+    <div class="acm-header-greeting">
+        <h1 class="acm-greeting-title"><%= greeting %>, <%= studentName %></h1>
+        <p class="acm-greeting-meta">
+            <%= student.class_name %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+        </p>
+    </div>
+    <div class="acm-header-actions">
+        <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications<%= individualMessagesCount > 0 ? ', ' + individualMessagesCount + ' unread' : '' %>">
+            <i class="bi bi-bell" aria-hidden="true"></i>
+            <% if (individualMessagesCount > 0) { %>
+                <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+            <% } %>
+        </a>
+    </div>
+</header>

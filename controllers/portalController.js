@@ -14,9 +14,9 @@ exports.getDashboard = async (req, res) => {
     const studentId = req.session.student.id;
     const school = await getSettings();
 
-    // Fetch latest results
+    // Fetch latest results (added AVG total for Phase 2)
     const results = await db.all(`
-        SELECT session, term, COUNT(*) as subjects_taken
+        SELECT session, term, COUNT(*) as subjects_taken, AVG(total) as average_score
         FROM results
         WHERE student_id = ? AND status IN ('approved', 'published')
         GROUP BY session, term
@@ -133,6 +133,22 @@ exports.getDashboard = async (req, res) => {
         current_term: ec.section_term || school.current_term || '1st Term'
     }));
 
+    // Calculate attendance percentage for current term and session
+    const activeSession = sectionInfo.length > 0 ? sectionInfo[0].current_session : currentSessionStr;
+    const activeTerm = sectionInfo.length > 0 ? sectionInfo[0].current_term : (school.current_term || '1st Term');
+
+    const attRows = await db.all(`
+        SELECT status 
+        FROM attendance 
+        WHERE student_id = ? AND session = ? AND term = ?
+    `, [studentId, activeSession, activeTerm]);
+
+    let attendancePercentage = null;
+    if (attRows && attRows.length > 0) {
+        const presentCount = attRows.filter(r => r.status === 'Present' || r.status === 'Late').length;
+        attendancePercentage = Math.round((presentCount / attRows.length) * 100);
+    }
+
     res.render('portal/index', {
         title: 'Student Dashboard',
         path: '/portal',
@@ -147,8 +163,9 @@ exports.getDashboard = async (req, res) => {
         feeProgress,
         feeBalance,
         sectionInfo,
-        currentTerm: school.current_term || 'First',
-        currentSession: school.current_session || '2024/2025',
+        attendancePercentage,
+        currentTerm: activeTerm,
+        currentSession: activeSession,
         error: req.query.error
     });
 };

@@ -101,10 +101,25 @@
     </style>
 </head>
 <body>
-    <div class="no-print" style="position: fixed; top: 20px; right: 20px; z-index: 100;">
-        <button onclick="window.print()" class="btn">Print High-Res PDF</button>
-        <button onclick="history.back()" class="btn" style="background:#555; margin-right: 10px;">Back</button>
+    <!-- AcadMe back bar (no-print) -->
+    <div class="no-print" style="
+        position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+        background: var(--school-primary, #2c3e50); color: #fff;
+        display: flex; align-items: center; justify-content: space-between;
+        padding: 12px 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        font-family: 'Inter', sans-serif; font-size: 0.9rem;">
+        <a href="/portal/academics/results#report-cards"
+           style="color:#fff; text-decoration:none; display:flex; align-items:center; gap:8px; font-weight:600;">
+            &#8592; Back to Academics
+        </a>
+        <button onclick="window.print()"
+            style="background:rgba(255,255,255,0.18); color:#fff; border:1px solid rgba(255,255,255,0.4);
+                   padding:8px 18px; border-radius:6px; cursor:pointer; font-weight:600;
+                   font-family:inherit; font-size:0.85rem;">
+            Print / Save PDF
+        </button>
     </div>
+    <div class="no-print" style="height: 54px;"></div>
 
     <%- include('../partials/cumulative_content', { student, subjects, getGrade, position, classCount, session, school, grading, marksAnalysis }) %>
 </body>

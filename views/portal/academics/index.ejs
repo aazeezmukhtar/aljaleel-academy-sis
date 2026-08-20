@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <%- include('./head') %>
+</head>
+<body>
+<div class="acm-portal-shell">
+    <%- include('../../partials/student_shell_nav') %>
+    <main class="acm-main-content">
+        <%- include('../../partials/student_shell_header') %>
+
+        <!-- Desktop greeting -->
+        <% 
+            const hour = new Date().getHours();
+            let greeting = 'Good evening';
+            if (hour < 12) greeting = 'Good morning';
+            else if (hour < 18) greeting = 'Good afternoon';
+            const studentName = student.first_name || (student.name ? student.name.split(' ')[0] : 'Student');
+        %>
+        <div class="acm-desktop-header">
+            <div class="acm-header-greeting">
+                <h1 class="acm-greeting-title">Academics</h1>
+                <p class="acm-greeting-meta">
+                    <%= student.class_name %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+                </p>
+            </div>
+            <div class="acm-header-actions">
+                <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <% if (individualMessagesCount > 0) { %>
+                        <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+                    <% } %>
+                </a>
+            </div>
+        </div>
+
+        <!-- Academic Context -->
+        <div class="acm-academic-ctx">
+            <strong><%= currentSession %></strong>
+            <span class="acm-dot">&middot;</span>
+            <span><%= currentTerm %></span>
+            <span class="acm-dot">&middot;</span>
+            <strong><%= student.class_name %></strong>
+        </div>
+
+        <!-- Sub-navigation -->
+        <nav class="acm-academic-nav" aria-label="Academic sections">
+            <a href="/portal/academics" class="acm-academic-nav-item is-active"><i class="bi bi-grid"></i> Overview</a>
+            <a href="/portal/academics/results" class="acm-academic-nav-item"><i class="bi bi-bar-chart"></i> Results</a>
+            <a href="/portal/academics/results#report-cards" class="acm-academic-nav-item"><i class="bi bi-file-earmark-text"></i> Report Cards</a>
+            <a href="/portal/academics/class-board" class="acm-academic-nav-item"><i class="bi bi-journal-bookmark"></i> Class Board</a>
+            <a href="/portal/academics/subjects" class="acm-academic-nav-item"><i class="bi bi-book"></i> Subjects</a>
+            <a href="/portal/academics/timetable" class="acm-academic-nav-item"><i class="bi bi-calendar3"></i> Timetable</a>
+        </nav>
+
+        <div class="acm-academics-layout">
+            <!-- Left: Performance + Shortcuts -->
+            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-24);">
+
+                <!-- Performance summary -->
+                <section class="acm-section">
+                    <h2 class="acm-section-title">Performance</h2>
+                    <% if (resultSummary && resultSummary.length > 0) {
+                        const lr = resultSummary[0];
+                        const avg = lr.average_score ? lr.average_score.toFixed(1) : null;
+                    %>
+                    <div class="acm-perf-summary">
+                        <% if (avg) { %>
+                        <div class="acm-metric">
+                            <span class="acm-metric-value"><%= avg %>%</span>
+                            <span class="acm-metric-label">Average · <%= lr.term %></span>
+                        </div>
+                        <% } %>
+                        <% if (latestPosition && latestClassCount) { %>
+                        <div class="acm-metric">
+                            <span class="acm-metric-value"><%= latestPosition %><sup style="font-size:0.5em; vertical-align:top; margin-top:4px;"><%= ['','st','nd','rd'][latestPosition] || 'th' %></sup></span>
+                            <span class="acm-metric-label">of <%= latestClassCount %></span>
+                        </div>
+                        <% } %>
+                        <div class="acm-metric">
+                            <span class="acm-metric-value"><%= subjects.length %></span>
+                            <span class="acm-metric-label">Subjects</span>
+                        </div>
+                        <div class="acm-metric">
+                            <span class="acm-metric-value"><%= resultSummary.length %></span>
+                            <span class="acm-metric-label">Terms</span>
+                        </div>
+                    </div>
+                    <% } else { %>
+                    <div class="acm-empty" style="padding: var(--acm-sp-20) 0; text-align: start; align-items: flex-start;">
+                        <p class="acm-empty-desc" style="max-width:none;">Results haven&rsquo;t been published yet for this term.</p>
+                    </div>
+                    <% } %>
+                </section>
+
+                <!-- Academic Shortcuts -->
+                <section class="acm-section">
+                    <h2 class="acm-section-title">Academic Tools</h2>
+                    <div class="acm-shortcut-list">
+                        <a href="/portal/academics/results" class="acm-shortcut-item">
+                            <div class="acm-shortcut-icon"><i class="bi bi-bar-chart-fill"></i></div>
+                            <span class="acm-shortcut-label">Results</span>
+                            <% if (resultSummary && resultSummary.length > 0) { %>
+                                <span class="acm-shortcut-meta"><%= resultSummary[0].term %></span>
+                            <% } %>
+                            <i class="bi bi-chevron-right acm-shortcut-arrow"></i>
+                        </a>
+                        <a href="/portal/academics/results#report-cards" class="acm-shortcut-item">
+                            <div class="acm-shortcut-icon"><i class="bi bi-file-earmark-text-fill"></i></div>
+                            <span class="acm-shortcut-label">Report Cards</span>
+                            <% if (resultSummary && resultSummary.length > 0) { %>
+                                <span class="acm-shortcut-meta"><%= resultSummary.length %> available</span>
+                            <% } else { %>
+                                <span class="acm-shortcut-meta">None yet</span>
+                            <% } %>
+                            <i class="bi bi-chevron-right acm-shortcut-arrow"></i>
+                        </a>
+                        <a href="/portal/academics/class-board" class="acm-shortcut-item">
+                            <div class="acm-shortcut-icon"><i class="bi bi-journal-bookmark-fill"></i></div>
+                            <span class="acm-shortcut-label">Class Board</span>
+                            <% 
+                                const assignmentCount = classPosts ? classPosts.filter(p => p.post_type === 'Assignment').length : 0;
+                                const now = new Date();
+                                const overdueCount = classPosts ? classPosts.filter(p => p.post_type === 'Assignment' && p.due_date && new Date(p.due_date) < now).length : 0;
+                            %>
+                            <% if (overdueCount > 0) { %>
+                                <span class="acm-status-chip acm-status-chip--overdue"><%= overdueCount %> overdue</span>
+                            <% } else if (assignmentCount > 0) { %>
+                                <span class="acm-shortcut-meta"><%= assignmentCount %> assignments</span>
+                            <% } %>
+                            <i class="bi bi-chevron-right acm-shortcut-arrow"></i>
+                        </a>
+                        <a href="/portal/academics/timetable" class="acm-shortcut-item">
+                            <div class="acm-shortcut-icon"><i class="bi bi-calendar3"></i></div>
+                            <span class="acm-shortcut-label">Timetable</span>
+                            <span class="acm-shortcut-meta">Not yet available</span>
+                            <i class="bi bi-chevron-right acm-shortcut-arrow"></i>
+                        </a>
+                        <a href="/portal/academics/subjects" class="acm-shortcut-item">
+                            <div class="acm-shortcut-icon"><i class="bi bi-book-fill"></i></div>
+                            <span class="acm-shortcut-label">My Subjects</span>
+                            <span class="acm-shortcut-meta"><%= subjects.length %> subjects</span>
+                            <i class="bi bi-chevron-right acm-shortcut-arrow"></i>
+                        </a>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right: Recent Class Board -->
+            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-24);">
+                <section class="acm-section">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: var(--acm-sp-12);">
+                        <h2 class="acm-section-title" style="margin:0;">Recent Activity</h2>
+                        <a href="/portal/academics/class-board" style="font-size:var(--acm-text-sm); color:var(--school-primary,var(--acm-info));">View all</a>
+                    </div>
+                    <% if (classPosts && classPosts.length > 0) { %>
+                    <div class="acm-post-list">
+                        <% classPosts.slice(0,4).forEach(post => {
+                            const isOverdue = post.post_type === 'Assignment' && post.due_date && new Date(post.due_date) < now;
+                            const statusClass = post.post_type === 'Announcement' ? 'general' : (isOverdue ? 'overdue' : 'pending');
+                        %>
+                        <a href="/portal/assignment/<%= post.id %>" class="acm-post-item acm-post-item--<%= statusClass %>">
+                            <div class="acm-post-icon acm-post-icon--<%= post.post_type === 'Assignment' ? 'assignment' : 'announcement' %>">
+                                <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-megaphone' %>"></i>
+                            </div>
+                            <div class="acm-post-body">
+                                <p class="acm-post-title"><%= post.title %></p>
+                                <div class="acm-post-meta">
+                                    <% if (post.subject_name) { %><span><%= post.subject_name %></span><% } %>
+                                    <% if (post.due_date) { %>
+                                        <span>Due <%= new Date(post.due_date).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) %></span>
+                                        <% if (isOverdue) { %><span class="acm-status-chip acm-status-chip--overdue">Overdue</span><% } %>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </a>
+                        <% }) %>
+                    </div>
+                    <% } else { %>
+                    <div class="acm-empty">
+                        <i class="bi bi-journal acm-empty-icon"></i>
+                        <p class="acm-empty-title">No recent activity</p>
+                        <p class="acm-empty-desc">Class board posts will appear here.</p>
+                    </div>
+                    <% } %>
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+<%- include('../../partials/student_shell_footer') %>
+</body>
+</html>

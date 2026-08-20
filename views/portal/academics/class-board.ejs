@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <%- include('./head') %>
+</head>
+<body>
+<div class="acm-portal-shell">
+    <%- include('../../partials/student_shell_nav') %>
+    <main class="acm-main-content">
+        <%- include('../../partials/student_shell_header') %>
+
+        <div class="acm-desktop-header">
+            <div class="acm-header-greeting">
+                <h1 class="acm-greeting-title">Class Board</h1>
+                <p class="acm-greeting-meta"><%= student.class_name %> &middot; <%= currentTerm %></p>
+            </div>
+            <div class="acm-header-actions">
+                <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <% if (individualMessagesCount > 0) { %>
+                        <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+                    <% } %>
+                </a>
+            </div>
+        </div>
+
+        <div class="acm-academic-ctx">
+            <a href="/portal/academics" style="color:var(--acm-text-secondary);text-decoration:none;">Academics</a>
+            <span class="acm-dot">/</span>
+            <strong>Class Board</strong>
+        </div>
+
+        <nav class="acm-academic-nav" aria-label="Academic sections">
+            <a href="/portal/academics" class="acm-academic-nav-item"><i class="bi bi-grid"></i> Overview</a>
+            <a href="/portal/academics/results" class="acm-academic-nav-item"><i class="bi bi-bar-chart"></i> Results</a>
+            <a href="/portal/academics/results#report-cards" class="acm-academic-nav-item"><i class="bi bi-file-earmark-text"></i> Report Cards</a>
+            <a href="/portal/academics/class-board" class="acm-academic-nav-item is-active"><i class="bi bi-journal-bookmark"></i> Class Board</a>
+            <a href="/portal/academics/subjects" class="acm-academic-nav-item"><i class="bi bi-book"></i> Subjects</a>
+            <a href="/portal/academics/timetable" class="acm-academic-nav-item"><i class="bi bi-calendar3"></i> Timetable</a>
+        </nav>
+
+        <%
+            const now = new Date();
+            const overdueItems   = posts.filter(p => p.status === 'overdue');
+            const pendingItems   = posts.filter(p => p.status === 'pending');
+            const generalItems   = posts.filter(p => p.status === 'general');
+
+            let filteredPosts = posts;
+            if (filterType === 'assignments') filteredPosts = posts.filter(p => p.post_type === 'Assignment');
+            if (filterType === 'announcements') filteredPosts = posts.filter(p => p.post_type === 'Announcement');
+            if (filterType === 'overdue') filteredPosts = overdueItems;
+        %>
+
+        <!-- Filter bar -->
+        <div class="acm-board-filters" role="group" aria-label="Filter class board">
+            <a href="?filter=all" class="acm-filter-btn <%= filterType === 'all' ? 'is-active' : '' %>">All (<%= posts.length %>)</a>
+            <a href="?filter=assignments" class="acm-filter-btn <%= filterType === 'assignments' ? 'is-active' : '' %>">Assignments (<%= posts.filter(p=>p.post_type==='Assignment').length %>)</a>
+            <% if (overdueItems.length > 0) { %>
+            <a href="?filter=overdue" class="acm-filter-btn <%= filterType === 'overdue' ? 'is-active' : '' %>">Overdue (<%= overdueItems.length %>)</a>
+            <% } %>
+            <a href="?filter=announcements" class="acm-filter-btn <%= filterType === 'announcements' ? 'is-active' : '' %>">Announcements (<%= generalItems.length %>)</a>
+        </div>
+
+        <% if (filteredPosts.length > 0) { %>
+        <div class="acm-post-list">
+            <% filteredPosts.forEach(post => {
+                const isOverdue = post.status === 'overdue';
+                const statusClass = post.status;
+            %>
+            <a href="/portal/assignment/<%= post.id %>" class="acm-post-item acm-post-item--<%= statusClass %>" aria-label="<%= post.title %>">
+                <div class="acm-post-icon acm-post-icon--<%= post.post_type === 'Assignment' ? 'assignment' : 'announcement' %>">
+                    <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-megaphone' %>" aria-hidden="true"></i>
+                </div>
+                <div class="acm-post-body">
+                    <p class="acm-post-title"><%= post.title %></p>
+                    <div class="acm-post-meta">
+                        <% if (post.subject_name) { %><span><%= post.subject_name %></span><% } %>
+                        <% if (post.first_name) { %><span><%= post.first_name %> <%= post.last_name %></span><% } %>
+                        <% if (post.due_date) { %>
+                            <span>Due <%= new Date(post.due_date).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) %></span>
+                        <% } %>
+                        <% if (post.status === 'overdue') { %>
+                            <span class="acm-status-chip acm-status-chip--overdue"><i class="bi bi-exclamation-circle" aria-hidden="true"></i> Overdue</span>
+                        <% } else if (post.status === 'pending') { %>
+                            <span class="acm-status-chip acm-status-chip--pending">Pending</span>
+                        <% } %>
+                    </div>
+                </div>
+                <i class="bi bi-chevron-right" style="color:var(--acm-text-muted); margin-top:2px; flex-shrink:0;" aria-hidden="true"></i>
+            </a>
+            <% }) %>
+        </div>
+        <% } else { %>
+        <div class="acm-empty">
+            <i class="bi bi-journal acm-empty-icon"></i>
+            <p class="acm-empty-title">Nothing here</p>
+            <p class="acm-empty-desc">
+                <% if (filterType === 'overdue') { %>No overdue assignments.
+                <% } else if (filterType === 'assignments') { %>No assignments posted yet.
+                <% } else if (filterType === 'announcements') { %>No announcements yet.
+                <% } else { %>Your class board is empty.<% } %>
+            </p>
+        </div>
+        <% } %>
+
+    </main>
+</div>
+<%- include('../../partials/student_shell_footer') %>
+</body>
+</html>

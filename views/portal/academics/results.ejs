@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <%- include('./head') %>
+</head>
+<body>
+<div class="acm-portal-shell">
+    <%- include('../../partials/student_shell_nav') %>
+    <main class="acm-main-content">
+        <%- include('../../partials/student_shell_header') %>
+
+        <div class="acm-desktop-header">
+            <div class="acm-header-greeting">
+                <h1 class="acm-greeting-title">Results</h1>
+                <p class="acm-greeting-meta"><%= student.class_name %> &middot; <%= currentSession %></p>
+            </div>
+            <div class="acm-header-actions">
+                <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <% if (individualMessagesCount > 0) { %>
+                        <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+                    <% } %>
+                </a>
+            </div>
+        </div>
+
+        <!-- Academic Context -->
+        <div class="acm-academic-ctx">
+            <a href="/portal/academics" style="color:var(--acm-text-secondary);text-decoration:none;">Academics</a>
+            <span class="acm-dot">/</span>
+            <strong>Results</strong>
+        </div>
+
+        <!-- Sub-navigation -->
+        <nav class="acm-academic-nav" aria-label="Academic sections">
+            <a href="/portal/academics" class="acm-academic-nav-item"><i class="bi bi-grid"></i> Overview</a>
+            <a href="/portal/academics/results" class="acm-academic-nav-item is-active"><i class="bi bi-bar-chart"></i> Results</a>
+            <a href="/portal/academics/results#report-cards" class="acm-academic-nav-item"><i class="bi bi-file-earmark-text"></i> Report Cards</a>
+            <a href="/portal/academics/class-board" class="acm-academic-nav-item"><i class="bi bi-journal-bookmark"></i> Class Board</a>
+            <a href="/portal/academics/subjects" class="acm-academic-nav-item"><i class="bi bi-book"></i> Subjects</a>
+            <a href="/portal/academics/timetable" class="acm-academic-nav-item"><i class="bi bi-calendar3"></i> Timetable</a>
+        </nav>
+
+        <% if (allPublished && allPublished.length > 0) { %>
+
+        <!-- Term selector -->
+        <div class="acm-term-selector" role="group" aria-label="Select term">
+            <% allPublished.forEach(p => { 
+                const isActive = p.session === selectedSession && p.term === selectedTerm;
+            %>
+            <a href="/portal/academics/results?session=<%= encodeURIComponent(p.session) %>&term=<%= encodeURIComponent(p.term) %>"
+               class="acm-term-btn <%= isActive ? 'is-active' : '' %>"
+               aria-current="<%= isActive ? 'true' : 'false' %>">
+                <%= p.term %> · <%= p.session %>
+            </a>
+            <% }) %>
+        </div>
+
+        <!-- Performance summary -->
+        <% if (detailedResults && detailedResults.length > 0) { %>
+        <div class="acm-perf-summary" style="margin-bottom: var(--acm-sp-24);">
+            <% if (avgRow && avgRow.avg != null) { %>
+            <div class="acm-metric">
+                <span class="acm-metric-value"><%= avgRow.avg.toFixed(1) %>%</span>
+                <div style="display:flex; align-items:center; gap:var(--acm-sp-6);">
+                    <span class="acm-metric-label">Average</span>
+                    <% if (prevAvg !== null && avgRow.avg !== null) {
+                        const diff = avgRow.avg - prevAvg;
+                        const sign = diff > 0 ? '+' : '';
+                        const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+                        const icon = diff > 0 ? 'bi-arrow-up-short' : diff < 0 ? 'bi-arrow-down-short' : 'bi-dash';
+                    %>
+                    <span class="acm-trend acm-trend--<%= cls %>">
+                        <i class="bi <%= icon %>"></i><%= sign %><%= diff.toFixed(1) %>
+                    </span>
+                    <% } %>
+                </div>
+            </div>
+            <% } %>
+            <% if (position && classCount) { %>
+            <div class="acm-metric">
+                <span class="acm-metric-value"><%= position %><sup style="font-size:0.5em;vertical-align:top;margin-top:4px;"><%= ['','st','nd','rd'][position] || 'th' %></sup></span>
+                <span class="acm-metric-label">of <%= classCount %> students</span>
+            </div>
+            <% } %>
+            <div class="acm-metric">
+                <span class="acm-metric-value"><%= detailedResults.length %></span>
+                <span class="acm-metric-label">Subjects</span>
+            </div>
+            <% const scores = detailedResults.map(r => r.total || 0);
+               const highest = Math.max(...scores);
+               const lowest = Math.min(...scores);
+            %>
+            <div class="acm-metric">
+                <span class="acm-metric-value"><%= highest %></span>
+                <span class="acm-metric-label">Highest</span>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div class="acm-section" style="margin-bottom: var(--acm-sp-32);">
+            <h2 class="acm-section-title">Subject Results &mdash; <%= selectedTerm %></h2>
+            <div class="acm-results-wrapper">
+                <table class="acm-results-table">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <% const caCount = parseInt(resultConfig.ca_count || 2);
+                               for (let i = 1; i <= caCount; i++) { %>
+                                <th>CA<%= caCount > 1 ? i : '' %></th>
+                            <% } %>
+                            <th>Exam</th>
+                            <th>Total</th>
+                            <th>Grade</th>
+                            <th>Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% detailedResults.forEach(r => {
+                            const gradeClass = r.grade ? 'acm-grade--' + r.grade.charAt(0) : '';
+                        %>
+                        <tr>
+                            <td class="acm-subject-name"><%= r.subject_name %></td>
+                            <td class="acm-score"><%= r.ca1 != null ? r.ca1 : '—' %></td>
+                            <% if (caCount >= 2) { %>
+                            <td class="acm-score"><%= r.ca2 != null ? r.ca2 : '—' %></td>
+                            <% } %>
+                            <td class="acm-score"><%= r.exam != null ? r.exam : '—' %></td>
+                            <td class="acm-score acm-score-total"><%= r.total != null ? r.total : '—' %></td>
+                            <td>
+                                <% if (r.grade) { %>
+                                    <span class="acm-grade <%= gradeClass %>" aria-label="Grade <%= r.grade %>"><%= r.grade %></span>
+                                <% } else { %> — <% } %>
+                            </td>
+                            <td>
+                                <% if (r.teacher_remark && r.teacher_remark.trim()) { %>
+                                    <span class="acm-remark" title="<%= r.teacher_remark %>"><%= r.teacher_remark %></span>
+                                <% } else { %> — <% } %>
+                            </td>
+                        </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <% } else { %>
+        <div class="acm-empty">
+            <i class="bi bi-bar-chart acm-empty-icon"></i>
+            <p class="acm-empty-title">No results for this term</p>
+            <p class="acm-empty-desc">Results for <%= selectedTerm %> haven&rsquo;t been published yet.</p>
+        </div>
+        <% } %>
+
+        <!-- Report Cards Section -->
+        <div class="acm-section" id="report-cards" style="margin-top: var(--acm-sp-32);">
+            <h2 class="acm-section-title">Report Cards</h2>
+            <% if (allPublished && allPublished.length > 0) { %>
+            <div class="acm-report-list">
+                <% allPublished.forEach(p => { %>
+                <div class="acm-report-item">
+                    <div class="acm-report-info">
+                        <p class="acm-report-term"><%= p.term %></p>
+                        <p class="acm-report-session"><%= p.session %></p>
+                    </div>
+                    <div class="acm-report-actions">
+                        <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
+                            <% student.class_name.split(', ').forEach(cls => { %>
+                            <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>&class_name=<%= encodeURIComponent(cls) %>"
+                               target="_blank" class="acm-report-btn acm-report-btn--primary" aria-label="View termly report card for <%= p.term %>">
+                                <i class="bi bi-file-earmark-text"></i> Termly
+                            </a>
+                            <% }) %>
+                        <% } else { %>
+                        <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>"
+                           target="_blank" class="acm-report-btn acm-report-btn--primary">
+                            <i class="bi bi-file-earmark-text"></i> Termly
+                        </a>
+                        <% } %>
+                    </div>
+                </div>
+                <% }) %>
+
+                <!-- Cumulative -->
+                <% const sessions = [...new Set(allPublished.map(p => p.session))]; %>
+                <% sessions.forEach(sess => { %>
+                <div class="acm-report-item">
+                    <div class="acm-report-info">
+                        <p class="acm-report-term">Cumulative</p>
+                        <p class="acm-report-session"><%= sess %> · All Terms</p>
+                    </div>
+                    <div class="acm-report-actions">
+                        <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
+                            <% student.class_name.split(', ').forEach(cls => { %>
+                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>&class_name=<%= encodeURIComponent(cls) %>"
+                               target="_blank" class="acm-report-btn acm-report-btn--secondary">
+                                <i class="bi bi-bar-chart-fill"></i> Cumulative
+                            </a>
+                            <% }) %>
+                        <% } else { %>
+                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>"
+                           target="_blank" class="acm-report-btn acm-report-btn--secondary">
+                            <i class="bi bi-bar-chart-fill"></i> Cumulative
+                        </a>
+                        <% } %>
+                    </div>
+                </div>
+                <% }) %>
+            </div>
+            <% } else { %>
+            <div class="acm-empty">
+                <i class="bi bi-file-earmark acm-empty-icon"></i>
+                <p class="acm-empty-title">No report cards yet</p>
+                <p class="acm-empty-desc">Report cards will appear here once results are published.</p>
+            </div>
+            <% } %>
+        </div>
+
+        <% } else { %>
+        <!-- No published results at all -->
+        <div class="acm-empty" style="padding: var(--acm-sp-48) var(--acm-sp-16);">
+            <i class="bi bi-bar-chart acm-empty-icon"></i>
+            <p class="acm-empty-title">Results not yet published</p>
+            <p class="acm-empty-desc">Your results for this term haven&rsquo;t been published yet. Check back later.</p>
+        </div>
+        <% } %>
+
+    </main>
+</div>
+<%- include('../../partials/student_shell_footer') %>
+</body>
+</html>

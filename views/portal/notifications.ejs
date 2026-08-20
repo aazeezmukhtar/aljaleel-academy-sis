@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <%- include('../partials/student_shell_head') %>
+    <link rel="stylesheet" href="/css/academics.css">
+</head>
+<body>
+<div class="acm-portal-shell">
+    <%- include('../partials/student_shell_nav') %>
+    <main class="acm-main-content">
+        <%- include('../partials/student_shell_header') %>
+
+        <div class="acm-desktop-header">
+            <div class="acm-header-greeting">
+                <h1 class="acm-greeting-title">Notifications</h1>
+                <p class="acm-greeting-meta"><%= currentTerm %> &middot; <%= currentSession %></p>
+            </div>
+            <div class="acm-header-actions">
+                <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications" aria-current="page">
+                    <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                </a>
+            </div>
+        </div>
+
+        <% const filterType = typeof reqFilter !== 'undefined' ? reqFilter : 'all'; %>
+
+        <!-- Announcements -->
+        <% if (announcements && announcements.length > 0) { %>
+        <section class="acm-section" style="margin-bottom: var(--acm-sp-28);">
+            <h2 class="acm-section-title">School Announcements</h2>
+            <div class="acm-post-list">
+                <% announcements.forEach(ann => { %>
+                <a href="/portal/announcement/<%= ann.id %>" class="acm-post-item acm-post-item--general">
+                    <div class="acm-post-icon acm-post-icon--announcement">
+                        <i class="bi bi-megaphone" aria-hidden="true"></i>
+                    </div>
+                    <div class="acm-post-body">
+                        <p class="acm-post-title"><%= ann.title %></p>
+                        <div class="acm-post-meta">
+                            <span><%= new Date(ann.created_at).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) %></span>
+                            <% if (ann.priority === 'High') { %>
+                                <span class="acm-status-chip acm-status-chip--overdue">Important</span>
+                            <% } %>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right" style="color:var(--acm-text-muted);" aria-hidden="true"></i>
+                </a>
+                <% }) %>
+            </div>
+        </section>
+        <% } %>
+
+        <!-- Class Board messages -->
+        <% if (classPosts && classPosts.length > 0) { %>
+        <section class="acm-section">
+            <h2 class="acm-section-title">Class Board</h2>
+            <div class="acm-post-list">
+                <% const now = new Date();
+                   classPosts.forEach(post => {
+                    const isOverdue = post.post_type === 'Assignment' && post.due_date && new Date(post.due_date) < now;
+                    const statusClass = post.post_type === 'Announcement' ? 'general' : (isOverdue ? 'overdue' : 'pending');
+                %>
+                <a href="/portal/assignment/<%= post.id %>" class="acm-post-item acm-post-item--<%= statusClass %>">
+                    <div class="acm-post-icon acm-post-icon--<%= post.post_type === 'Assignment' ? 'assignment' : 'announcement' %>">
+                        <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-megaphone' %>" aria-hidden="true"></i>
+                    </div>
+                    <div class="acm-post-body">
+                        <p class="acm-post-title"><%= post.title %></p>
+                        <div class="acm-post-meta">
+                            <% if (post.subject_name) { %><span><%= post.subject_name %></span><% } %>
+                            <% if (post.first_name) { %><span><%= post.first_name %> <%= post.last_name %></span><% } %>
+                            <% if (post.due_date) { %>
+                                <span>Due <%= new Date(post.due_date).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) %></span>
+                                <% if (isOverdue) { %><span class="acm-status-chip acm-status-chip--overdue">Overdue</span><% } %>
+                            <% } %>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right" style="color:var(--acm-text-muted);" aria-hidden="true"></i>
+                </a>
+                <% }) %>
+            </div>
+        </section>
+        <% } %>
+
+        <% if ((!announcements || announcements.length === 0) && (!classPosts || classPosts.length === 0)) { %>
+        <div class="acm-empty">
+            <i class="bi bi-bell acm-empty-icon"></i>
+            <p class="acm-empty-title">No notifications</p>
+            <p class="acm-empty-desc">You&rsquo;re all caught up. Announcements and class board messages will appear here.</p>
+        </div>
+        <% } %>
+
+    </main>
+</div>
+<%- include('../partials/student_shell_footer') %>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <%- include('./head') %>
+</head>
+<body>
+<div class="acm-portal-shell">
+    <%- include('../../partials/student_shell_nav') %>
+    <main class="acm-main-content">
+        <%- include('../../partials/student_shell_header') %>
+
+        <div class="acm-desktop-header">
+            <div class="acm-header-greeting">
+                <h1 class="acm-greeting-title">My Subjects</h1>
+                <p class="acm-greeting-meta"><%= student.class_name %> &middot; <%= currentSession %></p>
+            </div>
+            <div class="acm-header-actions">
+                <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <% if (individualMessagesCount > 0) { %>
+                        <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+                    <% } %>
+                </a>
+            </div>
+        </div>
+
+        <div class="acm-academic-ctx">
+            <a href="/portal/academics" style="color:var(--acm-text-secondary);text-decoration:none;">Academics</a>
+            <span class="acm-dot">/</span>
+            <strong>My Subjects</strong>
+        </div>
+
+        <nav class="acm-academic-nav" aria-label="Academic sections">
+            <a href="/portal/academics" class="acm-academic-nav-item"><i class="bi bi-grid"></i> Overview</a>
+            <a href="/portal/academics/results" class="acm-academic-nav-item"><i class="bi bi-bar-chart"></i> Results</a>
+            <a href="/portal/academics/results#report-cards" class="acm-academic-nav-item"><i class="bi bi-file-earmark-text"></i> Report Cards</a>
+            <a href="/portal/academics/class-board" class="acm-academic-nav-item"><i class="bi bi-journal-bookmark"></i> Class Board</a>
+            <a href="/portal/academics/subjects" class="acm-academic-nav-item is-active"><i class="bi bi-book"></i> Subjects</a>
+            <a href="/portal/academics/timetable" class="acm-academic-nav-item"><i class="bi bi-calendar3"></i> Timetable</a>
+        </nav>
+
+        <% if (subjects && subjects.length > 0) { %>
+        <p style="font-size:var(--acm-text-sm); color:var(--acm-text-secondary); margin-bottom:var(--acm-sp-16);"><%= subjects.length %> subjects &middot; <%= currentSession %></p>
+        <div class="acm-subject-list" role="list">
+            <% subjects.forEach((sub, i) => {
+                const initials = sub.name ? sub.name.charAt(0).toUpperCase() : '?';
+            %>
+            <div class="acm-subject-item" role="listitem">
+                <div class="acm-subject-icon" aria-hidden="true"><%= initials %></div>
+                <div class="acm-subject-info">
+                    <p class="acm-subject-title"><%= sub.name %></p>
+                    <p class="acm-subject-teacher">
+                        <% if (sub.teacher_first) { %>
+                            <i class="bi bi-person" aria-hidden="true"></i> <%= sub.teacher_first %> <%= sub.teacher_last %>
+                        <% } else { %>
+                            <span style="color:var(--acm-text-muted);">No teacher assigned</span>
+                        <% } %>
+                    </p>
+                </div>
+                <% if (sub.code) { %>
+                <span class="acm-subject-code" aria-label="Subject code <%= sub.code %>"><%= sub.code %></span>
+                <% } %>
+            </div>
+            <% }) %>
+        </div>
+        <% } else { %>
+        <div class="acm-empty">
+            <i class="bi bi-book acm-empty-icon"></i>
+            <p class="acm-empty-title">No subjects found</p>
+            <p class="acm-empty-desc">Subjects assigned to your class will appear here.</p>
+        </div>
+        <% } %>
+
+    </main>
+</div>
+<%- include('../../partials/student_shell_footer') %>
+</body>
+</html>

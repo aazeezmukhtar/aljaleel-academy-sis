@@ -1,0 +1,522 @@
+/*
+ * =============================================================
+ * AcadMe — Academics Hub Styles  v3.0
+ * =============================================================
+ * Depends on: acadme-tokens.css + student-portal.css
+ * =============================================================
+ */
+
+/* Academic Context Bar */
+.acm-academic-ctx {
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-8);
+    font-size: var(--acm-text-sm);
+    color: var(--acm-text-secondary);
+    margin-bottom: var(--acm-sp-20);
+    flex-wrap: wrap;
+}
+.acm-academic-ctx strong {
+    color: var(--acm-text-primary);
+    font-weight: var(--acm-fw-semibold);
+}
+.acm-academic-ctx .acm-dot {
+    color: var(--acm-text-muted);
+}
+
+/* Academic Sub-navigation */
+.acm-academic-nav {
+    display: flex;
+    gap: var(--acm-sp-4);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: var(--acm-sp-24);
+    padding-bottom: var(--acm-sp-4);
+    border-bottom: 1px solid var(--acm-border);
+}
+.acm-academic-nav::-webkit-scrollbar { display: none; }
+
+.acm-academic-nav-item {
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-6);
+    padding: var(--acm-sp-8) var(--acm-sp-16);
+    text-decoration: none;
+    color: var(--acm-text-secondary);
+    font-size: var(--acm-text-sm);
+    font-weight: var(--acm-fw-medium);
+    border-radius: var(--acm-radius-full);
+    white-space: nowrap;
+    transition: background-color var(--acm-transition-fast), color var(--acm-transition-fast);
+}
+.acm-academic-nav-item:hover {
+    background-color: var(--acm-bg);
+    color: var(--acm-text-primary);
+}
+.acm-academic-nav-item.is-active {
+    background-color: var(--school-primary, var(--acm-navy));
+    color: #fff;
+}
+
+/* Performance Summary Row */
+.acm-perf-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--acm-sp-12);
+    margin-bottom: var(--acm-sp-24);
+}
+
+.acm-metric {
+    background-color: var(--acm-surface);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-md);
+    padding: var(--acm-sp-16);
+    display: flex;
+    flex-direction: column;
+    gap: var(--acm-sp-4);
+}
+.acm-metric-value {
+    font-size: var(--acm-text-2xl);
+    font-weight: var(--acm-fw-bold);
+    color: var(--acm-text-primary);
+    line-height: 1;
+}
+.acm-metric-label {
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--acm-ls-wider);
+    font-weight: var(--acm-fw-semibold);
+}
+
+/* Academic Shortcut Links */
+.acm-shortcut-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background-color: var(--acm-surface);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-lg);
+    overflow: hidden;
+}
+
+.acm-shortcut-item {
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-16);
+    padding: var(--acm-sp-16) var(--acm-sp-20);
+    text-decoration: none;
+    color: var(--acm-text-primary);
+    border-bottom: 1px solid var(--acm-border);
+    transition: background-color var(--acm-transition-fast);
+}
+.acm-shortcut-item:last-child { border-bottom: none; }
+.acm-shortcut-item:hover { background-color: var(--acm-bg); }
+
+.acm-shortcut-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--acm-radius-md);
+    background-color: var(--acm-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--school-primary, var(--acm-navy));
+    flex-shrink: 0;
+}
+.acm-shortcut-label {
+    flex: 1;
+    font-weight: var(--acm-fw-medium);
+    font-size: var(--acm-text-base);
+}
+.acm-shortcut-meta {
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-muted);
+}
+.acm-shortcut-arrow {
+    color: var(--acm-text-muted);
+}
+[dir="rtl"] .acm-shortcut-arrow { transform: scaleX(-1); }
+
+/* Results Table */
+.acm-results-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: var(--acm-radius-lg);
+    border: 1px solid var(--acm-border);
+}
+.acm-results-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: var(--acm-surface);
+    font-size: var(--acm-text-sm);
+}
+.acm-results-table th {
+    padding: var(--acm-sp-12) var(--acm-sp-16);
+    text-align: start;
+    font-size: var(--acm-text-xs);
+    font-weight: var(--acm-fw-bold);
+    color: var(--acm-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--acm-ls-wider);
+    background-color: var(--acm-bg);
+    border-bottom: 1px solid var(--acm-border);
+    white-space: nowrap;
+}
+.acm-results-table td {
+    padding: var(--acm-sp-12) var(--acm-sp-16);
+    border-bottom: 1px solid var(--acm-border);
+    color: var(--acm-text-primary);
+    vertical-align: middle;
+}
+.acm-results-table tr:last-child td { border-bottom: none; }
+.acm-results-table tr:hover td { background-color: var(--acm-bg); }
+
+.acm-subject-name {
+    font-weight: var(--acm-fw-semibold);
+    min-width: 140px;
+}
+.acm-score {
+    font-weight: var(--acm-fw-semibold);
+    text-align: center;
+}
+.acm-score-total {
+    font-size: var(--acm-text-md);
+    font-weight: var(--acm-fw-bold);
+}
+
+/* Grade badge */
+.acm-grade {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    border-radius: var(--acm-radius-sm);
+    font-weight: var(--acm-fw-bold);
+    font-size: var(--acm-text-sm);
+    padding: 0 var(--acm-sp-8);
+}
+.acm-grade--A { background-color: var(--acm-success-bg); color: var(--acm-success); }
+.acm-grade--B { background-color: #e0f2fe; color: #0369a1; }
+.acm-grade--C { background-color: var(--acm-warning-bg); color: #92400e; }
+.acm-grade--D { background-color: #fff3e0; color: #c45e00; }
+.acm-grade--E { background-color: #fef2f2; color: #991b1b; }
+.acm-grade--F { background-color: var(--acm-error-bg, #fee2e2); color: var(--acm-error); }
+
+/* Remark text */
+.acm-remark {
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-secondary);
+    font-style: italic;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Term Selector */
+.acm-term-selector {
+    display: flex;
+    gap: var(--acm-sp-8);
+    flex-wrap: wrap;
+    margin-bottom: var(--acm-sp-24);
+}
+.acm-term-btn {
+    padding: var(--acm-sp-8) var(--acm-sp-16);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-full);
+    background-color: var(--acm-surface);
+    color: var(--acm-text-secondary);
+    font-size: var(--acm-text-sm);
+    font-weight: var(--acm-fw-medium);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--acm-transition-fast);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--acm-sp-6);
+}
+.acm-term-btn:hover { background-color: var(--acm-bg); color: var(--acm-text-primary); }
+.acm-term-btn.is-active {
+    background-color: var(--school-primary, var(--acm-navy));
+    color: #fff;
+    border-color: transparent;
+}
+
+/* Comparison badge */
+.acm-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--acm-sp-4);
+    font-size: var(--acm-text-sm);
+    font-weight: var(--acm-fw-semibold);
+}
+.acm-trend--up { color: var(--acm-success); }
+.acm-trend--down { color: var(--acm-error); }
+.acm-trend--flat { color: var(--acm-text-muted); }
+
+/* Class Board */
+.acm-board-filters {
+    display: flex;
+    gap: var(--acm-sp-8);
+    overflow-x: auto;
+    scrollbar-width: none;
+    margin-bottom: var(--acm-sp-16);
+}
+.acm-board-filters::-webkit-scrollbar { display: none; }
+.acm-filter-btn {
+    padding: var(--acm-sp-6) var(--acm-sp-14);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-full);
+    background: var(--acm-surface);
+    font-size: var(--acm-text-sm);
+    font-weight: var(--acm-fw-medium);
+    color: var(--acm-text-secondary);
+    cursor: pointer;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all var(--acm-transition-fast);
+}
+.acm-filter-btn.is-active,
+.acm-filter-btn:hover {
+    background: var(--school-primary, var(--acm-navy));
+    color: #fff;
+    border-color: transparent;
+}
+
+.acm-post-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--acm-sp-8);
+}
+
+.acm-post-item {
+    background-color: var(--acm-surface);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-md);
+    padding: var(--acm-sp-16);
+    display: flex;
+    gap: var(--acm-sp-12);
+    text-decoration: none;
+    color: inherit;
+    transition: background-color var(--acm-transition-fast);
+    align-items: flex-start;
+}
+.acm-post-item:hover { background-color: var(--acm-bg); }
+
+.acm-post-item--overdue {
+    border-inline-start: 3px solid var(--acm-error);
+}
+.acm-post-item--pending {
+    border-inline-start: 3px solid var(--acm-warning);
+}
+.acm-post-item--general {
+    border-inline-start: 3px solid var(--acm-info);
+}
+
+.acm-post-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--acm-radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+.acm-post-icon--assignment { background-color: var(--acm-warning-bg); color: var(--acm-warning); }
+.acm-post-icon--announcement { background-color: var(--acm-info-bg); color: var(--acm-info); }
+
+.acm-post-body { flex: 1; min-width: 0; }
+.acm-post-title {
+    font-weight: var(--acm-fw-semibold);
+    font-size: var(--acm-text-base);
+    color: var(--acm-text-primary);
+    margin: 0 0 var(--acm-sp-4) 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.acm-post-meta {
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-secondary);
+    display: flex;
+    gap: var(--acm-sp-8);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.acm-status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--acm-sp-4);
+    padding: 2px var(--acm-sp-8);
+    border-radius: var(--acm-radius-full);
+    font-size: var(--acm-text-xs);
+    font-weight: var(--acm-fw-bold);
+}
+.acm-status-chip--overdue { background-color: #fee2e2; color: var(--acm-error); }
+.acm-status-chip--pending { background-color: var(--acm-warning-bg); color: #92400e; }
+.acm-status-chip--general { background-color: var(--acm-info-bg); color: var(--acm-info); }
+
+/* Subject list */
+.acm-subject-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background-color: var(--acm-surface);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-lg);
+    overflow: hidden;
+}
+.acm-subject-item {
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-16);
+    padding: var(--acm-sp-16) var(--acm-sp-20);
+    border-bottom: 1px solid var(--acm-border);
+}
+.acm-subject-item:last-child { border-bottom: none; }
+
+.acm-subject-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--acm-radius-md);
+    background-color: var(--acm-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    color: var(--school-primary, var(--acm-navy));
+    font-weight: var(--acm-fw-bold);
+    flex-shrink: 0;
+}
+.acm-subject-info { flex: 1; min-width: 0; }
+.acm-subject-title {
+    font-weight: var(--acm-fw-semibold);
+    font-size: var(--acm-text-base);
+    color: var(--acm-text-primary);
+    margin: 0 0 2px 0;
+}
+.acm-subject-teacher {
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-secondary);
+    margin: 0;
+}
+.acm-subject-code {
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-muted);
+    font-family: monospace;
+}
+
+/* Report Card list */
+.acm-report-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--acm-sp-12);
+}
+.acm-report-item {
+    background-color: var(--acm-surface);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-md);
+    padding: var(--acm-sp-16) var(--acm-sp-20);
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-16);
+}
+.acm-report-info { flex: 1; }
+.acm-report-term {
+    font-weight: var(--acm-fw-semibold);
+    font-size: var(--acm-text-base);
+    color: var(--acm-text-primary);
+    margin: 0 0 2px 0;
+}
+.acm-report-session {
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-secondary);
+    margin: 0;
+}
+.acm-report-actions {
+    display: flex;
+    gap: var(--acm-sp-8);
+    flex-wrap: wrap;
+}
+.acm-report-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--acm-sp-6);
+    padding: var(--acm-sp-8) var(--acm-sp-14);
+    border-radius: var(--acm-radius-sm);
+    font-size: var(--acm-text-sm);
+    font-weight: var(--acm-fw-semibold);
+    text-decoration: none;
+    transition: all var(--acm-transition-fast);
+    border: 1px solid var(--acm-border);
+}
+.acm-report-btn--primary {
+    background-color: var(--school-primary, var(--acm-navy));
+    color: #fff;
+    border-color: transparent;
+}
+.acm-report-btn--secondary {
+    background-color: var(--acm-bg);
+    color: var(--acm-text-primary);
+}
+.acm-report-btn:hover { opacity: 0.88; }
+
+/* Empty states */
+.acm-empty {
+    padding: var(--acm-sp-32) var(--acm-sp-16);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--acm-sp-12);
+}
+.acm-empty-icon {
+    font-size: 2.5rem;
+    color: var(--acm-text-muted);
+    opacity: 0.5;
+}
+.acm-empty-title {
+    font-size: var(--acm-text-base);
+    font-weight: var(--acm-fw-semibold);
+    color: var(--acm-text-primary);
+    margin: 0;
+}
+.acm-empty-desc {
+    font-size: var(--acm-text-sm);
+    color: var(--acm-text-secondary);
+    margin: 0;
+    max-width: 280px;
+}
+
+/* Timetable */
+.acm-timetable-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--acm-sp-48) var(--acm-sp-16);
+    gap: var(--acm-sp-16);
+    text-align: center;
+}
+
+/* Desktop layout for academics */
+@media (min-width: 768px) {
+    .acm-perf-summary {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .acm-academics-layout {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: var(--acm-sp-32);
+        align-items: start;
+    }
+}

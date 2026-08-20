@@ -37,6 +37,16 @@ router.get('/announcement/:id', portalController.viewAnnouncement);
 // Assignments / Class posts
 router.get('/assignment/:id', portalController.viewAssignment);
 
+// Academics Hub
+router.get('/academics', portalController.getAcademicsHub);
+router.get('/academics/results', portalController.getAcademicsResults);
+router.get('/academics/class-board', portalController.getAcademicsClassBoard);
+router.get('/academics/subjects', portalController.getAcademicsSubjects);
+router.get('/academics/timetable', portalController.getAcademicsTimetable);
+
+// Notifications / Announcements listing
+router.get('/notifications', portalController.getNotifications);
+
 // Profile (self-service)
 router.get('/profile', portalController.getProfile);
 router.post('/profile', upload.single('passport'), portalController.postUpdateProfile);

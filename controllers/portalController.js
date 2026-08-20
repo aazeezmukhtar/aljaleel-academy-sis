@@ -360,3 +360,379 @@ exports.viewAssignment = async (req, res) => {
         res.status(500).send('Database Error');
     }
 };
+
+// ============================================================
+// PHASE 3 — ACADEMICS HUB CONTROLLERS
+// ============================================================
+
+// Shared helper: resolve student's active class & section context
+const getStudentContext = async (studentId, school) => {
+    const currentSessionStr = school.current_session || '2024/2025';
+    const enrolledClasses = await db.all(`
+        SELECT c.id as class_id, c.name as class_name, sec.name as section_name,
+               sec.current_session as section_session, sec.current_term as section_term
+        FROM student_enrollments se
+        JOIN classes c ON se.class_id = c.id
+        LEFT JOIN sections sec ON c.section_id = sec.id
+        WHERE se.student_id = ? AND se.session = sec.current_session
+    `, [studentId]);
+
+    const activeSession = enrolledClasses.length > 0
+        ? enrolledClasses[0].section_session || currentSessionStr
+        : currentSessionStr;
+    const activeTerm = enrolledClasses.length > 0
+        ? enrolledClasses[0].section_term || school.current_term || '1st Term'
+        : (school.current_term || '1st Term');
+
+    const studentObj = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+    if (studentObj) {
+        if (enrolledClasses.length > 0) {
+            studentObj.class_name = enrolledClasses.map(c => c.class_name).join(', ');
+        } else {
+            const classRow = studentObj.current_class_id
+                ? await db.get('SELECT name FROM classes WHERE id = ?', [studentObj.current_class_id])
+                : null;
+            studentObj.class_name = classRow ? classRow.name : 'Unassigned';
+        }
+    }
+
+    const enrolledClassIds = enrolledClasses.length > 0
+        ? enrolledClasses.map(c => c.class_id)
+        : (studentObj && studentObj.current_class_id ? [studentObj.current_class_id] : []);
+
+    const msgCountObj = await db.get('SELECT COUNT(*) as c FROM class_posts WHERE student_id = ?', [studentId]);
+    const individualMessagesCount = msgCountObj ? msgCountObj.c : 0;
+
+    return {
+        studentObj,
+        enrolledClasses,
+        enrolledClassIds,
+        activeSession,
+        activeTerm,
+        individualMessagesCount
+    };
+};
+
+exports.getAcademicsHub = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+        const { studentObj, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+
+        // Published results summary (latest term)
+        const resultSummary = await db.all(`
+            SELECT session, term, COUNT(*) as subjects_taken, AVG(total) as average_score
+            FROM results
+            WHERE student_id = ? AND status IN ('approved', 'published')
+            GROUP BY session, term
+            ORDER BY session DESC, term DESC
+            LIMIT 6
+        `, [studentId]);
+
+        // Position for latest term (if published)
+        let latestPosition = null, latestClassCount = null;
+        if (resultSummary.length > 0) {
+            const lr = resultSummary[0];
+            // Find class for position calc
+            const classForPos = ctx.enrolledClasses.length > 0
+                ? ctx.enrolledClasses[0]
+                : null;
+            if (classForPos) {
+                const classPerf = await db.all(`
+                    SELECT r.student_id, SUM(r.total) as student_total
+                    FROM results r
+                    WHERE r.term = ? AND r.session = ?
+                    AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+                    GROUP BY r.student_id ORDER BY student_total DESC
+                `, [lr.term, lr.session, classForPos.class_id, lr.session]);
+                latestClassCount = classPerf.length;
+                const myPerf = classPerf.find(p => p.student_id == studentId);
+                if (myPerf) latestPosition = classPerf.indexOf(myPerf) + 1;
+            }
+        }
+
+        // Class board recent items
+        let classPosts = [];
+        if (enrolledClassIds.length > 0) {
+            const ph = enrolledClassIds.map(() => '?').join(',');
+            classPosts = await db.all(`
+                SELECT cp.*, st.first_name, st.last_name, sub.name as subject_name
+                FROM class_posts cp
+                JOIN staff st ON cp.teacher_id = st.id
+                LEFT JOIN subjects sub ON cp.subject_id = sub.id
+                WHERE cp.class_id IN (${ph}) AND (cp.student_id IS NULL OR cp.student_id = ?)
+                ORDER BY cp.created_at DESC LIMIT 5
+            `, [...enrolledClassIds, studentId]);
+        }
+
+        // Subjects for current class
+        let subjects = [];
+        if (enrolledClassIds.length > 0) {
+            subjects = await db.all(`
+                SELECT sub.id, sub.name, sub.code,
+                       st.first_name as teacher_first, st.last_name as teacher_last
+                FROM subject_assignments sa
+                JOIN subjects sub ON sa.subject_id = sub.id
+                LEFT JOIN staff st ON sa.teacher_id = st.id
+                WHERE sa.class_id = ? AND sa.session = ?
+                ORDER BY sub.name
+            `, [enrolledClassIds[0], activeSession]);
+        }
+
+        res.render('portal/academics/index', {
+            title: 'Academics',
+            path: '/portal/academics',
+            school, student: studentObj || req.session.student,
+            resultSummary, latestPosition, latestClassCount,
+            classPosts, subjects,
+            currentTerm: activeTerm, currentSession: activeSession,
+            individualMessagesCount,
+            sectionInfo: ctx.enrolledClasses
+        });
+    } catch (err) {
+        console.error('Academics Hub Error:', err);
+        res.status(500).send('Error loading Academics Hub');
+    }
+};
+
+exports.getAcademicsResults = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+        const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+
+        // Selected term/session from query or default to latest published
+        const allPublished = await db.all(`
+            SELECT DISTINCT session, term FROM results
+            WHERE student_id = ? AND status IN ('approved','published')
+            ORDER BY session DESC, term DESC
+        `, [studentId]);
+
+        const selectedSession = req.query.session || (allPublished[0] ? allPublished[0].session : activeSession);
+        const selectedTerm = req.query.term || (allPublished[0] ? allPublished[0].term : activeTerm);
+
+        // Detailed results for selected term
+        let detailedResults = [];
+        let position = null, classCount = null;
+        const classForCalc = enrolledClasses.length > 0 ? enrolledClasses[0] : null;
+
+        if (classForCalc) {
+            detailedResults = await db.all(`
+                SELECT r.*, sub.name as subject_name, sub.code as subject_code
+                FROM results r
+                JOIN subjects sub ON r.subject_id = sub.id
+                WHERE r.student_id = ? AND r.term = ? AND r.session = ?
+                AND r.status IN ('approved','published')
+                ORDER BY sub.name
+            `, [studentId, selectedTerm, selectedSession]);
+
+            // Position
+            const classPerf = await db.all(`
+                SELECT r.student_id, SUM(r.total) as student_total
+                FROM results r
+                WHERE r.term = ? AND r.session = ?
+                AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+                GROUP BY r.student_id ORDER BY student_total DESC
+            `, [selectedTerm, selectedSession, classForCalc.class_id, selectedSession]);
+            classCount = classPerf.length;
+            const myPerf = classPerf.find(p => p.student_id == studentId);
+            if (myPerf) position = classPerf.indexOf(myPerf) + 1;
+        }
+
+        // Average
+        const avgRow = detailedResults.length > 0
+            ? { avg: detailedResults.reduce((s, r) => s + (r.total || 0), 0) / detailedResults.length }
+            : null;
+
+        // Previous term for comparison
+        const prevTermData = allPublished.find(p => !(p.session === selectedSession && p.term === selectedTerm));
+        let prevAvg = null;
+        if (prevTermData) {
+            const prevRows = await db.all(`
+                SELECT AVG(total) as avg FROM results
+                WHERE student_id = ? AND term = ? AND session = ? AND status IN ('approved','published')
+            `, [studentId, prevTermData.term, prevTermData.session]);
+            prevAvg = prevRows[0] ? prevRows[0].avg : null;
+        }
+
+        // Result config for section (to know ca_count)
+        let resultConfig = { ca_count: '2' };
+        if (classForCalc) {
+            const configRows = await db.all('SELECT key, value FROM section_result_config WHERE section_id = (SELECT section_id FROM classes WHERE id = ?)', [classForCalc.class_id]);
+            configRows.forEach(r => { resultConfig[r.key] = r.value; });
+        }
+
+        // Grading system
+        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+
+        res.render('portal/academics/results', {
+            title: 'Results', path: '/portal/academics/results',
+            school, student: studentObj || req.session.student,
+            allPublished, selectedSession, selectedTerm,
+            detailedResults, position, classCount,
+            avgRow, prevTermData, prevAvg,
+            resultConfig, grading,
+            currentTerm: activeTerm, currentSession: activeSession,
+            individualMessagesCount, sectionInfo: enrolledClasses
+        });
+    } catch (err) {
+        console.error('Academics Results Error:', err);
+        res.status(500).send('Error loading Results');
+    }
+};
+
+exports.getAcademicsClassBoard = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+        const { studentObj, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+
+        let classPosts = [];
+        if (enrolledClassIds.length > 0) {
+            const ph = enrolledClassIds.map(() => '?').join(',');
+            classPosts = await db.all(`
+                SELECT cp.*, st.first_name, st.last_name, sub.name as subject_name
+                FROM class_posts cp
+                JOIN staff st ON cp.teacher_id = st.id
+                LEFT JOIN subjects sub ON cp.subject_id = sub.id
+                WHERE cp.class_id IN (${ph}) AND (cp.student_id IS NULL OR cp.student_id = ?)
+                ORDER BY cp.created_at DESC
+            `, [...enrolledClassIds, studentId]);
+        }
+
+        // Classify each post
+        const now = new Date();
+        const posts = classPosts.map(p => {
+            let status = 'general';
+            if (p.post_type === 'Assignment') {
+                if (p.due_date) {
+                    status = new Date(p.due_date) < now ? 'overdue' : 'pending';
+                } else {
+                    status = 'pending';
+                }
+            }
+            return { ...p, status };
+        });
+
+        const filterType = req.query.filter || 'all';
+
+        res.render('portal/academics/class-board', {
+            title: 'Class Board', path: '/portal/academics/class-board',
+            school, student: studentObj || req.session.student,
+            posts, filterType,
+            currentTerm: activeTerm, currentSession: activeSession,
+            individualMessagesCount, sectionInfo: ctx.enrolledClasses
+        });
+    } catch (err) {
+        console.error('Class Board Error:', err);
+        res.status(500).send('Error loading Class Board');
+    }
+};
+
+exports.getAcademicsSubjects = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+        const { studentObj, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+
+        let subjects = [];
+        if (enrolledClassIds.length > 0) {
+            subjects = await db.all(`
+                SELECT sub.id, sub.name, sub.code,
+                       st.first_name as teacher_first, st.last_name as teacher_last
+                FROM subject_assignments sa
+                JOIN subjects sub ON sa.subject_id = sub.id
+                LEFT JOIN staff st ON sa.teacher_id = st.id
+                WHERE sa.class_id = ? AND sa.session = ?
+                ORDER BY sub.name
+            `, [enrolledClassIds[0], activeSession]);
+        }
+
+        res.render('portal/academics/subjects', {
+            title: 'My Subjects', path: '/portal/academics/subjects',
+            school, student: studentObj || req.session.student,
+            subjects, currentTerm: activeTerm, currentSession: activeSession,
+            individualMessagesCount, sectionInfo: ctx.enrolledClasses
+        });
+    } catch (err) {
+        console.error('Subjects Error:', err);
+        res.status(500).send('Error loading Subjects');
+    }
+};
+
+exports.getAcademicsTimetable = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+        res.render('portal/academics/timetable', {
+            title: 'Timetable', path: '/portal/academics/timetable',
+            school, student: ctx.studentObj || req.session.student,
+            timetableAvailable: false,
+            currentTerm: ctx.activeTerm, currentSession: ctx.activeSession,
+            individualMessagesCount: ctx.individualMessagesCount,
+            sectionInfo: ctx.enrolledClasses
+        });
+    } catch (err) {
+        res.status(500).send('Error loading Timetable');
+    }
+};
+
+exports.getNotifications = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+        const { studentObj, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+
+        // Enrolled section IDs for section-filtered announcements
+        const sectionRows = await db.all(`
+            SELECT DISTINCT s.id as section_id
+            FROM student_enrollments se
+            JOIN classes c ON se.class_id = c.id
+            JOIN sections s ON c.section_id = s.id
+            WHERE se.student_id = ? AND se.session = s.current_session
+        `, [studentId]);
+        const sectionIds = sectionRows.map(r => r.section_id);
+        let sectionFilter = sectionIds.length > 0
+            ? `AND (section_id IS NULL OR section_id IN (${sectionIds.join(',')}))`
+            : `AND section_id IS NULL`;
+
+        const announcements = await db.all(`
+            SELECT * FROM announcements
+            WHERE is_published = 1 AND (target_role = 'Students' OR target_role = 'All')
+            ${sectionFilter}
+            ORDER BY created_at DESC
+        `);
+
+        // Class posts targeted to this student (individual messages)
+        let classPosts = [];
+        if (enrolledClassIds.length > 0) {
+            const ph = enrolledClassIds.map(() => '?').join(',');
+            classPosts = await db.all(`
+                SELECT cp.*, st.first_name, st.last_name, sub.name as subject_name
+                FROM class_posts cp
+                JOIN staff st ON cp.teacher_id = st.id
+                LEFT JOIN subjects sub ON cp.subject_id = sub.id
+                WHERE cp.class_id IN (${ph}) AND (cp.student_id IS NULL OR cp.student_id = ?)
+                ORDER BY cp.created_at DESC
+                LIMIT 30
+            `, [...enrolledClassIds, studentId]);
+        }
+
+        res.render('portal/notifications', {
+            title: 'Notifications', path: '/portal/notifications',
+            school, student: studentObj || req.session.student,
+            announcements, classPosts,
+            currentTerm: activeTerm, currentSession: activeSession,
+            individualMessagesCount, sectionInfo: ctx.enrolledClasses
+        });
+    } catch (err) {
+        console.error('Notifications Error:', err);
+        res.status(500).send('Error loading Notifications');
+    }
+};

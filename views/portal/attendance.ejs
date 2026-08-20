@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <%- include('../partials/student_shell_head') %>
+    <link rel="stylesheet" href="/css/attendance.css">
+</head>
+<body>
+<div class="acm-portal-shell">
+    <%- include('../partials/student_shell_nav') %>
+    <main class="acm-main-content">
+        <%- include('../partials/student_shell_header') %>
+
+        <div class="acm-desktop-header">
+            <div class="acm-header-greeting">
+                <h1 class="acm-greeting-title">Attendance</h1>
+                <p class="acm-greeting-meta"><%= student.class_name %> &middot; <%= selectedTerm %> &middot; <%= selectedSession %></p>
+            </div>
+            <div class="acm-header-actions">
+                <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <% if (individualMessagesCount > 0) { %>
+                        <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+                    <% } %>
+                </a>
+            </div>
+        </div>
+
+        <!-- Academic Context -->
+        <div class="acm-academic-ctx" style="display:flex; align-items:center; gap:var(--acm-sp-8); font-size:var(--acm-text-sm); color:var(--acm-text-secondary); margin-bottom:var(--acm-sp-20);">
+            <strong><%= selectedSession %></strong>
+            <span>&middot;</span>
+            <span><%= selectedTerm %></span>
+            <span>&middot;</span>
+            <strong><%= student.class_name %></strong>
+        </div>
+
+        <!-- Term Selector (if multiple periods available) -->
+        <% if (periods && periods.length > 1) { %>
+        <div class="acm-term-selector" style="display:flex; gap:var(--acm-sp-8); flex-wrap:wrap; margin-bottom:var(--acm-sp-20);" role="group" aria-label="Select term">
+            <% periods.forEach(p => { 
+                const isActive = p.session === selectedSession && p.term === selectedTerm;
+            %>
+            <a href="?session=<%= encodeURIComponent(p.session) %>&term=<%= encodeURIComponent(p.term) %>&view=<%= activeView %>&status=<%= selectedFilter %>"
+               class="acm-filter-btn <%= isActive ? 'is-active' : '' %>"
+               style="text-decoration:none; padding:var(--acm-sp-6) var(--acm-sp-14); border-radius:var(--acm-radius-full); font-size:var(--acm-text-sm);"
+               aria-current="<%= isActive ? 'true' : 'false' %>">
+                <%= p.term %> &middot; <%= p.session %>
+            </a>
+            <% }) %>
+        </div>
+        <% } %>
+
+        <% if (totalDays > 0) { %>
+
+        <!-- Primary Summary Hero Card -->
+        <div class="acm-att-hero">
+            <div class="acm-att-rate-box">
+                <div>
+                    <div class="acm-att-rate-val"><%= attendanceRate !== null ? attendanceRate + '%' : '—' %></div>
+                    <div class="acm-att-rate-label">Attendance Rate &middot; <%= selectedTerm %></div>
+                </div>
+                <div style="text-align:end;">
+                    <span style="font-size:var(--acm-text-lg); font-weight:var(--acm-fw-bold); color:var(--acm-text-primary);"><%= presentCount + lateCount %> of <%= totalDays %></span>
+                    <div style="font-size:var(--acm-text-xs); color:var(--acm-text-muted);">Days Attended</div>
+                </div>
+            </div>
+
+            <!-- Breakdown -->
+            <div class="acm-att-breakdown">
+                <div class="acm-att-stat">
+                    <span class="acm-att-stat-count"><%= presentCount %></span>
+                    <span class="acm-att-stat-label acm-stat-present"><i class="bi bi-check-circle-fill" aria-hidden="true"></i> Present</span>
+                </div>
+                <div class="acm-att-stat">
+                    <span class="acm-att-stat-count"><%= lateCount %></span>
+                    <span class="acm-att-stat-label acm-stat-late"><i class="bi bi-clock-fill" aria-hidden="true"></i> Late</span>
+                </div>
+                <div class="acm-att-stat">
+                    <span class="acm-att-stat-count"><%= absentCount %></span>
+                    <span class="acm-att-stat-label acm-stat-absent"><i class="bi bi-x-circle-fill" aria-hidden="true"></i> Absent</span>
+                </div>
+                <% if (leaveCount > 0) { %>
+                <div class="acm-att-stat">
+                    <span class="acm-att-stat-count"><%= leaveCount %></span>
+                    <span class="acm-att-stat-label acm-stat-leave"><i class="bi bi-info-circle-fill" aria-hidden="true"></i> Leave</span>
+                </div>
+                <% } %>
+            </div>
+        </div>
+
+        <!-- Factual Insights -->
+        <div class="acm-att-insights">
+            <div class="acm-att-insight-card">
+                <i class="bi bi-info-circle" aria-hidden="true"></i>
+                <span>Recorded attendance across <strong><%= totalDays %> school days</strong> in <%= selectedTerm %>.</span>
+            </div>
+            <% if (recentAbsence) { %>
+            <div class="acm-att-insight-card">
+                <i class="bi bi-calendar-x" aria-hidden="true" style="color:var(--acm-error);"></i>
+                <span>Most recent absence was on <strong><%= new Date(recentAbsence.date).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }) %></strong><%= recentAbsence.reason ? ' (' + recentAbsence.reason + ')' : '' %>.</span>
+            </div>
+            <% } %>
+            <% if (recentLate) { %>
+            <div class="acm-att-insight-card">
+                <i class="bi bi-clock-history" aria-hidden="true" style="color:#d97706;"></i>
+                <span>Most recent late arrival on <strong><%= new Date(recentLate.date).toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' }) %></strong>.</span>
+            </div>
+            <% } %>
+        </div>
+
+        <!-- View Controls: Tabs & Filters -->
+        <div class="acm-att-controls">
+            <!-- View Switcher -->
+            <div class="acm-att-view-switch" role="tablist" aria-label="Attendance view">
+                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=<%= selectedFilter %>"
+                   class="acm-view-btn <%= activeView === 'history' ? 'is-active' : '' %>" role="tab" aria-selected="<%= activeView === 'history' %>">
+                    <i class="bi bi-list-ul" aria-hidden="true"></i> History
+                </a>
+                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.monthStr %>&status=<%= selectedFilter %>"
+                   class="acm-view-btn <%= activeView === 'calendar' ? 'is-active' : '' %>" role="tab" aria-selected="<%= activeView === 'calendar' %>">
+                    <i class="bi bi-calendar3" aria-hidden="true"></i> Calendar
+                </a>
+            </div>
+
+            <!-- Status Filter Bar (for History View) -->
+            <% if (activeView === 'history') { %>
+            <div style="display:flex; gap:var(--acm-sp-6); overflow-x:auto; scrollbar-width:none;" role="group" aria-label="Filter attendance records">
+                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=all"
+                   class="acm-filter-btn <%= selectedFilter === 'all' ? 'is-active' : '' %>" style="text-decoration:none; font-size:var(--acm-text-xs); padding:4px 10px; border-radius:var(--acm-radius-full);">
+                    All (<%= totalDays %>)
+                </a>
+                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=present"
+                   class="acm-filter-btn <%= selectedFilter === 'present' ? 'is-active' : '' %>" style="text-decoration:none; font-size:var(--acm-text-xs); padding:4px 10px; border-radius:var(--acm-radius-full);">
+                    Present (<%= presentCount %>)
+                </a>
+                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=late"
+                   class="acm-filter-btn <%= selectedFilter === 'late' ? 'is-active' : '' %>" style="text-decoration:none; font-size:var(--acm-text-xs); padding:4px 10px; border-radius:var(--acm-radius-full);">
+                    Late (<%= lateCount %>)
+                </a>
+                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=absent"
+                   class="acm-filter-btn <%= selectedFilter === 'absent' ? 'is-active' : '' %>" style="text-decoration:none; font-size:var(--acm-text-xs); padding:4px 10px; border-radius:var(--acm-radius-full);">
+                    Absent (<%= absentCount %>)
+                </a>
+            </div>
+            <% } %>
+        </div>
+
+        <!-- MAIN VIEW CONTAINER -->
+        <% if (activeView === 'calendar') { %>
+        <!-- Calendar View -->
+        <div class="acm-cal-card">
+            <div class="acm-cal-header">
+                <h2 class="acm-cal-title"><%= calendar.monthName %></h2>
+                <div class="acm-cal-nav">
+                    <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.prevMonthStr %>"
+                       class="acm-cal-nav-btn" aria-label="Previous Month">
+                        <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                    </a>
+                    <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.nextMonthStr %>"
+                       class="acm-cal-nav-btn" aria-label="Next Month">
+                        <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                    </a>
+                </div>
+            </div>
+
+            <div class="acm-cal-grid">
+                <div class="acm-cal-weekday">Sun</div>
+                <div class="acm-cal-weekday">Mon</div>
+                <div class="acm-cal-weekday">Tue</div>
+                <div class="acm-cal-weekday">Wed</div>
+                <div class="acm-cal-weekday">Thu</div>
+                <div class="acm-cal-weekday">Fri</div>
+                <div class="acm-cal-weekday">Sat</div>
+
+                <% for (let i = 0; i < calendar.startDayOfWeek; i++) { %>
+                    <div class="acm-cal-day acm-cal-day--empty"></div>
+                <% } %>
+
+                <% for (let day = 1; day <= calendar.daysInMonth; day++) { 
+                    const dayStr = String(day).padStart(2, '0');
+                    const fullDateStr = `${calendar.monthStr}-${dayStr}`;
+                    const dayOfWeek = (calendar.startDayOfWeek + day - 1) % 7;
+                    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+                    const record = calendar.recordsByDate[fullDateStr];
+
+                    let statusClass = '';
+                    if (record) {
+                        statusClass = 'acm-cal-day--' + record.status.toLowerCase();
+                    } else if (isWeekend) {
+                        statusClass = 'acm-cal-day--weekend';
+                    }
+                %>
+                <div class="acm-cal-day <%= statusClass %>" title="<%= record ? record.status + (record.reason ? ': ' + record.reason : '') : (isWeekend ? 'Weekend' : 'No Record') %>">
+                    <span><%= day %></span>
+                </div>
+                <% } %>
+            </div>
+
+            <div class="acm-cal-legend">
+                <div class="acm-legend-item">
+                    <span class="acm-legend-dot acm-legend-dot--present"></span>
+                    <span>Present</span>
+                </div>
+                <div class="acm-legend-item">
+                    <span class="acm-legend-dot acm-legend-dot--late"></span>
+                    <span>Late</span>
+                </div>
+                <div class="acm-legend-item">
+                    <span class="acm-legend-dot acm-legend-dot--absent"></span>
+                    <span>Absent</span>
+                </div>
+                <div class="acm-legend-item">
+                    <span class="acm-legend-dot acm-legend-dot--leave"></span>
+                    <span>Leave</span>
+                </div>
+                <div class="acm-legend-item">
+                    <span class="acm-legend-dot acm-legend-dot--weekend"></span>
+                    <span>Weekend</span>
+                </div>
+            </div>
+        </div>
+
+        <% } else { %>
+
+        <!-- History List View -->
+        <% if (filteredRecords.length > 0) { %>
+        <div class="acm-att-list" role="list">
+            <% filteredRecords.forEach(rec => { 
+                const d = new Date(rec.date);
+                const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+                const dateFormatted = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+                const statusLower = rec.status.toLowerCase();
+                const icon = statusLower === 'present' ? 'bi-check-circle-fill' : 
+                             statusLower === 'late' ? 'bi-clock-fill' : 
+                             statusLower === 'absent' ? 'bi-x-circle-fill' : 'bi-info-circle-fill';
+            %>
+            <div class="acm-att-row" role="listitem">
+                <div class="acm-att-date-col">
+                    <span class="acm-att-date"><%= dateFormatted %></span>
+                    <span class="acm-att-day"><%= dayName %></span>
+                    <% if (rec.reason && rec.reason.trim()) { %>
+                        <span class="acm-att-reason">Reason: <%= rec.reason %></span>
+                    <% } %>
+                </div>
+                <div>
+                    <span class="acm-att-badge acm-att-badge--<%= statusLower %>" aria-label="Status <%= rec.status %>">
+                        <i class="bi <%= icon %>" aria-hidden="true"></i>
+                        <span><%= rec.status %></span>
+                    </span>
+                </div>
+            </div>
+            <% }) %>
+        </div>
+        <% } else { %>
+        <div class="acm-card" style="padding:var(--acm-sp-32); text-align:center;">
+            <p style="color:var(--acm-text-secondary); margin:0;">No records found for status "<%= selectedFilter %>".</p>
+        </div>
+        <% } %>
+
+        <% } %>
+
+        <% } else { %>
+        <!-- Empty State: No attendance records for this period -->
+        <div class="acm-card" style="padding:var(--acm-sp-48) var(--acm-sp-20); text-align:center; display:flex; flex-direction:column; align-items:center; gap:var(--acm-sp-12);">
+            <i class="bi bi-calendar-check" style="font-size:3rem; color:var(--acm-text-muted); opacity:0.5;" aria-hidden="true"></i>
+            <h2 style="font-size:var(--acm-text-lg); font-weight:var(--acm-fw-bold); color:var(--acm-text-primary); margin:0;">No attendance records</h2>
+            <p style="font-size:var(--acm-text-sm); color:var(--acm-text-secondary); margin:0; max-width:320px;">Attendance has not been recorded for <%= selectedTerm %> (<%= selectedSession %>) yet.</p>
+        </div>
+        <% } %>
+
+    </main>
+</div>
+<%- include('../partials/student_shell_footer') %>
+</body>
+</html>

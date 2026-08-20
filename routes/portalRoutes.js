@@ -37,6 +37,9 @@ router.get('/announcement/:id', portalController.viewAnnouncement);
 // Assignments / Class posts
 router.get('/assignment/:id', portalController.viewAssignment);
 
+// Attendance
+router.get('/attendance', portalController.getAttendance);
+
 // Academics Hub
 router.get('/academics', portalController.getAcademicsHub);
 router.get('/academics/results', portalController.getAcademicsResults);

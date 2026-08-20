@@ -736,3 +736,132 @@ exports.getNotifications = async (req, res) => {
         res.status(500).send('Error loading Notifications');
     }
 };
+
+// ============================================================
+// PHASE 4 — STUDENT ATTENDANCE CONTROLLER
+// ============================================================
+
+exports.getAttendance = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+        const { studentObj, activeSession, activeTerm, individualMessagesCount } = ctx;
+
+        // Fetch distinct session & term periods with attendance records
+        const periods = await db.all(`
+            SELECT DISTINCT session, term 
+            FROM attendance 
+            WHERE student_id = ? 
+            ORDER BY session DESC, term DESC
+        `, [studentId]);
+
+        const selectedSession = req.query.session || (periods[0] ? periods[0].session : activeSession);
+        const selectedTerm = req.query.term || (periods[0] ? periods[0].term : activeTerm);
+        const selectedFilter = (req.query.status || 'all').toLowerCase();
+        const activeView = req.query.view === 'calendar' ? 'calendar' : 'history';
+
+        // Fetch all attendance records for the selected term & session
+        const allTermRecords = await db.all(`
+            SELECT id, date, status, reason, reason_type, custom_reason
+            FROM attendance
+            WHERE student_id = ? AND session = ? AND term = ?
+            ORDER BY date DESC
+        `, [studentId, selectedSession, selectedTerm]);
+
+        // Summary calculations
+        const totalDays = allTermRecords.length;
+        const presentCount = allTermRecords.filter(r => r.status === 'Present').length;
+        const lateCount = allTermRecords.filter(r => r.status === 'Late').length;
+        const absentCount = allTermRecords.filter(r => r.status === 'Absent').length;
+        const leaveCount = allTermRecords.filter(r => r.status === 'Leave').length;
+        
+        const attendanceRate = totalDays > 0 
+            ? Math.round(((presentCount + lateCount) / totalDays) * 100) 
+            : null;
+
+        // Factual insights
+        const recentAbsence = allTermRecords.find(r => r.status === 'Absent');
+        const recentLate = allTermRecords.find(r => r.status === 'Late');
+
+        // Check for school term absence limit
+        const limitRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.term_absence_limit'");
+        const termAbsenceLimit = Number(limitRow ? limitRow.value : 10);
+
+        // Filtered records for History view
+        let filteredRecords = allTermRecords;
+        if (selectedFilter !== 'all') {
+            filteredRecords = allTermRecords.filter(r => r.status.toLowerCase() === selectedFilter);
+        }
+
+        // Calendar computation
+        let calMonthStr = req.query.month;
+        if (!calMonthStr) {
+            if (allTermRecords.length > 0) {
+                calMonthStr = allTermRecords[0].date.substring(0, 7); // 'YYYY-MM'
+            } else {
+                const now = new Date();
+                calMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            }
+        }
+
+        const [calYear, calMonth] = calMonthStr.split('-').map(Number);
+        const firstDayOfMonth = new Date(calYear, calMonth - 1, 1);
+        const lastDayOfMonth = new Date(calYear, calMonth, 0);
+        const daysInMonth = lastDayOfMonth.getDate();
+        const startDayOfWeek = firstDayOfMonth.getDay(); // 0 = Sun, 1 = Mon...
+
+        // Map date -> status for quick lookup in calendar
+        const recordsByDate = {};
+        allTermRecords.forEach(r => {
+            recordsByDate[r.date] = r;
+        });
+
+        // Prev and Next month navigation strings
+        const prevMonthDate = new Date(calYear, calMonth - 2, 1);
+        const nextMonthDate = new Date(calYear, calMonth, 1);
+        const prevMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        const nextMonthStr = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
+
+        res.render('portal/attendance', {
+            title: 'Attendance',
+            path: '/portal/attendance',
+            school,
+            student: studentObj || req.session.student,
+            currentTerm: activeTerm,
+            currentSession: activeSession,
+            selectedTerm,
+            selectedSession,
+            selectedFilter,
+            activeView,
+            periods,
+            totalDays,
+            presentCount,
+            lateCount,
+            absentCount,
+            leaveCount,
+            attendanceRate,
+            filteredRecords,
+            allTermRecords,
+            recentAbsence,
+            recentLate,
+            termAbsenceLimit,
+            calendar: {
+                year: calYear,
+                month: calMonth,
+                monthName: firstDayOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                monthStr: calMonthStr,
+                prevMonthStr,
+                nextMonthStr,
+                daysInMonth,
+                startDayOfWeek,
+                recordsByDate
+            },
+            individualMessagesCount,
+            sectionInfo: ctx.enrolledClasses
+        });
+    } catch (err) {
+        console.error('Portal Attendance Error:', err);
+        res.status(500).send('Error loading Attendance');
+    }
+};

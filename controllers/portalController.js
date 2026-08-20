@@ -762,12 +762,28 @@ exports.getAttendance = async (req, res) => {
         const activeView = req.query.view === 'calendar' ? 'calendar' : 'history';
 
         // Fetch all attendance records for the selected term & session
-        const allTermRecords = await db.all(`
+        const rawRecords = await db.all(`
             SELECT id, date, status, reason, reason_type, custom_reason
             FROM attendance
             WHERE student_id = ? AND session = ? AND term = ?
             ORDER BY date DESC
         `, [studentId, selectedSession, selectedTerm]);
+
+        // Normalize date field to 'YYYY-MM-DD' string for consistent handling across SQLite/Postgres
+        const allTermRecords = (rawRecords || []).map(r => {
+            let dateStr = '';
+            if (r.date instanceof Date) {
+                dateStr = r.date.toISOString().slice(0, 10);
+            } else if (typeof r.date === 'string') {
+                dateStr = r.date.slice(0, 10);
+            } else if (r.date) {
+                dateStr = new Date(r.date).toISOString().slice(0, 10);
+            }
+            return {
+                ...r,
+                date: dateStr
+            };
+        });
 
         // Summary calculations
         const totalDays = allTermRecords.length;

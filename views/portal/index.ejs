@@ -42,25 +42,57 @@
             <!-- Left Column / Primary Content -->
             <div style="display: flex; flex-direction: column; gap: var(--acm-sp-20);">
                 
-                <!-- Section 1: Academic Performance -->
+                <!-- Section 1: Report Cards -->
                 <section class="acm-section">
-                    <h2 class="acm-section-title">Academic Performance</h2>
-                    <% if (results && results.length > 0) { 
-                        // Use the most recent term's average score
-                        const latestResult = results[0];
-                        const average = latestResult.average_score ? latestResult.average_score.toFixed(1) : '0.0';
-                    %>
-                    <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" target="_blank" class="acm-card acm-card-link" aria-label="View Results, Average <%= average %>%">
-                        <div class="acm-perf-score"><%= average %>%</div>
-                        <p class="acm-perf-label">Average &middot; <%= latestResult.term %></p>
-                        <div class="acm-card-action">
-                            <span>View Results</span>
-                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                    <h2 class="acm-section-title">Report Cards</h2>
+                    <% if (results && results.length > 0) { %>
+                        <div class="acm-card" style="gap: var(--acm-sp-16);">
+                        <% results.forEach((result, index) => { %>
+                            <div style="<% if(index > 0) { %>border-top: 1px solid var(--acm-border); padding-top: var(--acm-sp-16);<% } %>">
+                                <div style="margin-bottom: var(--acm-sp-8);">
+                                    <strong style="display: block; font-size: var(--acm-text-md); color: var(--acm-text-primary);"><%= result.term %></strong>
+                                    <span style="font-size: var(--acm-text-sm); color: var(--acm-text-secondary);"><%= result.session %></span>
+                                </div>
+                                <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap;">
+                                    <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
+                                        <% student.class_name.split(', ').forEach(className => { %>
+                                            <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="acm-card-action" style="background: var(--acm-bg); padding: 6px 12px; border-radius: var(--acm-radius-sm); border: 1px solid var(--acm-border); text-decoration: none;">
+                                                <i class="bi bi-file-text" aria-hidden="true"></i>
+                                                <span><%= className %> Termly</span>
+                                            </a>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>" target="_blank" class="acm-card-action" style="background: var(--acm-bg); padding: 6px 12px; border-radius: var(--acm-radius-sm); border: 1px solid var(--acm-border); text-decoration: none;">
+                                            <i class="bi bi-file-text" aria-hidden="true"></i>
+                                            <span>Termly Report</span>
+                                        </a>
+                                    <% } %>
+                                </div>
+                            </div>
+                        <% }) %>
+
+                            <div style="margin-top: var(--acm-sp-8); border-top: 1px solid var(--acm-border); padding-top: var(--acm-sp-16);">
+                                <h4 style="font-size: var(--acm-text-xs); color: var(--acm-text-muted); margin: 0 0 var(--acm-sp-8) 0; text-transform: uppercase;">Cumulative Reports</h4>
+                                <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap;">
+                                    <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
+                                        <% student.class_name.split(', ').forEach(className => { %>
+                                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="acm-card-action" style="background: var(--school-primary, var(--acm-navy)); color: #fff; padding: 6px 12px; border-radius: var(--acm-radius-sm); text-decoration: none;">
+                                                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+                                                <span style="color: #fff;"><%= className %> Cumulative</span>
+                                            </a>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>" target="_blank" class="acm-card-action" style="background: var(--school-primary, var(--acm-navy)); color: #fff; padding: 6px 12px; border-radius: var(--acm-radius-sm); text-decoration: none;">
+                                            <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+                                            <span style="color: #fff;">Cumulative Report</span>
+                                        </a>
+                                    <% } %>
+                                </div>
+                            </div>
                         </div>
-                    </a>
                     <% } else { %>
                     <div class="acm-card">
-                        <p class="acm-empty-state">Results haven't been published yet.</p>
+                        <p class="acm-empty-state">No reports published yet.</p>
                     </div>
                     <% } %>
                 </section>

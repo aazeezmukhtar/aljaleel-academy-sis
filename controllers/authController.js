@@ -8,7 +8,7 @@ exports.getLogin = (req, res) => {
         return res.redirect('/dashboard');
     }
     res.render('auth/login', {
-        title: 'Nexus SIS - Login',
+        title: 'Staff Login — AcadMe',
         error: req.query.error || null
     });
 };
@@ -100,7 +100,7 @@ exports.postChangePassword = async (req, res) => {
 exports.getStudentLogin = (req, res) => {
     if (req.session.student) return res.redirect('/portal');
     res.render('auth/student_login', {
-        title: 'Student Portal Login',
+        title: 'Student Portal — AcadMe',
         error: req.query.error || null,
         success: req.query.success || null
     });
@@ -108,31 +108,37 @@ exports.getStudentLogin = (req, res) => {
 
 exports.postStudentLogin = async (req, res) => {
     const { admission_number, password } = req.body;
-    if (!admission_number || !password) return res.redirect('/auth/student-login?error=All fields are required');
+
+    // Guard: both fields must be present
+    if (!admission_number || !password) {
+        return res.redirect('/auth/student-login?error=Please enter your Student ID and password.');
+    }
 
     try {
         const student = await db.get("SELECT * FROM students WHERE admission_number = ? AND status = 'active'", [admission_number]);
-        
+
         if (!student) {
-            return res.redirect('/auth/student-login?error=Invalid admission number.');
+            // Do not reveal whether the Student ID exists
+            return res.redirect('/auth/student-login?error=Student ID or password is incorrect.');
         }
 
         let isMatch = false;
-        // Check if password matches admission number (default)
+        // Check if password matches admission number (default first-login password)
         if (password === student.admission_number) {
             isMatch = true;
         } else if (student.password) {
-            // Check if it's a hashed password
+            // Check if it's a bcrypt hash
             if (student.password.startsWith('$2a$') || student.password.startsWith('$2b$')) {
                 isMatch = await bcrypt.compare(password, student.password);
             } else {
-                // Cleartext comparison for old passwords
+                // Cleartext comparison for legacy passwords
                 isMatch = (student.password === password);
             }
         }
 
         if (!isMatch) {
-            return res.redirect('/auth/student-login?error=Invalid password.');
+            // Same generic message — does not reveal which field failed
+            return res.redirect('/auth/student-login?error=Student ID or password is incorrect.');
         }
 
         req.session.student = {
@@ -148,7 +154,7 @@ exports.postStudentLogin = async (req, res) => {
         });
     } catch (err) {
         console.error('Student Login Error:', err);
-        res.redirect('/auth/student-login?error=System error occurred');
+        res.redirect('/auth/student-login?error=A system error occurred. Please try again.');
     }
 };
 

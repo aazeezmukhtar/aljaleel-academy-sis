@@ -1,0 +1,185 @@
+﻿/*
+ * =============================================================
+ * AcadMe Design Tokens  v1.0
+ * =============================================================
+ * Central custom-property definitions for the AcadMe design
+ * system.  All AcadMe UI — Student Portal, Staff Portal, and
+ * any future surface — MUST consume values from this file
+ * instead of hardcoding colour/spacing/radius values inline.
+ *
+ * Usage
+ * -----
+ * Reference this file BEFORE any component stylesheet:
+ *   <link rel="stylesheet" href="/css/acadme-tokens.css">
+ *
+ * Then use variables anywhere:
+ *   background: var(--acm-surface);
+ *   padding:    var(--acm-sp-16);
+ *
+ * School branding overrides
+ * -------------------------
+ * School-specific colours (pulled from the settings table) may
+ * override the accent/primary tokens at runtime via an inline
+ * <style> block injected by the template.  Base contrast and
+ * accessibility guarantees are maintained by the token system.
+ * =============================================================
+ */
+
+:root {
+
+    /* ----------------------------------------------------------
+       BRAND — AcadMe Product Identity
+       ---------------------------------------------------------- */
+    --acm-navy:   #001C2C;   /* Primary brand dark               */
+    --acm-yellow: #FBBA00;   /* Primary brand accent             */
+
+    /* ----------------------------------------------------------
+       NEUTRAL SCALE
+       ---------------------------------------------------------- */
+    --acm-bg:            #F7F8FA;  /* Page background               */
+    --acm-surface:       #FFFFFF;  /* Card / panel surface          */
+    --acm-text-primary:  #17212B;  /* Headings, labels, body        */
+    --acm-text-secondary:#66717C;  /* Secondary body text           */
+    --acm-text-muted:    #98A1AA;  /* Placeholder, helper text      */
+    --acm-border:        #E7EAED;  /* Input borders, dividers       */
+    --acm-border-focus:  #001C2C;  /* Focus ring border colour      */
+
+    /* ----------------------------------------------------------
+       SEMANTIC COLOURS
+       ---------------------------------------------------------- */
+    --acm-success:        #198754;
+    --acm-success-bg:     #E9F5EE;
+    --acm-success-border: #B6D9C4;
+
+    --acm-warning:        #D98200;
+    --acm-warning-bg:     #FFF8E6;
+    --acm-warning-border: #F5D98A;
+
+    --acm-error:          #C93636;
+    --acm-error-bg:       #FDECEC;
+    --acm-error-border:   #F0BABA;
+
+    --acm-info:           #246B9C;
+    --acm-info-bg:        #E8F2F9;
+    --acm-info-border:    #AACCDE;
+
+    /* ----------------------------------------------------------
+       TYPOGRAPHY SCALE
+       Fonts must support Arabic/RTL for bilingual use.
+       Plus Jakarta Sans: Latin + extended Latin
+       Noto Sans Arabic or system-ui as Arabic fallback.
+       ---------------------------------------------------------- */
+    --acm-font-body:    'Plus Jakarta Sans', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
+    --acm-font-heading: 'Plus Jakarta Sans', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
+
+    /* Size scale */
+    --acm-text-xs:   0.75rem;    /*  12px */
+    --acm-text-sm:   0.8125rem;  /*  13px */
+    --acm-text-base: 0.875rem;   /*  14px */
+    --acm-text-md:   1rem;       /*  16px */
+    --acm-text-lg:   1.125rem;   /*  18px */
+    --acm-text-xl:   1.25rem;    /*  20px */
+    --acm-text-2xl:  1.5rem;     /*  24px */
+    --acm-text-3xl:  1.875rem;   /*  30px */
+
+    /* Weight scale */
+    --acm-fw-regular:  400;
+    --acm-fw-medium:   500;
+    --acm-fw-semibold: 600;
+    --acm-fw-bold:     700;
+
+    /* Line heights */
+    --acm-lh-tight: 1.2;
+    --acm-lh-snug:  1.4;
+    --acm-lh-base:  1.6;
+
+    /* Letter spacing */
+    --acm-ls-tight:  -0.02em;
+    --acm-ls-normal:  0;
+    --acm-ls-wide:    0.02em;
+    --acm-ls-wider:   0.04em;
+
+    /* ----------------------------------------------------------
+       SPACING SCALE
+       ---------------------------------------------------------- */
+    --acm-sp-4:   0.25rem;
+    --acm-sp-8:   0.5rem;
+    --acm-sp-12:  0.75rem;
+    --acm-sp-16:  1rem;
+    --acm-sp-20:  1.25rem;
+    --acm-sp-24:  1.5rem;
+    --acm-sp-32:  2rem;
+    --acm-sp-40:  2.5rem;
+    --acm-sp-48:  3rem;
+    --acm-sp-64:  4rem;
+
+    /* ----------------------------------------------------------
+       RADIUS TOKENS
+       ---------------------------------------------------------- */
+    --acm-radius-xs:   4px;
+    --acm-radius-sm:   8px;
+    --acm-radius-md:   12px;
+    --acm-radius-lg:   16px;
+    --acm-radius-xl:   24px;
+    --acm-radius-full: 9999px;
+
+    /* ----------------------------------------------------------
+       SHADOW TOKENS
+       Restrained — no glow effects.
+       ---------------------------------------------------------- */
+    --acm-shadow-xs:   0 1px 2px rgba(0, 0, 0, 0.05);
+    --acm-shadow-sm:   0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+    --acm-shadow-card: 0 0 0 1px var(--acm-border), 0 2px 8px rgba(0, 0, 0, 0.06);
+    --acm-shadow-md:   0 4px 16px rgba(0, 0, 0, 0.08);
+    --acm-shadow-lg:   0 8px 32px rgba(0, 0, 0, 0.10);
+
+    /* Focus ring */
+    --acm-focus-ring: 0 0 0 3px rgba(0, 28, 44, 0.18);
+
+    /* ----------------------------------------------------------
+       TRANSITION TOKENS
+       ---------------------------------------------------------- */
+    --acm-ease:            cubic-bezier(0.4, 0, 0.2, 1);
+    --acm-ease-out:        cubic-bezier(0.0, 0, 0.2, 1);
+    --acm-transition-fast: 120ms var(--acm-ease);
+    --acm-transition-base: 200ms var(--acm-ease);
+    --acm-transition-slow: 300ms var(--acm-ease);
+
+    /* ----------------------------------------------------------
+       Z-INDEX SCALE
+       ---------------------------------------------------------- */
+    --acm-z-base:     0;
+    --acm-z-raised:   10;
+    --acm-z-dropdown: 100;
+    --acm-z-sticky:   200;
+    --acm-z-overlay:  300;
+    --acm-z-modal:    400;
+    --acm-z-toast:    500;
+
+    /* ----------------------------------------------------------
+       BREAKPOINT REFERENCE (documentation only)
+       --acm-bp-xs:   360px   Smallest mobile
+       --acm-bp-sm:   430px   Large mobile
+       --acm-bp-md:   768px   Tablet portrait
+       --acm-bp-lg:   1024px  Tablet landscape / small desktop
+       --acm-bp-xl:   1280px  Desktop
+       --acm-bp-2xl:  1440px  Wide desktop
+       ---------------------------------------------------------- */
+}
+
+/*
+ * RTL NOTE
+ * --------
+ * Components consuming these tokens should prefer CSS logical
+ * properties so that layout automatically mirrors in RTL:
+ *
+ *   padding-inline-start  instead of  padding-left
+ *   padding-inline-end    instead of  padding-right
+ *   margin-inline-start   instead of  margin-left
+ *   inset-inline-start    instead of  left
+ *   inset-inline-end      instead of  right
+ *   border-inline-start   instead of  border-left
+ *
+ * Directional icons (chevrons, arrows) should use
+ * transform: scaleX(-1) when [dir="rtl"] is set.
+ */

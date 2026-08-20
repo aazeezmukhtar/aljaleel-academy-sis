@@ -1,327 +1,385 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><%= title %></title>
-    <link rel="stylesheet" href="/css/main.css">
+
+    <!-- AcadMe Design Tokens (must load first) -->
+    <link rel="stylesheet" href="/css/acadme-tokens.css">
+    <!-- Login page styles -->
+    <link rel="stylesheet" href="/css/portal-login.css">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Google Fonts — Plus Jakarta Sans (Latin + extended; Arabic via system fallback) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#001C2C">
+
+    <%
+        /*
+         * School branding override
+         * The settingsMiddleware injects res.locals.school globally.
+         * Primary / secondary colours from the settings table
+         * override the default AcadMe accent tokens at runtime.
+         * Core neutrals (navy, bg, surface, text, borders) remain fixed
+         * to preserve contrast and accessibility.
+         */
+        const schoolPrimary   = (typeof school !== 'undefined' && school && school.primary_color)   ? school.primary_color   : '#001C2C';
+        const schoolSecondary = (typeof school !== 'undefined' && school && school.secondary_color) ? school.secondary_color : '#FBBA00';
+    %>
     <style>
         :root {
-            --school-primary: #6366f1;
-            --school-secondary: #a855f7;
+            /* School accent overrides — keep in sync with branding system */
+            --school-primary:   <%= schoolPrimary %>;
+            --school-secondary: <%= schoolSecondary %>;
         }
-
-        *, *::before, *::after { box-sizing: border-box; }
-
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            position: relative;
-            overflow: hidden;
+        /* Use school primary for the login button if it has sufficient contrast */
+        .acm-btn--primary {
+            background-color: var(--school-primary, #001C2C);
         }
-
-        /* Animated background blobs */
-        body::before, body::after {
-            content: '';
-            position: fixed;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.15;
-            pointer-events: none;
-            animation: drift 12s ease-in-out infinite alternate;
-        }
-        body::before {
-            width: 500px; height: 500px;
-            background: var(--school-primary, #6366f1);
-            top: -150px; left: -150px;
-        }
-        body::after {
-            width: 400px; height: 400px;
-            background: var(--school-secondary, #a855f7);
-            bottom: -100px; right: -100px;
-            animation-delay: -6s;
-        }
-
-        @keyframes drift {
-            from { transform: translate(0, 0) scale(1); }
-            to   { transform: translate(40px, 30px) scale(1.1); }
-        }
-
-        .login-wrapper {
-            width: 100%;
-            max-width: 420px;
-            position: relative;
-            z-index: 1;
-            animation: fadeUp 0.6s cubic-bezier(0.165, 0.84, 0.44, 1) both;
-        }
-
-        @keyframes fadeUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .login-card {
-            background: rgba(255, 255, 255, 0.06);
-            backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            border-radius: 24px;
-            padding: 40px 36px;
-            box-shadow: 0 32px 64px rgba(0, 0, 0, 0.4);
-        }
-
-        .login-brand {
-            text-align: center;
-            margin-bottom: 32px;
-        }
-
-        .login-icon {
-            width: 72px;
-            height: 72px;
-            background: linear-gradient(135deg, var(--school-primary, #6366f1), var(--school-secondary, #a855f7));
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2rem;
-            color: white;
-            margin: 0 auto 20px;
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.4);
-        }
-
-        .login-brand h1 {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: #ffffff;
-            margin: 0 0 6px;
-            letter-spacing: -0.03em;
-        }
-
-        .login-brand p {
-            color: rgba(255, 255, 255, 0.55);
-            font-size: 0.9rem;
-            margin: 0;
-        }
-
-        .alert {
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 0.875rem;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-        }
-
-        .alert-danger {
-            background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.3);
-            color: #fca5a5;
-        }
-
-        .alert-success {
-            background: rgba(16, 185, 129, 0.15);
-            border: 1px solid rgba(16, 185, 129, 0.3);
-            color: #6ee7b7;
-        }
-
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.7);
-            letter-spacing: 0.02em;
-        }
-
-        .form-group { margin-bottom: 20px; }
-
-        .input-wrap {
-            position: relative;
-        }
-
-        .input-wrap i {
-            position: absolute;
-            left: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.35);
-            font-size: 1rem;
-            pointer-events: none;
-        }
-
-        .input-wrap input {
-            width: 100%;
-            padding: 13px 16px 13px 42px;
-            background: rgba(255, 255, 255, 0.07);
-            border: 1.5px solid rgba(255, 255, 255, 0.12);
-            border-radius: 12px;
-            font-size: 0.95rem;
-            color: #ffffff;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            transition: all 0.2s ease;
-            -webkit-text-fill-color: white;
-        }
-
-        .input-wrap input::placeholder {
-            color: rgba(255, 255, 255, 0.3);
-        }
-
-        .input-wrap input:focus {
-            outline: none;
-            border-color: var(--school-primary, #6366f1);
-            background: rgba(99, 102, 241, 0.1);
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2);
-        }
-
-        .input-wrap input:-webkit-autofill,
-        .input-wrap input:-webkit-autofill:hover,
-        .input-wrap input:-webkit-autofill:focus {
-            -webkit-box-shadow: 0 0 0 1000px rgba(30, 27, 75, 0.95) inset;
-            -webkit-text-fill-color: white !important;
-            border-color: rgba(255,255,255,0.2);
-        }
-
-        .toggle-password {
-            position: absolute;
-            right: 14px;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
-            color: rgba(255,255,255,0.4);
-            cursor: pointer;
-            font-size: 1rem;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            transition: color 0.2s;
-        }
-        .toggle-password:hover { color: rgba(255,255,255,0.7); }
-
-        .btn-login {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, var(--school-primary, #6366f1), var(--school-secondary, #a855f7));
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 1rem;
-            font-weight: 700;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
-            letter-spacing: 0.01em;
-            margin-top: 8px;
-        }
-
-        .btn-login:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 28px rgba(99, 102, 241, 0.45);
-        }
-
-        .btn-login:active { transform: scale(0.98); }
-
-        .login-footer {
-            text-align: center;
-            margin-top: 24px;
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 0.8rem;
-        }
-
-        .login-footer a {
-            color: rgba(255, 255, 255, 0.6);
-            text-decoration: none;
-            font-weight: 600;
-            transition: color 0.2s;
-        }
-        .login-footer a:hover { color: white; }
-
-        @media (max-width: 480px) {
-            .login-card { padding: 28px 20px; }
-            .login-brand h1 { font-size: 1.5rem; }
+        .acm-btn--primary:hover:not(:disabled) {
+            filter: brightness(1.08);
         }
     </style>
 </head>
 <body>
 
-<div class="login-wrapper">
-    <div class="login-card">
+<main class="acm-login-page" role="main">
 
-        <div class="login-brand">
-            <div class="login-icon">
-                <% if (typeof school !== 'undefined' && school && school.school_logo && school.school_logo !== '/img/logo.png') { %>
-                    <img src="<%= school.school_logo %>" alt="School Logo" style="width:100%;height:100%;object-fit:contain;border-radius:16px;">
-                <% } else { %>
-                    <i class="bi bi-mortarboard-fill"></i>
-                <% } %>
-            </div>
-            <h1>Student Portal</h1>
-            <p>Sign in to access your dashboard</p>
+    <div class="acm-login-card" aria-label="Student login form">
+
+        <!-- ======================================================
+             BRAND BLOCK
+             School logo → School name → "Student Portal" label
+             ====================================================== -->
+        <div class="acm-brand">
+            <%
+                const hasLogo = typeof school !== 'undefined'
+                    && school
+                    && school.school_logo
+                    && school.school_logo.trim() !== ''
+                    && school.school_logo !== '/img/logo.png';
+
+                const schoolName = (typeof school !== 'undefined' && school && school.school_name)
+                    ? school.school_name
+                    : 'AcadMe';
+
+                /* First letter of school name for fallback avatar */
+                const logoInitial = schoolName.trim().charAt(0).toUpperCase();
+            %>
+
+            <% if (hasLogo) { %>
+                <div class="acm-school-logo" aria-hidden="true">
+                    <img
+                        src="<%= school.school_logo %>"
+                        alt="<%= schoolName %> logo"
+                        loading="eager"
+                        onerror="this.parentElement.style.display='none'; document.getElementById('logo-fallback').style.display='flex';"
+                    >
+                </div>
+                <!-- Hidden fallback in case image fails to load -->
+                <div class="acm-school-logo-fallback" id="logo-fallback" aria-hidden="true" style="display:none;">
+                    <%= logoInitial %>
+                </div>
+            <% } else { %>
+                <div class="acm-school-logo-fallback" aria-hidden="true">
+                    <%= logoInitial %>
+                </div>
+            <% } %>
+
+            <p class="acm-portal-label">Student Portal</p>
+            <h1 class="acm-school-name"><%= schoolName %></h1>
         </div>
 
+        <!-- ======================================================
+             WELCOME HEADING
+             ====================================================== -->
+        <div class="acm-welcome">
+            <h2 class="acm-welcome-heading">Welcome back</h2>
+            <p class="acm-welcome-sub">Sign in to continue.</p>
+        </div>
+
+        <!-- ======================================================
+             SERVER-SIDE FLASH MESSAGES
+             ====================================================== -->
         <% if (error) { %>
-            <div class="alert alert-danger">
-                <i class="bi bi-exclamation-circle-fill"></i>
+            <div class="acm-alert acm-alert--error" role="alert" aria-live="polite">
+                <i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i>
                 <span><%= error %></span>
             </div>
         <% } %>
 
         <% if (success) { %>
-            <div class="alert alert-success">
-                <i class="bi bi-check-circle-fill"></i>
+            <div class="acm-alert acm-alert--success" role="status" aria-live="polite">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
                 <span><%= success %></span>
             </div>
         <% } %>
 
-        <form action="/auth/student-login" method="POST">
-            <div class="form-group">
-                <label class="form-label" for="admission_number">Student ID</label>
-                <div class="input-wrap">
-                    <i class="bi bi-person-badge"></i>
-                    <input type="text" id="admission_number" name="admission_number" required placeholder="e.g. ADM/25/001" autocomplete="username">
+        <!-- ======================================================
+             LOGIN FORM
+             Field name "admission_number" preserved for backend
+             compatibility. Users see it as "Student ID".
+             ====================================================== -->
+        <form
+            id="student-login-form"
+            action="/auth/student-login"
+            method="POST"
+            novalidate
+            autocomplete="on"
+        >
+            <!-- Student ID -->
+            <div class="acm-form-group">
+                <label class="acm-label" for="admission_number">
+                    Student ID
+                </label>
+                <div class="acm-input-wrap">
+                    <input
+                        class="acm-input"
+                        type="text"
+                        id="admission_number"
+                        name="admission_number"
+                        inputmode="numeric"
+                        pattern="[0-9]*"
+                        placeholder="e.g. 836572"
+                        autocomplete="username"
+                        autocorrect="off"
+                        autocapitalize="off"
+                        spellcheck="false"
+                        aria-describedby="admission-error"
+                        aria-required="true"
+                        autofocus
+                    >
                 </div>
+                <!-- Client-side validation error -->
+                <p class="acm-input-error" id="admission-error" role="alert" aria-live="polite">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span id="admission-error-text">Please enter your Student ID.</span>
+                </p>
             </div>
 
-            <div class="form-group">
-                <label class="form-label" for="password">Password</label>
-                <div class="input-wrap">
-                    <i class="bi bi-lock-fill"></i>
-                    <input type="password" id="password" name="password" required placeholder="Default: your Student ID" autocomplete="current-password">
-                    <button type="button" class="toggle-password" onclick="togglePwd(this)" aria-label="Toggle password visibility">
-                        <i class="bi bi-eye"></i>
+            <!-- Password -->
+            <div class="acm-form-group">
+                <label class="acm-label" for="password">
+                    Password
+                </label>
+                <div class="acm-input-wrap">
+                    <input
+                        class="acm-input acm-input--password"
+                        type="password"
+                        id="password"
+                        name="password"
+                        placeholder="Enter your password"
+                        autocomplete="current-password"
+                        aria-describedby="password-error"
+                        aria-required="true"
+                    >
+                    <button
+                        type="button"
+                        class="acm-toggle-pwd"
+                        id="toggle-pwd-btn"
+                        aria-label="Show password"
+                        aria-controls="password"
+                        aria-pressed="false"
+                        tabindex="0"
+                    >
+                        <i class="bi bi-eye" aria-hidden="true" id="toggle-pwd-icon"></i>
                     </button>
                 </div>
+                <!-- Client-side validation error -->
+                <p class="acm-input-error" id="password-error" role="alert" aria-live="polite">
+                    <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+                    <span id="password-error-text">Please enter your password.</span>
+                </p>
             </div>
 
-            <button type="submit" class="btn-login">
-                <i class="bi bi-shield-lock"></i>&nbsp; Secure Login
+            <!-- Submit button -->
+            <button
+                type="submit"
+                class="acm-btn acm-btn--primary"
+                id="login-btn"
+            >
+                <span class="acm-spinner" id="login-spinner" aria-hidden="true"></span>
+                <span id="login-btn-text">Log in</span>
             </button>
         </form>
 
-        <div class="login-footer">
-            <p>Staff member? <a href="/auth/login">Go to Staff Login →</a></p>
-        </div>
-    </div>
-</div>
+        <!-- ======================================================
+             FORGOT PASSWORD
+             ====================================================== -->
+        <p class="acm-forgot">
+            Forgot password? Contact your class teacher for a password reset.
+        </p>
 
+    </div><!-- /.acm-login-card -->
+
+    <!-- ======================================================
+         PAGE FOOTER — AcadMe product identity
+         Subordinate to school branding above.
+         ====================================================== -->
+    <p class="acm-page-footer">
+        Powered by <strong>AcadMe</strong>
+    </p>
+
+</main><!-- /.acm-login-page -->
+
+<!-- ======================================================
+     CLIENT-SIDE SCRIPTS
+     ====================================================== -->
 <script>
-    function togglePwd(btn) {
-        const input = btn.closest('.input-wrap').querySelector('input');
-        const icon = btn.querySelector('i');
-        const isHidden = input.type === 'password';
-        input.type = isHidden ? 'text' : 'password';
-        icon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+(function () {
+    'use strict';
+
+    /* --------------------------------------------------------
+       DOM REFERENCES
+       -------------------------------------------------------- */
+    var form         = document.getElementById('student-login-form');
+    var idInput      = document.getElementById('admission_number');
+    var pwdInput     = document.getElementById('password');
+    var loginBtn     = document.getElementById('login-btn');
+    var loginSpinner = document.getElementById('login-spinner');
+    var loginBtnText = document.getElementById('login-btn-text');
+    var toggleBtn    = document.getElementById('toggle-pwd-btn');
+    var toggleIcon   = document.getElementById('toggle-pwd-icon');
+
+    var admissionError     = document.getElementById('admission-error');
+    var admissionErrorText = document.getElementById('admission-error-text');
+    var passwordError      = document.getElementById('password-error');
+
+    /* --------------------------------------------------------
+       PASSWORD SHOW / HIDE
+       Accessible: aria-label and aria-pressed update on toggle.
+       -------------------------------------------------------- */
+    toggleBtn.addEventListener('click', function () {
+        var isHidden = pwdInput.type === 'password';
+        pwdInput.type = isHidden ? 'text' : 'password';
+        toggleIcon.className = isHidden ? 'bi bi-eye-slash' : 'bi bi-eye';
+        toggleBtn.setAttribute('aria-label', isHidden ? 'Hide password' : 'Show password');
+        toggleBtn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
+    });
+
+    /* --------------------------------------------------------
+       CLEAR VALIDATION STATE ON INPUT
+       -------------------------------------------------------- */
+    function clearError(input, errorEl) {
+        input.classList.remove('is-error');
+        errorEl.classList.remove('is-visible');
     }
+
+    idInput.addEventListener('input', function () {
+        clearError(idInput, admissionError);
+    });
+
+    pwdInput.addEventListener('input', function () {
+        clearError(pwdInput, passwordError);
+    });
+
+    /* --------------------------------------------------------
+       CLIENT-SIDE VALIDATION
+       -------------------------------------------------------- */
+    function validateStudentId(value) {
+        var trimmed = value.trim();
+        if (trimmed === '') {
+            return { valid: false, message: 'Please enter your Student ID.' };
+        }
+        /* A Student ID is numeric. Warn if it contains non-numeric chars
+           but don't block — the server validates authoritative data. */
+        if (!/^\d+$/.test(trimmed)) {
+            return { valid: false, message: 'Invalid Student ID. Please enter a numeric ID.' };
+        }
+        return { valid: true };
+    }
+
+    function validatePassword(value) {
+        if (value === '') {
+            return { valid: false, message: 'Please enter your password.' };
+        }
+        return { valid: true };
+    }
+
+    function showError(input, errorEl, errorTextEl, message) {
+        input.classList.add('is-error');
+        errorTextEl.textContent = message;
+        errorEl.classList.add('is-visible');
+        input.focus();
+    }
+
+    /* --------------------------------------------------------
+       LOADING STATE HELPERS
+       -------------------------------------------------------- */
+    var isSubmitting = false;
+
+    function setLoading(loading) {
+        isSubmitting = loading;
+        loginBtn.disabled = loading;
+        loginBtn.classList.toggle('acm-btn--loading', loading);
+        loginSpinner.style.display = loading ? 'inline-block' : 'none';
+        loginBtnText.textContent = loading ? 'Signing in\u2026' : 'Log in';
+    }
+
+    /* --------------------------------------------------------
+       FORM SUBMIT HANDLER
+       -------------------------------------------------------- */
+    form.addEventListener('submit', function (e) {
+        /* Prevent duplicate submissions */
+        if (isSubmitting) {
+            e.preventDefault();
+            return;
+        }
+
+        var idVal  = idInput.value;
+        var pwdVal = pwdInput.value;
+
+        /* Validate Student ID */
+        var idCheck = validateStudentId(idVal);
+        if (!idCheck.valid) {
+            e.preventDefault();
+            showError(idInput, admissionError, admissionErrorText, idCheck.message);
+            return;
+        }
+
+        /* Validate Password */
+        var pwdCheck = validatePassword(pwdVal);
+        if (!pwdCheck.valid) {
+            e.preventDefault();
+            showError(pwdInput, passwordError, document.getElementById('password-error-text'), pwdCheck.message);
+            return;
+        }
+
+        /* All good — show loading state and submit */
+        setLoading(true);
+
+        /* Network error detection — reset UI if server never responds */
+        var networkTimeout = setTimeout(function () {
+            if (isSubmitting) {
+                setLoading(false);
+                /* Inject a network error alert above the form */
+                var existing = document.getElementById('network-alert');
+                if (!existing) {
+                    var alert = document.createElement('div');
+                    alert.id = 'network-alert';
+                    alert.className = 'acm-alert acm-alert--error';
+                    alert.setAttribute('role', 'alert');
+                    alert.innerHTML =
+                        '<i class="bi bi-wifi-off" aria-hidden="true"></i>' +
+                        '<span>Unable to connect. Please check your internet connection and try again.</span>';
+                    form.insertAdjacentElement('beforebegin', alert);
+                }
+            }
+        }, 15000); /* 15 s timeout */
+
+        /* Clear timeout when the page actually navigates (server responded) */
+        window.addEventListener('pagehide', function () {
+            clearTimeout(networkTimeout);
+        });
+    });
+
+})();
 </script>
 
 </body>

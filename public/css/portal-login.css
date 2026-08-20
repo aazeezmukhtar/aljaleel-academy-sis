@@ -1,0 +1,543 @@
+﻿/*
+ * =============================================================
+ * AcadMe — Student Portal Login  v1.0
+ * =============================================================
+ * Stylesheet for /auth/student-login only.
+ * Depends on: acadme-tokens.css (must load first)
+ *
+ * Design direction: clean, academic, professional, mobile-first.
+ * No gradients, no glassmorphism, no glowing shadows.
+ *
+ * Component inventory
+ * -------------------
+ *  .acm-login-page       Page wrapper / centering shell
+ *  .acm-login-card       White surface card
+ *  .acm-school-logo      School logo container
+ *  .acm-school-name      School name heading
+ *  .acm-portal-label     "Student Portal" label
+ *  .acm-welcome-heading  "Welcome back"
+ *  .acm-welcome-sub      "Sign in to continue."
+ *  .acm-alert            Alert banner (error/success)
+ *  .acm-form-group       Label + input wrapper
+ *  .acm-label            Field label
+ *  .acm-input-wrap       Relative container for input + icon
+ *  .acm-input            Text / password input
+ *  .acm-input.is-error   Error state
+ *  .acm-input-error      Inline error message
+ *  .acm-toggle-pwd       Show/hide password button
+ *  .acm-btn              Base button
+ *  .acm-btn--primary     Primary CTA (Log in)
+ *  .acm-btn--loading     Loading state (Signing in…)
+ *  .acm-forgot           Forgot password helper text
+ *  .acm-footer           "Powered by AcadMe" footer
+ * =============================================================
+ */
+
+/* ----------------------------------------------------------
+   RESET & BASE
+   ---------------------------------------------------------- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* ----------------------------------------------------------
+   PAGE LAYOUT
+   ---------------------------------------------------------- */
+.acm-login-page {
+    font-family: var(--acm-font-body);
+    background-color: var(--acm-bg);
+    min-height: 100vh;
+    min-height: 100dvh; /* dynamic viewport on mobile */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--acm-sp-24) var(--acm-sp-16);
+    /* Safe-area insets for notched phones */
+    padding-top: max(var(--acm-sp-24), env(safe-area-inset-top));
+    padding-bottom: max(var(--acm-sp-24), env(safe-area-inset-bottom));
+    color: var(--acm-text-primary);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* ----------------------------------------------------------
+   LOGIN CARD
+   ---------------------------------------------------------- */
+.acm-login-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--acm-surface);
+    border-radius: var(--acm-radius-lg);
+    box-shadow: var(--acm-shadow-card);
+    padding: var(--acm-sp-40) var(--acm-sp-32);
+    position: relative;
+}
+
+/* ----------------------------------------------------------
+   BRAND BLOCK (Logo + School Name + Portal Label)
+   ---------------------------------------------------------- */
+.acm-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin-bottom: var(--acm-sp-32);
+}
+
+/* Logo container — fixed size, no coloured background */
+.acm-school-logo {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--acm-radius-md);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--acm-sp-16);
+    flex-shrink: 0;
+}
+
+.acm-school-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+}
+
+/* Fallback — school initial in navy circle */
+.acm-school-logo-fallback {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--acm-radius-md);
+    background-color: var(--acm-navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: var(--acm-sp-16);
+    flex-shrink: 0;
+    color: #ffffff;
+    font-size: var(--acm-text-2xl);
+    font-weight: var(--acm-fw-bold);
+    letter-spacing: var(--acm-ls-tight);
+    line-height: 1;
+    user-select: none;
+}
+
+/* "Student Portal" label above school name */
+.acm-portal-label {
+    font-size: var(--acm-text-sm);
+    font-weight: var(--acm-fw-semibold);
+    color: var(--acm-text-muted);
+    letter-spacing: var(--acm-ls-wider);
+    text-transform: uppercase;
+    margin: 0 0 var(--acm-sp-4);
+}
+
+/* School name */
+.acm-school-name {
+    font-size: var(--acm-text-xl);
+    font-weight: var(--acm-fw-bold);
+    color: var(--acm-text-primary);
+    letter-spacing: var(--acm-ls-tight);
+    line-height: var(--acm-lh-tight);
+    margin: 0;
+}
+
+/* ----------------------------------------------------------
+   WELCOME HEADING
+   ---------------------------------------------------------- */
+.acm-welcome {
+    margin-bottom: var(--acm-sp-24);
+}
+
+.acm-welcome-heading {
+    font-size: var(--acm-text-2xl);
+    font-weight: var(--acm-fw-bold);
+    color: var(--acm-text-primary);
+    letter-spacing: var(--acm-ls-tight);
+    line-height: var(--acm-lh-tight);
+    margin: 0 0 var(--acm-sp-4);
+}
+
+.acm-welcome-sub {
+    font-size: var(--acm-text-base);
+    color: var(--acm-text-secondary);
+    margin: 0;
+    line-height: var(--acm-lh-snug);
+}
+
+/* ----------------------------------------------------------
+   ALERT BANNERS
+   ---------------------------------------------------------- */
+.acm-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--acm-sp-8);
+    padding: var(--acm-sp-12) var(--acm-sp-16);
+    border-radius: var(--acm-radius-sm);
+    font-size: var(--acm-text-base);
+    line-height: var(--acm-lh-snug);
+    margin-bottom: var(--acm-sp-20);
+    border-width: 1px;
+    border-style: solid;
+}
+
+.acm-alert i {
+    font-size: 1rem;
+    flex-shrink: 0;
+    margin-top: 1px; /* optical alignment with first line of text */
+}
+
+.acm-alert--error {
+    background-color: var(--acm-error-bg);
+    border-color: var(--acm-error-border);
+    color: var(--acm-error);
+}
+
+.acm-alert--success {
+    background-color: var(--acm-success-bg);
+    border-color: var(--acm-success-border);
+    color: var(--acm-success);
+}
+
+.acm-alert--info {
+    background-color: var(--acm-info-bg);
+    border-color: var(--acm-info-border);
+    color: var(--acm-info);
+}
+
+/* ----------------------------------------------------------
+   FORM GROUPS
+   ---------------------------------------------------------- */
+.acm-form-group {
+    margin-bottom: var(--acm-sp-20);
+}
+
+.acm-form-group:last-of-type {
+    margin-bottom: var(--acm-sp-8);
+}
+
+/* Label */
+.acm-label {
+    display: block;
+    font-size: var(--acm-text-base);
+    font-weight: var(--acm-fw-semibold);
+    color: var(--acm-text-primary);
+    margin-bottom: var(--acm-sp-8);
+    line-height: var(--acm-lh-snug);
+}
+
+/* Input wrapper (holds input + optional trailing button) */
+.acm-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* Base input */
+.acm-input {
+    width: 100%;
+    height: 48px; /* minimum 48px touch target */
+    padding: 0 var(--acm-sp-16);
+    border: 1.5px solid var(--acm-border);
+    border-radius: var(--acm-radius-md);
+    background: var(--acm-surface);
+    font-family: var(--acm-font-body);
+    font-size: var(--acm-text-md);
+    color: var(--acm-text-primary);
+    transition: border-color var(--acm-transition-base),
+                box-shadow var(--acm-transition-base);
+    -webkit-appearance: none;
+    appearance: none;
+    /* Numeric keyboard hint for Student ID — set via inputmode attr */
+}
+
+.acm-input::placeholder {
+    color: var(--acm-text-muted);
+    font-size: var(--acm-text-base);
+}
+
+/* Focus state */
+.acm-input:focus {
+    outline: none;
+    border-color: var(--acm-border-focus);
+    box-shadow: var(--acm-focus-ring);
+}
+
+/* Focus-visible for keyboard users */
+.acm-input:focus-visible {
+    outline: none;
+    border-color: var(--acm-border-focus);
+    box-shadow: var(--acm-focus-ring);
+}
+
+/* Error state */
+.acm-input.is-error {
+    border-color: var(--acm-error);
+    background-color: var(--acm-error-bg);
+}
+
+.acm-input.is-error:focus {
+    border-color: var(--acm-error);
+    box-shadow: 0 0 0 3px rgba(201, 54, 54, 0.15);
+}
+
+/* Disabled state */
+.acm-input:disabled {
+    background-color: var(--acm-bg);
+    color: var(--acm-text-muted);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Password input — room for toggle button on the right */
+.acm-input--password {
+    padding-inline-end: var(--acm-sp-48);
+}
+
+/* Inline error message */
+.acm-input-error {
+    display: none;
+    align-items: center;
+    gap: var(--acm-sp-4);
+    margin-top: var(--acm-sp-8);
+    font-size: var(--acm-text-sm);
+    color: var(--acm-error);
+    line-height: var(--acm-lh-snug);
+}
+
+.acm-input-error.is-visible {
+    display: flex;
+}
+
+.acm-input-error i {
+    font-size: 0.875rem;
+    flex-shrink: 0;
+}
+
+/* Helper text (grey, below input) */
+.acm-helper {
+    margin-top: var(--acm-sp-8);
+    font-size: var(--acm-text-sm);
+    color: var(--acm-text-muted);
+    line-height: var(--acm-lh-snug);
+}
+
+/* ----------------------------------------------------------
+   PASSWORD VISIBILITY TOGGLE
+   ---------------------------------------------------------- */
+.acm-toggle-pwd {
+    position: absolute;
+    inset-inline-end: var(--acm-sp-12);  /* RTL-aware */
+    top: 50%;
+    transform: translateY(-50%);
+    /* Minimum 44px tap target */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 44px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--acm-text-muted);
+    font-size: 1.0625rem;
+    padding: 0;
+    transition: color var(--acm-transition-fast);
+    border-radius: var(--acm-radius-sm);
+}
+
+.acm-toggle-pwd:hover {
+    color: var(--acm-text-secondary);
+}
+
+.acm-toggle-pwd:focus-visible {
+    outline: 2px solid var(--acm-border-focus);
+    outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------
+   PRIMARY BUTTON
+   ---------------------------------------------------------- */
+.acm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--acm-sp-8);
+    width: 100%;
+    min-height: 48px;
+    padding: var(--acm-sp-12) var(--acm-sp-24);
+    border: none;
+    border-radius: var(--acm-radius-md);
+    font-family: var(--acm-font-body);
+    font-size: var(--acm-text-md);
+    font-weight: var(--acm-fw-semibold);
+    cursor: pointer;
+    transition: background-color var(--acm-transition-base),
+                box-shadow var(--acm-transition-base),
+                opacity var(--acm-transition-fast);
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+    margin-top: var(--acm-sp-8);
+}
+
+.acm-btn:focus-visible {
+    outline: none;
+    box-shadow: var(--acm-focus-ring);
+}
+
+/* Primary */
+.acm-btn--primary {
+    background-color: var(--acm-navy);
+    color: #ffffff;
+}
+
+.acm-btn--primary:hover:not(:disabled) {
+    background-color: #002d46; /* slightly lighter than navy */
+}
+
+.acm-btn--primary:active:not(:disabled) {
+    transform: scale(0.99);
+    opacity: 0.92;
+}
+
+/* Disabled / loading */
+.acm-btn:disabled,
+.acm-btn--primary:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Loading spinner — CSS only */
+.acm-btn--loading .acm-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: acm-spin 0.65s linear infinite;
+    flex-shrink: 0;
+}
+
+.acm-spinner {
+    display: none;
+}
+
+@keyframes acm-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ----------------------------------------------------------
+   FORGOT PASSWORD
+   ---------------------------------------------------------- */
+.acm-forgot {
+    margin-top: var(--acm-sp-20);
+    font-size: var(--acm-text-sm);
+    color: var(--acm-text-muted);
+    line-height: var(--acm-lh-base);
+    text-align: center;
+}
+
+/* ----------------------------------------------------------
+   PAGE FOOTER — "Powered by AcadMe"
+   ---------------------------------------------------------- */
+.acm-page-footer {
+    margin-top: var(--acm-sp-24);
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-muted);
+    text-align: center;
+    line-height: var(--acm-lh-base);
+}
+
+.acm-page-footer strong {
+    color: var(--acm-text-secondary);
+    font-weight: var(--acm-fw-semibold);
+}
+
+/* ----------------------------------------------------------
+   AUTOFILL — keep inputs looking clean
+   ---------------------------------------------------------- */
+.acm-input:-webkit-autofill,
+.acm-input:-webkit-autofill:hover,
+.acm-input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--acm-text-primary);
+    -webkit-box-shadow: 0 0 0 1000px var(--acm-surface) inset;
+    transition: background-color 5000s ease-in-out 0s;
+}
+
+.acm-input.is-error:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0 1000px var(--acm-error-bg) inset;
+}
+
+/* ----------------------------------------------------------
+   RESPONSIVE — mobile-first adjustments
+   ---------------------------------------------------------- */
+
+/* 360px — smallest supported phone */
+@media (max-width: 374px) {
+    .acm-login-card {
+        padding: var(--acm-sp-32) var(--acm-sp-16);
+    }
+    .acm-welcome-heading {
+        font-size: var(--acm-text-xl);
+    }
+}
+
+/* 430px and under — all mobile sizes */
+@media (max-width: 430px) {
+    .acm-login-card {
+        /* On very small screens, hug the edges slightly less */
+        border-radius: var(--acm-radius-md);
+    }
+}
+
+/* Tablet and desktop */
+@media (min-width: 640px) {
+    .acm-login-page {
+        padding: var(--acm-sp-48) var(--acm-sp-24);
+    }
+    .acm-login-card {
+        padding: var(--acm-sp-48) var(--acm-sp-40);
+    }
+}
+
+/* Desktop — limit card from stretching */
+@media (min-width: 1024px) {
+    .acm-login-card {
+        max-width: 420px;
+    }
+}
+
+/* ----------------------------------------------------------
+   RTL SUPPORT
+   Mirror layout when html[dir="rtl"] or lang="ar" is set.
+   Inputs using padding-inline-end already adapt automatically.
+   ---------------------------------------------------------- */
+[dir="rtl"] .acm-toggle-pwd {
+    /* inset-inline-end handles this via logical properties already */
+}
+
+[dir="rtl"] .acm-input-error i,
+[dir="rtl"] .acm-alert i {
+    /* Icons remain visually correct in RTL */
+}
+
+/* ----------------------------------------------------------
+   REDUCE MOTION
+   Respect prefers-reduced-motion for animations.
+   ---------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .acm-btn,
+    .acm-input,
+    .acm-toggle-pwd {
+        transition: none;
+    }
+    .acm-btn--loading .acm-spinner {
+        animation: none;
+        opacity: 0.7;
+    }
+}

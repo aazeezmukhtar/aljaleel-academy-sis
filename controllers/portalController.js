@@ -200,22 +200,40 @@ exports.viewCumulativeResult = async (req, res) => {
 exports.getProfile = async (req, res) => {
     const studentId = req.session.student.id;
     try {
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
         const student = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
         if (!student) return res.redirect('/portal?error=Student not found');
         
-        let formattedDob = '';
+        // Use resolved class name from context if available
+        if (ctx.studentObj && ctx.studentObj.class_name) {
+            student.class_name = ctx.studentObj.class_name;
+        }
+
+        let rawDob = '';
+        let displayDob = '';
         if (student.dob) {
-            const d = new Date(student.dob);
+            let dobStr = student.dob instanceof Date ? student.dob.toISOString().slice(0, 10) : String(student.dob).slice(0, 10);
+            rawDob = dobStr;
+            const d = new Date(dobStr);
             if (!isNaN(d.getTime())) {
-                formattedDob = d.toISOString().slice(0, 10);
+                displayDob = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+            } else {
+                displayDob = dobStr;
             }
         }
-        student.formatted_dob = formattedDob;
 
         res.render('portal/profile', {
-            title: 'My Profile & Settings',
+            title: 'My Profile',
+            path: '/portal/profile',
             student,
-            school: await getSettings(),
+            school,
+            rawDob,
+            displayDob,
+            currentTerm: ctx.activeTerm,
+            currentSession: ctx.activeSession,
+            individualMessagesCount: ctx.individualMessagesCount,
+            sectionInfo: ctx.enrolledClasses,
             error: req.query.error,
             success: req.query.success
         });
@@ -247,6 +265,11 @@ exports.postUpdateProfile = async (req, res) => {
             );
         }
 
+        if (phone !== undefined) req.session.student.phone = phone;
+        if (email !== undefined) req.session.student.email = email;
+        if (address !== undefined) req.session.student.address = address;
+        if (dob !== undefined) req.session.student.dob = dob;
+
         res.redirect('/portal/profile?success=Profile updated successfully');
     } catch (err) {
         console.error('Portal Update Profile Error:', err);
@@ -254,18 +277,37 @@ exports.postUpdateProfile = async (req, res) => {
     }
 };
 
-exports.getChangePassword = (req, res) => {
-    res.render('portal/change_password', {
-        title: 'Change Password - Scholar Portal',
-        studentUser: req.session.student,
-        error: req.query.error,
-        success: req.query.success
-    });
+exports.getChangePassword = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+
+        res.render('portal/change_password', {
+            title: 'Change Password',
+            path: '/portal/profile',
+            student: ctx.studentObj || req.session.student,
+            school,
+            currentTerm: ctx.activeTerm,
+            currentSession: ctx.activeSession,
+            individualMessagesCount: ctx.individualMessagesCount,
+            sectionInfo: ctx.enrolledClasses,
+            error: req.query.error,
+            success: req.query.success
+        });
+    } catch (err) {
+        console.error('Portal Get Change Password Error:', err);
+        res.status(500).send('Database Error');
+    }
 };
 
 exports.postChangePassword = async (req, res) => {
     const { current_password, new_password, confirm_password } = req.body;
     const studentId = req.session.student.id;
+
+    if (!new_password || new_password.length < 6) {
+        return res.redirect('/portal/change-password?error=Password must be at least 6 characters');
+    }
 
     if (new_password !== confirm_password) {
         return res.redirect('/portal/change-password?error=New passwords do not match');
@@ -284,13 +326,13 @@ exports.postChangePassword = async (req, res) => {
         }
 
         if (!isMatch) {
-            return res.redirect('/portal/change-password?error=Incorrect current password');
+            return res.redirect('/portal/change-password?error=Current password is incorrect');
         }
 
         const hashedPassword = await bcrypt.hash(new_password, 10);
         await db.run('UPDATE students SET password = ? WHERE id = ?', [hashedPassword, studentId]);
         
-        res.redirect('/portal/change-password?success=Password updated successfully');
+        res.redirect('/portal/change-password?success=Password changed successfully');
     } catch (err) {
         console.error('Portal Change Password Error:', err);
         res.redirect('/portal/change-password?error=Database error occurred');

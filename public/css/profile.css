@@ -1,0 +1,388 @@
+/*
+ * =============================================================
+ * AcadMe — Student Profile & Account Styles v6.0
+ * =============================================================
+ * Inherits & Extends: acadme-tokens.css, student-portal.css, academics.css
+ * =============================================================
+ */
+
+/* Profile Hero Card */
+.acm-profile-hero {
+    background-color: var(--acm-surface);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-lg);
+    padding: var(--acm-sp-24);
+    margin-bottom: var(--acm-sp-24);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    position: relative;
+}
+
+@media (min-width: 640px) {
+    .acm-profile-hero {
+        flex-direction: row;
+        align-items: center;
+        text-align: start;
+        gap: var(--acm-sp-24);
+    }
+}
+
+/* Avatar Wrapper & Upload */
+.acm-avatar-container {
+    position: relative;
+    flex-shrink: 0;
+    margin-bottom: var(--acm-sp-16);
+}
+
+@media (min-width: 640px) {
+    .acm-avatar-container {
+        margin-bottom: 0;
+    }
+}
+
+.acm-profile-avatar {
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid var(--acm-surface);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    background-color: var(--acm-bg);
+    display: block;
+}
+
+.acm-avatar-initials {
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    background-color: var(--school-primary, var(--acm-navy));
+    color: #fff;
+    font-size: 2.2rem;
+    font-weight: var(--acm-fw-bold);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid var(--acm-surface);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.acm-avatar-upload-btn {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    inset-inline-end: 2px;
+    background-color: var(--school-primary, var(--acm-navy));
+    color: #fff;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 2px solid var(--acm-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transition: transform var(--acm-transition-fast), background-color var(--acm-transition-fast);
+}
+
+.acm-avatar-upload-btn:hover {
+    transform: scale(1.08);
+}
+
+.acm-profile-identity {
+    flex: 1;
+}
+
+.acm-profile-name {
+    font-size: var(--acm-text-2xl);
+    font-weight: var(--acm-fw-bold);
+    color: var(--acm-text-primary);
+    margin: 0 0 var(--acm-sp-4) 0;
+    line-height: var(--acm-lh-tight);
+}
+
+.acm-profile-meta {
+    font-size: var(--acm-text-sm);
+    color: var(--acm-text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-8);
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+@media (min-width: 640px) {
+    .acm-profile-meta {
+        justify-content: flex-start;
+    }
+}
+
+.acm-profile-id-badge {
+    background-color: var(--acm-bg);
+    padding: 3px var(--acm-sp-10);
+    border-radius: var(--acm-radius-full);
+    font-weight: var(--acm-fw-semibold);
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-primary);
+    border: 1px solid var(--acm-border);
+}
+
+/* Sections & Two-Column Grid */
+.acm-profile-sections-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--acm-sp-24);
+    margin-bottom: var(--acm-sp-32);
+}
+
+@media (min-width: 1024px) {
+    .acm-profile-sections-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--acm-sp-28);
+        align-items: start;
+    }
+}
+
+.acm-profile-card {
+    background-color: var(--acm-surface);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-lg);
+    padding: var(--acm-sp-20) var(--acm-sp-24);
+}
+
+.acm-profile-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--acm-sp-16);
+    padding-bottom: var(--acm-sp-12);
+    border-bottom: 1px solid var(--acm-border);
+}
+
+.acm-profile-card-title {
+    font-size: var(--acm-text-md);
+    font-weight: var(--acm-fw-bold);
+    color: var(--acm-text-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-8);
+}
+
+.acm-profile-card-subtitle {
+    font-size: var(--acm-text-xs);
+    color: var(--acm-text-muted);
+}
+
+.acm-field-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--acm-sp-14);
+}
+
+.acm-field-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.acm-field-label {
+    font-size: var(--acm-text-xs);
+    font-weight: var(--acm-fw-semibold);
+    color: var(--acm-text-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--acm-ls-wider);
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-6);
+}
+
+.acm-field-value {
+    font-size: var(--acm-text-base);
+    color: var(--acm-text-primary);
+    font-weight: var(--acm-fw-medium);
+    word-break: break-word;
+}
+
+.acm-field-value--empty {
+    color: var(--acm-text-muted);
+    font-style: italic;
+}
+
+/* Edit Mode Form Controls */
+.acm-form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--acm-sp-6);
+    margin-bottom: var(--acm-sp-16);
+}
+
+.acm-form-label {
+    font-size: var(--acm-text-sm);
+    font-weight: var(--acm-fw-semibold);
+    color: var(--acm-text-primary);
+}
+
+.acm-form-control {
+    width: 100%;
+    padding: var(--acm-sp-10) var(--acm-sp-14);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-md);
+    font-family: var(--acm-font-body);
+    font-size: var(--acm-text-base);
+    color: var(--acm-text-primary);
+    background-color: var(--acm-surface);
+    transition: border-color var(--acm-transition-fast), box-shadow var(--acm-transition-fast);
+    box-sizing: border-box;
+}
+
+.acm-form-control:focus {
+    outline: none;
+    border-color: var(--school-primary, var(--acm-navy));
+    box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
+}
+
+textarea.acm-form-control {
+    min-height: 80px;
+    resize: vertical;
+}
+
+.acm-form-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--acm-sp-12);
+    margin-top: var(--acm-sp-20);
+    padding-top: var(--acm-sp-16);
+    border-top: 1px solid var(--acm-border);
+}
+
+.acm-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--acm-sp-8);
+    padding: var(--acm-sp-10) var(--acm-sp-20);
+    border-radius: var(--acm-radius-md);
+    font-size: var(--acm-text-sm);
+    font-weight: var(--acm-fw-semibold);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--acm-transition-fast);
+    border: 1px solid transparent;
+}
+
+.acm-btn--primary {
+    background-color: var(--school-primary, var(--acm-navy));
+    color: #fff;
+}
+
+.acm-btn--primary:hover {
+    filter: brightness(1.1);
+}
+
+.acm-btn--secondary {
+    background-color: var(--acm-bg);
+    border-color: var(--acm-border);
+    color: var(--acm-text-primary);
+}
+
+.acm-btn--secondary:hover {
+    background-color: var(--acm-border);
+}
+
+.acm-btn--danger {
+    background-color: var(--acm-error-bg, #fee2e2);
+    color: var(--acm-error);
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.acm-btn--danger:hover {
+    background-color: var(--acm-error);
+    color: #fff;
+}
+
+/* Account Actions List */
+.acm-account-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--acm-sp-8);
+}
+
+.acm-account-item {
+    background-color: var(--acm-surface);
+    border: 1px solid var(--acm-border);
+    border-radius: var(--acm-radius-md);
+    padding: var(--acm-sp-14) var(--acm-sp-18);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-decoration: none;
+    color: var(--acm-text-primary);
+    transition: background-color var(--acm-transition-fast);
+}
+
+.acm-account-item:hover {
+    background-color: var(--acm-bg);
+}
+
+.acm-account-item--danger {
+    color: var(--acm-error);
+}
+
+.acm-account-item--danger:hover {
+    background-color: var(--acm-error-bg, #fee2e2);
+}
+
+/* Password Visibility Toggle */
+.acm-password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.acm-password-toggle-btn {
+    position: absolute;
+    right: 12px;
+    inset-inline-end: 12px;
+    background: none;
+    border: none;
+    color: var(--acm-text-muted);
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+}
+
+.acm-password-toggle-btn:hover {
+    color: var(--acm-text-primary);
+}
+
+/* Feedback Alert Banner */
+.acm-alert {
+    padding: var(--acm-sp-12) var(--acm-sp-16);
+    border-radius: var(--acm-radius-md);
+    font-size: var(--acm-text-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-10);
+    margin-bottom: var(--acm-sp-20);
+}
+
+.acm-alert--success {
+    background-color: var(--acm-success-bg, #dcfce7);
+    color: var(--acm-success, #166534);
+    border: 1px solid rgba(22, 101, 52, 0.2);
+}
+
+.acm-alert--error {
+    background-color: var(--acm-error-bg, #fee2e2);
+    color: var(--acm-error, #991b1b);
+    border: 1px solid rgba(153, 27, 27, 0.2);
+}

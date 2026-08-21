@@ -1,383 +1,279 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
-    <link rel="stylesheet" href="/css/main.css">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-    <style>
-        :root { --primary: <%= (school && school.primary_color) ? school.primary_color : '#6366f1' %>; }
-
-        *, *::before, *::after { box-sizing: border-box; }
-        body { background: #f0f4ff; color: #1e293b; font-family: 'Inter', sans-serif; margin: 0; padding: 0; min-height: 100vh; }
-
-        /* ── Top bar ── */
-        .portal-nav {
-            background: var(--primary);
-            color: white;
-            padding: 14px 36px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-        }
-        .nav-brand { display: flex; align-items: center; gap: 10px; color: white; text-decoration: none; }
-        .nav-brand i { font-size: 1.9rem; }
-        .nav-brand .brand-text { font-weight: 700; font-size: 0.95rem; line-height: 1.25; }
-        .nav-brand .brand-sub { font-size: 0.72rem; font-weight: 500; opacity: 0.8; }
-        .nav-links { display: flex; align-items: center; gap: 22px; }
-        .nav-links a { color: rgba(255,255,255,0.88); text-decoration: none; font-size: 0.88rem; font-weight: 600; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
-        .nav-links a:hover { color: white; }
-
-        /* ── Page wrapper ── */
-        .page { max-width: 860px; margin: 0 auto; padding: 36px 20px 60px; }
-
-        /* ── Hero banner ── */
-        .hero {
-            background: var(--primary);
-            border-radius: 20px;
-            padding: 36px 36px 70px;
-            position: relative;
-            overflow: hidden;
-            color: white;
-            margin-bottom: 0;
-        }
-        .hero::before {
-            content: '';
-            position: absolute;
-            top: -40px; right: -40px;
-            width: 200px; height: 200px;
-            background: rgba(255,255,255,0.07);
-            border-radius: 50%;
-        }
-        .hero::after {
-            content: '';
-            position: absolute;
-            bottom: -60px; left: -20px;
-            width: 260px; height: 260px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 50%;
-        }
-        .hero-top { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 16px; position: relative; z-index: 1; }
-        .hero-name { font-size: 1.6rem; font-weight: 800; margin: 0 0 4px; font-family: 'Playfair Display', serif; }
-        .hero-meta { font-size: 0.88rem; opacity: 0.85; display: flex; gap: 16px; flex-wrap: wrap; }
-        .hero-meta span { display: flex; align-items: center; gap: 5px; }
-        .hero-badge {
-            background: rgba(255,255,255,0.18);
-            border: 1px solid rgba(255,255,255,0.28);
-            border-radius: 30px;
-            padding: 6px 14px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            backdrop-filter: blur(6px);
-        }
-
-        /* ── Avatar overlapping hero ── */
-        .avatar-row {
-            position: relative;
-            z-index: 10;
-            display: flex;
-            align-items: flex-end;
-            gap: 20px;
-            margin-top: -52px;
-            padding: 0 32px;
-        }
-        .avatar-wrap {
-            width: 100px; height: 100px;
-            border-radius: 50%;
-            border: 4px solid white;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            background: #e2e8f0;
-            overflow: hidden;
-            cursor: pointer;
-            position: relative;
-            flex-shrink: 0;
-        }
-        .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
-        .avatar-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2.8rem; color: #94a3b8; background: #e2e8f0; }
-        .avatar-overlay {
-            position: absolute; inset: 0;
-            background: rgba(0,0,0,0.4);
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; border-radius: 50%;
-            transition: opacity 0.25s;
-            color: white; font-size: 1.3rem;
-        }
-        .avatar-wrap:hover .avatar-overlay { opacity: 1; }
-        .avatar-meta { padding-bottom: 8px; }
-        .avatar-meta .id-badge {
-            display: inline-block;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 20px;
-            padding: 3px 12px;
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #475569;
-        }
-
-        /* ── Main card ── */
-        .main-card {
-            background: white;
-            border-radius: 0 0 20px 20px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.07);
-            padding: 60px 36px 36px;
-        }
-
-        /* ── Alerts ── */
-        .alert {
-            border-radius: 12px;
-            padding: 14px 18px;
-            margin-bottom: 28px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
-        .alert-danger  { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
-
-        /* ── Section label ── */
-        .section-label {
-            font-size: 0.72rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--primary);
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .section-label::after { content: ''; flex: 1; height: 1px; background: #e2e8f0; }
-
-        /* ── Form grid ── */
-        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .form-grid.full { grid-template-columns: 1fr; }
-
-        .field { display: flex; flex-direction: column; gap: 6px; }
-        .field label { font-size: 0.82rem; font-weight: 600; color: #64748b; display: flex; align-items: center; gap: 6px; }
-        .field input, .field textarea {
-            padding: 11px 14px;
-            border: 1.5px solid #e2e8f0;
-            border-radius: 10px;
-            font-size: 0.93rem;
-            font-family: 'Inter', sans-serif;
-            color: #1e293b;
-            background: #f8fafc;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            width: 100%;
-        }
-        .field input:focus, .field textarea:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
-            outline: none;
-            background: white;
-        }
-        .field textarea { resize: vertical; min-height: 84px; }
-
-        /* Hidden file input — triggered via avatar click */
-        #photoInput { display: none; }
-
-        /* ── Footer actions ── */
-        .form-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 12px;
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid #f1f5f9;
-        }
-        .btn-save {
-            background: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            padding: 13px 32px;
-            font-size: 0.95rem;
-            font-weight: 700;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            transition: opacity 0.2s, transform 0.1s;
-            box-shadow: 0 4px 14px rgba(99,102,241,0.3);
-        }
-        .btn-save:hover { opacity: 0.88; transform: translateY(-1px); }
-        .btn-save:active { transform: translateY(0); }
-
-        .link-btn {
-            color: var(--primary);
-            text-decoration: none;
-            font-size: 0.88rem;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            transition: opacity 0.2s;
-        }
-        .link-btn:hover { opacity: 0.75; }
-
-        /* ── Photo hint toast ── */
-        .photo-hint {
-            position: fixed;
-            bottom: 24px; left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: #1e293b;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 30px;
-            font-size: 0.83rem;
-            font-weight: 600;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s, transform 0.3s;
-            white-space: nowrap;
-            z-index: 999;
-        }
-        .photo-hint.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-
-        @media (max-width: 640px) {
-            .portal-nav { padding: 14px 18px; }
-            .nav-brand .brand-text { display: none; }
-            .hero { padding: 24px 20px 60px; }
-            .hero-name { font-size: 1.3rem; }
-            .avatar-row { padding: 0 18px; }
-            .main-card { padding: 52px 18px 24px; }
-            .form-grid { grid-template-columns: 1fr; }
-        }
-    </style>
+    <%- include('../partials/student_shell_head') %>
+    <link rel="stylesheet" href="/css/profile.css">
 </head>
 <body>
+<div class="acm-portal-shell">
+    <%- include('../partials/student_shell_nav') %>
+    <main class="acm-main-content">
+        <%- include('../partials/student_shell_header') %>
 
-<nav class="portal-nav">
-    <a href="/portal" class="nav-brand">
-        <i class="bi bi-grid-1x2-fill"></i>
-        <div>
-            <div class="brand-text">Student Portal</div>
-            <div class="brand-sub">Dashboard</div>
+        <div class="acm-desktop-header">
+            <div class="acm-header-greeting">
+                <h1 class="acm-greeting-title">My Profile</h1>
+                <p class="acm-greeting-meta"><%= currentTerm %> &middot; <%= currentSession %></p>
+            </div>
+            <div class="acm-header-actions">
+                <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
+                    <i class="bi bi-bell" aria-hidden="true"></i>
+                    <% if (individualMessagesCount > 0) { %>
+                        <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+                    <% } %>
+                </a>
+            </div>
         </div>
-    </a>
-    <div class="nav-links">
-        <a href="/auth/student-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
-    </div>
-</nav>
 
-<% if (typeof error !== 'undefined' && error) { %>
-<div style="max-width:860px;margin:20px auto 0;padding:0 20px;">
-    <div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill"></i> <%= error %></div>
-</div>
-<% } %>
-<% if (typeof success !== 'undefined' && success) { %>
-<div style="max-width:860px;margin:20px auto 0;padding:0 20px;">
-    <div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> <%= success %></div>
-</div>
-<% } %>
+        <% if (typeof success !== 'undefined' && success) { %>
+            <div class="acm-alert acm-alert--success" role="alert">
+                <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                <span><%= success %></span>
+            </div>
+        <% } %>
 
-<div class="page">
-    <form action="/portal/profile" method="POST" enctype="multipart/form-data" id="profileForm">
-        <input type="file" name="passport" accept="image/*" id="photoInput">
+        <% if (typeof error !== 'undefined' && error) { %>
+            <div class="acm-alert acm-alert--error" role="alert">
+                <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+                <span><%= error %></span>
+            </div>
+        <% } %>
 
-        <!-- Hero Banner -->
-        <div class="hero">
-            <div class="hero-top">
-                <div>
-                    <h1 class="hero-name"><%= student.first_name %> <%= student.last_name %></h1>
-                    <div class="hero-meta">
-                        <span><i class="bi bi-hash"></i> <%= student.admission_number %></span>
-                        <% if (student.class_name) { %>
-                        <span><i class="bi bi-mortarboard"></i> <%= student.class_name %></span>
-                        <% } %>
+        <!-- PROFILE HERO / IDENTITY -->
+        <div class="acm-profile-hero">
+            <div class="acm-avatar-container">
+                <% if (student.passport_photo_path) { %>
+                    <img id="avatarPreview" src="<%= student.passport_photo_path %>" alt="<%= student.first_name %> <%= student.last_name %>" class="acm-profile-avatar">
+                <% } else { %>
+                    <div id="avatarInitials" class="acm-avatar-initials">
+                        <%= (student.first_name ? student.first_name[0] : '') + (student.last_name ? student.last_name[0] : '') %>
+                    </div>
+                    <img id="avatarPreview" src="" alt="Profile Preview" class="acm-profile-avatar" style="display:none;">
+                <% } %>
+                <form id="avatarForm" action="/portal/profile" method="POST" enctype="multipart/form-data" style="display:none;">
+                    <input type="file" id="passportInput" name="passport" accept="image/jpeg,image/png,image/webp">
+                </form>
+                <label for="passportInput" class="acm-avatar-upload-btn" title="Change photo" aria-label="Change photo">
+                    <i class="bi bi-camera-fill" aria-hidden="true"></i>
+                </label>
+            </div>
+
+            <div class="acm-profile-identity">
+                <h2 class="acm-profile-name"><%= student.first_name %> <%= student.other_names ? student.other_names + ' ' : '' %><%= student.last_name %></h2>
+                <div class="acm-profile-meta">
+                    <span class="acm-profile-id-badge">ID: <%= student.admission_number || student.id %></span>
+                    <span>&middot;</span>
+                    <span><%= student.class_name || 'Enrolled Scholar' %></span>
+                    <span>&middot;</span>
+                    <span><%= currentSession %></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT SECTIONS -->
+        <div class="acm-profile-sections-grid">
+            
+            <!-- COLUMN 1: SCHOOL-MANAGED INFORMATION (READ ONLY) -->
+            <div class="acm-profile-card">
+                <div class="acm-profile-card-header">
+                    <h3 class="acm-profile-card-title">
+                        <i class="bi bi-shield-lock" style="color:var(--acm-text-muted);" aria-hidden="true"></i>
+                        School Information
+                    </h3>
+                    <span class="acm-profile-card-subtitle">Official Records</span>
+                </div>
+
+                <div class="acm-field-list">
+                    <div class="acm-field-row">
+                        <span class="acm-field-label">Student ID / Admission No.</span>
+                        <span class="acm-field-value"><%= student.admission_number || student.id %></span>
+                    </div>
+
+                    <div class="acm-field-row">
+                        <span class="acm-field-label">Full Name</span>
+                        <span class="acm-field-value"><%= student.first_name %> <%= student.other_names ? student.other_names + ' ' : '' %><%= student.last_name %></span>
+                    </div>
+
+                    <div class="acm-field-row">
+                        <span class="acm-field-label">Current Class</span>
+                        <span class="acm-field-value"><%= student.class_name || 'Unassigned' %></span>
+                    </div>
+
+                    <div class="acm-field-row">
+                        <span class="acm-field-label">Academic Session</span>
+                        <span class="acm-field-value"><%= currentSession %></span>
+                    </div>
+
+                    <div class="acm-field-row">
+                        <span class="acm-field-label">Gender</span>
+                        <span class="acm-field-value"><%= student.gender || 'Not specified' %></span>
+                    </div>
+
+                    <div class="acm-field-row">
+                        <span class="acm-field-label">Enrollment Status</span>
+                        <span class="acm-field-value">
+                            <span class="acm-status-chip acm-status-chip--present">Active Student</span>
+                        </span>
                     </div>
                 </div>
-                <span class="hero-badge"><i class="bi bi-person-check"></i> Active Student</span>
+
+                <p style="font-size: var(--acm-text-xs); color: var(--acm-text-muted); margin-top: var(--acm-sp-16); margin-bottom: 0;">
+                    <i class="bi bi-info-circle" aria-hidden="true"></i> School information is managed directly by the administration.
+                </p>
             </div>
+
+            <!-- COLUMN 2: STUDENT-MANAGED INFORMATION (PERSONAL & CONTACT) -->
+            <div class="acm-profile-card">
+                
+                <!-- VIEW MODE -->
+                <div id="contactViewMode">
+                    <div class="acm-profile-card-header">
+                        <h3 class="acm-profile-card-title">
+                            <i class="bi bi-person-lines-fill" style="color:var(--school-primary, var(--acm-navy));" aria-hidden="true"></i>
+                            Personal &amp; Contact
+                        </h3>
+                        <button type="button" id="editBtn" class="acm-btn acm-btn--secondary" style="padding: 4px 12px; font-size: var(--acm-text-xs);">
+                            <i class="bi bi-pencil" aria-hidden="true"></i> Edit
+                        </button>
+                    </div>
+
+                    <div class="acm-field-list">
+                        <div class="acm-field-row">
+                            <span class="acm-field-label">Date of Birth</span>
+                            <span class="acm-field-value <%= !displayDob ? 'acm-field-value--empty' : '' %>">
+                                <%= displayDob || 'Not provided' %>
+                            </span>
+                        </div>
+
+                        <div class="acm-field-row">
+                            <span class="acm-field-label">Phone Number</span>
+                            <span class="acm-field-value <%= !student.phone ? 'acm-field-value--empty' : '' %>">
+                                <%= student.phone || 'Not provided' %>
+                            </span>
+                        </div>
+
+                        <div class="acm-field-row">
+                            <span class="acm-field-label">Email Address</span>
+                            <span class="acm-field-value <%= !student.email ? 'acm-field-value--empty' : '' %>">
+                                <%= student.email || 'Not provided' %>
+                            </span>
+                        </div>
+
+                        <div class="acm-field-row">
+                            <span class="acm-field-label">Residential Address</span>
+                            <span class="acm-field-value <%= !student.address ? 'acm-field-value--empty' : '' %>">
+                                <%= student.address || 'Not provided' %>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- EDIT MODE -->
+                <div id="contactEditMode" style="display: none;">
+                    <div class="acm-profile-card-header">
+                        <h3 class="acm-profile-card-title">
+                            <i class="bi bi-pencil-square" style="color:var(--school-primary, var(--acm-navy));" aria-hidden="true"></i>
+                            Edit Personal Details
+                        </h3>
+                    </div>
+
+                    <form action="/portal/profile" method="POST" id="profileForm">
+                        <div class="acm-form-group">
+                            <label for="dobInput" class="acm-form-label">Date of Birth</label>
+                            <input type="date" id="dobInput" name="dob" class="acm-form-control" value="<%= rawDob %>">
+                        </div>
+
+                        <div class="acm-form-group">
+                            <label for="phoneInput" class="acm-form-label">Phone Number</label>
+                            <input type="tel" id="phoneInput" name="phone" class="acm-form-control" value="<%= student.phone || '' %>" placeholder="e.g. 08012345678">
+                        </div>
+
+                        <div class="acm-form-group">
+                            <label for="emailInput" class="acm-form-label">Email Address</label>
+                            <input type="email" id="emailInput" name="email" class="acm-form-control" value="<%= student.email || '' %>" placeholder="student@example.com">
+                        </div>
+
+                        <div class="acm-form-group">
+                            <label for="addressInput" class="acm-form-label">Residential Address</label>
+                            <textarea id="addressInput" name="address" class="acm-form-control" placeholder="Enter your full address"><%= student.address || '' %></textarea>
+                        </div>
+
+                        <div class="acm-form-actions">
+                            <button type="button" id="cancelEditBtn" class="acm-btn acm-btn--secondary">Cancel</button>
+                            <button type="submit" class="acm-btn acm-btn--primary">
+                                <i class="bi bi-check2" aria-hidden="true"></i> Save Changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+
         </div>
 
-        <!-- Avatar row overlapping hero/card -->
-        <div class="avatar-row">
-            <div class="avatar-wrap" id="avatarWrap" onclick="document.getElementById('photoInput').click()" title="Click to change photo">
-                <% if (student.passport_photo_path) { %>
-                    <img id="avatarImg" src="<%= student.passport_photo_path %>" alt="Profile Photo">
-                <% } else { %>
-                    <div class="avatar-placeholder" id="avatarPlaceholder"><i class="bi bi-person-fill"></i></div>
-                <% } %>
-                <div class="avatar-overlay"><i class="bi bi-camera"></i></div>
-            </div>
-            <div class="avatar-meta">
-                <span class="id-badge"><i class="bi bi-camera" style="margin-right:4px;"></i>Click photo to update</span>
-            </div>
-        </div>
-
-        <!-- Main Card -->
-        <div class="main-card">
-
-            <div class="section-label"><i class="bi bi-calendar-heart"></i> Personal Information</div>
-            <div class="form-grid">
-                <div class="field">
-                    <label for="dob"><i class="bi bi-calendar2"></i> Date of Birth</label>
-                    <input type="date" id="dob" name="dob" value="<%= student.formatted_dob || '' %>">
-                </div>
-                <div class="field">
-                    <label for="phone"><i class="bi bi-telephone"></i> Phone Number</label>
-                    <input type="tel" id="phone" name="phone" placeholder="e.g. 08012345678" value="<%= student.phone || '' %>">
-                </div>
-            </div>
-
-            <div class="form-grid full">
-                <div class="field">
-                    <label for="email"><i class="bi bi-envelope"></i> Email Address</label>
-                    <input type="email" id="email" name="email" placeholder="e.g. student@email.com" value="<%= student.email || '' %>">
-                </div>
-            </div>
-
-            <div class="section-label" style="margin-top:24px;"><i class="bi bi-geo-alt"></i> Home Address</div>
-            <div class="form-grid full">
-                <div class="field">
-                    <label for="address"><i class="bi bi-house"></i> Address</label>
-                    <textarea id="address" name="address" placeholder="Enter your full home address"><%= student.address || '' %></textarea>
-                </div>
-            </div>
-
-            <div class="form-actions">
-                <a href="/portal/change-password" class="link-btn">
-                    <i class="bi bi-shield-lock-fill"></i> Change Password
+        <!-- ACCOUNT ACTIONS SECTION -->
+        <section class="acm-section">
+            <h2 class="acm-section-title">Account Security</h2>
+            <div class="acm-account-list">
+                <a href="/portal/change-password" class="acm-account-item">
+                    <div style="display:flex; align-items:center; gap:var(--acm-sp-12);">
+                        <i class="bi bi-key" style="font-size:1.25rem; color:var(--school-primary, var(--acm-navy));" aria-hidden="true"></i>
+                        <div>
+                            <div style="font-weight:var(--acm-fw-semibold); font-size:var(--acm-text-sm);">Change Password</div>
+                            <div style="font-size:var(--acm-text-xs); color:var(--acm-text-muted);">Update your portal access credentials</div>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right" style="color:var(--acm-text-muted);" aria-hidden="true"></i>
                 </a>
-                <button type="submit" class="btn-save">
-                    <i class="bi bi-floppy2-fill"></i> Save Changes
-                </button>
+
+                <a href="/auth/student-logout" class="acm-account-item acm-account-item--danger">
+                    <div style="display:flex; align-items:center; gap:var(--acm-sp-12);">
+                        <i class="bi bi-box-arrow-right" style="font-size:1.25rem;" aria-hidden="true"></i>
+                        <div>
+                            <div style="font-weight:var(--acm-fw-semibold); font-size:var(--acm-text-sm);">Sign Out</div>
+                            <div style="font-size:var(--acm-text-xs); color:rgba(239, 68, 68, 0.8);">End your current portal session</div>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </a>
             </div>
-        </div>
-    </form>
+        </section>
+
+    </main>
 </div>
 
-<!-- Photo hint toast -->
-<div class="photo-hint" id="photoHint"><i class="bi bi-check-circle"></i> Photo selected — save to apply</div>
-
 <script>
-    document.getElementById('photoInput').addEventListener('change', function () {
-        const file = this.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function (e) {
-            const wrap = document.getElementById('avatarWrap');
-            wrap.innerHTML = `
-                <img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;" alt="Preview">
-                <div class="avatar-overlay"><i class="bi bi-camera"></i></div>`;
-            const hint = document.getElementById('photoHint');
-            hint.classList.add('show');
-            setTimeout(() => hint.classList.remove('show'), 3500);
-        };
-        reader.readAsDataURL(file);
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    const editBtn = document.getElementById('editBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const viewMode = document.getElementById('contactViewMode');
+    const editMode = document.getElementById('contactEditMode');
+
+    if (editBtn && cancelEditBtn && viewMode && editMode) {
+        editBtn.addEventListener('click', () => {
+            viewMode.style.display = 'none';
+            editMode.style.display = 'block';
+        });
+
+        cancelEditBtn.addEventListener('click', () => {
+            editMode.style.display = 'none';
+            viewMode.style.display = 'block';
+        });
+    }
+
+    // Avatar Instant Upload
+    const passportInput = document.getElementById('passportInput');
+    const avatarForm = document.getElementById('avatarForm');
+    if (passportInput && avatarForm) {
+        passportInput.addEventListener('change', () => {
+            if (passportInput.files && passportInput.files[0]) {
+                avatarForm.submit();
+            }
+        });
+    }
+});
 </script>
+
+<%- include('../partials/student_shell_footer') %>
 </body>
 </html>

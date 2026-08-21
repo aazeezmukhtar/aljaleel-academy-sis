@@ -245,7 +245,7 @@ exports.getProfile = async (req, res) => {
 
 exports.postUpdateProfile = async (req, res) => {
     const studentId = req.session.student.id;
-    const { dob, phone, email, address } = req.body;
+    const { dob, phone, email, address, parent_phone, parent_address } = req.body;
     let passport_photo_path = null;
     if (req.file) {
         passport_photo_path = `/uploads/${req.file.filename}`;
@@ -254,14 +254,14 @@ exports.postUpdateProfile = async (req, res) => {
     try {
         if (passport_photo_path) {
             await db.run(
-                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ?, passport_photo_path = ? WHERE id = ?',
-                [dob || null, phone || null, email || null, address || null, passport_photo_path, studentId]
+                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ?, parent_phone = ?, parent_address = ?, passport_photo_path = ? WHERE id = ?',
+                [dob || null, phone || null, email || null, address || null, parent_phone || null, parent_address || null, passport_photo_path, studentId]
             );
             req.session.student.passport_photo_path = passport_photo_path;
         } else {
             await db.run(
-                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ? WHERE id = ?',
-                [dob || null, phone || null, email || null, address || null, studentId]
+                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ?, parent_phone = ?, parent_address = ? WHERE id = ?',
+                [dob || null, phone || null, email || null, address || null, parent_phone || null, parent_address || null, studentId]
             );
         }
 
@@ -269,6 +269,8 @@ exports.postUpdateProfile = async (req, res) => {
         if (email !== undefined) req.session.student.email = email;
         if (address !== undefined) req.session.student.address = address;
         if (dob !== undefined) req.session.student.dob = dob;
+        if (parent_phone !== undefined) req.session.student.parent_phone = parent_phone;
+        if (parent_address !== undefined) req.session.student.parent_address = parent_address;
 
         res.redirect('/portal/profile?success=Profile updated successfully');
     } catch (err) {

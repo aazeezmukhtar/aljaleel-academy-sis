@@ -206,6 +206,9 @@ const enrollStudent = async (req, res) => {
         academy_class_id,
         tahfeez_class_id,
         current_class_id,
+        phone,
+        email,
+        address,
         parent_phone,
         parent_address
     } = req.body;
@@ -217,10 +220,15 @@ const enrollStudent = async (req, res) => {
         const primary_class_id = academy_class_id || tahfeez_class_id || current_class_id || null;
         const hashedPassword = await bcrypt.hash(admission_number, 10);
         const sql = `
-            INSERT INTO students (first_name, last_name, gender, dob, current_class_id, parent_phone, parent_address, admission_number, passport_photo_path, password, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+            INSERT INTO students (first_name, last_name, gender, dob, current_class_id, phone, email, address, parent_phone, parent_address, admission_number, passport_photo_path, password, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `;
-        await db.run(sql, [first_name, last_name, gender, dob, primary_class_id, parent_phone, parent_address, admission_number, passport_photo_path, hashedPassword]);
+        await db.run(sql, [
+            first_name, last_name, gender, dob, primary_class_id,
+            phone || null, email || null, address || null,
+            parent_phone || null, parent_address || null,
+            admission_number, passport_photo_path, hashedPassword
+        ]);
         
         const studentRow = await db.get("SELECT id FROM students WHERE admission_number = ?", [admission_number]);
         const studentId = studentRow.id;

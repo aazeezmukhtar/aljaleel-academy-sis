@@ -134,18 +134,40 @@
 
                         <h3
                             style="margin-top: 30px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
+                            Student Contact Details</h3>
+                        <div class="form-grid"
+                            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                            <div class="form-group">
+                                <label>Student Phone Number</label>
+                                <input type="tel" name="phone" class="form-control"
+                                    value="<%= student.phone || '' %>" placeholder="e.g. +234 800 000 0000">
+                            </div>
+                            <div class="form-group">
+                                <label>Student Email Address</label>
+                                <input type="email" name="email" class="form-control"
+                                    value="<%= student.email || '' %>" placeholder="student@example.com">
+                            </div>
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Student Residential Address</label>
+                                <textarea name="address" class="form-control"
+                                    placeholder="Residential Address"><%= student.address || '' %></textarea>
+                            </div>
+                        </div>
+
+                        <h3
+                            style="margin-top: 30px; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
                             Parent/Guardian Contact</h3>
                         <div class="form-grid"
                             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
                             <div class="form-group">
                                 <label>Parent Phone Number</label>
                                 <input type="tel" name="parent_phone" class="form-control"
-                                    value="<%= student.parent_phone %>" placeholder="e.g. +234 800 000 0000">
+                                    value="<%= student.parent_phone || '' %>" placeholder="e.g. +234 800 000 0000">
                             </div>
-                            <div class="form-group" style="grid-column: span 1;">
+                            <div class="form-group" style="grid-column: 1 / -1;">
                                 <label>Parent Address</label>
                                 <textarea name="parent_address" class="form-control"
-                                    placeholder="Residential Address"><%= student.parent_address %></textarea>
+                                    placeholder="Residential Address"><%= student.parent_address || '' %></textarea>
                             </div>
                         </div>
 

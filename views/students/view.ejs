@@ -178,7 +178,7 @@
                                  </script>
                                 <div class="grid-2" style="margin-top: 30px;">
                                     <div class="card">
-                                        <h3>Personal Information</h3>
+                                        <h3>Personal &amp; Academic</h3>
                                         <div class="detail-grid" style="margin-top: 20px;">
                                             <div class="detail-item">
                                                 <strong>Gender</strong>
@@ -220,7 +220,33 @@
                                     </div>
 
                                     <div class="card">
-                                        <h3>Parent / Guardian</h3>
+                                        <h3>Student Contact</h3>
+                                        <div class="detail-grid" style="margin-top: 20px;">
+                                            <div class="detail-item">
+                                                <strong>Phone Number</strong>
+                                                <span>
+                                                    <%= student.phone || 'Not Provided' %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Email Address</strong>
+                                                <span>
+                                                    <%= student.email || 'Not Provided' %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item" style="grid-column: span 2;">
+                                                <strong>Residential Address</strong>
+                                                <span>
+                                                    <%= student.address || 'Not Provided' %>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="grid-2" style="margin-top: 30px;">
+                                    <div class="card">
+                                        <h3>Parent / Guardian Contact</h3>
                                         <div class="detail-grid" style="margin-top: 20px;">
                                             <div class="detail-item">
                                                 <strong>Contact Phone</strong>
@@ -236,7 +262,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
                                 <div class="grid-2" style="margin-top: 30px;">
                                     <div class="card">

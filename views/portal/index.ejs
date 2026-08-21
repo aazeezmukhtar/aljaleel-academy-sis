@@ -12,7 +12,7 @@
     <main class="acm-main-content">
         <%- include('../partials/student_shell_header') %>
 
-        <!-- Desktop Header -->
+        <!-- Desktop Header shown only when sidebar hides top header -->
         <% 
             const hour = new Date().getHours();
             let greeting = 'Good evening';
@@ -40,29 +40,29 @@
         <div class="acm-dashboard-grid">
             
             <!-- Left Column / Primary Content -->
-            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-24);">
+            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-20);">
                 
                 <!-- Section 1: Report Cards -->
                 <section class="acm-section">
                     <h2 class="acm-section-title">Report Cards</h2>
                     <% if (results && results.length > 0) { %>
-                        <div class="acm-card" style="gap: var(--acm-sp-18);">
+                        <div class="acm-card" style="gap: var(--acm-sp-16);">
                         <% results.forEach((result, index) => { %>
-                            <div style="<% if(index > 0) { %>border-top: 1px solid var(--acm-border); padding-top: var(--acm-sp-18);<% } %>">
-                                <div style="margin-bottom: var(--acm-sp-10);">
+                            <div style="<% if(index > 0) { %>border-top: 1px solid var(--acm-border); padding-top: var(--acm-sp-16);<% } %>">
+                                <div style="margin-bottom: var(--acm-sp-8);">
                                     <strong style="display: block; font-size: var(--acm-text-md); color: var(--acm-text-primary);"><%= result.term %></strong>
-                                    <span style="font-size: var(--acm-text-xs); color: var(--acm-text-secondary);"><%= result.session %></span>
+                                    <span style="font-size: var(--acm-text-sm); color: var(--acm-text-secondary);"><%= result.session %></span>
                                 </div>
-                                <div style="display: flex; gap: var(--acm-sp-10); flex-wrap: wrap;">
+                                <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap;">
                                     <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
                                         <% student.class_name.split(', ').forEach(className => { %>
-                                            <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="acm-btn-pill">
+                                            <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="acm-card-action" style="background: var(--acm-bg); padding: 6px 12px; border-radius: var(--acm-radius-sm); border: 1px solid var(--acm-border); text-decoration: none;">
                                                 <i class="bi bi-file-text" aria-hidden="true"></i>
                                                 <span><%= className %> Termly</span>
                                             </a>
                                         <% }) %>
                                     <% } else { %>
-                                        <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>" target="_blank" class="acm-btn-pill">
+                                        <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>" target="_blank" class="acm-card-action" style="background: var(--acm-bg); padding: 6px 12px; border-radius: var(--acm-radius-sm); border: 1px solid var(--acm-border); text-decoration: none;">
                                             <i class="bi bi-file-text" aria-hidden="true"></i>
                                             <span>Termly Report</span>
                                         </a>
@@ -71,20 +71,20 @@
                             </div>
                         <% }) %>
 
-                            <div style="margin-top: var(--acm-sp-8); border-top: 1px solid var(--acm-border); padding-top: var(--acm-sp-18);">
-                                <h4 style="font-size: var(--acm-text-xs); color: var(--acm-text-muted); margin: 0 0 var(--acm-sp-10) 0; text-transform: uppercase; letter-spacing: var(--acm-ls-wider);">Cumulative Reports</h4>
-                                <div style="display: flex; gap: var(--acm-sp-10); flex-wrap: wrap;">
+                            <div style="margin-top: var(--acm-sp-8); border-top: 1px solid var(--acm-border); padding-top: var(--acm-sp-16);">
+                                <h4 style="font-size: var(--acm-text-xs); color: var(--acm-text-muted); margin: 0 0 var(--acm-sp-8) 0; text-transform: uppercase;">Cumulative Reports</h4>
+                                <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap;">
                                     <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
                                         <% student.class_name.split(', ').forEach(className => { %>
-                                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="acm-btn-pill acm-btn-pill--primary">
+                                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="acm-card-action" style="background: var(--school-primary, var(--acm-navy)); color: #fff; padding: 6px 12px; border-radius: var(--acm-radius-sm); text-decoration: none;">
                                                 <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
-                                                <span><%= className %> Cumulative</span>
+                                                <span style="color: #fff;"><%= className %> Cumulative</span>
                                             </a>
                                         <% }) %>
                                     <% } else { %>
-                                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>" target="_blank" class="acm-btn-pill acm-btn-pill--primary">
+                                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>" target="_blank" class="acm-card-action" style="background: var(--school-primary, var(--acm-navy)); color: #fff; padding: 6px 12px; border-radius: var(--acm-radius-sm); text-decoration: none;">
                                             <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
-                                            <span>Cumulative Report</span>
+                                            <span style="color: #fff;">Cumulative Report</span>
                                         </a>
                                     <% } %>
                                 </div>
@@ -111,7 +111,7 @@
                                 <div class="acm-quick-value">--</div>
                             <% } %>
                             <div class="acm-card-action">
-                                <span>View summary</span>
+                                <span>View</span>
                                 <i class="bi bi-arrow-right" aria-hidden="true"></i>
                             </div>
                         </a>
@@ -121,19 +121,18 @@
                             <h3 class="acm-quick-title">Academics</h3>
                             <div class="acm-quick-value"><%= results && results.length > 0 ? results[0].subjects_taken + ' Subjects' : '--' %></div>
                             <div class="acm-card-action">
-                                <span>View results</span>
+                                <span>View</span>
                                 <i class="bi bi-arrow-right" aria-hidden="true"></i>
                             </div>
                         </a>
 
                         <!-- Class Board -->
-                        <a href="/portal/academics/class-board" class="acm-quick-card acm-card-link acm-quick-card--full">
+                        <a href="/portal/academics" class="acm-quick-card acm-card-link acm-quick-card--full">
                             <div class="acm-quick-content">
                                 <h3 class="acm-quick-title">Class Board</h3>
                                 <div class="acm-quick-value"><%= classPosts && classPosts.length > 0 ? classPosts.length + ' recent items' : 'No new items' %></div>
                             </div>
                             <div class="acm-card-action">
-                                <span>View board</span>
                                 <i class="bi bi-arrow-right" aria-hidden="true"></i>
                             </div>
                         </a>
@@ -143,13 +142,13 @@
             </div>
 
             <!-- Right Column / Secondary Content -->
-            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-24);">
+            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-20);">
                 
                 <!-- Section 4: Needs Your Attention (Conditional) -->
                 <% if ((results && results.length > 0) || (classPosts && classPosts.length > 0)) { %>
                 <section class="acm-section">
                     <h2 class="acm-section-title">Needs Your Attention</h2>
-                    <div style="display: flex; flex-direction: column; gap: var(--acm-sp-14);">
+                    <div style="display: flex; flex-direction: column; gap: var(--acm-sp-12);">
                         <% if (results && results.length > 0) { 
                             const latestResult = results[0];
                         %>
@@ -157,10 +156,7 @@
                             <i class="bi bi-file-earmark-check acm-attention-icon" aria-hidden="true"></i>
                             <div class="acm-attention-content">
                                 <p class="acm-attention-text">Your <%= latestResult.term %> report card is available.</p>
-                                <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" target="_blank" class="acm-attention-action">
-                                    <span>View Report Card</span>
-                                    <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                                </a>
+                                <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" target="_blank" class="acm-attention-action">View Report Card &rarr;</a>
                             </div>
                         </div>
                         <% } %>
@@ -170,10 +166,7 @@
                             <i class="bi bi-journal-text acm-attention-icon" aria-hidden="true"></i>
                             <div class="acm-attention-content">
                                 <p class="acm-attention-text"><%= classPosts.length %> new class board <%= classPosts.length === 1 ? 'post' : 'posts' %>.</p>
-                                <a href="/portal/academics/class-board" class="acm-attention-action">
-                                    <span>View Class Board</span>
-                                    <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                                </a>
+                                <a href="/portal/academics" class="acm-attention-action">View Class Board &rarr;</a>
                             </div>
                         </div>
                         <% } %>
@@ -190,16 +183,15 @@
                     <h2 class="acm-section-title">Announcement</h2>
                     <div class="acm-announcement-card">
                         <div class="acm-announcement-meta">
-                            <span><i class="bi bi-calendar3"></i> <%= date %></span>
-                            <% if (latestAnn.priority === 'High' || latestAnn.priority === 'Urgent') { %>
+                            <span><%= date %></span>
+                            <% if (latestAnn.priority === 'High') { %>
                                 <span>&middot;</span>
-                                <span class="acm-status-chip acm-status-chip--overdue" style="padding: 2px 8px;">Important</span>
+                                <span style="color: var(--acm-error); font-weight: var(--acm-fw-bold);">Important</span>
                             <% } %>
                         </div>
                         <h3 class="acm-announcement-title"><%= latestAnn.title %></h3>
-                        <div class="acm-announcement-snippet"><%- latestAnn.content.replace(/<[^>]*>?/gm, '') %></div>
-                        <div style="margin-top: var(--acm-sp-14); display: flex; justify-content: space-between; align-items: center; border-top: 1px solid rgba(0,0,0,0.06); padding-top: var(--acm-sp-10);">
-                            <a href="/portal/announcement/<%= latestAnn.id %>" style="color: var(--school-primary, var(--acm-navy)); font-weight: var(--acm-fw-bold); font-size: var(--acm-text-sm); text-decoration: none;">Read more &rarr;</a>
+                        <div class="acm-card-action" style="margin-top: var(--acm-sp-12); display: flex; justify-content: space-between; align-items: center;">
+                            <a href="/portal/announcement/<%= latestAnn.id %>" style="color: var(--school-primary, var(--acm-navy)); font-weight: var(--acm-fw-semibold); text-decoration: none;">Read more &rarr;</a>
                             <a href="/portal/notifications" style="font-size: var(--acm-text-xs); color: var(--acm-text-secondary); text-decoration: none;">All updates &rarr;</a>
                         </div>
                     </div>

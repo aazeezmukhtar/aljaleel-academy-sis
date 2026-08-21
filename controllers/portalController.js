@@ -315,17 +315,30 @@ exports.getCalendar = async (req, res) => {
 exports.viewAnnouncement = async (req, res) => {
     try {
         const id = req.params.id;
-        const announcement = await db.get('SELECT * FROM announcements WHERE id = ?', [id]);
-        
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+
+        const announcement = await db.get('SELECT * FROM announcements WHERE id = ? AND is_published = 1', [id]);
         if (!announcement) {
-            return res.redirect('/portal?error=Announcement not found');
+            return res.redirect('/portal/notifications?error=Announcement not found');
         }
+
+        // Auto-mark read
+        await db.run(`
+            INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
+            VALUES (?, 'student', ?, 'announcement')
+        `, [studentId, id]);
 
         res.render('portal/announcement', {
             title: announcement.title,
-            student: req.session.student,
-            school: await getSettings(),
-            announcement
+            student: ctx.studentObj || req.session.student,
+            school,
+            announcement,
+            currentTerm: ctx.activeTerm,
+            currentSession: ctx.activeSession,
+            individualMessagesCount: ctx.individualMessagesCount,
+            sectionInfo: ctx.enrolledClasses
         });
     } catch (err) {
         console.error('Portal View Announcement Error:', err);
@@ -337,6 +350,10 @@ exports.viewAnnouncement = async (req, res) => {
 exports.viewAssignment = async (req, res) => {
     try {
         const id = req.params.id;
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+
         const post = await db.get(`
             SELECT cp.*, s.first_name, s.last_name, sub.name as subject_name
             FROM class_posts cp
@@ -346,14 +363,24 @@ exports.viewAssignment = async (req, res) => {
         `, [id]);
 
         if (!post) {
-            return res.redirect('/portal?error=Assignment or post not found');
+            return res.redirect('/portal/academics/class-board?error=Class post not found');
         }
+
+        // Auto-mark read
+        await db.run(`
+            INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
+            VALUES (?, 'student', ?, 'class_post')
+        `, [studentId, id]);
 
         res.render('portal/assignment', {
             title: post.title,
-            student: req.session.student,
-            school: await getSettings(),
-            post
+            student: ctx.studentObj || req.session.student,
+            school,
+            post,
+            currentTerm: ctx.activeTerm,
+            currentSession: ctx.activeSession,
+            individualMessagesCount: ctx.individualMessagesCount,
+            sectionInfo: ctx.enrolledClasses
         });
     } catch (err) {
         console.error('Portal View Assignment Error:', err);
@@ -365,11 +392,31 @@ exports.viewAssignment = async (req, res) => {
 // PHASE 3 — ACADEMICS HUB CONTROLLERS
 // ============================================================
 
+// Helper: Format human-friendly relative time
+const formatRelativeTime = (dateInput) => {
+    if (!dateInput) return '';
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) return '';
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHours = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHours / 24);
+
+    if (diffSec < 60) return 'Just now';
+    if (diffMin < 60) return `${diffMin}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
 // Shared helper: resolve student's active class & section context
 const getStudentContext = async (studentId, school) => {
     const currentSessionStr = school.current_session || '2024/2025';
     const enrolledClasses = await db.all(`
-        SELECT c.id as class_id, c.name as class_name, sec.name as section_name,
+        SELECT c.id as class_id, c.name as class_name, sec.id as section_id, sec.name as section_name,
                sec.current_session as section_session, sec.current_term as section_term
         FROM student_enrollments se
         JOIN classes c ON se.class_id = c.id
@@ -400,8 +447,40 @@ const getStudentContext = async (studentId, school) => {
         ? enrolledClasses.map(c => c.class_id)
         : (studentObj && studentObj.current_class_id ? [studentObj.current_class_id] : []);
 
-    const msgCountObj = await db.get('SELECT COUNT(*) as c FROM class_posts WHERE student_id = ?', [studentId]);
-    const individualMessagesCount = msgCountObj ? msgCountObj.c : 0;
+    const sectionIds = enrolledClasses.map(c => c.section_id).filter(Boolean);
+    let sectionFilter = sectionIds.length > 0
+        ? `AND (section_id IS NULL OR section_id IN (${sectionIds.join(',')}))`
+        : `AND section_id IS NULL`;
+
+    // Compute unread announcements
+    const unreadAnnouncements = await db.get(`
+        SELECT COUNT(*) as c FROM announcements a
+        WHERE is_published = 1 AND (target_role = 'Students' OR target_role = 'All')
+        ${sectionFilter}
+        AND NOT EXISTS (
+            SELECT 1 FROM notification_reads nr 
+            WHERE nr.user_id = ? AND nr.user_type = 'student' 
+            AND nr.source_id = a.id AND nr.source_type = 'announcement'
+        )
+    `, [studentId]);
+
+    // Compute unread class posts
+    let unreadPostsCount = 0;
+    if (enrolledClassIds.length > 0) {
+        const ph = enrolledClassIds.map(() => '?').join(',');
+        const unreadPostsObj = await db.get(`
+            SELECT COUNT(*) as c FROM class_posts cp
+            WHERE cp.class_id IN (${ph}) AND (cp.student_id IS NULL OR cp.student_id = ?)
+            AND NOT EXISTS (
+                SELECT 1 FROM notification_reads nr 
+                WHERE nr.user_id = ? AND nr.user_type = 'student' 
+                AND nr.source_id = cp.id AND nr.source_type = 'class_post'
+            )
+        `, [...enrolledClassIds, studentId, studentId]);
+        unreadPostsCount = unreadPostsObj ? unreadPostsObj.c : 0;
+    }
+
+    const individualMessagesCount = (unreadAnnouncements ? unreadAnnouncements.c : 0) + unreadPostsCount;
 
     return {
         studentObj,
@@ -687,9 +766,18 @@ exports.getNotifications = async (req, res) => {
         const studentId = req.session.student.id;
         const school = await getSettings();
         const ctx = await getStudentContext(studentId, school);
-        const { studentObj, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+        const { studentObj, enrolledClassIds, activeSession, activeTerm } = ctx;
 
-        // Enrolled section IDs for section-filtered announcements
+        const activeFilter = req.query.filter || 'all';
+
+        // 1. Fetch Reads for this student
+        const reads = await db.all(`
+            SELECT source_id, source_type FROM notification_reads 
+            WHERE user_id = ? AND user_type = 'student'
+        `, [studentId]);
+        const readSet = new Set(reads.map(r => `${r.source_type}_${r.source_id}`));
+
+        // 2. Announcements
         const sectionRows = await db.all(`
             SELECT DISTINCT s.id as section_id
             FROM student_enrollments se
@@ -702,38 +790,184 @@ exports.getNotifications = async (req, res) => {
             ? `AND (section_id IS NULL OR section_id IN (${sectionIds.join(',')}))`
             : `AND section_id IS NULL`;
 
-        const announcements = await db.all(`
+        const announcementsRaw = await db.all(`
             SELECT * FROM announcements
             WHERE is_published = 1 AND (target_role = 'Students' OR target_role = 'All')
             ${sectionFilter}
             ORDER BY created_at DESC
         `);
 
-        // Class posts targeted to this student (individual messages)
-        let classPosts = [];
+        const announcementsList = announcementsRaw.map(a => {
+            const isRead = readSet.has(`announcement_${a.id}`);
+            return {
+                id: a.id,
+                source_type: 'announcement',
+                category: 'announcement',
+                type: a.type || 'Announcement',
+                title: a.title,
+                message: a.content ? a.content.substring(0, 140) + (a.content.length > 140 ? '...' : '') : '',
+                priority: a.priority,
+                created_at: a.created_at,
+                relativeTime: formatRelativeTime(a.created_at),
+                url: `/portal/announcement/${a.id}`,
+                isRead,
+                icon: 'bi-megaphone'
+            };
+        });
+
+        // 3. Class Posts / Assignments
+        let classPostsRaw = [];
         if (enrolledClassIds.length > 0) {
             const ph = enrolledClassIds.map(() => '?').join(',');
-            classPosts = await db.all(`
+            classPostsRaw = await db.all(`
                 SELECT cp.*, st.first_name, st.last_name, sub.name as subject_name
                 FROM class_posts cp
                 JOIN staff st ON cp.teacher_id = st.id
                 LEFT JOIN subjects sub ON cp.subject_id = sub.id
                 WHERE cp.class_id IN (${ph}) AND (cp.student_id IS NULL OR cp.student_id = ?)
                 ORDER BY cp.created_at DESC
-                LIMIT 30
+                LIMIT 40
             `, [...enrolledClassIds, studentId]);
         }
 
+        const now = new Date();
+        const personalList = classPostsRaw.map(cp => {
+            const isRead = readSet.has(`class_post_${cp.id}`);
+            const isAssignment = cp.post_type === 'Assignment';
+            const isOverdue = isAssignment && cp.due_date && new Date(cp.due_date) < now;
+            
+            let statusChip = null;
+            let statusChipType = 'pending';
+            if (isAssignment) {
+                if (isOverdue) {
+                    statusChip = 'Overdue';
+                    statusChipType = 'overdue';
+                } else if (cp.due_date) {
+                    statusChip = `Due ${new Date(cp.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`;
+                    statusChipType = 'pending';
+                }
+            }
+
+            return {
+                id: cp.id,
+                source_type: 'class_post',
+                category: isAssignment ? 'assignment' : 'academic',
+                type: cp.post_type,
+                title: cp.title,
+                message: cp.content ? cp.content.substring(0, 140) + (cp.content.length > 140 ? '...' : '') : '',
+                tag: cp.subject_name || `${cp.first_name} ${cp.last_name}`,
+                created_at: cp.created_at,
+                relativeTime: formatRelativeTime(cp.created_at),
+                url: `/portal/assignment/${cp.id}`,
+                isRead,
+                statusChip,
+                statusChipType,
+                icon: isAssignment ? 'bi-pencil-square' : 'bi-journal-text'
+            };
+        });
+
+        // 4. Combined & Filtered Feed
+        const allItems = [...personalList, ...announcementsList]
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+        const totalUnread = allItems.filter(i => !i.isRead).length;
+
+        let displayItems = allItems;
+        if (activeFilter === 'unread') {
+            displayItems = allItems.filter(i => !i.isRead);
+        } else if (activeFilter === 'personal') {
+            displayItems = personalList;
+        } else if (activeFilter === 'announcements') {
+            displayItems = announcementsList;
+        }
+
+        const displayPersonal = displayItems.filter(i => i.source_type === 'class_post');
+        const displayAnnouncements = displayItems.filter(i => i.source_type === 'announcement');
+
         res.render('portal/notifications', {
-            title: 'Notifications', path: '/portal/notifications',
-            school, student: studentObj || req.session.student,
-            announcements, classPosts,
-            currentTerm: activeTerm, currentSession: activeSession,
-            individualMessagesCount, sectionInfo: ctx.enrolledClasses
+            title: 'Notifications',
+            path: '/portal/notifications',
+            school,
+            student: studentObj || req.session.student,
+            items: displayItems,
+            personalList,
+            announcementsList,
+            displayPersonal,
+            displayAnnouncements,
+            activeFilter,
+            totalItemsCount: allItems.length,
+            totalUnread,
+            currentTerm: activeTerm,
+            currentSession: activeSession,
+            individualMessagesCount: totalUnread,
+            sectionInfo: ctx.enrolledClasses
         });
     } catch (err) {
         console.error('Notifications Error:', err);
         res.status(500).send('Error loading Notifications');
+    }
+};
+
+exports.postMarkNotificationRead = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const { source_id, source_type } = req.body;
+        if (!source_id || !source_type) {
+            return res.status(400).json({ error: 'Missing parameters' });
+        }
+
+        await db.run(`
+            INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
+            VALUES (?, 'student', ?, ?)
+        `, [studentId, source_id, source_type]);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Mark Read Error:', err);
+        res.status(500).json({ error: 'Failed to mark as read' });
+    }
+};
+
+exports.postMarkAllNotificationsRead = async (req, res) => {
+    try {
+        const studentId = req.session.student.id;
+        const school = await getSettings();
+        const ctx = await getStudentContext(studentId, school);
+        const { enrolledClassIds } = ctx;
+
+        // 1. All announcements
+        const announcements = await db.all(`
+            SELECT id FROM announcements WHERE is_published = 1 AND (target_role = 'Students' OR target_role = 'All')
+        `);
+
+        // 2. All class posts
+        let classPosts = [];
+        if (enrolledClassIds.length > 0) {
+            const ph = enrolledClassIds.map(() => '?').join(',');
+            classPosts = await db.all(`
+                SELECT id FROM class_posts WHERE class_id IN (${ph}) AND (student_id IS NULL OR student_id = ?)
+            `, [...enrolledClassIds, studentId]);
+        }
+
+        await db.transaction(async () => {
+            for (const a of announcements) {
+                await db.run(`
+                    INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
+                    VALUES (?, 'student', ?, 'announcement')
+                `, [studentId, a.id]);
+            }
+            for (const cp of classPosts) {
+                await db.run(`
+                    INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
+                    VALUES (?, 'student', ?, 'class_post')
+                `, [studentId, cp.id]);
+            }
+        });
+
+        res.redirect('/portal/notifications');
+    } catch (err) {
+        console.error('Mark All Read Error:', err);
+        res.redirect('/portal/notifications?error=Failed to mark all as read');
     }
 };
 

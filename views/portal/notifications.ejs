@@ -3,6 +3,7 @@
 <head>
     <%- include('../partials/student_shell_head') %>
     <link rel="stylesheet" href="/css/academics.css">
+    <link rel="stylesheet" href="/css/notifications.css">
 </head>
 <body>
 <div class="acm-portal-shell">
@@ -12,82 +13,132 @@
 
         <div class="acm-desktop-header">
             <div class="acm-header-greeting">
-                <h1 class="acm-greeting-title">Notifications</h1>
+                <h1 class="acm-greeting-title">Communications</h1>
                 <p class="acm-greeting-meta"><%= currentTerm %> &middot; <%= currentSession %></p>
             </div>
             <div class="acm-header-actions">
                 <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications" aria-current="page">
                     <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                    <% if (totalUnread > 0) { %>
+                        <span class="acm-badge"><%= totalUnread > 9 ? '9+' : totalUnread %></span>
+                    <% } %>
                 </a>
             </div>
         </div>
 
-        <% const filterType = typeof reqFilter !== 'undefined' ? reqFilter : 'all'; %>
-
-        <!-- Announcements -->
-        <% if (announcements && announcements.length > 0) { %>
-        <section class="acm-section" style="margin-bottom: var(--acm-sp-28);">
-            <h2 class="acm-section-title">School Announcements</h2>
-            <div class="acm-post-list">
-                <% announcements.forEach(ann => { %>
-                <a href="/portal/announcement/<%= ann.id %>" class="acm-post-item acm-post-item--general">
-                    <div class="acm-post-icon acm-post-icon--announcement">
-                        <i class="bi bi-megaphone" aria-hidden="true"></i>
-                    </div>
-                    <div class="acm-post-body">
-                        <p class="acm-post-title"><%= ann.title %></p>
-                        <div class="acm-post-meta">
-                            <span><%= new Date(ann.created_at).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) %></span>
-                            <% if (ann.priority === 'High') { %>
-                                <span class="acm-status-chip acm-status-chip--overdue">Important</span>
-                            <% } %>
-                        </div>
-                    </div>
-                    <i class="bi bi-chevron-right" style="color:var(--acm-text-muted);" aria-hidden="true"></i>
+        <!-- Header Actions: Filter Tabs + Mark All Read -->
+        <div class="acm-notif-header-actions">
+            <!-- Filter Tabs -->
+            <div class="acm-board-filters" style="margin:0;" role="tablist" aria-label="Notification filters">
+                <a href="?filter=all" class="acm-filter-btn <%= activeFilter === 'all' ? 'is-active' : '' %>" role="tab">
+                    All (<%= totalItemsCount %>)
                 </a>
-                <% }) %>
-            </div>
-        </section>
-        <% } %>
-
-        <!-- Class Board messages -->
-        <% if (classPosts && classPosts.length > 0) { %>
-        <section class="acm-section">
-            <h2 class="acm-section-title">Class Board</h2>
-            <div class="acm-post-list">
-                <% const now = new Date();
-                   classPosts.forEach(post => {
-                    const isOverdue = post.post_type === 'Assignment' && post.due_date && new Date(post.due_date) < now;
-                    const statusClass = post.post_type === 'Announcement' ? 'general' : (isOverdue ? 'overdue' : 'pending');
-                %>
-                <a href="/portal/assignment/<%= post.id %>" class="acm-post-item acm-post-item--<%= statusClass %>">
-                    <div class="acm-post-icon acm-post-icon--<%= post.post_type === 'Assignment' ? 'assignment' : 'announcement' %>">
-                        <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-megaphone' %>" aria-hidden="true"></i>
-                    </div>
-                    <div class="acm-post-body">
-                        <p class="acm-post-title"><%= post.title %></p>
-                        <div class="acm-post-meta">
-                            <% if (post.subject_name) { %><span><%= post.subject_name %></span><% } %>
-                            <% if (post.first_name) { %><span><%= post.first_name %> <%= post.last_name %></span><% } %>
-                            <% if (post.due_date) { %>
-                                <span>Due <%= new Date(post.due_date).toLocaleDateString('en-GB', {day:'numeric',month:'short'}) %></span>
-                                <% if (isOverdue) { %><span class="acm-status-chip acm-status-chip--overdue">Overdue</span><% } %>
-                            <% } %>
-                        </div>
-                    </div>
-                    <i class="bi bi-chevron-right" style="color:var(--acm-text-muted);" aria-hidden="true"></i>
+                <a href="?filter=unread" class="acm-filter-btn <%= activeFilter === 'unread' ? 'is-active' : '' %>" role="tab">
+                    Unread <%= totalUnread > 0 ? '(' + totalUnread + ')' : '(0)' %>
                 </a>
-                <% }) %>
+                <a href="?filter=personal" class="acm-filter-btn <%= activeFilter === 'personal' ? 'is-active' : '' %>" role="tab">
+                    Personal (<%= personalList.length %>)
+                </a>
+                <a href="?filter=announcements" class="acm-filter-btn <%= activeFilter === 'announcements' ? 'is-active' : '' %>" role="tab">
+                    Announcements (<%= announcementsList.length %>)
+                </a>
             </div>
-        </section>
-        <% } %>
 
-        <% if ((!announcements || announcements.length === 0) && (!classPosts || classPosts.length === 0)) { %>
-        <div class="acm-empty">
-            <i class="bi bi-bell acm-empty-icon"></i>
-            <p class="acm-empty-title">No notifications</p>
-            <p class="acm-empty-desc">You&rsquo;re all caught up. Announcements and class board messages will appear here.</p>
+            <!-- Mark all as read button -->
+            <% if (totalUnread > 0) { %>
+            <form action="/portal/notifications/mark-all-read" method="POST" style="margin:0;">
+                <button type="submit" class="acm-mark-all-btn">
+                    <i class="bi bi-check2-all" aria-hidden="true"></i> Mark all as read
+                </button>
+            </form>
+            <% } %>
         </div>
+
+        <% if (items.length > 0) { %>
+
+            <!-- PERSONAL NOTIFICATIONS SECTION -->
+            <% if (displayPersonal.length > 0) { %>
+            <section class="acm-section" style="margin-bottom: var(--acm-sp-28);">
+                <h2 class="acm-section-title">Personal &amp; Class Activity</h2>
+                <div class="acm-notif-list" role="list">
+                    <% displayPersonal.forEach(item => { %>
+                    <a href="<%= item.url %>" class="acm-notif-card <%= !item.isRead ? 'acm-notif-card--unread' : '' %>" role="listitem">
+                        <div class="acm-notif-icon-box acm-notif-icon-box--<%= item.category %>">
+                            <i class="bi <%= item.icon %>" aria-hidden="true"></i>
+                        </div>
+                        <div class="acm-notif-content">
+                            <div class="acm-notif-title-row">
+                                <h3 class="acm-notif-title"><%= item.title %></h3>
+                                <% if (!item.isRead) { %>
+                                    <span class="acm-notif-unread-dot" title="Unread"></span>
+                                <% } %>
+                            </div>
+                            <p class="acm-notif-message"><%= item.message %></p>
+                            <div class="acm-notif-meta">
+                                <span><%= item.relativeTime %></span>
+                                <% if (item.tag) { %>
+                                    <span>&middot;</span>
+                                    <span><%= item.tag %></span>
+                                <% } %>
+                                <% if (item.statusChip) { %>
+                                    <span class="acm-status-chip acm-status-chip--<%= item.statusChipType || 'pending' %>"><%= item.statusChip %></span>
+                                <% } %>
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-right" style="color:var(--acm-text-muted); margin-top:2px; flex-shrink:0;" aria-hidden="true"></i>
+                    </a>
+                    <% }) %>
+                </div>
+            </section>
+            <% } %>
+
+            <!-- SCHOOL ANNOUNCEMENTS SECTION -->
+            <% if (displayAnnouncements.length > 0) { %>
+            <section class="acm-section">
+                <h2 class="acm-section-title">School Announcements</h2>
+                <div class="acm-notif-list" role="list">
+                    <% displayAnnouncements.forEach(ann => { %>
+                    <a href="<%= ann.url %>" class="acm-notif-card <%= !ann.isRead ? 'acm-notif-card--unread' : '' %>" role="listitem">
+                        <div class="acm-notif-icon-box acm-notif-icon-box--announcement">
+                            <i class="bi bi-megaphone" aria-hidden="true"></i>
+                        </div>
+                        <div class="acm-notif-content">
+                            <div class="acm-notif-title-row">
+                                <h3 class="acm-notif-title"><%= ann.title %></h3>
+                                <% if (!ann.isRead) { %>
+                                    <span class="acm-notif-unread-dot" title="Unread"></span>
+                                <% } %>
+                            </div>
+                            <p class="acm-notif-message"><%= ann.message %></p>
+                            <div class="acm-notif-meta">
+                                <span><%= ann.relativeTime %></span>
+                                <% if (ann.priority === 'High' || ann.priority === 'Urgent') { %>
+                                    <span class="acm-status-chip acm-status-chip--overdue">Important</span>
+                                <% } %>
+                            </div>
+                        </div>
+                        <i class="bi bi-chevron-right" style="color:var(--acm-text-muted); margin-top:2px; flex-shrink:0;" aria-hidden="true"></i>
+                    </a>
+                    <% }) %>
+                </div>
+            </section>
+            <% } %>
+
+        <% } else { %>
+            <!-- Empty state -->
+            <div class="acm-empty" style="padding: var(--acm-sp-48) var(--acm-sp-16);">
+                <i class="bi bi-bell-slash acm-empty-icon"></i>
+                <p class="acm-empty-title">
+                    <% if (activeFilter === 'unread') { %>You're all caught up!
+                    <% } else if (activeFilter === 'announcements') { %>No announcements yet
+                    <% } else if (activeFilter === 'personal') { %>No personal notifications
+                    <% } else { %>No notifications yet<% } %>
+                </p>
+                <p class="acm-empty-desc">
+                    <% if (activeFilter === 'unread') { %>There are no unread notifications or announcements.
+                    <% } else { %>Important school updates and personal academic activity will appear here.<% } %>
+                </p>
+            </div>
         <% } %>
 
     </main>

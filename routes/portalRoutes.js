@@ -41,14 +41,17 @@ router.get('/assignment/:id', portalController.viewAssignment);
 router.get('/attendance', portalController.getAttendance);
 
 // Academics Hub
+// Academics Hub
 router.get('/academics', portalController.getAcademicsHub);
 router.get('/academics/results', portalController.getAcademicsResults);
 router.get('/academics/class-board', portalController.getAcademicsClassBoard);
 router.get('/academics/subjects', portalController.getAcademicsSubjects);
 router.get('/academics/timetable', portalController.getAcademicsTimetable);
 
-// Notifications / Announcements listing
+// Notifications / Announcements
 router.get('/notifications', portalController.getNotifications);
+router.post('/notifications/mark-read', portalController.postMarkNotificationRead);
+router.post('/notifications/mark-all-read', portalController.postMarkAllNotificationsRead);
 
 // Profile (self-service)
 router.get('/profile', portalController.getProfile);

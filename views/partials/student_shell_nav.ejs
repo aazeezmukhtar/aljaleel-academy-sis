@@ -17,6 +17,9 @@
     <a href="/portal/notifications" class="acm-nav-item <%= currentPath.startsWith('/portal/notifications') ? 'is-active' : '' %>">
         <i class="bi <%= currentPath.startsWith('/portal/notifications') ? 'bi-bell-fill' : 'bi-bell' %>" aria-hidden="true"></i>
         <span>Notices</span>
+        <% if (typeof individualMessagesCount !== 'undefined' && individualMessagesCount > 0) { %>
+            <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+        <% } %>
     </a>
     <a href="/portal/profile" class="acm-nav-item <%= currentPath.startsWith('/portal/profile') ? 'is-active' : '' %>">
         <i class="bi <%= currentPath.startsWith('/portal/profile') ? 'bi-person-fill' : 'bi-person' %>" aria-hidden="true"></i>
@@ -53,6 +56,9 @@
         <a href="/portal/notifications" class="acm-sidebar-item <%= currentPath.startsWith('/portal/notifications') ? 'is-active' : '' %>">
             <i class="bi <%= currentPath.startsWith('/portal/notifications') ? 'bi-bell-fill' : 'bi-bell' %>" aria-hidden="true"></i>
             <span>Notifications</span>
+            <% if (typeof individualMessagesCount !== 'undefined' && individualMessagesCount > 0) { %>
+                <span class="acm-badge" style="position: static; margin-inline-start: auto; border: none;"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
+            <% } %>
         </a>
     </nav>
 

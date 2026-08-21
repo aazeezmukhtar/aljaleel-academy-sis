@@ -190,9 +190,9 @@
                             <% } %>
                         </div>
                         <h3 class="acm-announcement-title"><%= latestAnn.title %></h3>
-                        <div class="acm-announcement-snippet"><%- latestAnn.content.replace(/<[^>]*>?/gm, '') %></div>
-                        <div class="acm-card-action" style="margin-top: var(--acm-sp-12);">
-                            <a href="/portal/notifications" style="color: inherit; text-decoration: none;">View all &rarr;</a>
+                        <div class="acm-card-action" style="margin-top: var(--acm-sp-12); display: flex; justify-content: space-between; align-items: center;">
+                            <a href="/portal/announcement/<%= latestAnn.id %>" style="color: var(--school-primary, var(--acm-navy)); font-weight: var(--acm-fw-semibold); text-decoration: none;">Read more &rarr;</a>
+                            <a href="/portal/notifications" style="font-size: var(--acm-text-xs); color: var(--acm-text-secondary); text-decoration: none;">All updates &rarr;</a>
                         </div>
                     </div>
                 </section>

@@ -1,6 +1,6 @@
 /*
  * =============================================================
- * AcadMe — Student Attendance Styles v4.1
+ * AcadMe — Student Attendance Styles v4.2
  * =============================================================
  * Inherits & Extends: acadme-tokens.css, student-portal.css, academics.css
  * =============================================================
@@ -11,8 +11,8 @@
     background-color: var(--acm-surface);
     border: 1px solid var(--acm-border);
     border-radius: var(--acm-radius-lg);
-    padding: var(--acm-sp-20) var(--acm-sp-24);
-    margin-bottom: var(--acm-sp-20);
+    padding: var(--acm-sp-24) var(--acm-sp-28);
+    margin-bottom: var(--acm-sp-24);
 }
 
 .acm-att-rate-row {
@@ -24,7 +24,7 @@
 }
 
 .acm-att-rate-number {
-    font-size: 2.75rem;
+    font-size: 3rem;
     font-weight: var(--acm-fw-bold);
     color: var(--school-primary, var(--acm-navy));
     line-height: 1;
@@ -33,7 +33,7 @@
 .acm-att-rate-sub {
     font-size: var(--acm-text-sm);
     color: var(--acm-text-secondary);
-    margin-top: var(--acm-sp-4);
+    margin-top: var(--acm-sp-6);
     font-weight: var(--acm-fw-medium);
 }
 
@@ -57,7 +57,7 @@
     display: inline-flex;
     align-items: center;
     gap: var(--acm-sp-6);
-    padding: 4px var(--acm-sp-10);
+    padding: 5px var(--acm-sp-12);
     border-radius: var(--acm-radius-full);
     font-size: var(--acm-text-xs);
     font-weight: var(--acm-fw-bold);
@@ -88,18 +88,18 @@
 .acm-att-history-list {
     display: flex;
     flex-direction: column;
-    gap: var(--acm-sp-8);
+    gap: var(--acm-sp-10);
 }
 
 .acm-att-history-row {
     background-color: var(--acm-surface);
     border: 1px solid var(--acm-border);
     border-radius: var(--acm-radius-md);
-    padding: var(--acm-sp-14) var(--acm-sp-16);
+    padding: var(--acm-sp-16) var(--acm-sp-20);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--acm-sp-12);
+    gap: var(--acm-sp-14);
     transition: background-color var(--acm-transition-fast);
 }
 
@@ -135,14 +135,14 @@
     background-color: var(--acm-surface);
     border: 1px solid var(--acm-border);
     border-radius: var(--acm-radius-lg);
-    padding: var(--acm-sp-20);
+    padding: var(--acm-sp-24);
 }
 
 .acm-cal-top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--acm-sp-16);
+    margin-bottom: var(--acm-sp-20);
 }
 
 .acm-cal-heading {
@@ -154,65 +154,61 @@
 
 .acm-cal-actions {
     display: flex;
-    gap: var(--acm-sp-6);
+    gap: var(--acm-sp-8);
 }
 
 .acm-cal-btn {
-    width: 32px;
-    height: 32px;
-    border-radius: var(--acm-radius-sm);
+    background: none;
     border: 1px solid var(--acm-border);
-    background-color: var(--acm-surface);
-    display: flex;
+    padding: var(--acm-sp-8) var(--acm-sp-14);
+    border-radius: var(--acm-radius-sm);
+    color: var(--acm-text-secondary);
+    font-size: var(--acm-text-xs);
+    font-weight: var(--acm-fw-semibold);
+    cursor: pointer;
+    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    color: var(--acm-text-primary);
-    text-decoration: none;
-    transition: background-color var(--acm-transition-fast);
+    gap: var(--acm-sp-6);
+    transition: all var(--acm-transition-fast);
 }
 
 .acm-cal-btn:hover {
     background-color: var(--acm-bg);
+    color: var(--acm-text-primary);
 }
 
-.acm-cal-table-grid {
+.acm-cal-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 4px;
+    gap: var(--acm-sp-6);
     text-align: center;
 }
 
-.acm-cal-day-label {
+.acm-cal-dow {
     font-size: var(--acm-text-xs);
     font-weight: var(--acm-fw-bold);
     color: var(--acm-text-muted);
-    padding: var(--acm-sp-6) 0;
     text-transform: uppercase;
-    letter-spacing: var(--acm-ls-wider);
+    padding-bottom: var(--acm-sp-8);
 }
 
 .acm-cal-cell {
     aspect-ratio: 1;
+    border-radius: var(--acm-radius-sm);
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: var(--acm-radius-sm);
     font-size: var(--acm-text-xs);
     font-weight: var(--acm-fw-medium);
-    color: var(--acm-text-secondary);
+    background-color: var(--acm-bg);
+    color: var(--acm-text-primary);
     position: relative;
-    border: 1px solid transparent;
+    padding: 2px;
 }
 
 .acm-cal-cell--empty {
-    opacity: 0;
-    pointer-events: none;
-}
-
-.acm-cal-cell--weekend {
-    background-color: var(--acm-bg);
-    color: var(--acm-text-muted);
+    background: transparent;
 }
 
 .acm-cal-cell--present {
@@ -233,37 +229,34 @@
     font-weight: var(--acm-fw-bold);
 }
 
-.acm-cal-cell--leave {
-    background-color: #e0f2fe;
-    color: #0369a1;
-    font-weight: var(--acm-fw-bold);
+.acm-cal-cell--weekend {
+    opacity: 0.35;
 }
 
-.acm-cal-footer-legend {
+.acm-cal-legend {
     display: flex;
+    align-items: center;
+    gap: var(--acm-sp-16);
     flex-wrap: wrap;
-    gap: var(--acm-sp-12);
-    margin-top: var(--acm-sp-16);
-    padding-top: var(--acm-sp-12);
+    margin-top: var(--acm-sp-20);
+    padding-top: var(--acm-sp-16);
     border-top: 1px solid var(--acm-border);
     font-size: var(--acm-text-xs);
     color: var(--acm-text-secondary);
 }
 
-.acm-legend-chip {
+.acm-cal-legend-item {
     display: flex;
     align-items: center;
     gap: var(--acm-sp-6);
 }
 
-.acm-legend-circle {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+.acm-cal-legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
 }
 
-.acm-legend-circle--present { background-color: var(--acm-success); }
-.acm-legend-circle--late { background-color: #d97706; }
-.acm-legend-circle--absent { background-color: var(--acm-error); }
-.acm-legend-circle--leave { background-color: #0284c7; }
-.acm-legend-circle--weekend { background-color: var(--acm-text-muted); }
+.acm-cal-legend-dot--present { background-color: var(--acm-success); }
+.acm-cal-legend-dot--late { background-color: var(--acm-warning); }
+.acm-cal-legend-dot--absent { background-color: var(--acm-error); }

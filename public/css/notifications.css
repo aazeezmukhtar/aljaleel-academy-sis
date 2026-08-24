@@ -17,10 +17,10 @@
 }
 
 .acm-mark-all-btn {
-    background: none;
+    background: var(--acm-surface);
     border: 1px solid var(--acm-border);
-    padding: var(--acm-sp-6) var(--acm-sp-12);
-    border-radius: var(--acm-radius-sm);
+    padding: var(--acm-sp-8) var(--acm-sp-14);
+    border-radius: var(--acm-radius-full);
     font-size: var(--acm-text-xs);
     font-weight: var(--acm-fw-semibold);
     color: var(--acm-text-secondary);
@@ -32,7 +32,7 @@
 }
 
 .acm-mark-all-btn:hover {
-    background-color: var(--acm-surface);
+    background-color: var(--acm-bg);
     color: var(--acm-text-primary);
     border-color: var(--acm-text-secondary);
 }
@@ -41,7 +41,7 @@
 .acm-notif-list {
     display: flex;
     flex-direction: column;
-    gap: var(--acm-sp-8);
+    gap: var(--acm-sp-12);
 }
 
 /* Notification Item */
@@ -49,10 +49,10 @@
     background-color: var(--acm-surface);
     border: 1px solid var(--acm-border);
     border-radius: var(--acm-radius-md);
-    padding: var(--acm-sp-14) var(--acm-sp-16);
+    padding: var(--acm-sp-18) var(--acm-sp-20);
     display: flex;
     align-items: flex-start;
-    gap: var(--acm-sp-14);
+    gap: var(--acm-sp-16);
     text-decoration: none;
     color: inherit;
     transition: background-color var(--acm-transition-fast), border-color var(--acm-transition-fast);
@@ -65,17 +65,17 @@
 
 .acm-notif-card--unread {
     background-color: #f8fafc;
-    border-inline-start: 3px solid var(--school-primary, var(--acm-navy));
+    border-inline-start: 4px solid var(--school-primary, var(--acm-navy));
 }
 
 .acm-notif-icon-box {
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border-radius: var(--acm-radius-md);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     flex-shrink: 0;
 }
 

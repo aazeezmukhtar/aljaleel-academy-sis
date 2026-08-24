@@ -25,22 +25,43 @@
 }
 
 /* Academic Sub-navigation */
+/* Wrap the scrollable nav in a position:relative container so the
+   fade hint overlay sits on top of it. The wrapper is set on the
+   element in each view via a wrapper div with class acm-academic-nav-wrap */
+.acm-academic-nav-wrap {
+    position: relative;
+    margin-bottom: var(--acm-sp-24);
+}
+
+/* Fade-out gradient on the right edge to hint that more items exist */
+.acm-academic-nav-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: var(--acm-sp-4); /* above the border-bottom */
+    width: 48px;
+    background: linear-gradient(to right, transparent, var(--acm-bg));
+    pointer-events: none;
+}
+
 .acm-academic-nav {
     display: flex;
     gap: var(--acm-sp-4);
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
-    margin-bottom: var(--acm-sp-24);
     padding-bottom: var(--acm-sp-4);
     border-bottom: 1px solid var(--acm-border);
+    /* Pad the right so last item isn't hidden behind the fade */
+    padding-right: 48px;
 }
 .acm-academic-nav::-webkit-scrollbar { display: none; }
 
 .acm-academic-nav-item {
     display: flex;
     align-items: center;
-    gap: var(--acm-sp-6);
+    gap: var(--acm-sp-8);
     padding: var(--acm-sp-8) var(--acm-sp-16);
     text-decoration: none;
     color: var(--acm-text-secondary);
@@ -258,33 +279,60 @@
 .acm-trend--down { color: var(--acm-error); }
 .acm-trend--flat { color: var(--acm-text-muted); }
 
-/* Class Board */
+/* Class Board — filters match the academic sub-nav style */
 .acm-board-filters {
+    position: relative;
     display: flex;
-    gap: var(--acm-sp-8);
+    gap: var(--acm-sp-4);
     overflow-x: auto;
     scrollbar-width: none;
-    margin-bottom: var(--acm-sp-16);
+    margin-bottom: var(--acm-sp-20);
+    padding-bottom: var(--acm-sp-4);
+    border-bottom: 1px solid var(--acm-border);
+    /* Pad right so items aren't hidden behind the fade hint */
+    padding-right: 48px;
 }
 .acm-board-filters::-webkit-scrollbar { display: none; }
+
+/* Fade-out on the right to hint scrollability */
+.acm-board-filters-wrap {
+    position: relative;
+    margin-bottom: 0;
+}
+.acm-board-filters-wrap::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: var(--acm-sp-4);
+    width: 48px;
+    background: linear-gradient(to right, transparent, var(--acm-bg));
+    pointer-events: none;
+}
+
 .acm-filter-btn {
-    padding: var(--acm-sp-6) var(--acm-sp-14);
-    border: 1px solid var(--acm-border);
+    display: flex;
+    align-items: center;
+    gap: var(--acm-sp-8);
+    padding: var(--acm-sp-8) var(--acm-sp-16);
+    border: none;
     border-radius: var(--acm-radius-full);
-    background: var(--acm-surface);
+    background: transparent;
     font-size: var(--acm-text-sm);
     font-weight: var(--acm-fw-medium);
     color: var(--acm-text-secondary);
     cursor: pointer;
     text-decoration: none;
     white-space: nowrap;
-    transition: all var(--acm-transition-fast);
+    transition: background-color var(--acm-transition-fast), color var(--acm-transition-fast);
 }
-.acm-filter-btn.is-active,
-.acm-filter-btn:hover {
+.acm-filter-btn.is-active {
     background: var(--school-primary, var(--acm-navy));
     color: #fff;
-    border-color: transparent;
+}
+.acm-filter-btn:hover:not(.is-active) {
+    background: var(--acm-bg);
+    color: var(--acm-text-primary);
 }
 
 .acm-post-list {

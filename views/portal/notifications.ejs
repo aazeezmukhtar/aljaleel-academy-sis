@@ -29,6 +29,7 @@
         <!-- Header Actions: Filter Tabs + Mark All Read -->
         <div class="acm-notif-header-actions">
             <!-- Filter Tabs -->
+            <div class="acm-board-filters-wrap">
             <div class="acm-board-filters" style="margin:0;" role="tablist" aria-label="Notification filters">
                 <a href="?filter=all" class="acm-filter-btn <%= activeFilter === 'all' ? 'is-active' : '' %>" role="tab">
                     All (<%= totalItemsCount %>)
@@ -42,6 +43,7 @@
                 <a href="?filter=announcements" class="acm-filter-btn <%= activeFilter === 'announcements' ? 'is-active' : '' %>" role="tab">
                     Announcements (<%= announcementsList.length %>)
                 </a>
+            </div>
             </div>
 
             <!-- Mark all as read button -->

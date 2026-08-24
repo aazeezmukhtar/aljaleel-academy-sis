@@ -11,8 +11,8 @@
     background-color: var(--acm-surface);
     border: 1px solid var(--acm-border);
     border-radius: var(--acm-radius-lg);
-    padding: var(--acm-sp-24);
-    margin-bottom: var(--acm-sp-24);
+    padding: var(--acm-sp-28);
+    margin-bottom: var(--acm-sp-28);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -25,7 +25,7 @@
         flex-direction: row;
         align-items: center;
         text-align: start;
-        gap: var(--acm-sp-24);
+        gap: var(--acm-sp-28);
     }
 }
 
@@ -100,7 +100,7 @@
     font-size: var(--acm-text-2xl);
     font-weight: var(--acm-fw-bold);
     color: var(--acm-text-primary);
-    margin: 0 0 var(--acm-sp-4) 0;
+    margin: 0 0 var(--acm-sp-6) 0;
     line-height: var(--acm-lh-tight);
 }
 
@@ -151,15 +151,15 @@
     background-color: var(--acm-surface);
     border: 1px solid var(--acm-border);
     border-radius: var(--acm-radius-lg);
-    padding: var(--acm-sp-20) var(--acm-sp-24);
+    padding: var(--acm-sp-24) var(--acm-sp-28);
 }
 
 .acm-profile-card-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: var(--acm-sp-16);
-    padding-bottom: var(--acm-sp-12);
+    margin-bottom: var(--acm-sp-20);
+    padding-bottom: var(--acm-sp-14);
     border-bottom: 1px solid var(--acm-border);
 }
 
@@ -181,13 +181,13 @@
 .acm-field-list {
     display: flex;
     flex-direction: column;
-    gap: var(--acm-sp-14);
+    gap: var(--acm-sp-18);
 }
 
 .acm-field-row {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--acm-sp-4);
 }
 
 .acm-field-label {
@@ -217,8 +217,8 @@
 .acm-form-group {
     display: flex;
     flex-direction: column;
-    gap: var(--acm-sp-6);
-    margin-bottom: var(--acm-sp-16);
+    gap: var(--acm-sp-8);
+    margin-bottom: var(--acm-sp-18);
 }
 
 .acm-form-label {
@@ -229,7 +229,7 @@
 
 .acm-form-control {
     width: 100%;
-    padding: var(--acm-sp-10) var(--acm-sp-14);
+    padding: var(--acm-sp-12) var(--acm-sp-14);
     border: 1px solid var(--acm-border);
     border-radius: var(--acm-radius-md);
     font-family: var(--acm-font-body);
@@ -256,8 +256,8 @@ textarea.acm-form-control {
     align-items: center;
     justify-content: flex-end;
     gap: var(--acm-sp-12);
-    margin-top: var(--acm-sp-20);
-    padding-top: var(--acm-sp-16);
+    margin-top: var(--acm-sp-24);
+    padding-top: var(--acm-sp-18);
     border-top: 1px solid var(--acm-border);
 }
 
@@ -310,14 +310,14 @@ textarea.acm-form-control {
 .acm-account-list {
     display: flex;
     flex-direction: column;
-    gap: var(--acm-sp-8);
+    gap: var(--acm-sp-10);
 }
 
 .acm-account-item {
     background-color: var(--acm-surface);
     border: 1px solid var(--acm-border);
     border-radius: var(--acm-radius-md);
-    padding: var(--acm-sp-14) var(--acm-sp-18);
+    padding: var(--acm-sp-16) var(--acm-sp-20);
     display: flex;
     align-items: center;
     justify-content: space-between;

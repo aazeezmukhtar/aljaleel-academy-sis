@@ -30,6 +30,7 @@
             <strong>Class Board</strong>
         </div>
 
+        <div class="acm-academic-nav-wrap">
         <nav class="acm-academic-nav" aria-label="Academic sections">
             <a href="/portal/academics" class="acm-academic-nav-item"><i class="bi bi-grid"></i> Overview</a>
             <a href="/portal/academics/results" class="acm-academic-nav-item"><i class="bi bi-bar-chart"></i> Results</a>
@@ -38,6 +39,7 @@
             <a href="/portal/academics/subjects" class="acm-academic-nav-item"><i class="bi bi-book"></i> Subjects</a>
             <a href="/portal/academics/timetable" class="acm-academic-nav-item"><i class="bi bi-calendar3"></i> Timetable</a>
         </nav>
+        </div>
 
         <%
             const now = new Date();
@@ -52,6 +54,7 @@
         %>
 
         <!-- Filter bar -->
+        <div class="acm-board-filters-wrap">
         <div class="acm-board-filters" role="group" aria-label="Filter class board">
             <a href="?filter=all" class="acm-filter-btn <%= filterType === 'all' ? 'is-active' : '' %>">All (<%= posts.length %>)</a>
             <a href="?filter=assignments" class="acm-filter-btn <%= filterType === 'assignments' ? 'is-active' : '' %>">Assignments (<%= posts.filter(p=>p.post_type==='Assignment').length %>)</a>
@@ -59,6 +62,7 @@
             <a href="?filter=overdue" class="acm-filter-btn <%= filterType === 'overdue' ? 'is-active' : '' %>">Overdue (<%= overdueItems.length %>)</a>
             <% } %>
             <a href="?filter=announcements" class="acm-filter-btn <%= filterType === 'announcements' ? 'is-active' : '' %>">Announcements (<%= generalItems.length %>)</a>
+        </div>
         </div>
 
         <% if (filteredPosts.length > 0) { %>

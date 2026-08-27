@@ -9,7 +9,11 @@
     <div class="acm-header-greeting">
         <h1 class="acm-greeting-title"><%= greeting %>, <%= studentName %></h1>
         <p class="acm-greeting-meta">
-            <%= student.class_name %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+            <% if (typeof sectionInfo !== 'undefined' && sectionInfo && sectionInfo.length > 1) { %>
+                <%= sectionInfo.map(s => (s.section_name ? s.section_name + ': ' : '') + s.class_name).join(' · ') %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+            <% } else { %>
+                <%= student.class_name || 'Unassigned' %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+            <% } %>
         </p>
     </div>
     <div class="acm-header-actions">

@@ -12,7 +12,13 @@
         <div class="acm-desktop-header">
             <div class="acm-header-greeting">
                 <h1 class="acm-greeting-title">Results</h1>
-                <p class="acm-greeting-meta"><%= student.class_name %> &middot; <%= currentSession %></p>
+                <p class="acm-greeting-meta">
+                    <% if (typeof sectionInfo !== 'undefined' && sectionInfo && sectionInfo.length > 1) { %>
+                        <%= sectionInfo.map(s => (s.section_name ? s.section_name + ': ' : '') + s.class_name).join(' · ') %> &middot; <%= currentSession %>
+                    <% } else { %>
+                        <%= student.class_name || 'Unassigned' %> &middot; <%= currentSession %>
+                    <% } %>
+                </p>
             </div>
             <div class="acm-header-actions">
                 <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
@@ -45,8 +51,8 @@
 
         <% if (allPublished && allPublished.length > 0) { %>
 
-        <!-- Term selector -->
-        <div class="acm-term-selector" role="group" aria-label="Select term">
+        <!-- Term Filter Bar -->
+        <div class="acm-term-bar" role="tablist" aria-label="Academic terms">
             <% allPublished.forEach(p => { 
                 const isActive = p.session === selectedSession && p.term === selectedTerm;
             %>
@@ -119,26 +125,24 @@
                     </thead>
                     <tbody>
                         <% detailedResults.forEach(r => {
-                            const gradeClass = r.grade ? 'acm-grade--' + r.grade.charAt(0) : '';
+                            const remark = r.teacher_remark || (r.total >= 70 ? 'Excellent' : r.total >= 60 ? 'Very Good' : r.total >= 50 ? 'Good' : r.total >= 40 ? 'Pass' : 'Needs Improvement');
                         %>
                         <tr>
-                            <td class="acm-subject-name"><%= r.subject_name %></td>
-                            <td class="acm-score"><%= r.ca1 != null ? r.ca1 : '—' %></td>
-                            <% if (caCount >= 2) { %>
-                            <td class="acm-score"><%= r.ca2 != null ? r.ca2 : '—' %></td>
-                            <% } %>
-                            <td class="acm-score"><%= r.exam != null ? r.exam : '—' %></td>
-                            <td class="acm-score acm-score-total"><%= r.total != null ? r.total : '—' %></td>
+                            <td>
+                                <strong><%= r.subject_name %></strong>
+                                <% if (r.subject_code) { %><span class="acm-subject-code-tag"><%= r.subject_code %></span><% } %>
+                            </td>
+                            <% if (caCount >= 1) { %><td><%= r.ca1 != null ? r.ca1 : '—' %></td><% } %>
+                            <% if (caCount >= 2) { %><td><%= r.ca2 != null ? r.ca2 : '—' %></td><% } %>
+                            <% if (caCount >= 3) { %><td><%= r.ca3 != null ? r.ca3 : '—' %></td><% } %>
+                            <td><%= r.exam != null ? r.exam : '—' %></td>
+                            <td><strong><%= r.total != null ? r.total : '—' %></strong></td>
                             <td>
                                 <% if (r.grade) { %>
-                                    <span class="acm-grade <%= gradeClass %>" aria-label="Grade <%= r.grade %>"><%= r.grade %></span>
-                                <% } else { %> — <% } %>
+                                <span class="acm-grade-pill acm-grade-pill--<%= r.grade.toLowerCase() %>"><%= r.grade %></span>
+                                <% } else { %>—<% } %>
                             </td>
-                            <td>
-                                <% if (r.teacher_remark && r.teacher_remark.trim()) { %>
-                                    <span class="acm-remark" title="<%= r.teacher_remark %>"><%= r.teacher_remark %></span>
-                                <% } else { %> — <% } %>
-                            </td>
+                            <td class="acm-remark-cell"><%= remark %></td>
                         </tr>
                         <% }) %>
                     </tbody>
@@ -166,11 +170,18 @@
                         <p class="acm-report-session"><%= p.session %></p>
                     </div>
                     <div class="acm-report-actions">
-                        <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
+                        <% if (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 0) { %>
+                            <% enrolledClasses.forEach(ec => { %>
+                            <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>&class_name=<%= encodeURIComponent(ec.class_name) %>"
+                               target="_blank" class="acm-report-btn acm-report-btn--primary" aria-label="View termly report card for <%= p.term %> (<%= ec.class_name %>)">
+                                <i class="bi bi-file-earmark-text"></i> <%= ec.section_name ? ec.section_name + ' (' + ec.class_name + ')' : ec.class_name %> Termly
+                            </a>
+                            <% }) %>
+                        <% } else if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
                             <% student.class_name.split(', ').forEach(cls => { %>
                             <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>&class_name=<%= encodeURIComponent(cls) %>"
-                               target="_blank" class="acm-report-btn acm-report-btn--primary" aria-label="View termly report card for <%= p.term %>">
-                                <i class="bi bi-file-earmark-text"></i> Termly
+                               target="_blank" class="acm-report-btn acm-report-btn--primary" aria-label="View termly report card for <%= p.term %> (<%= cls %>)">
+                                <i class="bi bi-file-earmark-text"></i> <%= cls %> Termly
                             </a>
                             <% }) %>
                         <% } else { %>
@@ -192,11 +203,18 @@
                         <p class="acm-report-session"><%= sess %> · All Terms</p>
                     </div>
                     <div class="acm-report-actions">
-                        <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
+                        <% if (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 0) { %>
+                            <% enrolledClasses.forEach(ec => { %>
+                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>&class_name=<%= encodeURIComponent(ec.class_name) %>"
+                               target="_blank" class="acm-report-btn acm-report-btn--secondary">
+                                <i class="bi bi-bar-chart-fill"></i> <%= ec.section_name ? ec.section_name + ' (' + ec.class_name + ')' : ec.class_name %> Cumulative
+                            </a>
+                            <% }) %>
+                        <% } else if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
                             <% student.class_name.split(', ').forEach(cls => { %>
                             <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>&class_name=<%= encodeURIComponent(cls) %>"
                                target="_blank" class="acm-report-btn acm-report-btn--secondary">
-                                <i class="bi bi-bar-chart-fill"></i> Cumulative
+                                <i class="bi bi-bar-chart-fill"></i> <%= cls %> Cumulative
                             </a>
                             <% }) %>
                         <% } else { %>

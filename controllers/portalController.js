@@ -13,6 +13,8 @@ const getSettings = async () => {
 exports.getDashboard = async (req, res) => {
     const studentId = req.session.student.id;
     const school = await getSettings();
+    const ctx = await getStudentContext(studentId, school);
+    const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount, sectionIds } = ctx;
 
     // Fetch latest results (added AVG total for Phase 2)
     const results = await db.all(`
@@ -36,18 +38,8 @@ exports.getDashboard = async (req, res) => {
 
     const currentSessionStr = school.current_session || '2024/2025';
     
-    // Get student's enrolled sections
-    const enrollments = await db.all(`
-        SELECT s.id as section_id 
-        FROM student_enrollments se 
-        JOIN classes c ON se.class_id = c.id 
-        JOIN sections s ON c.section_id = s.id 
-        WHERE se.student_id = ? AND se.session = s.current_session
-    `, [studentId]);
-    const sectionIds = (enrollments || []).map(e => e.section_id);
-    
     let sectionFilter = '';
-    if (sectionIds.length > 0) {
+    if (sectionIds && sectionIds.length > 0) {
         sectionFilter = ` AND (section_id IS NULL OR section_id IN (${sectionIds.join(',')}))`;
     } else {
         sectionFilter = ` AND section_id IS NULL`;
@@ -62,15 +54,6 @@ exports.getDashboard = async (req, res) => {
     `);
 
     // Fetch latest class posts (general + targeted) for all classes the student is enrolled in
-    const enrollRows = await db.all(`
-        SELECT class_id FROM student_enrollments WHERE student_id = ?
-    `, [studentId]);
-    
-    let enrolledClassIds = (enrollRows || []).map(r => r.class_id);
-    if (enrolledClassIds.length === 0 && req.session.student.current_class_id) {
-        enrolledClassIds = [req.session.student.current_class_id];
-    }
-
     let classPosts = [];
     if (enrolledClassIds.length > 0) {
         const placeholders = enrolledClassIds.map(() => '?').join(',');
@@ -82,9 +65,6 @@ exports.getDashboard = async (req, res) => {
             ORDER BY cp.created_at DESC LIMIT 5
         `, [...enrolledClassIds, studentId]);
     }
-
-    const msgCountObj = await db.get('SELECT COUNT(*) as c FROM class_posts WHERE student_id = ?', [studentId]);
-    const individualMessagesCount = msgCountObj ? msgCountObj.c : 0;
     
     // Fee Stats for Progress Bar
     const feeStats = await db.get(`
@@ -106,42 +86,29 @@ exports.getDashboard = async (req, res) => {
 
     const upcomingEvents = await db.all(eventsSql);
 
-    // Fetch student data with enrolled classes
-    const studentObj = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
-    const enrolledClasses = await db.all(`
-        SELECT c.name as class_name, sec.name as section_name, 
-               sec.current_session as section_session, sec.current_term as section_term
-        FROM student_enrollments se 
-        JOIN classes c ON se.class_id = c.id 
-        LEFT JOIN sections sec ON c.section_id = sec.id
-        WHERE se.student_id = ? AND se.session = sec.current_session
-    `, [studentId]);
-    
-    if (studentObj) {
-        if (enrolledClasses && enrolledClasses.length > 0) {
-            studentObj.class_name = enrolledClasses.map(c => c.class_name).join(', ');
-        } else {
-            const classRow = studentObj.current_class_id ? await db.get('SELECT name FROM classes WHERE id = ?', [studentObj.current_class_id]) : null;
-            studentObj.class_name = classRow ? classRow.name : 'Unassigned';
-        }
-    }
-
     const sectionInfo = (enrolledClasses || []).map(ec => ({
+        class_id: ec.class_id,
         class_name: ec.class_name,
+        section_id: ec.section_id,
         section_name: ec.section_name,
         current_session: ec.section_session || school.current_session || currentSessionStr,
         current_term: ec.section_term || school.current_term || '1st Term'
     }));
 
-    // Calculate attendance percentage for current term and session
-    const activeSession = sectionInfo.length > 0 ? sectionInfo[0].current_session : currentSessionStr;
-    const activeTerm = sectionInfo.length > 0 ? sectionInfo[0].current_term : (school.current_term || '1st Term');
-
-    const attRows = await db.all(`
-        SELECT status 
-        FROM attendance 
-        WHERE student_id = ? AND session = ? AND term = ?
-    `, [studentId, activeSession, activeTerm]);
+    // Calculate attendance percentage across enrolled sessions/terms
+    const activeSessions = [...new Set(sectionInfo.map(s => s.current_session))];
+    const activeTerms = [...new Set(sectionInfo.map(s => s.current_term))];
+    
+    let attRows = [];
+    if (activeSessions.length > 0 && activeTerms.length > 0) {
+        const sessPh = activeSessions.map(() => '?').join(',');
+        const termPh = activeTerms.map(() => '?').join(',');
+        attRows = await db.all(`
+            SELECT status 
+            FROM attendance 
+            WHERE student_id = ? AND session IN (${sessPh}) AND term IN (${termPh})
+        `, [studentId, ...activeSessions, ...activeTerms]);
+    }
 
     let attendancePercentage = null;
     if (attRows && attRows.length > 0) {
@@ -163,6 +130,7 @@ exports.getDashboard = async (req, res) => {
         feeProgress,
         feeBalance,
         sectionInfo,
+        enrolledClasses,
         attendancePercentage,
         currentTerm: activeTerm,
         currentSession: activeSession,
@@ -461,21 +429,30 @@ const formatRelativeTime = (dateInput) => {
 // Shared helper: resolve student's active class & section context
 const getStudentContext = async (studentId, school) => {
     const currentSessionStr = school.current_session || '2024/2025';
-    const enrolledClasses = await db.all(`
+    
+    // Fetch all active enrollments for the student across all sections
+    const rawEnrolled = await db.all(`
         SELECT c.id as class_id, c.name as class_name, sec.id as section_id, sec.name as section_name,
-               sec.current_session as section_session, sec.current_term as section_term
+               COALESCE(sec.current_session, se.session, ?) as section_session,
+               COALESCE(sec.current_term, ?) as section_term,
+               se.session as enrolled_session
         FROM student_enrollments se
         JOIN classes c ON se.class_id = c.id
         LEFT JOIN sections sec ON c.section_id = sec.id
-        WHERE se.student_id = ? AND se.session = sec.current_session
-    `, [studentId]);
+        WHERE se.student_id = ?
+        ORDER BY sec.id ASC, se.id DESC
+    `, [currentSessionStr, school.current_term || '1st Term', studentId]);
 
-    const activeSession = enrolledClasses.length > 0
-        ? enrolledClasses[0].section_session || currentSessionStr
-        : currentSessionStr;
-    const activeTerm = enrolledClasses.length > 0
-        ? enrolledClasses[0].section_term || school.current_term || '1st Term'
-        : (school.current_term || '1st Term');
+    // Keep unique class/section combinations
+    const seenSections = new Set();
+    const enrolledClasses = [];
+    for (const ec of (rawEnrolled || [])) {
+        const key = ec.section_id ? `sec_${ec.section_id}` : `class_${ec.class_id}`;
+        if (!seenSections.has(key)) {
+            seenSections.add(key);
+            enrolledClasses.push(ec);
+        }
+    }
 
     const studentObj = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
     if (studentObj) {
@@ -492,6 +469,13 @@ const getStudentContext = async (studentId, school) => {
     const enrolledClassIds = enrolledClasses.length > 0
         ? enrolledClasses.map(c => c.class_id)
         : (studentObj && studentObj.current_class_id ? [studentObj.current_class_id] : []);
+
+    const activeSession = enrolledClasses.length > 0
+        ? enrolledClasses[0].section_session || currentSessionStr
+        : currentSessionStr;
+    const activeTerm = enrolledClasses.length > 0
+        ? enrolledClasses[0].section_term || school.current_term || '1st Term'
+        : (school.current_term || '1st Term');
 
     const sectionIds = enrolledClasses.map(c => c.section_id).filter(Boolean);
     let sectionFilter = sectionIds.length > 0
@@ -534,7 +518,8 @@ const getStudentContext = async (studentId, school) => {
         enrolledClassIds,
         activeSession,
         activeTerm,
-        individualMessagesCount
+        individualMessagesCount,
+        sectionIds
     };
 };
 
@@ -543,7 +528,7 @@ exports.getAcademicsHub = async (req, res) => {
         const studentId = req.session.student.id;
         const school = await getSettings();
         const ctx = await getStudentContext(studentId, school);
-        const { studentObj, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+        const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
 
         // Published results summary (latest term)
         const resultSummary = await db.all(`
@@ -555,54 +540,59 @@ exports.getAcademicsHub = async (req, res) => {
             LIMIT 6
         `, [studentId]);
 
-        // Position for latest term (if published)
+        // Position for latest term across enrolled classes
         let latestPosition = null, latestClassCount = null;
-        if (resultSummary.length > 0) {
+        if (resultSummary.length > 0 && enrolledClasses.length > 0) {
             const lr = resultSummary[0];
-            // Find class for position calc
-            const classForPos = ctx.enrolledClasses.length > 0
-                ? ctx.enrolledClasses[0]
-                : null;
-            if (classForPos) {
+            for (const ec of enrolledClasses) {
                 const classPerf = await db.all(`
                     SELECT r.student_id, SUM(r.total) as student_total
                     FROM results r
                     WHERE r.term = ? AND r.session = ?
                     AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
                     GROUP BY r.student_id ORDER BY student_total DESC
-                `, [lr.term, lr.session, classForPos.class_id, lr.session]);
-                latestClassCount = classPerf.length;
-                const myPerf = classPerf.find(p => p.student_id == studentId);
-                if (myPerf) latestPosition = classPerf.indexOf(myPerf) + 1;
+                `, [lr.term, lr.session, ec.class_id, lr.session]);
+                if (classPerf.length > 0) {
+                    const myPerf = classPerf.find(p => p.student_id == studentId);
+                    if (myPerf && latestPosition === null) {
+                        latestPosition = classPerf.indexOf(myPerf) + 1;
+                        latestClassCount = classPerf.length;
+                    }
+                }
             }
         }
 
-        // Class board recent items
+        // Class board recent items across all enrolled classes
         let classPosts = [];
         if (enrolledClassIds.length > 0) {
             const ph = enrolledClassIds.map(() => '?').join(',');
             classPosts = await db.all(`
-                SELECT cp.*, st.first_name, st.last_name, sub.name as subject_name
+                SELECT cp.*, st.first_name, st.last_name, sub.name as subject_name, c.name as class_name
                 FROM class_posts cp
                 JOIN staff st ON cp.teacher_id = st.id
+                JOIN classes c ON cp.class_id = c.id
                 LEFT JOIN subjects sub ON cp.subject_id = sub.id
                 WHERE cp.class_id IN (${ph}) AND (cp.student_id IS NULL OR cp.student_id = ?)
                 ORDER BY cp.created_at DESC LIMIT 5
             `, [...enrolledClassIds, studentId]);
         }
 
-        // Subjects for current class
+        // Subjects across ALL enrolled classes
         let subjects = [];
         if (enrolledClassIds.length > 0) {
+            const ph = enrolledClassIds.map(() => '?').join(',');
             subjects = await db.all(`
                 SELECT sub.id, sub.name, sub.code,
+                       c.id as class_id, c.name as class_name, sec.name as section_name,
                        st.first_name as teacher_first, st.last_name as teacher_last
                 FROM subject_assignments sa
                 JOIN subjects sub ON sa.subject_id = sub.id
+                JOIN classes c ON sa.class_id = c.id
+                LEFT JOIN sections sec ON c.section_id = sec.id
                 LEFT JOIN staff st ON sa.teacher_id = st.id
-                WHERE sa.class_id = ? AND sa.session = ?
-                ORDER BY sub.name
-            `, [enrolledClassIds[0], activeSession]);
+                WHERE sa.class_id IN (${ph})
+                ORDER BY sec.id ASC, c.name ASC, sub.name ASC
+            `, enrolledClassIds);
         }
 
         res.render('portal/academics/index', {
@@ -613,7 +603,8 @@ exports.getAcademicsHub = async (req, res) => {
             classPosts, subjects,
             currentTerm: activeTerm, currentSession: activeSession,
             individualMessagesCount,
-            sectionInfo: ctx.enrolledClasses
+            sectionInfo: enrolledClasses,
+            enrolledClasses
         });
     } catch (err) {
         console.error('Academics Hub Error:', err);
@@ -643,27 +634,33 @@ exports.getAcademicsResults = async (req, res) => {
         let position = null, classCount = null;
         const classForCalc = enrolledClasses.length > 0 ? enrolledClasses[0] : null;
 
-        if (classForCalc) {
-            detailedResults = await db.all(`
-                SELECT r.*, sub.name as subject_name, sub.code as subject_code
-                FROM results r
-                JOIN subjects sub ON r.subject_id = sub.id
-                WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-                AND r.status IN ('approved','published')
-                ORDER BY sub.name
-            `, [studentId, selectedTerm, selectedSession]);
+        detailedResults = await db.all(`
+            SELECT r.*, sub.name as subject_name, sub.code as subject_code
+            FROM results r
+            JOIN subjects sub ON r.subject_id = sub.id
+            WHERE r.student_id = ? AND r.term = ? AND r.session = ?
+            AND r.status IN ('approved','published')
+            ORDER BY sub.name
+        `, [studentId, selectedTerm, selectedSession]);
 
-            // Position
-            const classPerf = await db.all(`
-                SELECT r.student_id, SUM(r.total) as student_total
-                FROM results r
-                WHERE r.term = ? AND r.session = ?
-                AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-                GROUP BY r.student_id ORDER BY student_total DESC
-            `, [selectedTerm, selectedSession, classForCalc.class_id, selectedSession]);
-            classCount = classPerf.length;
-            const myPerf = classPerf.find(p => p.student_id == studentId);
-            if (myPerf) position = classPerf.indexOf(myPerf) + 1;
+        // Position across enrolled classes
+        if (enrolledClasses.length > 0) {
+            for (const ec of enrolledClasses) {
+                const classPerf = await db.all(`
+                    SELECT r.student_id, SUM(r.total) as student_total
+                    FROM results r
+                    WHERE r.term = ? AND r.session = ?
+                    AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+                    GROUP BY r.student_id ORDER BY student_total DESC
+                `, [selectedTerm, selectedSession, ec.class_id, selectedSession]);
+                if (classPerf.length > 0) {
+                    const myPerf = classPerf.find(p => p.student_id == studentId);
+                    if (myPerf && position === null) {
+                        position = classPerf.indexOf(myPerf) + 1;
+                        classCount = classPerf.length;
+                    }
+                }
+            }
         }
 
         // Average
@@ -700,7 +697,8 @@ exports.getAcademicsResults = async (req, res) => {
             avgRow, prevTermData, prevAvg,
             resultConfig, grading,
             currentTerm: activeTerm, currentSession: activeSession,
-            individualMessagesCount, sectionInfo: enrolledClasses
+            individualMessagesCount, sectionInfo: enrolledClasses,
+            enrolledClasses
         });
     } catch (err) {
         console.error('Academics Results Error:', err);
@@ -713,15 +711,16 @@ exports.getAcademicsClassBoard = async (req, res) => {
         const studentId = req.session.student.id;
         const school = await getSettings();
         const ctx = await getStudentContext(studentId, school);
-        const { studentObj, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+        const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
 
         let classPosts = [];
         if (enrolledClassIds.length > 0) {
             const ph = enrolledClassIds.map(() => '?').join(',');
             classPosts = await db.all(`
-                SELECT cp.*, st.first_name, st.last_name, sub.name as subject_name
+                SELECT cp.*, st.first_name, st.last_name, sub.name as subject_name, c.name as class_name
                 FROM class_posts cp
                 JOIN staff st ON cp.teacher_id = st.id
+                JOIN classes c ON cp.class_id = c.id
                 LEFT JOIN subjects sub ON cp.subject_id = sub.id
                 WHERE cp.class_id IN (${ph}) AND (cp.student_id IS NULL OR cp.student_id = ?)
                 ORDER BY cp.created_at DESC
@@ -749,7 +748,8 @@ exports.getAcademicsClassBoard = async (req, res) => {
             school, student: studentObj || req.session.student,
             posts, filterType,
             currentTerm: activeTerm, currentSession: activeSession,
-            individualMessagesCount, sectionInfo: ctx.enrolledClasses
+            individualMessagesCount, sectionInfo: enrolledClasses,
+            enrolledClasses
         });
     } catch (err) {
         console.error('Class Board Error:', err);
@@ -762,26 +762,31 @@ exports.getAcademicsSubjects = async (req, res) => {
         const studentId = req.session.student.id;
         const school = await getSettings();
         const ctx = await getStudentContext(studentId, school);
-        const { studentObj, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+        const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
 
         let subjects = [];
         if (enrolledClassIds.length > 0) {
+            const ph = enrolledClassIds.map(() => '?').join(',');
             subjects = await db.all(`
                 SELECT sub.id, sub.name, sub.code,
+                       c.id as class_id, c.name as class_name, sec.name as section_name,
                        st.first_name as teacher_first, st.last_name as teacher_last
                 FROM subject_assignments sa
                 JOIN subjects sub ON sa.subject_id = sub.id
+                JOIN classes c ON sa.class_id = c.id
+                LEFT JOIN sections sec ON c.section_id = sec.id
                 LEFT JOIN staff st ON sa.teacher_id = st.id
-                WHERE sa.class_id = ? AND sa.session = ?
-                ORDER BY sub.name
-            `, [enrolledClassIds[0], activeSession]);
+                WHERE sa.class_id IN (${ph})
+                ORDER BY sec.id ASC, c.name ASC, sub.name ASC
+            `, enrolledClassIds);
         }
 
         res.render('portal/academics/subjects', {
             title: 'My Subjects', path: '/portal/academics/subjects',
             school, student: studentObj || req.session.student,
             subjects, currentTerm: activeTerm, currentSession: activeSession,
-            individualMessagesCount, sectionInfo: ctx.enrolledClasses
+            individualMessagesCount, sectionInfo: enrolledClasses,
+            enrolledClasses
         });
     } catch (err) {
         console.error('Subjects Error:', err);
@@ -812,7 +817,7 @@ exports.getNotifications = async (req, res) => {
         const studentId = req.session.student.id;
         const school = await getSettings();
         const ctx = await getStudentContext(studentId, school);
-        const { studentObj, enrolledClassIds, activeSession, activeTerm } = ctx;
+        const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, sectionIds } = ctx;
 
         const activeFilter = req.query.filter || 'all';
 
@@ -823,16 +828,8 @@ exports.getNotifications = async (req, res) => {
         `, [studentId]);
         const readSet = new Set(reads.map(r => `${r.source_type}_${r.source_id}`));
 
-        // 2. Announcements
-        const sectionRows = await db.all(`
-            SELECT DISTINCT s.id as section_id
-            FROM student_enrollments se
-            JOIN classes c ON se.class_id = c.id
-            JOIN sections s ON c.section_id = s.id
-            WHERE se.student_id = ? AND se.session = s.current_session
-        `, [studentId]);
-        const sectionIds = sectionRows.map(r => r.section_id);
-        let sectionFilter = sectionIds.length > 0
+        // 2. Announcements across all student sections
+        let sectionFilter = sectionIds && sectionIds.length > 0
             ? `AND (section_id IS NULL OR section_id IN (${sectionIds.join(',')}))`
             : `AND section_id IS NULL`;
 

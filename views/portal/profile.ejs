@@ -94,15 +94,29 @@
                         <span class="acm-field-value"><%= student.first_name %> <%= student.other_names ? student.other_names + ' ' : '' %><%= student.last_name %></span>
                     </div>
 
-                    <div class="acm-field-row">
-                        <span class="acm-field-label">Current Class</span>
-                        <span class="acm-field-value"><%= student.class_name || 'Unassigned' %></span>
-                    </div>
+                    <% if (typeof sectionInfo !== 'undefined' && sectionInfo && sectionInfo.length > 0) { %>
+                        <% sectionInfo.forEach((sec, idx) => { %>
+                            <div class="acm-field-row" style="<%= idx > 0 ? 'margin-top: var(--acm-sp-8); padding-top: var(--acm-sp-8); border-top: 1px dashed var(--acm-border);' : '' %>">
+                                <span class="acm-field-label"><%= sec.section_name ? sec.section_name + ' Class' : 'Class' %></span>
+                                <span class="acm-field-value">
+                                    <strong><%= sec.class_name %></strong>
+                                    <span style="font-size: var(--acm-text-xs); color: var(--acm-text-secondary); display: block; margin-top: 2px;">
+                                        <%= sec.current_session %> &middot; <%= sec.current_term %>
+                                    </span>
+                                </span>
+                            </div>
+                        <% }) %>
+                    <% } else { %>
+                        <div class="acm-field-row">
+                            <span class="acm-field-label">Current Class</span>
+                            <span class="acm-field-value"><%= student.class_name || 'Unassigned' %></span>
+                        </div>
 
-                    <div class="acm-field-row">
-                        <span class="acm-field-label">Academic Session</span>
-                        <span class="acm-field-value"><%= currentSession %></span>
-                    </div>
+                        <div class="acm-field-row">
+                            <span class="acm-field-label">Academic Session</span>
+                            <span class="acm-field-value"><%= currentSession %></span>
+                        </div>
+                    <% } %>
 
                     <div class="acm-field-row">
                         <span class="acm-field-label">Gender</span>

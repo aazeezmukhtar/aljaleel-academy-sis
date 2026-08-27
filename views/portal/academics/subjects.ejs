@@ -12,7 +12,13 @@
         <div class="acm-desktop-header">
             <div class="acm-header-greeting">
                 <h1 class="acm-greeting-title">My Subjects</h1>
-                <p class="acm-greeting-meta"><%= student.class_name %> &middot; <%= currentSession %></p>
+                <p class="acm-greeting-meta">
+                    <% if (typeof sectionInfo !== 'undefined' && sectionInfo && sectionInfo.length > 1) { %>
+                        <%= sectionInfo.map(s => (s.section_name ? s.section_name + ': ' : '') + s.class_name).join(' · ') %> &middot; <%= currentSession %>
+                    <% } else { %>
+                        <%= student.class_name || 'Unassigned' %> &middot; <%= currentSession %>
+                    <% } %>
+                </p>
             </div>
             <div class="acm-header-actions">
                 <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
@@ -50,8 +56,15 @@
             <div class="acm-subject-item" role="listitem">
                 <div class="acm-subject-icon" aria-hidden="true"><%= initials %></div>
                 <div class="acm-subject-info">
-                    <p class="acm-subject-title"><%= sub.name %></p>
-                    <p class="acm-subject-teacher">
+                    <div style="display: flex; align-items: center; gap: var(--acm-sp-8); flex-wrap: wrap;">
+                        <p class="acm-subject-title" style="margin:0;"><%= sub.name %></p>
+                        <% if (sub.class_name) { %>
+                            <span class="acm-status-chip acm-status-chip--present" style="font-size: 0.72rem; padding: 2px 8px;">
+                                <%= sub.section_name ? sub.section_name + ' · ' : '' %><%= sub.class_name %>
+                            </span>
+                        <% } %>
+                    </div>
+                    <p class="acm-subject-teacher" style="margin-top: 4px;">
                         <% if (sub.teacher_first) { %>
                             <i class="bi bi-person" aria-hidden="true"></i> <%= sub.teacher_first %> <%= sub.teacher_last %>
                         <% } else { %>

@@ -24,7 +24,11 @@
             <div class="acm-header-greeting">
                 <h1 class="acm-greeting-title"><%= greeting %>, <%= studentName %></h1>
                 <p class="acm-greeting-meta">
-                    <%= student.class_name %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+                    <% if (typeof sectionInfo !== 'undefined' && sectionInfo && sectionInfo.length > 1) { %>
+                        <%= sectionInfo.map(s => (s.section_name ? s.section_name + ': ' : '') + s.class_name).join(' · ') %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+                    <% } else { %>
+                        <%= student.class_name || 'Unassigned' %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
+                    <% } %>
                 </p>
             </div>
             <div class="acm-header-actions">
@@ -54,7 +58,14 @@
                                     <span style="font-size: var(--acm-text-sm); color: var(--acm-text-secondary);"><%= result.session %></span>
                                 </div>
                                 <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap;">
-                                    <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
+                                    <% if (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 0) { %>
+                                        <% enrolledClasses.forEach(ec => { %>
+                                            <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_name=<%= encodeURIComponent(ec.class_name) %>" target="_blank" class="acm-card-action" style="background: var(--acm-bg); padding: 6px 12px; border-radius: var(--acm-radius-sm); border: 1px solid var(--acm-border); text-decoration: none;">
+                                                <i class="bi bi-file-text" aria-hidden="true"></i>
+                                                <span><%= ec.section_name ? ec.section_name + ' (' + ec.class_name + ')' : ec.class_name %> Termly</span>
+                                            </a>
+                                        <% }) %>
+                                    <% } else if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
                                         <% student.class_name.split(', ').forEach(className => { %>
                                             <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="acm-card-action" style="background: var(--acm-bg); padding: 6px 12px; border-radius: var(--acm-radius-sm); border: 1px solid var(--acm-border); text-decoration: none;">
                                                 <i class="bi bi-file-text" aria-hidden="true"></i>
@@ -74,7 +85,14 @@
                             <div style="margin-top: var(--acm-sp-8); border-top: 1px solid var(--acm-border); padding-top: var(--acm-sp-16);">
                                 <h4 style="font-size: var(--acm-text-xs); color: var(--acm-text-muted); margin: 0 0 var(--acm-sp-8) 0; text-transform: uppercase;">Cumulative Reports</h4>
                                 <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap;">
-                                    <% if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
+                                    <% if (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 0) { %>
+                                        <% enrolledClasses.forEach(ec => { %>
+                                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>&class_name=<%= encodeURIComponent(ec.class_name) %>" target="_blank" class="acm-card-action" style="background: var(--school-primary, var(--acm-navy)); color: #fff; padding: 6px 12px; border-radius: var(--acm-radius-sm); text-decoration: none;">
+                                                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
+                                                <span style="color: #fff;"><%= ec.section_name ? ec.section_name + ' (' + ec.class_name + ')' : ec.class_name %> Cumulative</span>
+                                            </a>
+                                        <% }) %>
+                                    <% } else if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
                                         <% student.class_name.split(', ').forEach(className => { %>
                                             <a href="/portal/results/cumulative?session=<%= encodeURIComponent(results[0].session) %>&class_name=<%= encodeURIComponent(className) %>" target="_blank" class="acm-card-action" style="background: var(--school-primary, var(--acm-navy)); color: #fff; padding: 6px 12px; border-radius: var(--acm-radius-sm); text-decoration: none;">
                                                 <i class="bi bi-bar-chart-fill" aria-hidden="true"></i>
@@ -127,7 +145,7 @@
                         </a>
 
                         <!-- Class Board -->
-                        <a href="/portal/academics" class="acm-quick-card acm-card-link acm-quick-card--full">
+                        <a href="/portal/academics/class-board" class="acm-quick-card acm-card-link acm-quick-card--full">
                             <div class="acm-quick-content">
                                 <h3 class="acm-quick-title">Class Board</h3>
                                 <div class="acm-quick-value"><%= classPosts && classPosts.length > 0 ? classPosts.length + ' recent items' : 'No new items' %></div>
@@ -155,8 +173,16 @@
                         <div class="acm-attention-card">
                             <i class="bi bi-file-earmark-check acm-attention-icon" aria-hidden="true"></i>
                             <div class="acm-attention-content">
-                                <p class="acm-attention-text">Your <%= latestResult.term %> report card is available.</p>
-                                <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" target="_blank" class="acm-attention-action">View Report Card &rarr;</a>
+                                <p class="acm-attention-text">Your <%= latestResult.term %> report <%= (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 1) ? 'cards are' : 'card is' %> available.</p>
+                                <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap; margin-top: var(--acm-sp-4);">
+                                    <% if (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 0) { %>
+                                        <% enrolledClasses.forEach(ec => { %>
+                                            <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>&class_name=<%= encodeURIComponent(ec.class_name) %>" target="_blank" class="acm-attention-action"><%= ec.class_name %> &rarr;</a>
+                                        <% }) %>
+                                    <% } else { %>
+                                        <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" target="_blank" class="acm-attention-action">View Report Card &rarr;</a>
+                                    <% } %>
+                                </div>
                             </div>
                         </div>
                         <% } %>
@@ -166,7 +192,7 @@
                             <i class="bi bi-journal-text acm-attention-icon" aria-hidden="true"></i>
                             <div class="acm-attention-content">
                                 <p class="acm-attention-text"><%= classPosts.length %> new class board <%= classPosts.length === 1 ? 'post' : 'posts' %>.</p>
-                                <a href="/portal/academics" class="acm-attention-action">View Class Board &rarr;</a>
+                                <a href="/portal/academics/class-board" class="acm-attention-action">View Class Board &rarr;</a>
                             </div>
                         </div>
                         <% } %>

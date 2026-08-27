@@ -18,6 +18,22 @@ try {
         }
     }
 
+    // 1b. Add parent email and alternate phone columns
+    try {
+        db.prepare("ALTER TABLE students ADD COLUMN parent_email TEXT").run();
+        console.log("Added parent_email column.");
+    } catch (e) {
+        if (!e.message.includes("duplicate column name")) console.error("Error adding parent_email:", e.message);
+        else console.log("parent_email column already exists.");
+    }
+    try {
+        db.prepare("ALTER TABLE students ADD COLUMN parent_phone_alt TEXT").run();
+        console.log("Added parent_phone_alt column.");
+    } catch (e) {
+        if (!e.message.includes("duplicate column name")) console.error("Error adding parent_phone_alt:", e.message);
+        else console.log("parent_phone_alt column already exists.");
+    }
+
     // 2. Create Staff Attendance Table
     db.prepare(`
         CREATE TABLE IF NOT EXISTS staff_attendance (

@@ -249,9 +249,21 @@
                                         <h3>Parent / Guardian Contact</h3>
                                         <div class="detail-grid" style="margin-top: 20px;">
                                             <div class="detail-item">
-                                                <strong>Contact Phone</strong>
+                                                <strong>Primary Phone</strong>
                                                 <span>
                                                     <%= student.parent_phone || 'Not Provided' %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Alternate Phone</strong>
+                                                <span>
+                                                    <%= student.parent_phone_alt || 'Not Provided' %>
+                                                </span>
+                                            </div>
+                                            <div class="detail-item">
+                                                <strong>Email Address</strong>
+                                                <span>
+                                                    <%= student.parent_email || 'Not Provided' %>
                                                 </span>
                                             </div>
                                             <div class="detail-item">

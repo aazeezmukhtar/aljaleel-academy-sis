@@ -1,4 +1,4 @@
-﻿Found tables: settings, classes, sqlite_sequence, arms, subjects, fee_categories, student_fees, payments, affective_psychomotor, attendance, staff, class_assignments, audit_logs, student_health, sessions, grading_systems, result_config, subject_assignments, staff_attendance, announcements, gallery_images, public_pages, class_posts, notification_reads, term_events, students, results
+Found tables: settings, classes, sqlite_sequence, arms, subjects, fee_categories, student_fees, payments, affective_psychomotor, attendance, staff, class_assignments, audit_logs, student_health, sessions, grading_systems, result_config, subject_assignments, staff_attendance, announcements, gallery_images, public_pages, class_posts, notification_reads, term_events, students, results
 
 -- SCHEMA FOR settings --
 CREATE TABLE settings (
@@ -236,7 +236,12 @@ CREATE TABLE "students" (
                 current_class_id INTEGER,
                 current_arm_id INTEGER,
                 status TEXT DEFAULT 'active',
+                phone TEXT,
+                email TEXT,
+                address TEXT,
                 parent_phone TEXT,
+                parent_phone_alt TEXT,
+                parent_email TEXT,
                 parent_address TEXT,
                 password TEXT,
                 FOREIGN KEY (current_class_id) REFERENCES classes(id)

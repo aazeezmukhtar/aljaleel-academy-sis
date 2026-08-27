@@ -168,9 +168,23 @@
 
                         <div style="margin-top: var(--acm-sp-8); padding-top: var(--acm-sp-12); border-top: 1px dashed var(--acm-border);">
                             <div class="acm-field-row">
-                                <span class="acm-field-label">Parent / Guardian Phone</span>
+                                <span class="acm-field-label">Parent / Guardian Primary Phone</span>
                                 <span class="acm-field-value <%= !student.parent_phone ? 'acm-field-value--empty' : '' %>">
                                     <%= student.parent_phone || 'Not provided' %>
+                                </span>
+                            </div>
+
+                            <div class="acm-field-row" style="margin-top: var(--acm-sp-8);">
+                                <span class="acm-field-label">Parent / Guardian Alternate Phone</span>
+                                <span class="acm-field-value <%= !student.parent_phone_alt ? 'acm-field-value--empty' : '' %>">
+                                    <%= student.parent_phone_alt || 'Not provided' %>
+                                </span>
+                            </div>
+
+                            <div class="acm-field-row" style="margin-top: var(--acm-sp-8);">
+                                <span class="acm-field-label">Parent / Guardian Email</span>
+                                <span class="acm-field-value <%= !student.parent_email ? 'acm-field-value--empty' : '' %>">
+                                    <%= student.parent_email || 'Not provided' %>
                                 </span>
                             </div>
 
@@ -218,8 +232,18 @@
                             <h4 style="font-size: var(--acm-text-xs); font-weight: var(--acm-fw-bold); text-transform: uppercase; color: var(--acm-text-muted); margin-bottom: var(--acm-sp-12);">Parent / Guardian Contact</h4>
                             
                             <div class="acm-form-group">
-                                <label for="parentPhoneInput" class="acm-form-label">Parent Phone Number</label>
+                                <label for="parentPhoneInput" class="acm-form-label">Parent Primary Phone</label>
                                 <input type="tel" id="parentPhoneInput" name="parent_phone" class="acm-form-control" value="<%= student.parent_phone || '' %>" placeholder="e.g. 08012345678">
+                            </div>
+
+                            <div class="acm-form-group">
+                                <label for="parentPhoneAltInput" class="acm-form-label">Parent Alternate Phone</label>
+                                <input type="tel" id="parentPhoneAltInput" name="parent_phone_alt" class="acm-form-control" value="<%= student.parent_phone_alt || '' %>" placeholder="e.g. 08012345679">
+                            </div>
+
+                            <div class="acm-form-group">
+                                <label for="parentEmailInput" class="acm-form-label">Parent Email Address</label>
+                                <input type="email" id="parentEmailInput" name="parent_email" class="acm-form-control" value="<%= student.parent_email || '' %>" placeholder="parent@example.com">
                             </div>
 
                             <div class="acm-form-group">

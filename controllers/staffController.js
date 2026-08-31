@@ -25,7 +25,7 @@ const saveStaff = async (req, res) => {
 
     try {
         await db.run(`
-            INSERT INTO staff (first_name, last_name, staff_id, role, designation, password, avatar_image, public_bio, show_on_website, status)
+            INSERT INTO staff (first_name, last_name, staff_id, role, designation, password_hash, avatar_image, public_bio, show_on_website, status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `, [first_name, last_name, staff_id.toLowerCase(), role, designation, defaultPassword, avatar_image, public_bio || null, show_on_website ? 1 : 0]);
 

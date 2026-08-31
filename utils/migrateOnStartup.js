@@ -211,6 +211,24 @@ async function runMigrations() {
         }
     }
 
+    // 12. Add parent_email and parent_phone_alt columns to students table
+    try {
+        await db.run("ALTER TABLE students ADD COLUMN parent_email TEXT");
+        console.log('[migrate] Added parent_email to students');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] students.parent_email failed:', e.message);
+        }
+    }
+    try {
+        await db.run("ALTER TABLE students ADD COLUMN parent_phone_alt TEXT");
+        console.log('[migrate] Added parent_phone_alt to students');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] students.parent_phone_alt failed:', e.message);
+        }
+    }
+
     console.log('[migrate] Startup migrations complete.');
 }
 

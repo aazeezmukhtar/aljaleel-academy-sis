@@ -247,10 +247,18 @@
         }
     }
 
-    function confirmPromotion() {
-        const hasSelection = Array.from(document.querySelectorAll('.mapping-select')).some(s => s.value !== 'none');
+    async function confirmPromotion() {
+        const selects = Array.from(document.querySelectorAll('.mapping-select'));
+        const mapping = {};
         
-        if (!hasSelection) {
+        selects.forEach(sel => {
+            const classId = sel.getAttribute('data-source-id');
+            if (sel.value && sel.value !== 'none') {
+                mapping[classId] = sel.value;
+            }
+        });
+
+        if (Object.keys(mapping).length === 0) {
             alert('Please select at least one class to promote.');
             return;
         }
@@ -263,14 +271,35 @@
             return;
         }
 
+        const commitBtn = document.getElementById('commitBtn');
         if (confirm(`CRITICAL CONFIRMATION:\nYou are about to advance enrolled students from ${source_session} into ${target_session}.\n\nDual section assignments (e.g. Tahfeez) will be safely preserved.\n\nAre you sure you want to commit this promotion?`)) {
-            // Disable all selects that have value "none" so they are NOT sent in req.body
-            document.querySelectorAll('.mapping-select').forEach(sel => {
-                if (sel.value === 'none') {
-                    sel.disabled = true;
+            commitBtn.disabled = true;
+            commitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing Promotion...';
+
+            try {
+                const res = await fetch('/settings/promotion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ source_session, target_session, mapping })
+                });
+
+                if (res.redirected) {
+                    window.location.href = res.url;
+                } else {
+                    const data = await res.json().catch(() => null);
+                    if (data && !data.success) {
+                        alert('Promotion Failed: ' + (data.message || 'Unknown error'));
+                        commitBtn.disabled = false;
+                        commitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Commit Session Transition';
+                    } else {
+                        window.location.reload();
+                    }
                 }
-            });
-            document.getElementById('promotionForm').submit();
+            } catch (err) {
+                alert('Request failed: ' + err.message);
+                commitBtn.disabled = false;
+                commitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Commit Session Transition';
+            }
         }
     }
 </script>

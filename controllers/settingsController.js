@@ -292,10 +292,27 @@ const processPromotion = async (req, res) => {
         let totalPromoted = 0;
         let totalGraduated = 0;
 
+        // Normalize mapping input: support both { "10": "11" } and { "c_10": "11" } or flat form inputs
+        const normalizedMapping = {};
+        if (mapping && typeof mapping === 'object') {
+            for (const [key, value] of Object.entries(mapping)) {
+                if (!value || value === 'none') continue;
+                const cleanKey = key.replace(/^c_/, '');
+                normalizedMapping[cleanKey] = value;
+            }
+        }
+        // Also check req.body directly for mapping[10] or mapping[c_10]
+        for (const [key, value] of Object.entries(req.body || {})) {
+            const match = key.match(/^mapping\[(?:c_)?(\d+)\]$/);
+            if (match && value && value !== 'none') {
+                normalizedMapping[match[1]] = value;
+            }
+        }
+
         await db.transaction(async () => {
-            for (const [classIdStr, targetIdStr] of Object.entries(mapping || {})) {
+            for (const [classIdStr, targetIdStr] of Object.entries(normalizedMapping)) {
                 const classId = parseInt(classIdStr);
-                if (!targetIdStr || targetIdStr === 'none') continue;
+                if (!targetIdStr || targetIdStr === 'none' || isNaN(classId)) continue;
 
                 const sourceClass = classMap.get(classId);
                 if (!sourceClass) continue;

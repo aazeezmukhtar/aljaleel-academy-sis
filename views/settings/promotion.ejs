@@ -6,79 +6,125 @@
     <main class="main-content">
         <header style="margin-bottom: 30px;">
             <a href="/settings" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to Settings</a>
-            <h1 style="margin-top: 20px;">Session Transition & Promotion</h1>
-            <p class="text-muted">Manage the transition of students from their current classes to the next level.</p>
+            <h1 style="margin-top: 20px;">Session Transition & Student Promotion</h1>
+            <p class="text-muted">Safely manage student advancement across academic sessions with strict section isolation.</p>
         </header>
 
         <% if (success) { %>
-            <div class="alert alert-success"><%= success %></div>
+            <div class="alert alert-success" style="padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;"><%= success %></div>
         <% } %>
         <% if (error) { %>
-            <div class="alert alert-danger"><%= error %></div>
+            <div class="alert alert-danger" style="padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;"><%= error %></div>
         <% } %>
 
-        <div class="alert alert-warning" style="border-left: 5px solid #f39c12; background: #fff8e1; color: #856404; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
-            <h4 style="margin: 0 0 10px 0;"><i class="bi bi-exclamation-triangle-fill"></i> Critical Operation</h4>
-            <p style="margin: 0;">Promotion should only be performed <strong>once at the end of the academic session</strong> after all results have been finalized and reports issued. This action will update the current class for all active students.</p>
+        <div class="alert alert-warning" style="border-left: 5px solid #f39c12; background: #fff8e1; color: #856404; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
+            <h4 style="margin: 0 0 8px 0; font-size: 1.05rem;"><i class="bi bi-shield-exclamation"></i> Protected Multi-Section Operation</h4>
+            <p style="margin: 0; font-size: 0.9rem; line-height: 1.5;">
+                Promoting students from one section (e.g. <strong>Academy</strong>) will <strong>strictly preserve</strong> their enrollments in any other sections (e.g. <strong>Tahfeez</strong>). Cross-section class assignments are strictly prohibited. Always inspect the <strong>Interactive Preview</strong> before committing.
+            </p>
         </div>
 
-        <section class="card shadow-sm">
+        <section class="card shadow-sm" style="padding: 25px; margin-bottom: 30px;">
             <form action="/settings/promotion" method="POST" id="promotionForm">
+                <!-- Session Configuration Bar -->
+                <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px 24px; margin-bottom: 25px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-weight: 700; color: #1e293b; margin: 0; white-space: nowrap;">Source Session (Promote From):</label>
+                        <select name="source_session" id="sourceSessionSelect" class="form-control" style="font-weight: 600; width: 150px;" onchange="changeSourceSession(this.value)">
+                            <% available_sessions.forEach(s => { %>
+                                <option value="<%= s %>" <%= s === sourceSession ? 'selected' : '' %>><%= s %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div style="font-size: 1.3rem; color: #64748b;">&rarr;</div>
+
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <label style="font-weight: 700; color: #1e293b; margin: 0; white-space: nowrap;">Destination Session (Promote To):</label>
+                        <select name="target_session" id="targetSessionSelect" class="form-control" style="font-weight: 600; width: 150px;">
+                            <% available_sessions.forEach(s => { %>
+                                <option value="<%= s %>" <%= s === targetSession ? 'selected' : '' %>><%= s %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div style="margin-left: auto; font-size: 0.85rem; color: #64748b;">
+                        Active Source Cohort Counts are based on <strong><%= sourceSession %></strong>
+                    </div>
+                </div>
+
+                <!-- Class Mapping Table -->
                 <table class="table" style="width: 100%;">
                     <thead>
-                        <tr>
-                            <th style="text-align: left;">Current Class</th>
-                            <th style="text-align: center;">Students</th>
-                            <th style="text-align: left;">Promote To...</th>
+                        <tr style="border-bottom: 2px solid #cbd5e1;">
+                            <th style="text-align: left; padding: 12px 16px;">Source Class (<%= sourceSession %>)</th>
+                            <th style="text-align: center; padding: 12px 16px;">Enrolled Students</th>
+                            <th style="text-align: left; padding: 12px 16px;">Advance / Promote To Target Class</th>
                         </tr>
                     </thead>
                     <tbody>
                         <% 
-                        // Group classes by section name
+                        // Group classes strictly by section ID
                         let sectionsMap = {};
+                        sections.forEach(sec => {
+                            sectionsMap[sec.id] = {
+                                id: sec.id,
+                                name: sec.name,
+                                session: sec.current_session,
+                                classes: []
+                            };
+                        });
+
                         classes.forEach(cls => {
-                            const secName = cls.section_name || 'General';
-                            if (!sectionsMap[secName]) {
-                                sectionsMap[secName] = {
+                            const secId = cls.section_id || 1;
+                            if (!sectionsMap[secId]) {
+                                sectionsMap[secId] = {
+                                    id: secId,
+                                    name: cls.section_name || 'General',
                                     session: cls.currentSession,
                                     classes: []
                                 };
                             }
-                            sectionsMap[secName].classes.push(cls);
+                            sectionsMap[secId].classes.push(cls);
                         });
                         
-                        for (const [secName, secData] of Object.entries(sectionsMap)) {
+                        for (const [secId, secData] of Object.entries(sectionsMap)) {
+                            if (secData.classes.length === 0) continue;
                         %>
-                            <tr style="background-color: #f8f9fa; font-weight: bold;">
-                                <td colspan="3" style="padding: 12px 15px; border-bottom: 2px solid #dee2e6; border-top: 2px solid #dee2e6;">
-                                    <span style="font-size: 1.1em; color: var(--primary);"><%= secName %> Section</span> 
-                                    <span class="text-muted" style="font-weight: normal; margin-left: 10px;">(Current Session: <%= secData.session %>)</span>
+                            <tr style="background-color: #f8fafc; font-weight: bold;">
+                                <td colspan="3" style="padding: 14px 18px; border-bottom: 2px solid #e2e8f0; border-top: 2px solid #e2e8f0;">
+                                    <span style="font-size: 1.05rem; color: var(--primary);">
+                                        <i class="bi bi-layers-fill" style="margin-right: 6px;"></i><%= secData.name %> Section
+                                    </span>
+                                    <span class="badge" style="background: #e2e8f0; color: #475569; font-weight: 600; margin-left: 10px;">
+                                        Strict Section Isolation Active
+                                    </span>
                                 </td>
                             </tr>
                             <% secData.classes.forEach(cls => { %>
                                 <tr>
-                                    <td style="padding-left: 30px;"><strong><%= cls.name %></strong></td>
-                                    <td style="text-align: center;"><span class="badge" style="background: #e3f2fd; color: #1976d2;"><%= cls.studentCount %> Students</span></td>
-                                    <td>
-                                        <select name="mapping[<%= cls.id %>]" class="form-control" style="max-width: 300px;">
+                                    <td style="padding-left: 32px; vertical-align: middle;">
+                                        <strong style="font-size: 0.95rem; color: #1e293b;"><%= cls.name %></strong>
+                                    </td>
+                                    <td style="text-align: center; vertical-align: middle;">
+                                        <span class="badge" style="background: <%= cls.studentCount > 0 ? '#e0f2fe' : '#f1f5f9' %>; color: <%= cls.studentCount > 0 ? '#0369a1' : '#64748b' %>; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px;">
+                                            <%= cls.studentCount %> Students
+                                        </span>
+                                    </td>
+                                    <td style="vertical-align: middle;">
+                                        <!-- STRICT SECTION AFFINITY: Can ONLY select target classes from the same section -->
+                                        <select name="mapping[<%= cls.id %>]" class="form-control mapping-select" data-source-id="<%= cls.id %>" data-source-name="<%= cls.name %>" style="max-width: 340px;">
                                             <option value="none">-- No Change --</option>
-                                            <option value="graduate" style="color: #d32f2f; font-weight: 600;">🎓 Graduating / Alumni</option>
+                                            <option value="graduate" style="color: #b91c1c; font-weight: 600;">🎓 Graduating / Alumni</option>
                                             
-                                            <% 
-                                            // Group target options by section
-                                            for (const [targetSecName, targetSecData] of Object.entries(sectionsMap)) { 
-                                                const filteredTargets = targetSecData.classes.filter(t => t.id !== cls.id);
-                                                if (filteredTargets.length > 0) {
-                                            %>
-                                                <optgroup label="<%= targetSecName %> Classes:">
-                                                    <% filteredTargets.forEach(target => { %>
-                                                        <option value="<%= target.id %>"><%= target.name %></option>
-                                                    <% }) %>
-                                                </optgroup>
-                                            <% 
-                                                }
-                                            } 
-                                            %>
+                                            <optgroup label="<%= secData.name %> Classes:">
+                                                <% 
+                                                const allowedTargets = secData.classes.filter(t => t.id !== cls.id);
+                                                allowedTargets.forEach(target => { 
+                                                %>
+                                                    <option value="<%= target.id %>"><%= target.name %></option>
+                                                <% }) %>
+                                            </optgroup>
                                         </select>
                                     </td>
                                 </tr>
@@ -87,28 +133,138 @@
                     </tbody>
                 </table>
 
-                <div style="margin-top: 40px; padding: 20px; border-top: 1px solid #eee; display: flex; justify-content: flex-end; gap: 15px;">
+                <!-- Action Toolbar -->
+                <div style="margin-top: 35px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 15px;">
                     <a href="/settings" class="btn btn-outline">Cancel</a>
-                    <button type="button" class="btn btn-primary" onclick="confirmPromotion()">Commit Session Transition</button>
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-outline" onclick="fetchPreview()" style="display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-eye"></i> Preview Promotion Dry-Run
+                        </button>
+                        <button type="button" id="commitBtn" class="btn btn-primary" onclick="confirmPromotion()" style="display: flex; align-items: center; gap: 8px;">
+                            <i class="bi bi-check-circle"></i> Commit Session Transition
+                        </button>
+                    </div>
                 </div>
             </form>
+        </section>
+
+        <!-- Preview Modal / Card Container -->
+        <section id="previewSection" class="card shadow-sm" style="display: none; padding: 25px; margin-bottom: 35px; border-left: 5px solid #0284c7;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+                <h3 style="margin: 0; color: #0369a1; display: flex; align-items: center; gap: 8px;">
+                    <i class="bi bi-clipboard-check"></i> Promotion Dry-Run Preview
+                </h3>
+                <span id="previewSummaryBadge" class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.9rem; padding: 6px 14px;"></span>
+            </div>
+            <div id="previewContent" style="max-height: 480px; overflow-y: auto;"></div>
         </section>
     </main>
 </div>
 
 <script>
+    function changeSourceSession(newSession) {
+        window.location.href = `/settings/promotion?source_session=${encodeURIComponent(newSession)}`;
+    }
+
+    async function fetchPreview() {
+        const form = document.getElementById('promotionForm');
+        const formData = new FormData(form);
+        const mapping = {};
+        
+        for (const [key, value] of formData.entries()) {
+            const match = key.match(/^mapping\[(\d+)\]$/);
+            if (match && value !== 'none') {
+                mapping[match[1]] = value;
+            }
+        }
+
+        if (Object.keys(mapping).length === 0) {
+            alert('Please select at least one class mapping before requesting a preview.');
+            return;
+        }
+
+        const source_session = document.getElementById('sourceSessionSelect').value;
+        const target_session = document.getElementById('targetSessionSelect').value;
+
+        try {
+            const res = await fetch('/settings/promotion/preview', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_session, target_session, mapping })
+            });
+            const data = await res.json();
+
+            if (!data.success) {
+                alert('Preview Error: ' + data.message);
+                return;
+            }
+
+            const previewSection = document.getElementById('previewSection');
+            const previewContent = document.getElementById('previewContent');
+            const summaryBadge = document.getElementById('previewSummaryBadge');
+
+            summaryBadge.textContent = `${data.totalStudents} Students across ${data.totalClasses} Classes (${source_session} → ${target_session})`;
+
+            let html = '';
+            data.preview.forEach(group => {
+                html += `
+                    <div style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <div style="background: #f8fafc; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
+                            <div>
+                                <span style="font-weight: 700; color: #1e293b;">${group.sourceClassName}</span> 
+                                <span style="color: #64748b; font-size: 0.85rem;">(${group.sectionName})</span>
+                                <span style="margin: 0 8px; color: #0284c7; font-weight: 700;">&rarr;</span>
+                                <span style="font-weight: 700; color: ${group.isGraduate ? '#b91c1c' : '#059669'};">${group.targetClassName}</span>
+                            </div>
+                            <span class="badge" style="background: #e2e8f0; color: #334155;">${group.studentCount} Students</span>
+                        </div>
+                        <div style="padding: 12px 18px;">
+                `;
+
+                if (group.students.length === 0) {
+                    html += `<p class="text-muted" style="margin: 0; font-style: italic;">No active students currently enrolled in this class for ${source_session}.</p>`;
+                } else {
+                    html += `
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px;">
+                            ${group.students.map(st => `
+                                <div style="background: #fff; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; display: flex; justify-content: space-between;">
+                                    <strong>${st.name}</strong>
+                                    <span style="color: #64748b; font-family: monospace;">${st.admissionNumber || '#' + st.id}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+
+                html += `</div></div>`;
+            });
+
+            previewContent.innerHTML = html;
+            previewSection.style.display = 'block';
+            previewSection.scrollIntoView({ behavior: 'smooth' });
+        } catch (err) {
+            alert('Failed to load preview: ' + err.message);
+        }
+    }
+
     function confirmPromotion() {
-        const hasSelection = Array.from(document.querySelectorAll('select')).some(s => s.value !== 'none');
+        const hasSelection = Array.from(document.querySelectorAll('.mapping-select')).some(s => s.value !== 'none');
         
         if (!hasSelection) {
             alert('Please select at least one class to promote.');
             return;
         }
 
-        if (confirm('CRITICAL WARNING: You are about to update student class assignments for the entire school. This action cannot be easily undone.\n\nAre you sure you want to proceed?')) {
-            if (confirm('Final confirmation: Are you ABSOLUTELY sure? Please double-check all mappings before clicking OK.')) {
-                document.getElementById('promotionForm').submit();
-            }
+        const source_session = document.getElementById('sourceSessionSelect').value;
+        const target_session = document.getElementById('targetSessionSelect').value;
+
+        if (source_session === target_session) {
+            alert('Source session and Destination session cannot be identical. Please select different sessions.');
+            return;
+        }
+
+        if (confirm(`CRITICAL CONFIRMATION:\nYou are about to advance enrolled students from ${source_session} into ${target_session}.\n\nDual section assignments (e.g. Tahfeez) will be safely preserved.\n\nAre you sure you want to commit this promotion?`)) {
+            document.getElementById('promotionForm').submit();
         }
     }
 </script>

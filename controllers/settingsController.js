@@ -87,29 +87,65 @@ const updateSettings = async (req, res) => {
 // GET /settings/promotion
 const getPromotionPage = async (req, res) => {
     try {
+        const sections = await db.all('SELECT * FROM sections ORDER BY name');
         const classes = await db.all(`
             SELECT c.*, s.name as section_name, s.current_session as sec_session
             FROM classes c
             LEFT JOIN sections s ON c.section_id = s.id
             ORDER BY s.name, c.name
         `);
+
+        // Fetch distinct available sessions across enrollments, sections, and settings
+        const sessionRows = await db.all(`
+            SELECT DISTINCT session FROM student_enrollments WHERE session IS NOT NULL
+            UNION
+            SELECT DISTINCT current_session as session FROM sections WHERE current_session IS NOT NULL
+        `).catch(() => []);
         
-        // Count students in each class based on its section's current session
+        let available_sessions = sessionRows.map(s => s.session).filter(Boolean);
+        ['2024/2025', '2025/2026', '2026/2027', '2027/2028'].forEach(s => {
+            if (!available_sessions.includes(s)) available_sessions.push(s);
+        });
+        available_sessions.sort((a, b) => {
+            const aY = parseInt(a.split('/')[0]) || 0;
+            const bY = parseInt(b.split('/')[0]) || 0;
+            return bY - aY;
+        });
+
+        // Determine default source and target sessions
+        const currentSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+        const currentSessionDefault = currentSettingRow ? currentSettingRow.value : (available_sessions[0] || '2026/2027');
+        
+        // Selected source session (from query parameter or default to pre-current session)
+        const selectedSourceSession = req.query.source_session || (
+            available_sessions.includes('2025/2026') ? '2025/2026' : available_sessions[1] || available_sessions[0]
+        );
+        
+        // Calculate default target session from source session
+        const srcParts = selectedSourceSession.split('/');
+        const defaultTargetSession = srcParts.length === 2 
+            ? `${parseInt(srcParts[0]) + 1}/${parseInt(srcParts[1]) + 1}` 
+            : currentSessionDefault;
+
+        // Count active students in each class for the selected source session
         for (let c of classes) {
-            const classSession = c.sec_session || '2024/2025';
             const count = await db.get(`
                 SELECT COUNT(DISTINCT se.student_id) as total 
                 FROM student_enrollments se
                 JOIN students s ON se.student_id = s.id
                 WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-            `, [c.id, classSession]);
-            c.studentCount = count.total;
-            c.currentSession = classSession;
+            `, [c.id, selectedSourceSession]);
+            c.studentCount = count ? (count.total || 0) : 0;
+            c.currentSession = selectedSourceSession;
         }
         
         res.render('settings/promotion', {
             title: 'Session Transition & Promotion',
+            sections,
             classes,
+            available_sessions,
+            sourceSession: selectedSourceSession,
+            targetSession: defaultTargetSession,
             success: req.query.success,
             error: req.query.error
         });
@@ -119,87 +155,221 @@ const getPromotionPage = async (req, res) => {
     }
 };
 
-// POST /settings/promotion
-const processPromotion = async (req, res) => {
-    const { mapping } = req.body; // mapping will be { class_id: target_class_id or 'graduate' }
-    
+// POST /settings/promotion/preview - Dry-run endpoint
+const previewPromotion = async (req, res) => {
+    const { source_session, target_session, mapping } = req.body;
+
+    if (!source_session || !target_session) {
+        return res.status(400).json({ success: false, message: 'Source and target sessions are required.' });
+    }
+
     try {
-        // Fetch all classes and their section sessions
         const classes = await db.all(`
-            SELECT c.id, c.section_id, s.current_session
+            SELECT c.id, c.name, c.section_id, s.name as section_name
             FROM classes c
             LEFT JOIN sections s ON c.section_id = s.id
         `);
-        
-        const classSessionMap = {};
-        const classSectionIdMap = {};
-        classes.forEach(c => {
-            classSessionMap[c.id] = c.current_session || '2024/2025';
-            classSectionIdMap[c.id] = c.section_id;
+        const classMap = new Map();
+        classes.forEach(c => classMap.set(c.id, c));
+
+        const previewData = [];
+        let totalStudentsCount = 0;
+
+        for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
+            const classId = parseInt(classIdStr);
+            if (!targetId || targetId === 'none') continue;
+
+            const sourceClass = classMap.get(classId);
+            if (!sourceClass) continue;
+
+            let targetClassName = 'No Change';
+            let isGraduate = false;
+
+            if (targetId === 'graduate') {
+                targetClassName = '🎓 Graduating / Alumni';
+                isGraduate = true;
+            } else {
+                const targetClass = classMap.get(parseInt(targetId));
+                if (!targetClass) continue;
+
+                // Strict section affinity validation
+                if (sourceClass.section_id !== targetClass.section_id) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `Cross-section error: Class "${sourceClass.name}" (${sourceClass.section_name}) cannot be promoted to "${targetClass.name}" (${targetClass.section_name}). Both classes must be in the same section.`
+                    });
+                }
+                targetClassName = targetClass.name;
+            }
+
+            // Fetch students enrolled in source class for source_session
+            const enrolledStudents = await db.all(`
+                SELECT s.id, s.first_name, s.last_name, s.admission_number, s.status, s.current_class_id
+                FROM students s
+                JOIN student_enrollments se ON s.id = se.student_id
+                WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
+                ORDER BY s.last_name, s.first_name
+            `, [classId, source_session]);
+
+            totalStudentsCount += enrolledStudents.length;
+
+            previewData.push({
+                sourceClassId: classId,
+                sourceClassName: sourceClass.name,
+                sectionName: sourceClass.section_name,
+                targetClassId: targetId,
+                targetClassName,
+                isGraduate,
+                studentCount: enrolledStudents.length,
+                students: enrolledStudents.map(st => ({
+                    id: st.id,
+                    name: `${st.first_name} ${st.last_name}`,
+                    admissionNumber: st.admission_number,
+                    currentClassId: st.current_class_id
+                }))
+            });
+        }
+
+        res.json({
+            success: true,
+            sourceSession: source_session,
+            targetSession: target_session,
+            totalClasses: previewData.length,
+            totalStudents: totalStudentsCount,
+            preview: previewData
         });
+    } catch (err) {
+        console.error('Preview Promotion Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to calculate promotion preview: ' + err.message });
+    }
+};
+
+// POST /settings/promotion - Atomic, section-safe execution
+const processPromotion = async (req, res) => {
+    const { source_session, target_session, mapping } = req.body;
+    
+    if (!source_session || !target_session) {
+        return res.redirect(`/settings/promotion?error=${encodeURIComponent('Source and target sessions are required.')}`);
+    }
+
+    if (source_session === target_session) {
+        return res.redirect(`/settings/promotion?error=${encodeURIComponent('Source session and destination session cannot be identical.')}`);
+    }
+
+    try {
+        const classes = await db.all(`
+            SELECT c.id, c.name, c.section_id, s.name as section_name
+            FROM classes c
+            LEFT JOIN sections s ON c.section_id = s.id
+        `);
+        const classMap = new Map();
+        classes.forEach(c => classMap.set(c.id, c));
+
+        let totalPromoted = 0;
+        let totalGraduated = 0;
 
         await db.transaction(async () => {
-            for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
+            for (const [classIdStr, targetIdStr] of Object.entries(mapping || {})) {
                 const classId = parseInt(classIdStr);
-                const currentSession = classSessionMap[classId];
-                if (!currentSession) continue;
+                if (!targetIdStr || targetIdStr === 'none') continue;
 
-                const parts = currentSession.split('/');
-                const nextSession = parts.length === 2 ? `${parseInt(parts[0]) + 1}/${parseInt(parts[1]) + 1}` : '2025/2026';
+                const sourceClass = classMap.get(classId);
+                if (!sourceClass) continue;
 
-                if (targetId === 'graduate') {
-                    // Find active students enrolled in this class for the current session
+                const sourceSectionId = sourceClass.section_id;
+
+                if (targetIdStr === 'graduate') {
+                    // Find active students in source class for source_session
                     const enrolledStudents = await db.all(`
                         SELECT s.id 
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
                         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-                    `, [classId, currentSession]);
+                    `, [classId, source_session]);
 
                     if (enrolledStudents.length > 0) {
                         const ids = enrolledStudents.map(s => s.id);
-                        const placeholders = ids.map(() => '?').join(',');
-                        await db.run(`UPDATE students SET status = 'graduated' WHERE id IN (${placeholders})`, ids);
+                        for (const studentId of ids) {
+                            await db.run("UPDATE students SET status = 'graduated' WHERE id = ?", [studentId]);
+                        }
+                        totalGraduated += ids.length;
                     }
-                } else if (targetId && targetId !== 'none') {
-                    // Find active students enrolled in this class for the current session
+                } else {
+                    const targetId = parseInt(targetIdStr);
+                    const targetClass = classMap.get(targetId);
+                    if (!targetClass) {
+                        throw new Error(`Invalid destination class ID: ${targetIdStr}`);
+                    }
+
+                    // Strict section affinity: source and target MUST share the exact same section_id
+                    if (sourceSectionId !== targetClass.section_id) {
+                        throw new Error(`Section mismatch: Cannot promote from "${sourceClass.name}" (${sourceClass.section_name}) to "${targetClass.name}" (${targetClass.section_name}). Both classes must be in the same section.`);
+                    }
+
+                    // Query students enrolled in this specific source class for source_session
                     const enrolledStudents = await db.all(`
-                        SELECT s.id 
+                        SELECT s.id, s.current_class_id
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
                         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-                    `, [classId, currentSession]);
-
-                    const targetSectionId = classSectionIdMap[targetId];
+                    `, [classId, source_session]);
 
                     for (const student of enrolledStudents) {
-                        // Keep legacy current_class_id updated
-                        await db.run('UPDATE students SET current_class_id = ? WHERE id = ?', [targetId, student.id]);
-                        
-                        // Clear existing enrollments for the student in nextSession for classes belonging to the target section
-                        if (targetSectionId) {
+                        // 1. Clear ANY existing enrollment for the student in target_session ONLY for the section being promoted!
+                        // This strictly protects dual enrollments in other sections (e.g. Tahfeez stays untouched when Academy is promoted).
+                        if (sourceSectionId) {
                             await db.run(`
                                 DELETE FROM student_enrollments 
                                 WHERE student_id = ? 
                                   AND class_id IN (SELECT id FROM classes WHERE section_id = ?) 
                                   AND session = ?
-                            `, [student.id, targetSectionId, nextSession]);
+                            `, [student.id, sourceSectionId, target_session]);
                         }
 
-                        // Enroll in the next session
+                        // 2. Enroll student in target class for the target_session
                         await db.run(`
                             INSERT INTO student_enrollments (student_id, class_id, session)
                             VALUES (?, ?, ?)
-                        `, [student.id, targetId, nextSession]);
+                        `, [student.id, targetId, target_session]);
+
+                        // 3. Update students.current_class_id with section affinity awareness:
+                        // Only update current_class_id if:
+                        //   a) The student's current_class_id belongs to the section being promoted, OR
+                        //   b) The student's current_class_id is NULL or not assigned.
+                        // If the student's current_class_id belongs to a DIFFERENT section (e.g. Tahfeez),
+                        // we leave current_class_id alone so we do NOT overwrite their other section assignment!
+                        const currentClassObj = classMap.get(student.current_class_id);
+                        if (!currentClassObj || currentClassObj.section_id === sourceSectionId) {
+                            await db.run('UPDATE students SET current_class_id = ? WHERE id = ?', [targetId, student.id]);
+                        }
+
+                        totalPromoted++;
                     }
                 }
             }
+
+            // Log the promotion action into audit_logs if user is authenticated
+            if (req.session && req.session.staff) {
+                const { logAction } = require('../utils/logger');
+                logAction(
+                    req.session.staff.id,
+                    'PROMOTION_EXECUTED',
+                    'SETTINGS',
+                    {
+                        source_session,
+                        target_session,
+                        totalPromoted,
+                        totalGraduated
+                    },
+                    req.ip || '127.0.0.1'
+                );
+            }
         });
         
-        res.redirect('/settings/promotion?success=Promotion completed successfully');
+        res.redirect(`/settings/promotion?success=${encodeURIComponent(`Promotion completed successfully! ${totalPromoted} student enrollment(s) updated, ${totalGraduated} graduated into session ${target_session}.`)}&source_session=${encodeURIComponent(source_session)}`);
     } catch (err) {
         console.error('Process Promotion Error:', err);
-        res.redirect(`/settings/promotion?error=${encodeURIComponent(err.message)}`);
+        res.redirect(`/settings/promotion?error=${encodeURIComponent(err.message)}&source_session=${encodeURIComponent(source_session || '')}`);
     }
 };
 
@@ -226,4 +396,12 @@ const updateSectionCalendar = async (req, res) => {
     }
 };
 
-module.exports = { getSettingsPage, updateSettings, updateSectionCalendar, getPromotionPage, processPromotion };
+module.exports = { 
+    getSettingsPage, 
+    updateSettings, 
+    updateSectionCalendar, 
+    getPromotionPage, 
+    previewPromotion, 
+    processPromotion 
+};
+

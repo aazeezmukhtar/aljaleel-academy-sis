@@ -264,6 +264,12 @@
         }
 
         if (confirm(`CRITICAL CONFIRMATION:\nYou are about to advance enrolled students from ${source_session} into ${target_session}.\n\nDual section assignments (e.g. Tahfeez) will be safely preserved.\n\nAre you sure you want to commit this promotion?`)) {
+            // Disable all selects that have value "none" so they are NOT sent in req.body
+            document.querySelectorAll('.mapping-select').forEach(sel => {
+                if (sel.value === 'none') {
+                    sel.disabled = true;
+                }
+            });
             document.getElementById('promotionForm').submit();
         }
     }

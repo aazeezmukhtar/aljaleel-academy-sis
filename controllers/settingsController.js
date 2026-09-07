@@ -128,15 +128,37 @@ const getPromotionPage = async (req, res) => {
             : currentSessionDefault;
 
         // Count active students in each class for the selected source session
+        // For each class, query students enrolled in source_session.
+        // Fallback: If a section's current_session matches source_session or if class has students in its section's current_session,
+        // use the class's section session if it differs, or check both.
         for (let c of classes) {
-            const count = await db.get(`
+            // Check student_enrollments for the selected sourceSession
+            let count = await db.get(`
                 SELECT COUNT(DISTINCT se.student_id) as total 
                 FROM student_enrollments se
                 JOIN students s ON se.student_id = s.id
                 WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
             `, [c.id, selectedSourceSession]);
-            c.studentCount = count ? (count.total || 0) : 0;
-            c.currentSession = selectedSourceSession;
+            
+            let total = count ? (count.total || 0) : 0;
+            
+            // If total is 0 and section has its own current_session, also check that session as fallback
+            if (total === 0 && c.sec_session && c.sec_session !== selectedSourceSession) {
+                const secCount = await db.get(`
+                    SELECT COUNT(DISTINCT se.student_id) as total 
+                    FROM student_enrollments se
+                    JOIN students s ON se.student_id = s.id
+                    WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
+                `, [c.id, c.sec_session]);
+                if (secCount && secCount.total > 0) {
+                    total = secCount.total;
+                    c.currentSession = c.sec_session;
+                }
+            } else {
+                c.currentSession = selectedSourceSession;
+            }
+
+            c.studentCount = total;
         }
         
         res.render('settings/promotion', {

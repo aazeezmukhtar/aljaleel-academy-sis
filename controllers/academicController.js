@@ -41,6 +41,18 @@ const addClass = async (req, res) => {
     }
 };
 
+const updateClass = async (req, res) => {
+    const { id } = req.params;
+    const { name, section_id } = req.body;
+    try {
+        await db.run('UPDATE classes SET name = ?, section_id = ? WHERE id = ?', [name, section_id || null, id]);
+        res.redirect('/academics');
+    } catch (err) {
+        console.error('Update Class Error:', err);
+        res.status(500).send('Error updating class');
+    }
+};
+
 const deleteClass = async (req, res) => {
     const { id } = req.params;
     try {
@@ -162,6 +174,7 @@ const deleteAssignment = async (req, res) => {
 module.exports = {
     getAcademicDashboard,
     addClass,
+    updateClass,
     deleteClass,
     addSubject,
     editSubjectForm,

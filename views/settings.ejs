@@ -138,6 +138,14 @@
                                              <button type="submit" class="btn btn-primary"
                                                  style="width: 100%; margin-top: 20px;">Save Changes</button>
                                         </form>
+
+                                        <div style="margin-top: 25px; padding-top: 15px; border-top: 1px dashed #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                                             <div>
+                                                 <strong style="color: #1e293b; font-size: 0.9rem;">End of Session Promotion</strong>
+                                                 <p class="text-muted" style="font-size: 0.8rem; margin: 0;">Promote all enrolled students into the next grade level.</p>
+                                             </div>
+                                             <a href="/settings/promotion" class="btn btn-outline btn-sm">Promotion Wizard &rarr;</a>
+                                        </div>
                                     </section>
 
                                     <!-- Preview Card (Helpful for users to see impact) -->
@@ -266,6 +274,23 @@
                                             </div>
                                             <button type="submit" class="btn btn-primary" style="width: 100%;">Update Section Calendars</button>
                                         </form>
+                                    </section>
+
+                                    <!-- Session Transition & Student Promotion Wizard Card -->
+                                    <section class="card" style="grid-column: 1 / -1; margin-top: 10px; border-left: 4px solid #f59e0b;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                                            <div>
+                                                <h3 style="margin-bottom: 5px; display: flex; align-items: center; gap: 8px;">
+                                                    <i class="bi bi-arrow-up-right-circle-fill" style="color: #f59e0b;"></i> Session Transition & Promotion Wizard
+                                                </h3>
+                                                <p class="text-muted" style="font-size: 0.88rem; margin: 0;">
+                                                    End the academic year and transition students from their current classes to the next level. This should be run once at session completion.
+                                                </p>
+                                            </div>
+                                            <a href="/settings/promotion" class="btn btn-primary" style="background: #f59e0b; border-color: #f59e0b; white-space: nowrap;">
+                                                <i class="bi bi-box-arrow-up-right"></i> Open Promotion Wizard
+                                            </a>
+                                        </div>
                                     </section>
                                 </div>
             </main>

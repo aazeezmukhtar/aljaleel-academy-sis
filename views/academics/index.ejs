@@ -38,16 +38,27 @@
                         </div>
 
                         <div id="add-class-form"
-                            style="display: none; background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                            <form action="/academics/classes/add" method="POST">
+                            style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
+                            <form action="/academics/classes/add" method="POST" class="grid-2">
                                 <div class="form-group">
                                     <label>Class Name (e.g., JSS 1)</label>
-                                    <input type="text" name="name" required placeholder="Enter class name">
+                                    <input type="text" name="name" required placeholder="Enter class name" class="form-control">
                                 </div>
-                                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                <div class="form-group">
+                                    <label>Section</label>
+                                    <select name="section_id" class="form-control">
+                                        <option value="">-- Select Section (Optional) --</option>
+                                        <% if (typeof sections !== 'undefined' && sections) { %>
+                                            <% sections.forEach(sec => { %>
+                                                <option value="<%= sec.id %>"><%= sec.name %></option>
+                                            <% }); %>
+                                        <% } %>
+                                    </select>
+                                </div>
+                                <div style="grid-column: span 2; display: flex; gap: 10px; margin-top: 5px;">
                                     <button type="submit" class="btn">Save Class</button>
                                     <button type="button" class="btn btn-outline"
-                                        onclick="this.parentElement.parentElement.parentElement.style.display='none'">Cancel</button>
+                                        onclick="document.getElementById('add-class-form').style.display='none'">Cancel</button>
                                 </div>
                             </form>
                         </div>
@@ -57,6 +68,7 @@
                                 <thead>
                                     <tr>
                                         <th>Name</th>
+                                        <th>Section</th>
                                         <th style="text-align: right;">Action</th>
                                     </tr>
                                 </thead>
@@ -66,11 +78,25 @@
                                             <td><strong>
                                                     <%= c.name %>
                                                 </strong></td>
-                                            <td style="text-align: right;">
+                                            <td>
+                                                <% if (c.section_name) { %>
+                                                    <span style="background: #e0e7ff; color: #4338ca; padding: 3px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
+                                                        <%= c.section_name %>
+                                                    </span>
+                                                <% } else { %>
+                                                    <span class="text-muted" style="font-size: 0.85rem;">—</span>
+                                                <% } %>
+                                            </td>
+                                            <td style="text-align: right; display: flex; gap: 12px; justify-content: flex-end; align-items: center;">
+                                                <button type="button" class="btn-text" 
+                                                    style="color: var(--primary); font-weight: 600; cursor: pointer; border: none; background: none; padding: 0;"
+                                                    onclick="openEditClassModal(<%= c.id %>, '<%= c.name.replace(/'/g, "\\'") %>', <%= c.section_id || 'null' %>)">
+                                                    Edit
+                                                </button>
                                                 <form action="/academics/classes/delete/<%= c.id %>" method="POST"
                                                     onsubmit="return confirm('Delete this class?')">
                                                     <button type="submit"
-                                                        style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Delete</button>
+                                                        style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600; padding: 0;">Delete</button>
                                                 </form>
                                             </td>
                                         </tr>
@@ -260,5 +286,60 @@
                     </div>
             </main>
     </div>
+
+    <!-- Edit Class Modal -->
+    <div id="editClassModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+        <div class="modal-content card" style="max-width: 450px; width: 90%; padding: 25px; border-radius: 12px; background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="margin: 0;">Edit Class</h3>
+                <button type="button" onclick="closeEditClassModal()" style="font-size: 1.5rem; border: none; background: none; cursor: pointer; line-height: 1; padding: 0 5px;">&times;</button>
+            </div>
+            <form id="editClassForm" method="POST">
+                <div class="form-group" style="margin-bottom: 15px;">
+                    <label>Class Name</label>
+                    <input type="text" name="name" id="edit_class_name" required class="form-control" style="width: 100%;">
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label>Section</label>
+                    <select name="section_id" id="edit_class_section_id" class="form-control" style="width: 100%;">
+                        <option value="">-- Select Section (Optional) --</option>
+                        <% if (typeof sections !== 'undefined' && sections) { %>
+                            <% sections.forEach(sec => { %>
+                                <option value="<%= sec.id %>"><%= sec.name %></option>
+                            <% }); %>
+                        <% } %>
+                    </select>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button type="button" class="btn btn-outline" onclick="closeEditClassModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        function openEditClassModal(id, name, sectionId) {
+            const form = document.getElementById('editClassForm');
+            form.action = '/academics/classes/update/' + id;
+            document.getElementById('edit_class_name').value = name;
+            const select = document.getElementById('edit_class_section_id');
+            select.value = sectionId ? String(sectionId) : '';
+            const modal = document.getElementById('editClassModal');
+            modal.style.display = 'flex';
+        }
+
+        function closeEditClassModal() {
+            document.getElementById('editClassModal').style.display = 'none';
+        }
+
+        // Close modal if user clicks outside the card
+        window.addEventListener('click', function(e) {
+            const modal = document.getElementById('editClassModal');
+            if (e.target === modal) {
+                closeEditClassModal();
+            }
+        });
+    </script>
 
     <%- include('../partials/footer') %>

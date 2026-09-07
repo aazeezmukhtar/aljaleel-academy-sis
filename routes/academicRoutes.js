@@ -6,6 +6,7 @@ router.get('/', academicController.getAcademicDashboard);
 
 // Classes
 router.post('/classes/add', academicController.addClass);
+router.post('/classes/update/:id', academicController.updateClass);
 router.post('/classes/delete/:id', academicController.deleteClass);
 
 

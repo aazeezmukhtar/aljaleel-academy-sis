@@ -128,11 +128,8 @@ const getPromotionPage = async (req, res) => {
             : currentSessionDefault;
 
         // Count active students in each class for the selected source session
-        // For each class, query students enrolled in source_session.
-        // Fallback: If a section's current_session matches source_session or if class has students in its section's current_session,
-        // use the class's section session if it differs, or check both.
+        // Uses student_enrollments for the chosen source_session, with fallback to current_class_id
         for (let c of classes) {
-            // Check student_enrollments for the selected sourceSession
             let count = await db.get(`
                 SELECT COUNT(DISTINCT se.student_id) as total 
                 FROM student_enrollments se
@@ -142,20 +139,16 @@ const getPromotionPage = async (req, res) => {
             
             let total = count ? (count.total || 0) : 0;
             
-            // If total is 0 and section has its own current_session, also check that session as fallback
-            if (total === 0 && c.sec_session && c.sec_session !== selectedSourceSession) {
-                const secCount = await db.get(`
-                    SELECT COUNT(DISTINCT se.student_id) as total 
-                    FROM student_enrollments se
-                    JOIN students s ON se.student_id = s.id
-                    WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
-                `, [c.id, c.sec_session]);
-                if (secCount && secCount.total > 0) {
-                    total = secCount.total;
-                    c.currentSession = c.sec_session;
+            // If total is 0, check if students are assigned via current_class_id (fallback for legacy or initial cohorts)
+            if (total === 0) {
+                const currentCount = await db.get(`
+                    SELECT COUNT(*) as total
+                    FROM students
+                    WHERE current_class_id = ? AND status = 'active'
+                `, [c.id]);
+                if (currentCount && currentCount.total > 0) {
+                    total = currentCount.total;
                 }
-            } else {
-                c.currentSession = selectedSourceSession;
             }
 
             c.studentCount = total;
@@ -224,14 +217,23 @@ const previewPromotion = async (req, res) => {
                 targetClassName = targetClass.name;
             }
 
-            // Fetch students enrolled in source class for source_session
-            const enrolledStudents = await db.all(`
+            // Fetch students enrolled in source class for source_session (with fallback to current_class_id)
+            let enrolledStudents = await db.all(`
                 SELECT s.id, s.first_name, s.last_name, s.admission_number, s.status, s.current_class_id
                 FROM students s
                 JOIN student_enrollments se ON s.id = se.student_id
                 WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
                 ORDER BY s.last_name, s.first_name
             `, [classId, source_session]);
+
+            if (enrolledStudents.length === 0) {
+                enrolledStudents = await db.all(`
+                    SELECT s.id, s.first_name, s.last_name, s.admission_number, s.status, s.current_class_id
+                    FROM students s
+                    WHERE s.current_class_id = ? AND s.status = 'active'
+                    ORDER BY s.last_name, s.first_name
+                `, [classId]);
+            }
 
             totalStudentsCount += enrolledStudents.length;
 
@@ -301,13 +303,20 @@ const processPromotion = async (req, res) => {
                 const sourceSectionId = sourceClass.section_id;
 
                 if (targetIdStr === 'graduate') {
-                    // Find active students in source class for source_session
-                    const enrolledStudents = await db.all(`
+                    // Find active students in source class for source_session (with fallback to current_class_id)
+                    let enrolledStudents = await db.all(`
                         SELECT s.id 
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
                         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
                     `, [classId, source_session]);
+
+                    if (enrolledStudents.length === 0) {
+                        enrolledStudents = await db.all(`
+                            SELECT s.id FROM students s
+                            WHERE s.current_class_id = ? AND s.status = 'active'
+                        `, [classId]);
+                    }
 
                     if (enrolledStudents.length > 0) {
                         const ids = enrolledStudents.map(s => s.id);
@@ -328,13 +337,20 @@ const processPromotion = async (req, res) => {
                         throw new Error(`Section mismatch: Cannot promote from "${sourceClass.name}" (${sourceClass.section_name}) to "${targetClass.name}" (${targetClass.section_name}). Both classes must be in the same section.`);
                     }
 
-                    // Query students enrolled in this specific source class for source_session
-                    const enrolledStudents = await db.all(`
+                    // Query students enrolled in this specific source class for source_session (with fallback to current_class_id)
+                    let enrolledStudents = await db.all(`
                         SELECT s.id, s.current_class_id
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
                         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
                     `, [classId, source_session]);
+
+                    if (enrolledStudents.length === 0) {
+                        enrolledStudents = await db.all(`
+                            SELECT s.id, s.current_class_id FROM students s
+                            WHERE s.current_class_id = ? AND s.status = 'active'
+                        `, [classId]);
+                    }
 
                     for (const student of enrolledStudents) {
                         // 1. Clear ANY existing enrollment for the student in target_session ONLY for the section being promoted!

@@ -126,6 +126,10 @@
                                                         <i class="bi bi-pencil-square"></i> Edit Profile
                                                     </a>
                                                     <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                                                        <button onclick="openPromoteModal()" class="btn btn-outline"
+                                                            style="border-color: #10b981; color: #047857; font-weight: 600;">
+                                                            <i class="bi bi-arrow-up-right-circle"></i> Promote Student
+                                                        </button>
                                                         <button onclick="resetPassword('<%= student.id %>')" class="btn btn-outline"
                                                             style="border-color: var(--school-secondary); color: var(--school-secondary);">
                                                             <i class="bi bi-shield-lock"></i> Reset Password
@@ -450,6 +454,242 @@
                                         </form>
                                     </div>
                                 </div>
+
+                                <!-- Promotion Modal -->
+                                <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
+                                <div id="promoteModal" class="modal"
+                                    style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+                                    <div class="card" style="width: 580px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px;">
+                                            <h3 style="margin: 0; display: flex; align-items: center; gap: 8px;">
+                                                <i class="bi bi-arrow-up-right-circle" style="color: #10b981;"></i> Promote Student
+                                            </h3>
+                                            <button type="button" onclick="closePromoteModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+                                        </div>
+
+                                        <div id="promoteAlertBox" style="display: none; margin-bottom: 15px; padding: 12px; border-radius: 8px; font-size: 0.9rem;"></div>
+
+                                        <p style="margin-top: 0; color: #64748b; font-size: 0.9rem;">
+                                            Promote <strong><%= student.first_name %> <%= student.last_name %></strong> to the next class while maintaining section affinity. Dual-class assignments in other sections will remain unaffected.
+                                        </p>
+
+                                        <form id="promoteForm" onsubmit="handlePromoteSubmit(event)" style="margin-top: 15px;">
+                                            <div class="form-group" style="margin-bottom: 15px;">
+                                                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Current Section & Class to Promote</label>
+                                                <select id="promoteSourceClass" class="form-control" onchange="onSourceClassChange()" required>
+                                                    <option value="">-- Select Current Class --</option>
+                                                    <% if (typeof studentEnrollments !== 'undefined' && studentEnrollments.length > 0) { %>
+                                                        <% studentEnrollments.forEach(enr => { %>
+                                                            <option value="<%= enr.class_id %>" 
+                                                                data-section-id="<%= enr.section_id %>"
+                                                                data-section-name="<%= enr.section_name %>"
+                                                                data-session="<%= enr.session %>">
+                                                                [<%= enr.section_name %>] <%= enr.class_name %> (<%= enr.session %>)
+                                                            </option>
+                                                        <% }) %>
+                                                    <% } %>
+                                                </select>
+                                            </div>
+
+                                            <div class="grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                                <div class="form-group">
+                                                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Source Session</label>
+                                                    <select id="promoteSourceSession" class="form-control" onchange="onSourceSessionChange()" required>
+                                                        <% if (typeof available_sessions !== 'undefined') { %>
+                                                            <% available_sessions.forEach(sess => { %>
+                                                                <option value="<%= sess %>"><%= sess %></option>
+                                                            <% }) %>
+                                                        <% } %>
+                                                    </select>
+                                                </div>
+                                                <div class="form-group">
+                                                    <label style="font-weight: 600; display: block; margin-bottom: 6px;">Destination Session</label>
+                                                    <select id="promoteTargetSession" class="form-control" required>
+                                                        <% if (typeof available_sessions !== 'undefined') { %>
+                                                            <% available_sessions.forEach(sess => { %>
+                                                                <option value="<%= sess %>"><%= sess %></option>
+                                                            <% }) %>
+                                                        <% } %>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group" style="margin-bottom: 20px;">
+                                                <label style="font-weight: 600; display: block; margin-bottom: 6px;">Target Destination Class</label>
+                                                <select id="promoteTargetClass" class="form-control" required>
+                                                    <option value="">-- Select Source Class First --</option>
+                                                </select>
+                                                <small id="sectionNotice" style="display: block; margin-top: 5px; color: #059669; font-size: 0.82rem;">
+                                                    <i class="bi bi-shield-check"></i> Section affinity active: Only classes in the same section will be offered.
+                                                </small>
+                                            </div>
+
+                                            <div style="display: flex; gap: 10px; margin-top: 25px;">
+                                                <button type="submit" id="promoteSubmitBtn" class="btn btn-primary" style="flex: 1; background: #10b981; border-color: #10b981;">
+                                                    <i class="bi bi-check-lg"></i> Confirm Promotion
+                                                </button>
+                                                <button type="button" class="btn btn-outline" style="flex: 1;" onclick="closePromoteModal()">Cancel</button>
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+
+                                <!-- Embedded class data for Section Affinity filtering -->
+                                <script>
+                                    const allClassesList = <%- JSON.stringify(typeof classes !== 'undefined' ? classes : []) %>;
+
+                                    function openPromoteModal() {
+                                        const modal = document.getElementById('promoteModal');
+                                        modal.style.display = 'flex';
+                                        const alertBox = document.getElementById('promoteAlertBox');
+                                        alertBox.style.display = 'none';
+
+                                        const srcSelect = document.getElementById('promoteSourceClass');
+                                        if (srcSelect && srcSelect.options.length > 1) {
+                                            srcSelect.selectedIndex = 1;
+                                            onSourceClassChange();
+                                        }
+                                    }
+
+                                    function closePromoteModal() {
+                                        document.getElementById('promoteModal').style.display = 'none';
+                                    }
+
+                                    function onSourceClassChange() {
+                                        const srcSelect = document.getElementById('promoteSourceClass');
+                                        const selectedOpt = srcSelect.options[srcSelect.selectedIndex];
+                                        const targetSelect = document.getElementById('promoteTargetClass');
+
+                                        if (!selectedOpt || !selectedOpt.value) {
+                                            targetSelect.innerHTML = '<option value="">-- Select Source Class First --</option>';
+                                            return;
+                                        }
+
+                                        const sectionId = parseInt(selectedOpt.getAttribute('data-section-id'));
+                                        const sessionVal = selectedOpt.getAttribute('data-session');
+
+                                        if (sessionVal) {
+                                            const srcSessSelect = document.getElementById('promoteSourceSession');
+                                            for (let i = 0; i < srcSessSelect.options.length; i++) {
+                                                if (srcSessSelect.options[i].value === sessionVal) {
+                                                    srcSessSelect.selectedIndex = i;
+                                                    break;
+                                                }
+                                            }
+                                            onSourceSessionChange();
+                                        }
+
+                                        // Filter classes by section_id strictly
+                                        targetSelect.innerHTML = '<option value="">-- Select Destination Class --</option>';
+                                        const filtered = allClassesList.filter(c => c.section_id === sectionId);
+
+                                        filtered.forEach(cls => {
+                                            const opt = document.createElement('option');
+                                            opt.value = cls.id;
+                                            opt.textContent = cls.name + (cls.id == selectedOpt.value ? ' (Repeat / Same)' : '');
+                                            targetSelect.appendChild(opt);
+                                        });
+
+                                        // Add graduation option
+                                        const gradOpt = document.createElement('option');
+                                        gradOpt.value = 'graduate';
+                                        gradOpt.textContent = '🎓 Graduate Student (Complete School)';
+                                        gradOpt.style.fontWeight = 'bold';
+                                        gradOpt.style.color = '#7c3aed';
+                                        targetSelect.appendChild(gradOpt);
+                                    }
+
+                                    function onSourceSessionChange() {
+                                        const srcSess = document.getElementById('promoteSourceSession').value;
+                                        const targetSessSelect = document.getElementById('promoteTargetSession');
+                                        const parts = srcSess.split('/');
+                                        if (parts.length === 2) {
+                                            const nextSess = `${parseInt(parts[0]) + 1}/${parseInt(parts[1]) + 1}`;
+                                            let found = false;
+                                            for (let i = 0; i < targetSessSelect.options.length; i++) {
+                                                if (targetSessSelect.options[i].value === nextSess) {
+                                                    targetSessSelect.selectedIndex = i;
+                                                    found = true;
+                                                    break;
+                                                }
+                                            }
+                                            if (!found) {
+                                                const opt = document.createElement('option');
+                                                opt.value = nextSess;
+                                                opt.textContent = nextSess;
+                                                targetSessSelect.insertBefore(opt, targetSessSelect.firstChild);
+                                                targetSessSelect.selectedIndex = 0;
+                                            }
+                                        }
+                                    }
+
+                                    async function handlePromoteSubmit(e) {
+                                        e.preventDefault();
+                                        const btn = document.getElementById('promoteSubmitBtn');
+                                        const alertBox = document.getElementById('promoteAlertBox');
+                                        alertBox.style.display = 'none';
+
+                                        const source_class_id = document.getElementById('promoteSourceClass').value;
+                                        const target_class_id = document.getElementById('promoteTargetClass').value;
+                                        const source_session = document.getElementById('promoteSourceSession').value;
+                                        const target_session = document.getElementById('promoteTargetSession').value;
+
+                                        if (!source_class_id || !target_class_id) {
+                                            alertBox.style.display = 'block';
+                                            alertBox.style.background = '#fee2e2';
+                                            alertBox.style.color = '#b91c1c';
+                                            alertBox.textContent = 'Please choose both current class and target destination class.';
+                                            return;
+                                        }
+
+                                        if (!confirm(`Are you sure you want to promote this student from ${source_session} to ${target_session}?`)) {
+                                            return;
+                                        }
+
+                                        btn.disabled = true;
+                                        btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+
+                                        try {
+                                            const res = await fetch('/students/promote/<%= student.id %>', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({
+                                                    source_class_id,
+                                                    target_class_id,
+                                                    source_session,
+                                                    target_session
+                                                })
+                                            });
+
+                                            const result = await res.json();
+                                            if (result.success) {
+                                                alertBox.style.display = 'block';
+                                                alertBox.style.background = '#dcfce7';
+                                                alertBox.style.color = '#15803d';
+                                                alertBox.innerHTML = '<i class="bi bi-check-circle-fill"></i> ' + result.message;
+                                                setTimeout(() => {
+                                                    window.location.reload();
+                                                }, 1200);
+                                            } else {
+                                                alertBox.style.display = 'block';
+                                                alertBox.style.background = '#fee2e2';
+                                                alertBox.style.color = '#b91c1c';
+                                                alertBox.innerHTML = '<i class="bi bi-exclamation-triangle-fill"></i> ' + (result.message || 'Promotion failed.');
+                                                btn.disabled = false;
+                                                btn.innerHTML = '<i class="bi bi-check-lg"></i> Confirm Promotion';
+                                            }
+                                        } catch (err) {
+                                            console.error(err);
+                                            alertBox.style.display = 'block';
+                                            alertBox.style.background = '#fee2e2';
+                                            alertBox.style.color = '#b91c1c';
+                                            alertBox.textContent = 'Network or server error during promotion.';
+                                            btn.disabled = false;
+                                            btn.innerHTML = '<i class="bi bi-check-lg"></i> Confirm Promotion';
+                                        }
+                                    }
+                                </script>
+                                <% } %>
 
                                 <script>
                                     function openHealthModal() { document.getElementById('healthModal').style.display = 'flex'; }

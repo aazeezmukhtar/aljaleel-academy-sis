@@ -260,14 +260,68 @@ const getStudentProfile = async (req, res) => {
         if (!student) return res.status(404).send('Student not found');
 
         const enrollments = await db.all(`
-            SELECT c.name as class_name
+            SELECT se.id as enrollment_id, se.class_id, se.session, c.name as class_name, c.section_id, sec.name as section_name, sec.current_session as sec_session
             FROM student_enrollments se
             JOIN classes c ON se.class_id = c.id
             JOIN sections sec ON c.section_id = sec.id
-            WHERE se.student_id = ? AND se.session = sec.current_session
+            WHERE se.student_id = ?
+            ORDER BY sec.name, se.session DESC
         `, [id]);
 
-        student.class_name = enrollments.map(e => e.class_name).join(', ') || student.class_name || 'Not Enrolled';
+        // Filter active enrollments for display (match section current session)
+        const currentEnrollments = enrollments.filter(e => e.session === e.sec_session);
+        student.class_name = currentEnrollments.map(e => e.class_name).join(', ') 
+            || enrollments.map(e => e.class_name).join(', ') 
+            || student.class_name 
+            || 'Not Enrolled';
+
+        // Also if enrollments is empty but student.current_class_id is set, build a fallback enrollment entry
+        let studentEnrollments = [...enrollments];
+        if (studentEnrollments.length === 0 && student.current_class_id) {
+            const fallbackClass = await db.get(`
+                SELECT c.id as class_id, c.name as class_name, c.section_id, s.name as section_name, s.current_session as sec_session
+                FROM classes c
+                LEFT JOIN sections s ON c.section_id = s.id
+                WHERE c.id = ?
+            `, [student.current_class_id]);
+            if (fallbackClass) {
+                studentEnrollments.push({
+                    enrollment_id: null,
+                    class_id: fallbackClass.class_id,
+                    session: fallbackClass.sec_session || '2025/2026',
+                    class_name: fallbackClass.class_name,
+                    section_id: fallbackClass.section_id,
+                    section_name: fallbackClass.section_name,
+                    sec_session: fallbackClass.sec_session
+                });
+            }
+        }
+
+        // Fetch all classes grouped with sections for promotion modal
+        const classes = await db.all(`
+            SELECT c.id, c.name, c.section_id, s.name as section_name
+            FROM classes c
+            LEFT JOIN sections s ON c.section_id = s.id
+            WHERE c.id != 0
+            ORDER BY s.name, c.name
+        `);
+
+        // Fetch sessions
+        const sessionRows = await db.all(`
+            SELECT DISTINCT session FROM student_enrollments WHERE session IS NOT NULL
+            UNION
+            SELECT DISTINCT current_session as session FROM sections WHERE current_session IS NOT NULL
+        `).catch(() => []);
+        
+        let available_sessions = sessionRows.map(s => s.session).filter(Boolean);
+        ['2024/2025', '2025/2026', '2026/2027', '2027/2028'].forEach(s => {
+            if (!available_sessions.includes(s)) available_sessions.push(s);
+        });
+        available_sessions.sort((a, b) => {
+            const aY = parseInt(a.split('/')[0]) || 0;
+            const bY = parseInt(b.split('/')[0]) || 0;
+            return bY - aY;
+        });
 
         const feeRow = await db.get(`
             SELECT COALESCE(SUM(total_amount), 0) as total_owed, COALESCE(SUM(paid_amount), 0) as total_paid
@@ -290,6 +344,9 @@ const getStudentProfile = async (req, res) => {
             fees,
             health,
             academicTerms,
+            studentEnrollments,
+            classes,
+            available_sessions,
             success,
             error,
             user: req.session.staff
@@ -532,8 +589,123 @@ const resetStudentPassword = async (req, res) => {
     }
 };
 
+const promoteStudent = async (req, res) => {
+    const { id } = req.params;
+    const { source_class_id, target_class_id, source_session, target_session } = req.body;
+
+    if (!source_class_id || !target_class_id || !source_session || !target_session) {
+        return res.status(400).json({ success: false, message: 'All fields (source class, target class, source session, target session) are required.' });
+    }
+
+    if (source_session === target_session && String(source_class_id) === String(target_class_id)) {
+        return res.status(400).json({ success: false, message: 'Source and target class/session cannot be identical.' });
+    }
+
+    try {
+        const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        const sourceClass = await db.get(`
+            SELECT c.*, s.name as section_name 
+            FROM classes c 
+            LEFT JOIN sections s ON c.section_id = s.id 
+            WHERE c.id = ?
+        `, [source_class_id]);
+
+        if (!sourceClass) {
+            return res.status(400).json({ success: false, message: 'Source class not found.' });
+        }
+
+        const sourceSectionId = sourceClass.section_id;
+
+        if (target_class_id === 'graduate') {
+            await db.run("UPDATE students SET status = 'graduated' WHERE id = ?", [id]);
+            logAction(req.session.staff.id, 'PROMOTE_STUDENT_GRADUATE', 'STUDENT', { id, source_class_id, source_session }, req.ip);
+            return res.json({ success: true, message: `Student graduated successfully from ${sourceClass.name}.` });
+        }
+
+        const targetClass = await db.get(`
+            SELECT c.*, s.name as section_name 
+            FROM classes c 
+            LEFT JOIN sections s ON c.section_id = s.id 
+            WHERE c.id = ?
+        `, [target_class_id]);
+
+        if (!targetClass) {
+            return res.status(400).json({ success: false, message: 'Target class not found.' });
+        }
+
+        // Strict section affinity: source and target MUST belong to the exact same section
+        if (sourceSectionId !== targetClass.section_id) {
+            return res.status(400).json({
+                success: false,
+                message: `Section mismatch: Cannot promote from "${sourceClass.name}" (${sourceClass.section_name}) to "${targetClass.name}" (${targetClass.section_name}). Both classes must belong to the same section.`
+            });
+        }
+
+        await db.transaction(async () => {
+            // 1. Remove existing enrollment for this student in target_session for this section only (protects dual enrollment in other sections)
+            if (sourceSectionId) {
+                await db.run(`
+                    DELETE FROM student_enrollments 
+                    WHERE student_id = ? 
+                      AND class_id IN (SELECT id FROM classes WHERE section_id = ?) 
+                      AND session = ?
+                `, [id, sourceSectionId, target_session]);
+            } else {
+                await db.run(`
+                    DELETE FROM student_enrollments 
+                    WHERE student_id = ? AND class_id = ? AND session = ?
+                `, [id, target_class_id, target_session]);
+            }
+
+            // 2. Insert new enrollment in target class for target_session
+            await db.run(`
+                INSERT INTO student_enrollments (student_id, class_id, session)
+                VALUES (?, ?, ?)
+            `, [id, target_class_id, target_session]);
+
+            // 3. Update students.current_class_id ONLY if student's current_class_id belongs to the section being promoted, or is null
+            let shouldUpdateCurrentClass = false;
+            if (!student.current_class_id) {
+                shouldUpdateCurrentClass = true;
+            } else {
+                const currentCls = await db.get('SELECT section_id FROM classes WHERE id = ?', [student.current_class_id]);
+                if (!currentCls || currentCls.section_id === sourceSectionId) {
+                    shouldUpdateCurrentClass = true;
+                }
+            }
+
+            if (shouldUpdateCurrentClass) {
+                await db.run('UPDATE students SET current_class_id = ? WHERE id = ?', [target_class_id, id]);
+            }
+
+            logAction(req.session.staff.id, 'PROMOTE_STUDENT_INDIVIDUAL', 'STUDENT', {
+                student_id: id,
+                source_class_id,
+                target_class_id,
+                source_session,
+                target_session,
+                section_id: sourceSectionId
+            }, req.ip);
+        });
+
+        res.json({
+            success: true,
+            message: `Successfully promoted to ${targetClass.name} (${target_session}). Section affinity preserved.`
+        });
+    } catch (err) {
+        console.error('Promote Student Error:', err);
+        res.status(500).json({ success: false, message: err.message || 'Failed to promote student.' });
+    }
+};
+
 module.exports = {
     enrollStudent, getStudents, getEnrollmentForm,
-    getStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
+    getStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword,
+    promoteStudent
 };
+
 

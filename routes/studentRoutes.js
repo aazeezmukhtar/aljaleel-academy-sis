@@ -44,6 +44,9 @@ router.post('/delete/:id', isAdmin, studentController.deleteStudent);
 // POST /students/reset-password/:id
 router.post('/reset-password/:id', isAdmin, studentController.resetStudentPassword);
 
+// POST /students/promote/:id
+router.post('/promote/:id', isAdmin, studentController.promoteStudent);
+
 // Bulk Import Routes
 router.get('/bulk-import', bulkStudentController.getBulkImportPage);
 router.post('/bulk-import', upload.single('studentFile'), bulkStudentController.processBulkImport);

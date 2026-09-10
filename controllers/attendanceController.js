@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const { logAction } = require('../utils/logger');
 const { getEnrolledStudents } = require('../utils/enrollmentHelper');
+const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user) => {
@@ -51,6 +52,12 @@ const getIndex = async (req, res) => {
 
         const consecutiveRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.consecutive_absence_limit'");
         const consecutiveAbsenceLimit = Number(consecutiveRow ? consecutiveRow.value : 3);
+
+        const schoolRow = await db.all('SELECT key, value FROM settings');
+        const schoolSettings = {};
+        schoolRow.forEach(s => schoolSettings[s.key] = s.value);
+        const schoolName = schoolSettings.school_name || 'Al-Jaleel Academy';
+        const schoolPhone = schoolSettings.phone || '';
 
         const flaggedStudents = {};
         for (const cls of classes) {
@@ -103,7 +110,32 @@ const getIndex = async (req, res) => {
                 if (s.consecutive_absent_days >= consecutiveAbsenceLimit) {
                     s.flag_reason.push(`Consecutive: ${s.consecutive_absent_days} absences`);
                 }
-                return s.flag_reason.length > 0;
+
+                if (s.flag_reason.length > 0) {
+                    const studentName = `${s.first_name || ''} ${s.last_name || ''}`.trim();
+                    const whatsappAction = buildWhatsAppAttendanceAction({
+                        parent_phone: s.parent_phone,
+                        total_absences: s.total_absent_days,
+                        consecutive_absences: s.consecutive_absent_days,
+                        term_limit: termAbsenceLimit,
+                        consecutive_limit: consecutiveAbsenceLimit,
+                        context: {
+                            student_name: studentName,
+                            class_name: cls.name,
+                            term: academicSettings.term,
+                            session: academicSettings.session,
+                            school_name: schoolName,
+                            school_phone: schoolPhone
+                        }
+                    });
+
+                    s.whatsapp_url = whatsappAction.whatsapp_url;
+                    s.normalized_phone = whatsappAction.normalized_phone;
+                    s.has_valid_whatsapp = whatsappAction.is_valid;
+                    s.display_phone = whatsappAction.display_phone;
+                    return true;
+                }
+                return false;
             });
 
             if (flagged.length > 0) {

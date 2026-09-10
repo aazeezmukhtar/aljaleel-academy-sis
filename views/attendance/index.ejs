@@ -100,12 +100,28 @@
                                                     <strong style="color: #1e293b;"><%= st.first_name %> <%= st.last_name %></strong>
                                                 </td>
                                                 <td data-label="Parent Contact">
-                                                    <% if (st.parent_phone) { %>
-                                                        <a href="tel:<%= st.parent_phone %>" style="color: #2563eb; text-decoration: none;">
-                                                            <i class="bi bi-telephone-fill"></i> <%= st.parent_phone %>
-                                                        </a>
+                                                    <% if (st.has_valid_whatsapp && st.whatsapp_url) { %>
+                                                        <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
+                                                            <a href="<%= st.whatsapp_url %>" target="_blank" rel="noopener noreferrer" 
+                                                               title="Open WhatsApp with pre-filled message"
+                                                               style="display: inline-flex; align-items: center; gap: 6px; background-color: #25D366; color: white; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.82rem; transition: background 0.2s ease;">
+                                                                <i class="bi bi-whatsapp" style="font-size: 0.95rem;"></i> WhatsApp
+                                                            </a>
+                                                            <a href="tel:<%= st.parent_phone %>" style="color: #64748b; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                                                <i class="bi bi-telephone-fill" style="font-size: 0.75rem;"></i> <%= st.parent_phone %>
+                                                            </a>
+                                                        </div>
+                                                    <% } else if (st.parent_phone) { %>
+                                                        <div style="display: flex; flex-direction: column; gap: 2px;">
+                                                            <a href="tel:<%= st.parent_phone %>" style="color: #2563eb; text-decoration: none; font-size: 0.88rem;">
+                                                                <i class="bi bi-telephone-fill"></i> <%= st.parent_phone %>
+                                                            </a>
+                                                            <span style="font-size: 0.75rem; color: #dc2626;">Invalid WhatsApp format</span>
+                                                        </div>
                                                     <% } else { %>
-                                                        <span class="text-muted">N/A</span>
+                                                        <span class="text-muted" style="font-size: 0.85rem; font-style: italic;">
+                                                            <i class="bi bi-telephone-x" style="margin-right: 3px;"></i> No contact available
+                                                        </span>
                                                     <% } %>
                                                 </td>
                                                 <td data-label="Total Absences" style="text-align: center;">

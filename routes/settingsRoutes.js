@@ -1,4 +1,5 @@
-const express = require('express');
+// Production single‑tenant mode – no tenant filtering needed
+
 const router = express.Router();
 const settingsController = require('../controllers/settingsController');
 const { isAdmin } = require('../middleware/authMiddleware');

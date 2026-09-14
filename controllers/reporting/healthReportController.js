@@ -1,12 +1,13 @@
-const db = require('../../utils/db');
+﻿const db = require('../../utils/db');
 const { getAcademicContext } = require('../../utils/sessionHelper');
 
 const getHealthDashboard = async (req, res) => {
     const user = req.session.staff;
+    const schoolId = req.schoolId || (user ? user.school_id : 1);
     const stats = {
-        students_with_conditions: (await db.get("SELECT COUNT(*) as count FROM student_health WHERE medical_conditions IS NOT NULL AND medical_conditions != ''")).count,
-        students_with_allergies: (await db.get("SELECT COUNT(*) as count FROM student_health WHERE allergies IS NOT NULL AND allergies != ''")).count,
-        blood_group_a: (await db.get("SELECT COUNT(*) as count FROM student_health WHERE blood_group LIKE 'A%'")).count
+        students_with_conditions: (await db.get("SELECT COUNT(h.student_id) as count FROM student_health h JOIN students s ON h.student_id = s.id WHERE h.medical_conditions IS NOT NULL AND h.medical_conditions != '' AND s.school_id = ?", [schoolId]))?.count || 0,
+        students_with_allergies: (await db.get("SELECT COUNT(h.student_id) as count FROM student_health h JOIN students s ON h.student_id = s.id WHERE h.allergies IS NOT NULL AND h.allergies != '' AND s.school_id = ?", [schoolId]))?.count || 0,
+        blood_group_a: (await db.get("SELECT COUNT(h.student_id) as count FROM student_health h JOIN students s ON h.student_id = s.id WHERE h.blood_group LIKE 'A%' AND s.school_id = ?", [schoolId]))?.count || 0
     };
 
     res.render('reports/health/index', {
@@ -18,12 +19,14 @@ const getHealthDashboard = async (req, res) => {
 
 const getMedicalAlerts = async (req, res) => {
     const { class_id } = req.query;
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (user ? user.school_id : 1);
 
-    let classes = await db.all('SELECT * FROM classes');
+    let classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
     let medicalRisks = [];
 
     if (class_id) {
-        const context = await getAcademicContext(class_id);
+        const context = await getAcademicContext(class_id, schoolId);
         medicalRisks = await db.all(`
             SELECT s.last_name, s.first_name, s.admission_number, h.allergies, h.medical_conditions, h.blood_group, h.emergency_contact_phone, c.name as class_name
             FROM students s
@@ -31,10 +34,10 @@ const getMedicalAlerts = async (req, res) => {
             JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
             JOIN classes c ON se.class_id = c.id
             WHERE se.class_id = ? AND s.status = 'active'
+            AND s.school_id = ?
             AND ((h.allergies IS NOT NULL AND h.allergies != '') OR (h.medical_conditions IS NOT NULL AND h.medical_conditions != ''))
-        `, [context.session, class_id]);
+        `, [context.session, class_id, schoolId]);
     } else {
-        // All students with risks if no class selected
         medicalRisks = await db.all(`
             SELECT s.last_name, s.first_name, s.admission_number, h.allergies, h.medical_conditions, h.blood_group, h.emergency_contact_phone, c.name as class_name
             FROM students s
@@ -43,9 +46,10 @@ const getMedicalAlerts = async (req, res) => {
             JOIN classes c ON se.class_id = c.id
             JOIN sections sec ON c.section_id = sec.id
             WHERE s.status = 'active' AND se.session = sec.current_session
+            AND s.school_id = ?
             AND ((h.allergies IS NOT NULL AND h.allergies != '') OR (h.medical_conditions IS NOT NULL AND h.medical_conditions != ''))
             ORDER BY c.name, s.last_name
-        `);
+        `, [schoolId]);
     }
 
     res.render('reports/health/alerts', {
@@ -58,8 +62,10 @@ const getMedicalAlerts = async (req, res) => {
 
 const getEmergencyContacts = async (req, res) => {
     const { class_id } = req.query;
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (user ? user.school_id : 1);
 
-    let classes = await db.all('SELECT * FROM classes');
+    let classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
     let contacts = [];
 
     let activeClassId = class_id;
@@ -71,7 +77,7 @@ const getEmergencyContacts = async (req, res) => {
         let coalesceFunc = "IFNULL";
         if (db.DB_TYPE === 'postgres') coalesceFunc = "COALESCE";
 
-        const context = await getAcademicContext(activeClassId);
+        const context = await getAcademicContext(activeClassId, schoolId);
 
         contacts = await db.all(`
             SELECT 
@@ -84,8 +90,9 @@ const getEmergencyContacts = async (req, res) => {
             JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
             JOIN classes c ON se.class_id = c.id
             WHERE se.class_id = ? AND s.status = 'active'
+              AND s.school_id = ?
             ORDER BY s.first_name, s.last_name
-        `, [context.session, activeClassId]);
+        `, [context.session, activeClassId, schoolId]);
     }
 
     res.render('reports/health/contacts', {
@@ -101,3 +108,4 @@ module.exports = {
     getMedicalAlerts,
     getEmergencyContacts
 };
+

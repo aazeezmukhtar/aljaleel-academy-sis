@@ -1,12 +1,14 @@
 const db = require('../utils/db');
 const { logAction } = require('../utils/logger');
 const { getEnrolledStudents } = require('../utils/enrollmentHelper');
+const sessionHelper = require('../utils/sessionHelper');
 const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
 
 // Helper: get classes assigned to a staff member
-const getAssignedClasses = async (user) => {
+const getAssignedClasses = async (user, schoolId) => {
+    if (!schoolId) return [];
     if (user.role === 'Admin') {
-        return await db.all('SELECT * FROM classes ORDER BY name ASC');
+        return await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
     }
     const staffId = Number(user.id);
     return await db.all(`
@@ -14,54 +16,56 @@ const getAssignedClasses = async (user) => {
         FROM classes c
         LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
         LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
-        WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
+        WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
+          AND c.school_id = ?
         ORDER BY c.name ASC
-    `, [staffId, staffId, staffId]);
+    `, [staffId, staffId, staffId, schoolId]);
 };
 
 // Helper: get current academic settings (section-aware)
-const getAcademicSettings = async (class_id = null) => {
-    if (class_id) {
+const getAcademicSettings = async (class_id = null, schoolId) => {
+    if (class_id && schoolId) {
         const sec = await db.get(`
             SELECT s.current_session, s.current_term 
             FROM sections s 
             JOIN classes c ON c.section_id = s.id 
-            WHERE c.id = ?
-        `, [class_id]);
+            WHERE c.id = ? AND c.school_id = ?
+        `, [class_id, schoolId]);
         if (sec && sec.current_session && sec.current_term) {
             return { session: sec.current_session, term: sec.current_term };
         }
     }
-    const school = await db.all('SELECT key, value FROM settings');
-    const settings = {};
-    school.forEach(s => settings[s.key] = s.value);
+    const session = schoolId ? await sessionHelper.getCurrentSession(schoolId) : null;
+    const term = schoolId ? await sessionHelper.getCurrentTerm(schoolId) : null;
     return {
-        session: settings.current_session || '2024/2025',
-        term: settings.current_term || '1st Term'
+        session: session || null,
+        term: term || null
     };
 };
 
 // GET /attendance - Attendance index/dashboard
 const getIndex = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
         const user = req.session.staff;
-        const classes = await getAssignedClasses(user);
+        const classes = await getAssignedClasses(user, schoolId);
 
-        const limitRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.term_absence_limit'");
+        const limitRow = await db.get(
+            "SELECT value FROM settings WHERE key = 'attendance.term_absence_limit' AND school_id = ? ORDER BY school_id DESC LIMIT 1",
+            [schoolId]
+        );
         const termAbsenceLimit = Number(limitRow ? limitRow.value : 10);
 
-        const consecutiveRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.consecutive_absence_limit'");
+        const consecutiveRow = await db.get(
+            "SELECT value FROM settings WHERE key = 'attendance.consecutive_absence_limit' AND school_id = ? ORDER BY school_id DESC LIMIT 1",
+            [schoolId]
+        );
         const consecutiveAbsenceLimit = Number(consecutiveRow ? consecutiveRow.value : 3);
-
-        const schoolRow = await db.all('SELECT key, value FROM settings');
-        const schoolSettings = {};
-        schoolRow.forEach(s => schoolSettings[s.key] = s.value);
-        const schoolName = schoolSettings.school_name || 'Al-Jaleel Academy';
-        const schoolPhone = schoolSettings.phone || '';
+const schoolInfo = await db.get('SELECT name, phone FROM schools WHERE id = ?', [schoolId]);
 
         const flaggedStudents = {};
         for (const cls of classes) {
-            const academicSettings = await getAcademicSettings(cls.id);
+            const academicSettings = await getAcademicSettings(cls.id, schoolId);
 
             const attendanceRecords = await db.all(`
                 SELECT a.student_id, a.status, a.date, s.first_name, s.last_name, s.parent_phone, a.reason
@@ -74,16 +78,17 @@ const getIndex = async (req, res) => {
             const studentStats = {};
             for (const record of attendanceRecords) {
                 if (!studentStats[record.student_id]) {
-                    studentStats[record.student_id] = {
-                        id: record.student_id,
-                        first_name: record.first_name,
-                        last_name: record.last_name,
-                        parent_phone: record.parent_phone,
-                        total_absent_days: 0,
-                        consecutive_absent_days: 0,
-                        current_streak: 0,
-                        absences_without_reason: 0
-                    };
+                                            studentStats[record.student_id] = {
+                            id: record.student_id,
+                            first_name: record.first_name,
+                            last_name: record.last_name,
+                            parent_phone: record.parent_phone,
+                            total_absent_days: 0,
+                            longest_consecutive_absent_days: 0,
+                            current_consecutive_absent_days: 0,
+                            current_streak: 0,
+                            absences_without_reason: 0
+                        };
                 }
 
                 const stats = studentStats[record.student_id];
@@ -91,51 +96,55 @@ const getIndex = async (req, res) => {
                 if (record.status === 'Absent') {
                     stats.total_absent_days++;
                     stats.current_streak++;
-                    if (stats.current_streak > stats.consecutive_absent_days) {
-                        stats.consecutive_absent_days = stats.current_streak;
+                    // Update current consecutive absent days
+                    stats.current_consecutive_absent_days = stats.current_streak;
+                    // Update longest consecutive absent days if this streak is greater
+                    if (stats.current_streak > stats.longest_consecutive_absent_days) {
+                        stats.longest_consecutive_absent_days = stats.current_streak;
                     }
                     if (!record.reason || record.reason.trim() === '' || record.reason === 'Unknown') {
                         stats.absences_without_reason++;
                     }
                 } else if (record.status === 'Present' || record.status === 'Late') {
+                    // Reset current streak on presence or lateness
                     stats.current_streak = 0;
+                    stats.current_consecutive_absent_days = 0;
                 }
             }
 
+            // Determine flagged students based on total and current consecutive absences
             const flagged = Object.values(studentStats).filter(s => {
                 s.flag_reason = [];
                 if (s.total_absent_days >= termAbsenceLimit) {
                     s.flag_reason.push(`Term Limit: ${s.total_absent_days} absences`);
                 }
-                if (s.consecutive_absent_days >= consecutiveAbsenceLimit) {
-                    s.flag_reason.push(`Consecutive: ${s.consecutive_absent_days} absences`);
+                if (s.current_consecutive_absent_days >= consecutiveAbsenceLimit) {
+                    s.flag_reason.push(`Consecutive: ${s.current_consecutive_absent_days} days`);
                 }
+                return s.flag_reason.length > 0;
+            });
 
-                if (s.flag_reason.length > 0) {
-                    const studentName = `${s.first_name || ''} ${s.last_name || ''}`.trim();
-                    const whatsappAction = buildWhatsAppAttendanceAction({
-                        parent_phone: s.parent_phone,
-                        total_absences: s.total_absent_days,
-                        consecutive_absences: s.consecutive_absent_days,
-                        term_limit: termAbsenceLimit,
-                        consecutive_limit: consecutiveAbsenceLimit,
-                        context: {
-                            student_name: studentName,
-                            class_name: cls.name,
-                            term: academicSettings.term,
-                            session: academicSettings.session,
-                            school_name: schoolName,
-                            school_phone: schoolPhone
-                        }
-                    });
-
-                    s.whatsapp_url = whatsappAction.whatsapp_url;
-                    s.normalized_phone = whatsappAction.normalized_phone;
-                    s.has_valid_whatsapp = whatsappAction.is_valid;
-                    s.display_phone = whatsappAction.display_phone;
-                    return true;
-                }
-                return false;
+            // Generate WhatsApp contact details for each flagged student
+            flagged.forEach(st => {
+                const wa = buildWhatsAppAttendanceAction({
+                    parent_phone: st.parent_phone,
+                    total_absences: st.total_absent_days,
+                    consecutive_absences: st.current_consecutive_absent_days,
+                    term_limit: termAbsenceLimit,
+                    consecutive_limit: consecutiveAbsenceLimit,
+                    context: {
+                        student_name: `${st.first_name} ${st.last_name}`,
+                        class_name: cls.name,
+                        term: academicSettings.term,
+                        session: academicSettings.session,
+                        school_name: schoolInfo.name,
+                        school_phone: schoolInfo.phone
+                    }
+                });
+                st.whatsapp_url = wa.whatsapp_url;
+                st.whatsapp_phone = wa.display_phone;
+                st.whatsapp_message = wa.message;
+                st.has_valid_whatsapp = wa.is_valid;
             });
 
             if (flagged.length > 0) {
@@ -165,17 +174,19 @@ const getTakeAttendance = async (req, res) => {
         return res.redirect('/attendance');
     }
 
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+
     try {
         if (user.role !== 'Admin') {
-            const assignedClasses = await getAssignedClasses(user);
+            const assignedClasses = await getAssignedClasses(user, schoolId);
             const hasAccess = assignedClasses.some(c => String(c.id) === String(class_id));
             if (!hasAccess) return res.redirect('/attendance?error=Access Denied');
         }
 
-        const clazz = await db.get('SELECT * FROM classes WHERE id = ?', [Number(class_id)]);
+        const clazz = await db.get('SELECT * FROM classes WHERE id = ? AND school_id = ?', [Number(class_id), schoolId]);
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
-        const settings = await getAcademicSettings(Number(class_id));
+        const settings = await getAcademicSettings(Number(class_id), schoolId);
 
         const enrolledStudents = await getEnrolledStudents(Number(class_id), settings.session);
         let students = [];
@@ -187,8 +198,9 @@ const getTakeAttendance = async (req, res) => {
                 FROM students s
                 LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
                 WHERE s.id IN (${studentIds.map(() => '?').join(',')})
+                  AND s.school_id = ?
                 ORDER BY s.last_name, s.first_name
-            `, [date, Number(class_id), ...studentIds]);
+            `, [date, Number(class_id), ...studentIds, schoolId]);
         }
 
         res.render('attendance/take', {
@@ -210,14 +222,18 @@ const getTakeAttendance = async (req, res) => {
 const saveAttendance = async (req, res) => {
     const { class_id, date, session, term, attendance, reasons = {}, custom_reasons = {} } = req.body;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     if (!user) {
         return res.status(401).json({ success: false, message: 'Session expired' });
     }
 
     try {
+        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [Number(class_id), schoolId]);
+        if (!classCheck) return res.status(403).json({ success: false, message: 'Class not found or access denied' });
+
         if (user.role !== 'Admin') {
-            const assignedClasses = await getAssignedClasses(user);
+            const assignedClasses = await getAssignedClasses(user, schoolId);
             const hasAccess = assignedClasses.some(c => String(c.id) === String(class_id));
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Access Denied to this class' });
         }
@@ -235,13 +251,19 @@ const saveAttendance = async (req, res) => {
             for (const [studentIdStr, status] of Object.entries(attendance || {})) {
                 const student_id = Number(studentIdStr);
                 if (isNaN(student_id)) continue;
-                const settings = await getAcademicSettings(class_id);
+
+                // Validate student belongs to tenant
+                const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [student_id, schoolId]);
+                if (!studentCheck) continue;
+
+                const settings = await getAcademicSettings(class_id, schoolId);
                 
                 const rawReason = reasons[studentIdStr] || null;
                 const customReason = custom_reasons[studentIdStr] || null;
                 
                 let reason = rawReason;
                 if (rawReason === 'Other' && customReason) {
+
                     reason = customReason;
                 }
                 
@@ -323,6 +345,7 @@ const getReport = async (req, res) => {
 
 // GET /attendance/staff - Staff attendance page (Admin only)
 const getStaffAttendance = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { date } = req.query;
     const targetDate = date || new Date().toISOString().split('T')[0];
     const user = req.session.staff;
@@ -336,8 +359,9 @@ const getStaffAttendance = async (req, res) => {
             SELECT s.*, sa.status 
             FROM staff s
             LEFT JOIN staff_attendance sa ON s.id = sa.teacher_id AND sa.date = ?
+            WHERE s.school_id = ?
             ORDER BY s.last_name, s.first_name
-        `, [targetDate]);
+        `, [targetDate, schoolId]);
 
         res.render('attendance/staff', {
             title: 'Staff Attendance',

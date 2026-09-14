@@ -6,23 +6,33 @@ const { computeResult } = require('../utils/resultHelper');
 const { getEnrolledStudents } = require('../utils/enrollmentHelper');
 
 const downloadTemplate = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { class_id, subject_id } = req.query;
 
     if (!class_id || !subject_id) return res.status(400).send('Class and Subject are required to generate template.');
 
     try {
-        const configArr = await db.all('SELECT * FROM result_config');
-        const settings = {};
-        configArr.forEach(c => settings[c.key] = c.value);
+        // Verify class and subject belong to this school
+        const klass = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [Number(class_id), schoolId]);
+        const subjectCheck = await db.get('SELECT id FROM subjects WHERE id = ? AND school_id = ?', [Number(subject_id), schoolId]);
+        if (!klass || !subjectCheck) {
+            return res.status(403).send('Access Denied: Class or Subject does not belong to this school.');
+        }
+
+        const resultController = require('./resultController');
+        const settings = await resultController.getSectionResultConfig(Number(class_id), schoolId);
         const caCount = parseInt(settings.ca_count || '2');
 
-        const settingsRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-        const currentSession = settingsRow ? settingsRow.value : '2024/2025';
+        const settingsRow = await db.get(
+            "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ? ORDER BY school_id DESC LIMIT 1",
+            [schoolId]
+        );
+        const currentSession = settingsRow ? settingsRow.value : '2025/2026';
 
         const students = await getEnrolledStudents(Number(class_id), currentSession);
 
-        const subject = await db.get('SELECT name FROM subjects WHERE id = ?', [Number(subject_id)]);
-        const className = await db.get('SELECT name FROM classes WHERE id = ?', [Number(class_id)]);
+        const subject = await db.get('SELECT name FROM subjects WHERE id = ? AND school_id = ?', [Number(subject_id), schoolId]);
+        const className = await db.get('SELECT name FROM classes WHERE id = ? AND school_id = ?', [Number(class_id), schoolId]);
 
         if (!students.length) return res.status(404).send('No active students found in this class.');
 
@@ -67,9 +77,10 @@ const downloadTemplate = async (req, res) => {
 };
 
 const getImportPage = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
-        const classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
-        const subjects = await db.all('SELECT * FROM subjects ORDER BY name ASC');
+        const classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
+        const subjects = await db.all('SELECT * FROM subjects WHERE school_id = ? ORDER BY name ASC', [schoolId]);
 
         res.render('results/import', {
             title: 'Bulk Result Import',
@@ -83,6 +94,7 @@ const getImportPage = async (req, res) => {
 };
 
 const processImport = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { class_id, subject_id, term, session } = req.body;
     const file = req.file;
 
@@ -116,15 +128,21 @@ const processImport = async (req, res) => {
                 continue;
             }
 
-            const student = await db.get('SELECT id FROM students WHERE admission_number = ?', [admissionNo.toString()]);
+            const student = await db.get(
+                'SELECT id FROM students WHERE admission_number = ? AND school_id = ?',
+                [admissionNo.toString(), schoolId]
+            );
             if (!student) {
-                errors.push(`Row ${i + 2}: Student with ID ${admissionNo} not found.`);
+                errors.push(`Row ${i + 2}: Student with ID ${admissionNo} not found in this school.`);
                 continue;
             }
 
             let activeSubjectId = Number(subject_id);
             if (subjectName) {
-                const sub = await db.get('SELECT id FROM subjects WHERE LOWER(name) = LOWER(?)', [subjectName]);
+                const sub = await db.get(
+                    'SELECT id FROM subjects WHERE LOWER(name) = LOWER(?) AND school_id = ?',
+                    [subjectName, schoolId]
+                );
                 if (sub) activeSubjectId = Number(sub.id);
                 else {
                     errors.push(`Row ${i + 2}: Subject "${subjectName}" not found in system.`);
@@ -180,4 +198,5 @@ const processImport = async (req, res) => {
 };
 
 module.exports = { getImportPage, processImport, downloadTemplate };
+
 

@@ -1,10 +1,14 @@
-const db = require('../utils/db');
+﻿const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 
 // GET /staff - Show all staff members
 const getAllStaff = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
-        const staff = await db.all('SELECT * FROM staff ORDER BY last_name, first_name');
+        const staff = await db.all(
+            'SELECT * FROM staff WHERE school_id = ? ORDER BY last_name, first_name',
+            [schoolId]
+        );
         res.render('staff/index', { title: 'Staff Directory', staff });
     } catch (err) {
         console.error('getAllStaff Error:', err);
@@ -19,15 +23,16 @@ const addStaffForm = (req, res) => {
 
 // POST /staff/add - Save new staff member
 const saveStaff = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { first_name, last_name, staff_id, role, designation, public_bio, show_on_website } = req.body;
     const avatar_image = req.file ? req.file.filename : null;
     const defaultPassword = bcrypt.hashSync(`${staff_id}123`, 10);
 
     try {
         await db.run(`
-            INSERT INTO staff (first_name, last_name, staff_id, role, designation, password_hash, avatar_image, public_bio, show_on_website, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-        `, [first_name, last_name, staff_id.toLowerCase(), role, designation, defaultPassword, avatar_image, public_bio || null, show_on_website ? 1 : 0]);
+            INSERT INTO staff (school_id, first_name, last_name, staff_id, role, designation, password_hash, avatar_image, public_bio, show_on_website, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+        `, [schoolId, first_name, last_name, staff_id.toLowerCase(), role, designation, defaultPassword, avatar_image, public_bio || null, show_on_website ? 1 : 0]);
 
         res.redirect('/staff');
     } catch (err) {
@@ -38,11 +43,15 @@ const saveStaff = async (req, res) => {
 
 // GET /staff/view/:id - View staff profile and assignments
 const getStaffProfile = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { id } = req.params;
     const user = req.session.staff;
 
     try {
-        const member = await db.get('SELECT * FROM staff WHERE id = ?', [id]);
+        const member = await db.get(
+            'SELECT * FROM staff WHERE id = ? AND school_id = ?',
+            [id, schoolId]
+        );
         if (!member) return res.status(404).send('Staff member not found');
 
         const classAssignments = await db.all(`
@@ -62,8 +71,14 @@ const getStaffProfile = async (req, res) => {
             ORDER BY sa.session DESC, s.name
         `, [id]);
 
-        const allClasses = await db.all('SELECT * FROM classes ORDER BY name');
-        const allSubjects = await db.all('SELECT * FROM subjects ORDER BY name');
+        const allClasses = await db.all(
+            'SELECT * FROM classes WHERE school_id = ? ORDER BY name',
+            [schoolId]
+        );
+        const allSubjects = await db.all(
+            'SELECT * FROM subjects WHERE school_id = ? ORDER BY name',
+            [schoolId]
+        );
 
         res.render('staff/view', {
             title: `${member.first_name} ${member.last_name}`,
@@ -82,9 +97,13 @@ const getStaffProfile = async (req, res) => {
 
 // GET /staff/edit/:id - Show edit form
 const getEditForm = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { id } = req.params;
     try {
-        const member = await db.get('SELECT * FROM staff WHERE id = ?', [id]);
+        const member = await db.get(
+            'SELECT * FROM staff WHERE id = ? AND school_id = ?',
+            [id, schoolId]
+        );
         if (!member) return res.status(404).send('Staff member not found');
         res.render('staff/edit', { title: 'Edit Staff', member });
     } catch (err) {
@@ -95,6 +114,7 @@ const getEditForm = async (req, res) => {
 
 // POST /staff/update/:id - Update staff info
 const updateStaff = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { id } = req.params;
     const { first_name, last_name, staff_id, role, designation, status, public_bio, show_on_website } = req.body;
     const avatar_image = req.file ? req.file.filename : null;
@@ -103,13 +123,13 @@ const updateStaff = async (req, res) => {
         if (avatar_image) {
             await db.run(`
                 UPDATE staff SET first_name=?, last_name=?, staff_id=?, role=?, designation=?, status=?,
-                public_bio=?, show_on_website=?, avatar_image=? WHERE id=?
-            `, [first_name, last_name, staff_id, role, designation, status, public_bio || null, show_on_website ? 1 : 0, avatar_image, id]);
+                public_bio=?, show_on_website=?, avatar_image=? WHERE id=? AND school_id = ?
+            `, [first_name, last_name, staff_id, role, designation, status, public_bio || null, show_on_website ? 1 : 0, avatar_image, id, schoolId]);
         } else {
             await db.run(`
                 UPDATE staff SET first_name=?, last_name=?, staff_id=?, role=?, designation=?, status=?,
-                public_bio=?, show_on_website=? WHERE id=?
-            `, [first_name, last_name, staff_id, role, designation, status, public_bio || null, show_on_website ? 1 : 0, id]);
+                public_bio=?, show_on_website=? WHERE id=? AND school_id = ?
+            `, [first_name, last_name, staff_id, role, designation, status, public_bio || null, show_on_website ? 1 : 0, id, schoolId]);
         }
         res.redirect(`/staff/view/${id}`);
     } catch (err) {
@@ -120,8 +140,15 @@ const updateStaff = async (req, res) => {
 
 // POST /staff/assign-class - Assign a class to a staff member
 const assignClass = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { staff_id, class_id, session } = req.body;
     try {
+        // Verify both staff and class belong to this school
+        const staffMember = await db.get('SELECT id FROM staff WHERE id = ? AND school_id = ?', [staff_id, schoolId]);
+        const klass = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!staffMember || !klass) {
+            return res.redirect(`/staff/view/${staff_id}?error=Access Denied: Resource does not belong to this school`);
+        }
         await db.run(`
             INSERT INTO class_assignments (staff_id, class_id, session) VALUES (?, ?, ?)
             ON CONFLICT DO NOTHING
@@ -135,8 +162,16 @@ const assignClass = async (req, res) => {
 
 // POST /staff/assign-subject - Assign a subject to a teacher
 const assignSubject = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { staff_id, subject_id, class_id, session } = req.body;
     try {
+        // Verify all entities belong to this school
+        const staffMember = await db.get('SELECT id FROM staff WHERE id = ? AND school_id = ?', [staff_id, schoolId]);
+        const subject = await db.get('SELECT id FROM subjects WHERE id = ? AND school_id = ?', [subject_id, schoolId]);
+        const klass = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!staffMember || !subject || !klass) {
+            return res.redirect(`/staff/view/${staff_id}?error=Access Denied: Resource does not belong to this school`);
+        }
         await db.run(`
             INSERT INTO subject_assignments (teacher_id, subject_id, class_id, session) VALUES (?, ?, ?, ?)
             ON CONFLICT DO NOTHING
@@ -150,12 +185,27 @@ const assignSubject = async (req, res) => {
 
 // POST /staff/delete-assignment/:id - Remove a class or subject assignment
 const deleteAssignment = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { id } = req.params;
     const { type, staff_id } = req.query;
     try {
         if (type === 'subject') {
+            // Verify assignment belongs to this tenant via joined class
+            const assign = await db.get(`
+                SELECT sa.id FROM subject_assignments sa
+                JOIN classes c ON sa.class_id = c.id
+                WHERE sa.id = ? AND c.school_id = ?
+            `, [id, schoolId]);
+            if (!assign) return res.redirect(`/staff/view/${staff_id}?error=Assignment not found or access denied`);
             await db.run('DELETE FROM subject_assignments WHERE id = ?', [id]);
         } else {
+            // Verify assignment belongs to this tenant via joined class
+            const assign = await db.get(`
+                SELECT ca.id FROM class_assignments ca
+                JOIN classes c ON ca.class_id = c.id
+                WHERE ca.id = ? AND c.school_id = ?
+            `, [id, schoolId]);
+            if (!assign) return res.redirect(`/staff/view/${staff_id}?error=Assignment not found or access denied`);
             await db.run('DELETE FROM class_assignments WHERE id = ?', [id]);
         }
         res.redirect(`/staff/view/${staff_id}`);
@@ -167,11 +217,18 @@ const deleteAssignment = async (req, res) => {
 
 // POST /staff/delete/:id - Permanently delete a staff member
 const deleteStaff = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { id } = req.params;
     try {
+        const member = await db.get('SELECT id FROM staff WHERE id = ? AND school_id = ?', [id, schoolId]);
+        if (!member) {
+            return res.status(404).json({ success: false, message: 'Staff member not found.' });
+        }
+
         await db.run('DELETE FROM class_assignments WHERE staff_id = ?', [id]);
         await db.run('DELETE FROM subject_assignments WHERE teacher_id = ?', [id]);
-        await db.run('DELETE FROM staff WHERE id = ?', [id]);
+        await db.run('DELETE FROM staff_attendance WHERE staff_id = ?', [id]);
+        await db.run('DELETE FROM staff WHERE id = ? AND school_id = ?', [id, schoolId]);
         res.json({ success: true, message: 'Staff member deleted successfully.' });
     } catch (err) {
         console.error('deleteStaff Error:', err);
@@ -181,37 +238,43 @@ const deleteStaff = async (req, res) => {
 
 // GET /staff/board - Class board for teachers
 const getClassBoard = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const user = req.session.staff;
     const { class_id, term, session } = req.query;
 
     try {
         let classes;
         if (user.role === 'Admin') {
-            classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
+            classes = await db.all(
+                'SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC',
+                [schoolId]
+            );
         } else {
             classes = await db.all(`
                 SELECT DISTINCT c.* 
                 FROM classes c
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
-                WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
+                WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
+                  AND c.school_id = ?
                 ORDER BY c.name ASC
-            `, [user.id, user.id, user.id]);
+            `, [user.id, user.id, user.id, schoolId]);
         }
 
         const subjects = await db.all(`
             SELECT DISTINCT s.id, s.name 
             FROM subjects s
             JOIN subject_assignments sa ON s.id = sa.subject_id
-            WHERE sa.teacher_id = ?
-        `, [user.id]);
+            WHERE sa.teacher_id = ? AND s.school_id = ?
+        `, [user.id, schoolId]);
 
         const students = await db.all(`
             SELECT DISTINCT s.id, s.first_name, s.last_name, COALESCE(se.class_id, s.current_class_id) as class_id
             FROM students s
             LEFT JOIN student_enrollments se ON s.id = se.student_id
-            WHERE s.status = 'active' OR s.status IS NULL OR s.status = 'Active'
-        `);
+            WHERE (s.status = 'active' OR s.status IS NULL OR s.status = 'Active')
+              AND s.school_id = ?
+        `, [schoolId]);
 
         const posts = classes.length > 0 ? await db.all(`
             SELECT cp.*, c.name as class_name, s.name as subject_name,
@@ -220,9 +283,9 @@ const getClassBoard = async (req, res) => {
             JOIN classes c ON cp.class_id = c.id
             LEFT JOIN subjects s ON cp.subject_id = s.id
             LEFT JOIN students st ON cp.student_id = st.id
-            WHERE cp.teacher_id = ?
+            WHERE cp.teacher_id = ? AND c.school_id = ?
             ORDER BY cp.created_at DESC
-        `, [user.id]) : [];
+        `, [user.id, schoolId]) : [];
 
         res.render('staff/board', {
             title: 'Class Board',
@@ -244,9 +307,7 @@ const postClassBoard = async (req, res) => {
     const user = req.session.staff;
     const { class_id, subject_id, student_id, post_type, title, due_date, content } = req.body;
     const attachment = req.file ? req.file.filename : null;
-    // Normalize student_id: empty string means whole class (null), otherwise convert to integer
     const normalizedStudentId = student_id && student_id.trim() !== '' ? parseInt(student_id, 10) : null;
-    console.log('postClassBoard - inserting with student_id:', normalizedStudentId);
     try {
         await db.run('INSERT INTO class_posts (class_id, teacher_id, subject_id, student_id, post_type, title, content, due_date, attachment_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
             [class_id, user.id, subject_id || null, normalizedStudentId, post_type, title, content, due_date || null, attachment]);
@@ -259,8 +320,25 @@ const postClassBoard = async (req, res) => {
 
 // POST /staff/board/post/delete/:id - Delete a class board post
 const deleteClassBoardPost = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { id } = req.params;
     try {
+        // Verify the post belongs to this tenant and to the requesting teacher (or Admin)
+        const post = await db.get(`
+            SELECT cp.id, cp.teacher_id FROM class_posts cp
+            JOIN classes c ON cp.class_id = c.id
+            WHERE cp.id = ? AND c.school_id = ?
+        `, [id, schoolId]);
+
+        if (!post) {
+            return res.redirect('/staff/board?error=Post not found');
+        }
+        // Only Admin or the post's own teacher may delete
+        if (user.role !== 'Admin' && Number(post.teacher_id) !== Number(user.id)) {
+            return res.redirect('/staff/board?error=Access Denied: You can only delete your own posts');
+        }
+
         await db.run('DELETE FROM class_posts WHERE id = ?', [id]);
         res.redirect('/staff/board?success=Post deleted successfully');
     } catch (err) {
@@ -269,4 +347,5 @@ const deleteClassBoardPost = async (req, res) => {
 };
 
 module.exports = { getAllStaff, addStaffForm, saveStaff, getStaffProfile, getEditForm, updateStaff, assignClass, assignSubject, deleteAssignment, deleteStaff, getClassBoard, postClassBoard, deleteClassBoardPost };
+
 

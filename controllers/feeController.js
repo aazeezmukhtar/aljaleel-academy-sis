@@ -1,15 +1,20 @@
-const db = require('../utils/db');
+﻿const db = require('../utils/db');
 const { getAcademicContext } = require('../utils/sessionHelper');
 
 const getSetup = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
-        const classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
+        const classes = await db.all(
+            'SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC',
+            [schoolId]
+        );
         const feeCategories = await db.all(`
             SELECT fc.*, c.name as class_name 
             FROM fee_categories fc
             LEFT JOIN classes c ON fc.class_id = c.id
+            WHERE fc.school_id = ?
             ORDER BY fc.session DESC, fc.term
-        `);
+        `, [schoolId]);
 
         res.render('fees/setup', {
             title: 'Fee Structure Setup',
@@ -23,12 +28,13 @@ const getSetup = async (req, res) => {
 };
 
 const addFeeCategory = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { name, amount, class_id, session, term } = req.body;
     try {
         await db.run(`
-            INSERT INTO fee_categories (name, amount, class_id, session, term)
-            VALUES (?, ?, ?, ?, ?)
-        `, [name, amount, class_id, session, term]);
+            INSERT INTO fee_categories (school_id, name, amount, class_id, session, term)
+            VALUES (?, ?, ?, ?, ?, ?)
+        `, [schoolId, name, amount, class_id, session, term]);
         res.redirect('/fees/setup');
     } catch (err) {
         console.error('Add Fee Category Error:', err);
@@ -37,19 +43,23 @@ const addFeeCategory = async (req, res) => {
 };
 
 const getFeeManager = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { class_id } = req.query;
     const user = req.session.staff;
     try {
         let classes;
         if (user.role === 'Admin' || user.role === 'Bursar') {
-            classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
+            classes = await db.all(
+                'SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC',
+                [schoolId]
+            );
         } else {
             classes = await db.all(`
                 SELECT DISTINCT c.* FROM classes c
                 JOIN class_assignments ca ON c.id = ca.class_id
-                WHERE ca.staff_id = ?
+                WHERE ca.staff_id = ? AND c.school_id = ?
                 ORDER BY c.name ASC
-            `, [user.id]);
+            `, [user.id, schoolId]);
         }
 
         let students = [];
@@ -65,10 +75,12 @@ const getFeeManager = async (req, res) => {
                        COALESCE(SUM(sf.paid_amount), 0) as total_paid
                 FROM students s
                 LEFT JOIN student_fees sf ON s.id = sf.student_id
-                WHERE (s.current_class_id = ? OR s.id IN (SELECT student_id FROM student_enrollments WHERE class_id = ?)) AND (s.status = 'active' OR s.status IS NULL OR s.status = 'Active')
+                WHERE (s.current_class_id = ? OR s.id IN (SELECT student_id FROM student_enrollments WHERE class_id = ?))
+                  AND (s.status = 'active' OR s.status IS NULL OR s.status = 'Active')
+                  AND s.school_id = ?
                 GROUP BY s.id
                 ORDER BY s.last_name, s.first_name
-            `, [class_id, class_id]);
+            `, [class_id, class_id, schoolId]);
         }
 
         res.render('fees/manager', {
@@ -84,10 +96,14 @@ const getFeeManager = async (req, res) => {
 };
 
 const getStudentFees = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { student_id } = req.params;
     const user = req.session.staff;
     try {
-        const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
+        const student = await db.get(
+            'SELECT * FROM students WHERE id = ? AND school_id = ?',
+            [student_id, schoolId]
+        );
         if (!student) return res.status(404).send('Student not found');
 
         const enrollments = await db.all(`
@@ -124,14 +140,16 @@ const getStudentFees = async (req, res) => {
             availableFees = await db.all(`
                 SELECT * FROM fee_categories 
                 WHERE (class_id = 0 OR class_id IN (${placeholders}))
-                AND id NOT IN (SELECT fee_category_id FROM student_fees WHERE student_id = ?)
-            `, [...enrolledClassIds, student_id]);
+                  AND school_id = ?
+                  AND id NOT IN (SELECT fee_category_id FROM student_fees WHERE student_id = ?)
+            `, [...enrolledClassIds, schoolId, student_id]);
         } else {
             availableFees = await db.all(`
                 SELECT * FROM fee_categories 
                 WHERE class_id = 0
-                AND id NOT IN (SELECT fee_category_id FROM student_fees WHERE student_id = ?)
-            `, [student_id]);
+                  AND school_id = ?
+                  AND id NOT IN (SELECT fee_category_id FROM student_fees WHERE student_id = ?)
+            `, [schoolId, student_id]);
         }
 
         res.render('fees/student-details', {
@@ -147,9 +165,15 @@ const getStudentFees = async (req, res) => {
 };
 
 const assignFee = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { student_id, fee_category_id } = req.body;
     try {
-        const fee = await db.get('SELECT amount FROM fee_categories WHERE id = ?', [fee_category_id]);
+        const student = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [student_id, schoolId]);
+        if (!student) return res.status(404).send('Student not found or access denied');
+
+        const fee = await db.get('SELECT amount FROM fee_categories WHERE id = ? AND school_id = ?', [fee_category_id, schoolId]);
+        if (!fee) return res.status(404).send('Fee category not found or access denied');
+
         await db.run(`
             INSERT INTO student_fees (student_id, fee_category_id, total_amount)
             VALUES (?, ?, ?)
@@ -162,6 +186,7 @@ const assignFee = async (req, res) => {
 };
 
 const getPayForm = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { student_fee_id } = req.params;
     try {
         const fee = await db.get(`
@@ -169,8 +194,10 @@ const getPayForm = async (req, res) => {
             FROM student_fees sf
             JOIN fee_categories fc ON sf.fee_category_id = fc.id
             JOIN students s ON sf.student_id = s.id
-            WHERE sf.id = ?
-        `, [student_fee_id]);
+            WHERE sf.id = ? AND s.school_id = ?
+        `, [student_fee_id, schoolId]);
+
+        if (!fee) return res.status(404).send('Fee record not found or access denied');
 
         res.render('fees/pay', {
             title: 'Record Payment',
@@ -183,11 +210,20 @@ const getPayForm = async (req, res) => {
 };
 
 const processPayment = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { student_fee_id, amount_paid, payment_method } = req.body;
     const receipt_number = 'REC-' + Date.now();
 
     try {
-        const fee = await db.get('SELECT * FROM student_fees WHERE id = ?', [student_fee_id]);
+        const fee = await db.get(`
+            SELECT sf.* 
+            FROM student_fees sf
+            JOIN students s ON sf.student_id = s.id
+            WHERE sf.id = ? AND s.school_id = ?
+        `, [student_fee_id, schoolId]);
+
+        if (!fee) return res.status(404).send('Fee record not found or access denied');
+
         const newPaidAmount = parseFloat(fee.paid_amount) + parseFloat(amount_paid);
         let status = 'Partial';
         if (newPaidAmount >= fee.total_amount) status = 'Paid';
@@ -212,6 +248,7 @@ const processPayment = async (req, res) => {
 };
 
 const getReceipt = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { receipt_number } = req.params;
     try {
         const payment = await db.get(`
@@ -220,8 +257,8 @@ const getReceipt = async (req, res) => {
             JOIN students s ON p.student_id = s.id
             JOIN student_fees sf ON p.student_fee_id = sf.id
             JOIN fee_categories fc ON sf.fee_category_id = fc.id
-            WHERE p.receipt_number = ?
-            `, [receipt_number]);
+            WHERE p.receipt_number = ? AND s.school_id = ?
+        `, [receipt_number, schoolId]);
 
         if (!payment) return res.status(404).send('Receipt not found');
 
@@ -235,6 +272,7 @@ const getReceipt = async (req, res) => {
         res.status(500).send('Database Error');
     }
 };
+
 
 module.exports = {
     getSetup,

@@ -1,8 +1,24 @@
-const db = require('../utils/db');
+﻿const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 
-const getSettings = async () => {
-    const rows = await db.all('SELECT key, value FROM settings');
+const getStudentSchoolId = async (req) => {
+    if (req.session && req.session.student) {
+        if (req.session.student.school_id) {
+            return Number(req.session.student.school_id);
+        }
+        const student = await db.get('SELECT school_id FROM students WHERE id = ?', [req.session.student.id]);
+        if (student && student.school_id) {
+            req.session.student.school_id = Number(student.school_id);
+            req.schoolId = Number(student.school_id);
+            return Number(student.school_id);
+        }
+    }
+    return req.schoolId ? Number(req.schoolId) : (req.school ? Number(req.school.id) : null);
+};
+
+const getSettings = async (schoolId) => {
+    if (!schoolId) return {};
+    const rows = await db.all('SELECT key, value FROM settings WHERE school_id = ?', [Number(schoolId)]);
     const settings = {};
     if (rows) {
         rows.forEach(r => settings[r.key] = r.value);
@@ -12,8 +28,10 @@ const getSettings = async () => {
 
 exports.getDashboard = async (req, res) => {
     const studentId = req.session.student.id;
-    const school = await getSettings();
-    const ctx = await getStudentContext(studentId, school);
+    const schoolId = await getStudentSchoolId(req);
+    if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+    const school = await getSettings(schoolId);
+    const ctx = await getStudentContext(studentId, school, schoolId);
     const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount, sectionIds } = ctx;
 
     // Fetch latest results (added AVG total for Phase 2)
@@ -49,9 +67,11 @@ exports.getDashboard = async (req, res) => {
     const announcements = await db.all(`
         SELECT * FROM announcements 
         WHERE is_published = 1 AND (target_role = 'Students' OR target_role = 'All')
+          AND school_id = ?
         ${sectionFilter}
         ORDER BY created_at DESC LIMIT 3
-    `);
+    `, [schoolId]);
+
 
     // Fetch latest class posts (general + targeted) for all classes the student is enrolled in
     let classPosts = [];
@@ -81,10 +101,10 @@ exports.getDashboard = async (req, res) => {
     
     // Fetch upcoming events
     const eventsSql = db.DB_TYPE === 'postgres'
-        ? `SELECT * FROM term_events WHERE event_date >= CURRENT_DATE ${sectionFilter} ORDER BY event_date ASC LIMIT 5`
-        : `SELECT * FROM term_events WHERE event_date >= date('now') ${sectionFilter} ORDER BY event_date ASC LIMIT 5`;
+        ? `SELECT * FROM term_events WHERE event_date >= CURRENT_DATE AND school_id = $1 ${sectionFilter} ORDER BY event_date ASC LIMIT 5`
+        : `SELECT * FROM term_events WHERE event_date >= date('now') AND school_id = ? ${sectionFilter} ORDER BY event_date ASC LIMIT 5`;
 
-    const upcomingEvents = await db.all(eventsSql);
+    const upcomingEvents = await db.all(eventsSql, [schoolId]);
 
     const sectionInfo = (enrolledClasses || []).map(ec => ({
         class_id: ec.class_id,
@@ -167,10 +187,12 @@ exports.viewCumulativeResult = async (req, res) => {
 
 exports.getProfile = async (req, res) => {
     const studentId = req.session.student.id;
+    const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
     try {
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
-        const student = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
+        const student = await db.get('SELECT * FROM students WHERE id = ? AND school_id = ?', [studentId, schoolId]);
         if (!student) return res.redirect('/portal?error=Student not found');
         
         // Use resolved class name from context if available
@@ -213,6 +235,7 @@ exports.getProfile = async (req, res) => {
 
 exports.postUpdateProfile = async (req, res) => {
     const studentId = req.session.student.id;
+    const schoolId = req.schoolId || (req.session.student ? req.session.student.school_id : 1);
     const { dob, phone, email, address, parent_phone, parent_phone_alt, parent_email, parent_address } = req.body;
     let passport_photo_path = null;
     if (req.file) {
@@ -222,14 +245,14 @@ exports.postUpdateProfile = async (req, res) => {
     try {
         if (passport_photo_path) {
             await db.run(
-                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ?, parent_phone = ?, parent_phone_alt = ?, parent_email = ?, parent_address = ?, passport_photo_path = ? WHERE id = ?',
-                [dob || null, phone || null, email || null, address || null, parent_phone || null, parent_phone_alt || null, parent_email || null, parent_address || null, passport_photo_path, studentId]
+                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ?, parent_phone = ?, parent_phone_alt = ?, parent_email = ?, parent_address = ?, passport_photo_path = ? WHERE id = ? AND school_id = ?',
+                [dob || null, phone || null, email || null, address || null, parent_phone || null, parent_phone_alt || null, parent_email || null, parent_address || null, passport_photo_path, studentId, schoolId]
             );
             req.session.student.passport_photo_path = passport_photo_path;
         } else {
             await db.run(
-                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ?, parent_phone = ?, parent_phone_alt = ?, parent_email = ?, parent_address = ? WHERE id = ?',
-                [dob || null, phone || null, email || null, address || null, parent_phone || null, parent_phone_alt || null, parent_email || null, parent_address || null, studentId]
+                'UPDATE students SET dob = ?, phone = ?, email = ?, address = ?, parent_phone = ?, parent_phone_alt = ?, parent_email = ?, parent_address = ? WHERE id = ? AND school_id = ?',
+                [dob || null, phone || null, email || null, address || null, parent_phone || null, parent_phone_alt || null, parent_email || null, parent_address || null, studentId, schoolId]
             );
         }
 
@@ -252,8 +275,9 @@ exports.postUpdateProfile = async (req, res) => {
 exports.getChangePassword = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = req.schoolId || (req.session.student ? req.session.student.school_id : 1);
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
 
         res.render('portal/change_password', {
             title: 'Change Password',
@@ -276,6 +300,7 @@ exports.getChangePassword = async (req, res) => {
 exports.postChangePassword = async (req, res) => {
     const { current_password, new_password, confirm_password } = req.body;
     const studentId = req.session.student.id;
+    const schoolId = req.schoolId || (req.session.student ? req.session.student.school_id : 1);
 
     if (!new_password || new_password.length < 6) {
         return res.redirect('/portal/change-password?error=Password must be at least 6 characters');
@@ -286,7 +311,7 @@ exports.postChangePassword = async (req, res) => {
     }
 
     try {
-        const student = await db.get('SELECT password, admission_number FROM students WHERE id = ?', [studentId]);
+        const student = await db.get('SELECT password, admission_number FROM students WHERE id = ? AND school_id = ?', [studentId, schoolId]);
 
         let isMatch = false;
         if (student.password && (student.password.startsWith('$2a$') || student.password.startsWith('$2b$') || student.password.startsWith('$2y$'))) {
@@ -302,7 +327,7 @@ exports.postChangePassword = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(new_password, 10);
-        await db.run('UPDATE students SET password = ? WHERE id = ?', [hashedPassword, studentId]);
+        await db.run('UPDATE students SET password = ? WHERE id = ? AND school_id = ?', [hashedPassword, studentId, schoolId]);
         
         res.redirect('/portal/change-password?success=Password changed successfully');
     } catch (err) {
@@ -312,13 +337,14 @@ exports.postChangePassword = async (req, res) => {
 };
 
 exports.getCalendar = async (req, res) => {
+    const schoolId = req.schoolId || (req.session.student ? req.session.student.school_id : 1);
     try {
-        const events = await db.all('SELECT * FROM term_events ORDER BY event_date ASC');
+        const events = await db.all('SELECT * FROM term_events WHERE school_id = ? ORDER BY event_date ASC', [schoolId]);
         res.render('portal/calendar', {
             title: 'School Calendar',
             student: req.session.student,
             events: events || [],
-            school: await getSettings()
+            school: await getSettings(schoolId)
         });
     } catch (err) {
         console.error('Portal Calendar Error:', err);
@@ -330,10 +356,11 @@ exports.viewAnnouncement = async (req, res) => {
     try {
         const id = req.params.id;
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = req.schoolId || (req.session.student ? req.session.student.school_id : 1);
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
 
-        const announcement = await db.get('SELECT * FROM announcements WHERE id = ? AND is_published = 1', [id]);
+        const announcement = await db.get('SELECT * FROM announcements WHERE id = ? AND is_published = 1 AND school_id = ?', [id, schoolId]);
         if (!announcement) {
             return res.redirect('/portal/notifications?error=Announcement not found');
         }
@@ -365,16 +392,18 @@ exports.viewAssignment = async (req, res) => {
     try {
         const id = req.params.id;
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = req.schoolId || (req.session.student ? req.session.student.school_id : 1);
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
 
         const post = await db.get(`
             SELECT cp.*, s.first_name, s.last_name, sub.name as subject_name
             FROM class_posts cp
+            JOIN classes c ON cp.class_id = c.id
             LEFT JOIN staff s ON cp.teacher_id = s.id
             LEFT JOIN subjects sub ON cp.subject_id = sub.id
-            WHERE cp.id = ?
-        `, [id]);
+            WHERE cp.id = ? AND c.school_id = ?
+        `, [id, schoolId]);
 
         if (!post) {
             return res.redirect('/portal/academics/class-board?error=Class post not found');
@@ -402,8 +431,9 @@ exports.viewAssignment = async (req, res) => {
     }
 };
 
+
 // ============================================================
-// PHASE 3 — ACADEMICS HUB CONTROLLERS
+// PHASE 3 ΓÇö ACADEMICS HUB CONTROLLERS
 // ============================================================
 
 // Helper: Format human-friendly relative time
@@ -427,7 +457,8 @@ const formatRelativeTime = (dateInput) => {
 };
 
 // Shared helper: resolve student's active class & section context
-const getStudentContext = async (studentId, school) => {
+const getStudentContext = async (studentId, school, schoolId) => {
+    const sId = schoolId ? Number(schoolId) : null;
     const currentSessionStr = school.current_session || '2024/2025';
     
     // Fetch all active enrollments for the student across all sections
@@ -526,8 +557,10 @@ const getStudentContext = async (studentId, school) => {
 exports.getAcademicsHub = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
         const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
 
         // Published results summary (latest term)
@@ -615,8 +648,10 @@ exports.getAcademicsHub = async (req, res) => {
 exports.getAcademicsResults = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
         const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
 
         // Selected term/session from query or default to latest published
@@ -687,7 +722,7 @@ exports.getAcademicsResults = async (req, res) => {
         }
 
         // Grading system
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
 
         res.render('portal/academics/results', {
             title: 'Results', path: '/portal/academics/results',
@@ -709,8 +744,10 @@ exports.getAcademicsResults = async (req, res) => {
 exports.getAcademicsClassBoard = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
         const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
 
         let classPosts = [];
@@ -760,8 +797,10 @@ exports.getAcademicsClassBoard = async (req, res) => {
 exports.getAcademicsSubjects = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
         const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
 
         let subjects = [];
@@ -797,8 +836,10 @@ exports.getAcademicsSubjects = async (req, res) => {
 exports.getAcademicsTimetable = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
         res.render('portal/academics/timetable', {
             title: 'Timetable', path: '/portal/academics/timetable',
             school, student: ctx.studentObj || req.session.student,
@@ -815,8 +856,10 @@ exports.getAcademicsTimetable = async (req, res) => {
 exports.getNotifications = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
         const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, sectionIds } = ctx;
 
         const activeFilter = req.query.filter || 'all';
@@ -974,8 +1017,10 @@ exports.postMarkNotificationRead = async (req, res) => {
 exports.postMarkAllNotificationsRead = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
         const { enrolledClassIds } = ctx;
 
         // 1. All announcements
@@ -1015,14 +1060,16 @@ exports.postMarkAllNotificationsRead = async (req, res) => {
 };
 
 // ============================================================
-// PHASE 4 — STUDENT ATTENDANCE CONTROLLER
+// PHASE 4 ΓÇö STUDENT ATTENDANCE CONTROLLER
 // ============================================================
 
 exports.getAttendance = async (req, res) => {
     try {
         const studentId = req.session.student.id;
-        const school = await getSettings();
-        const ctx = await getStudentContext(studentId, school);
+        const schoolId = await getStudentSchoolId(req);
+        if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+        const school = await getSettings(schoolId);
+        const ctx = await getStudentContext(studentId, school, schoolId);
         const { studentObj, activeSession, activeTerm, individualMessagesCount } = ctx;
 
         // Fetch distinct session & term periods with attendance records

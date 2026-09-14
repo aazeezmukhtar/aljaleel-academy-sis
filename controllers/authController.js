@@ -1,4 +1,4 @@
-const db = require('../utils/db');
+﻿const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 const { logAction } = require('../utils/logger');
 
@@ -8,7 +8,7 @@ exports.getLogin = (req, res) => {
         return res.redirect('/dashboard');
     }
     res.render('auth/login', {
-        title: 'Staff Login — AcadMe',
+        title: 'Staff Login ΓÇö AcadMe',
         error: req.query.error || null
     });
 };
@@ -21,9 +21,13 @@ exports.postLogin = async (req, res) => {
     }
 
     try {
-        const staff = await db.get('SELECT * FROM staff WHERE staff_id = ? AND status = \'active\'', [staff_id]);
+        // Authenticate staff record by unique identifier and active status
+        const staff = await db.get(
+            "SELECT * FROM staff WHERE LOWER(staff_id) = LOWER(?) AND status = 'active'",
+            [String(staff_id).trim()]
+        );
 
-        if (!staff) {
+        if (!staff || !staff.school_id) {
             return res.redirect('/auth/login?error=Invalid Staff ID or account inactive');
         }
 
@@ -33,13 +37,17 @@ exports.postLogin = async (req, res) => {
             return res.redirect('/auth/login?error=Invalid Password');
         }
 
-        // Create session
+        const authoritativeSchoolId = Number(staff.school_id);
+
+        // Create session strictly with authoritative database-derived school_id
         req.session.staff = {
             id: staff.id,
             staff_id: staff.staff_id,
+            name: `${staff.first_name} ${staff.last_name}`,
             first_name: staff.first_name,
             last_name: staff.last_name,
-            role: staff.role
+            role: staff.role,
+            school_id: authoritativeSchoolId
         };
 
         // Save session and log action
@@ -73,13 +81,21 @@ exports.getChangePassword = (req, res) => {
 exports.postChangePassword = async (req, res) => {
     const { current_password, new_password, confirm_password } = req.body;
     const user = req.session.staff;
+    const schoolId = user ? Number(user.school_id) : (req.schoolId || 1);
 
     if (new_password !== confirm_password) {
         return res.redirect('/auth/change-password?error=Passwords do not match');
     }
 
     try {
-        const staff = await db.get('SELECT * FROM staff WHERE id = ?', [user.id]);
+        const staff = await db.get(
+            'SELECT * FROM staff WHERE id = ? AND school_id = ?',
+            [user.id, schoolId]
+        );
+        if (!staff) {
+            return res.redirect('/auth/login?error=Session invalid');
+        }
+
         const isMatch = await bcrypt.compare(current_password, staff.password_hash);
 
         if (!isMatch) {
@@ -87,7 +103,10 @@ exports.postChangePassword = async (req, res) => {
         }
 
         const hashed = await bcrypt.hash(new_password, 10);
-        await db.run('UPDATE staff SET password_hash = ? WHERE id = ?', [hashed, user.id]);
+        await db.run(
+            'UPDATE staff SET password_hash = ? WHERE id = ? AND school_id = ?',
+            [hashed, user.id, schoolId]
+        );
 
         logAction(user.id, 'CHANGE_PASSWORD', 'AUTH', {}, req.ip);
         res.redirect('/auth/change-password?success=Password changed successfully');
@@ -100,7 +119,7 @@ exports.postChangePassword = async (req, res) => {
 exports.getStudentLogin = (req, res) => {
     if (req.session.student) return res.redirect('/portal');
     res.render('auth/student_login', {
-        title: 'Student Portal — AcadMe',
+        title: 'Student Portal ΓÇö AcadMe',
         error: req.query.error || null,
         success: req.query.success || null
     });
@@ -115,10 +134,12 @@ exports.postStudentLogin = async (req, res) => {
     }
 
     try {
-        const student = await db.get("SELECT * FROM students WHERE admission_number = ? AND status = 'active'", [admission_number]);
+        const student = await db.get(
+            "SELECT * FROM students WHERE admission_number = ? AND status = 'active'",
+            [String(admission_number).trim()]
+        );
 
-        if (!student) {
-            // Do not reveal whether the Student ID exists
+        if (!student || !student.school_id) {
             return res.redirect('/auth/student-login?error=Student ID or password is incorrect.');
         }
 
@@ -137,15 +158,17 @@ exports.postStudentLogin = async (req, res) => {
         }
 
         if (!isMatch) {
-            // Same generic message — does not reveal which field failed
             return res.redirect('/auth/student-login?error=Student ID or password is incorrect.');
         }
+
+        const authoritativeSchoolId = Number(student.school_id);
 
         req.session.student = {
             id: student.id,
             name: `${student.first_name} ${student.last_name}`,
             admission_number: student.admission_number,
-            class_id: student.current_class_id
+            class_id: student.current_class_id,
+            school_id: authoritativeSchoolId
         };
 
         req.session.save(() => {
@@ -163,3 +186,4 @@ exports.studentLogout = (req, res) => {
         res.redirect('/auth/student-login?success=Logged out successfully');
     });
 };
+

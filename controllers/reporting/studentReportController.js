@@ -1,19 +1,20 @@
-const db = require('../../utils/db');
+﻿const db = require('../../utils/db');
 const { getAcademicContext } = require('../../utils/sessionHelper');
 
 const getStudentDashboard = async (req, res) => {
     const user = req.session.staff;
+    const schoolId = req.schoolId || (user ? user.school_id : 1);
     try {
-        const total = await db.get("SELECT COUNT(*) as count FROM students WHERE status = 'active'");
-        const males = await db.get("SELECT COUNT(*) as count FROM students WHERE gender = 'Male' AND status = 'active'");
-        const females = await db.get("SELECT COUNT(*) as count FROM students WHERE gender = 'Female' AND status = 'active'");
+        const total = await db.get("SELECT COUNT(*) as count FROM students WHERE status = 'active' AND school_id = ?", [schoolId]);
+        const males = await db.get("SELECT COUNT(*) as count FROM students WHERE gender = 'Male' AND status = 'active' AND school_id = ?", [schoolId]);
+        const females = await db.get("SELECT COUNT(*) as count FROM students WHERE gender = 'Female' AND status = 'active' AND school_id = ?", [schoolId]);
         
         const year = new Date().getFullYear().toString();
         const yearSql = db.DB_TYPE === 'postgres' 
-            ? "SELECT COUNT(*) as count FROM students WHERE EXTRACT(YEAR FROM admission_date)::text = ?"
-            : "SELECT COUNT(*) as count FROM students WHERE strftime('%Y', admission_date) = ?";
+            ? "SELECT COUNT(*) as count FROM students WHERE EXTRACT(YEAR FROM admission_date)::text = ? AND school_id = $1"
+            : "SELECT COUNT(*) as count FROM students WHERE strftime('%Y', admission_date) = ? AND school_id = ?";
             
-        const newIntake = await db.get(yearSql, [year]);
+        const newIntake = await db.get(yearSql, [year, schoolId]);
 
         res.render('reports/student/index', {
             title: 'Student Reports',
@@ -33,21 +34,23 @@ const getStudentDashboard = async (req, res) => {
 
 const getClassListReport = async (req, res) => {
     const user = req.session.staff;
+    const schoolId = req.schoolId || (user ? user.school_id : 1);
     const { class_id, arm_id } = req.query;
 
     try {
         let classes;
         if (user.role === 'Admin' || user.role === 'Registrar') {
-            classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
+            classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
         } else {
             classes = await db.all(`
                 SELECT DISTINCT c.* 
                 FROM classes c
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
-                WHERE c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL
+                WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
+                  AND c.school_id = ?
                 ORDER BY c.name ASC
-            `, [user.id, user.id, user.id]);
+            `, [user.id, user.id, user.id, schoolId]);
         }
 
         let activeClassId = class_id;
@@ -59,7 +62,7 @@ const getClassListReport = async (req, res) => {
         if (activeClassId) {
             let currentSession = '2024/2025';
             try {
-                const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+                const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session' AND school_id = ? ORDER BY school_id DESC LIMIT 1", [schoolId]);
                 if (sessionRow && sessionRow.value) currentSession = sessionRow.value;
             } catch (e) {}
 
@@ -70,8 +73,9 @@ const getClassListReport = async (req, res) => {
                 LEFT JOIN classes c ON (se.class_id = c.id OR s.current_class_id = c.id)
                 LEFT JOIN arms a ON s.current_arm_id = a.id
                 WHERE (se.class_id = ? OR (s.current_class_id = ? AND se.id IS NULL)) AND s.status = 'active'
+                  AND s.school_id = ?
             `;
-            const params = [currentSession, activeClassId, activeClassId];
+            const params = [currentSession, activeClassId, activeClassId, schoolId];
 
             if (arm_id) {
                 query += " AND s.current_arm_id = ?";
@@ -88,8 +92,9 @@ const getClassListReport = async (req, res) => {
                     LEFT JOIN classes c ON s.current_class_id = c.id
                     LEFT JOIN arms a ON s.current_arm_id = a.id
                     WHERE s.current_class_id = ? AND s.status = 'active'
+                      AND s.school_id = ?
                 `;
-                const fallbackParams = [activeClassId];
+                const fallbackParams = [activeClassId, schoolId];
                 if (arm_id) {
                     fallbackQuery += " AND s.current_arm_id = ?";
                     fallbackParams.push(arm_id);
@@ -113,18 +118,19 @@ const getClassListReport = async (req, res) => {
 };
 
 const getDemographicsReport = async (req, res) => {
+    const schoolId = req.schoolId || (req.session.staff ? req.session.staff.school_id : 1);
     try {
         const demographics = await db.all(`
             SELECT 
                 gender, 
                 COUNT(*) as count, 
-                ROUND(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM students WHERE status='active'), 0), 1) as percentage
+                ROUND(COUNT(*) * 100.0 / NULLIF((SELECT COUNT(*) FROM students WHERE status='active' AND school_id = ?), 0), 1) as percentage
             FROM students 
-            WHERE status = 'active'
+            WHERE status = 'active' AND school_id = ?
             GROUP BY gender
-        `);
+        `, [schoolId, schoolId]);
 
-        const students = await db.all("SELECT dob FROM students WHERE status = 'active'");
+        const students = await db.all("SELECT dob FROM students WHERE status = 'active' AND school_id = ?", [schoolId]);
         const today = new Date();
 
         const ageMap = {
@@ -189,6 +195,7 @@ const getDemographicsReport = async (req, res) => {
 };
 
 const getProfileAuditReport = async (req, res) => {
+    const schoolId = req.schoolId || (req.session.staff ? req.session.staff.school_id : 1);
     try {
         const students = await db.all(`
             SELECT id, first_name, last_name, admission_number, 
@@ -197,12 +204,12 @@ const getProfileAuditReport = async (req, res) => {
                 CASE WHEN dob IS NULL OR CAST(dob AS TEXT) = '' THEN 1 ELSE 0 END as missing_dob,
                 CASE WHEN parent_address IS NULL OR parent_address = '' THEN 1 ELSE 0 END as missing_address
             FROM students
-            WHERE status = 'active'
+            WHERE status = 'active' AND school_id = ?
             AND (passport_photo_path IS NULL OR passport_photo_path = '' 
                 OR parent_phone IS NULL OR parent_phone = ''
                 OR dob IS NULL 
                 OR parent_address IS NULL OR parent_address = '')
-        `);
+        `, [schoolId]);
 
         res.render('reports/student/audit', {
             title: 'Student Profile Audit',
@@ -220,3 +227,4 @@ module.exports = {
     getDemographicsReport,
     getProfileAuditReport
 };
+

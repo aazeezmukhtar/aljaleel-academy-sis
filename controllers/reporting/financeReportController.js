@@ -1,15 +1,16 @@
-const db = require('../../utils/db');
+﻿const db = require('../../utils/db');
 const { getAcademicContext } = require('../../utils/sessionHelper');
 
 const getFinanceDashboard = async (req, res) => {
     const user = req.session.staff;
-    let todayQuery = "SELECT SUM(amount) as total FROM payments WHERE date = DATE('now')";
+    const schoolId = req.schoolId || (user ? user.school_id : 1);
+    let todayQuery = "SELECT SUM(p.amount) as total FROM payments p JOIN students s ON p.student_id = s.id WHERE p.date = DATE('now') AND s.school_id = ?";
     if (db.DB_TYPE === 'postgres') {
-        todayQuery = "SELECT SUM(amount) as total FROM payments WHERE date = CURRENT_DATE";
+        todayQuery = "SELECT SUM(p.amount) as total FROM payments p JOIN students s ON p.student_id = s.id WHERE p.date = CURRENT_DATE AND s.school_id = $2";
     }
 
     const stats = {
-        total_payment_today: (await db.get(todayQuery))?.total || 0,
+        total_payment_today: (await db.get(todayQuery, [schoolId]))?.total || 0,
         outstanding_fees: 0,
         total_collected_session: 0
     };
@@ -19,8 +20,10 @@ const getFinanceDashboard = async (req, res) => {
             SELECT 
                 SUM(p.amount) as total_collected
             FROM payments p
-        `);
-        stats.total_collected_session = result.total_collected || 0;
+            JOIN students s ON p.student_id = s.id
+            WHERE s.school_id = ?
+        `, [schoolId]);
+        stats.total_collected_session = result?.total_collected || 0;
     } catch (e) { console.log('Finance stats error', e.message); }
 
     res.render('reports/finance/index', {
@@ -33,9 +36,10 @@ const getFinanceDashboard = async (req, res) => {
 const getFeeStatusReport = async (req, res) => {
     const { class_id, status } = req.query; // status: 'Paid', 'Partial', 'Unpaid'
     const user = req.session.staff;
+    const schoolId = req.schoolId || (user ? user.school_id : 1);
     if (user.role !== 'Admin' && user.role !== 'Bursar') return res.status(403).send('Access Denied');
 
-    let classes = await db.all('SELECT * FROM classes');
+    let classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
     let students = [];
 
     let activeClassId = class_id;
@@ -45,7 +49,7 @@ const getFeeStatusReport = async (req, res) => {
 
     if (activeClassId) {
         let coalesceFunc = db.DB_TYPE === 'postgres' ? 'COALESCE' : 'IFNULL';
-        const context = await getAcademicContext(activeClassId);
+        const context = await getAcademicContext(activeClassId, schoolId);
         const currentSession = context.session;
 
         const query = `
@@ -56,10 +60,11 @@ const getFeeStatusReport = async (req, res) => {
             JOIN student_enrollments se ON s.id = se.student_id AND se.session = ?
             JOIN classes c ON se.class_id = c.id
             WHERE se.class_id = ? AND s.status = 'active'
+              AND s.school_id = ?
         `;
 
         try {
-            const rawStudents = await db.all(query, [currentSession, activeClassId]);
+            const rawStudents = await db.all(query, [currentSession, activeClassId, schoolId]);
             students = rawStudents.map(s => {
                 s.balance = s.total_payable - s.paid_amount;
                 s.status = s.balance <= 0 ? 'Paid' : (s.paid_amount > 0 ? 'Partial' : 'Unpaid');
@@ -86,6 +91,7 @@ const getFeeStatusReport = async (req, res) => {
 const getDebtorsList = async (req, res) => {
     const { min_debt } = req.query;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (user ? user.school_id : 1);
     if (user.role !== 'Admin' && user.role !== 'Bursar') return res.status(403).send('Access Denied');
 
     const threshold = min_debt || 1;
@@ -99,11 +105,11 @@ const getDebtorsList = async (req, res) => {
                 (SELECT ${coalesceFunc}(SUM(amount), 0) FROM student_fees WHERE student_id = s.id) as payable,
                 (SELECT ${coalesceFunc}(SUM(amount), 0) FROM payments WHERE student_id = s.id) as paid
             FROM students s
-            WHERE s.status = 'active'
+            WHERE s.status = 'active' AND s.school_id = ?
             GROUP BY s.id, s.first_name, s.last_name, s.admission_number
             HAVING ((SELECT ${coalesceFunc}(SUM(amount), 0) FROM student_fees WHERE student_id = s.id) - (SELECT ${coalesceFunc}(SUM(amount), 0) FROM payments WHERE student_id = s.id)) >= ?
             ORDER BY (payable - paid) DESC
-        `, [threshold]);
+        `, [schoolId, threshold]);
 
         if (debtors.length > 0) {
             const studentIds = debtors.map(d => d.id);
@@ -114,7 +120,8 @@ const getDebtorsList = async (req, res) => {
                 JOIN classes c ON se.class_id = c.id
                 JOIN sections sec ON c.section_id = sec.id
                 WHERE se.student_id IN (${placeholders}) AND se.session = sec.current_session
-            `, studentIds);
+                  AND c.school_id = ?
+            `, [...studentIds, schoolId]);
 
             const classMap = new Map();
             enrollments.forEach(e => {
@@ -145,3 +152,4 @@ module.exports = {
     getFeeStatusReport,
     getDebtorsList
 };
+

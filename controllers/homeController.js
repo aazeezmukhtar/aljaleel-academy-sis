@@ -1,44 +1,58 @@
 const db = require('../utils/db');
 
 const getDashboard = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
         const user = req.session.staff;
         const today = new Date().toISOString().split('T')[0];
 
         if (user.role === 'Admin') {
-            const totalStudents = (await db.get("SELECT COUNT(*) as count FROM students WHERE status = 'active'")).count;
-            const activeStaffCount = (await db.get("SELECT COUNT(*) as count FROM staff")).count;
+            const totalStudents = (await db.get(
+                "SELECT COUNT(*) as count FROM students WHERE status = 'active' AND school_id = ?",
+                [schoolId]
+            )).count;
+            
+            const activeStaffCount = (await db.get(
+                "SELECT COUNT(*) as count FROM staff WHERE school_id = ?",
+                [schoolId]
+            )).count;
 
             const attendanceData = await db.get(`
                 SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present
-                FROM attendance 
-                WHERE date = ?
-            `, [today]);
+                    SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present
+                FROM attendance a
+                JOIN students st ON a.student_id = st.id
+                WHERE a.date = ? AND st.school_id = ?
+            `, [today, schoolId]);
 
-            const attendance = attendanceData.total > 0
+            const attendance = attendanceData && attendanceData.total > 0
                 ? ((attendanceData.present / attendanceData.total) * 100).toFixed(1) + '%'
                 : 'N/A';
 
             const feeStats = await db.get(`
                 SELECT 
-                    SUM(total_amount) as expected,
-                    SUM(paid_amount) as collected
-                FROM student_fees
-            `);
-            const revenuePercentage = feeStats.expected > 0 
+                    SUM(sf.total_amount) as expected,
+                    SUM(sf.paid_amount) as collected
+                FROM student_fees sf
+                JOIN students st ON sf.student_id = st.id
+                WHERE st.school_id = ?
+            `, [schoolId]);
+            const revenuePercentage = (feeStats && feeStats.expected > 0)
                 ? Math.round((feeStats.collected / feeStats.expected) * 100) 
                 : 0;
 
-            const totalSubjects = (await db.get("SELECT COUNT(*) as count FROM subjects")).count;
+            const totalSubjects = (await db.get(
+                "SELECT COUNT(*) as count FROM subjects WHERE school_id = ?",
+                [schoolId]
+            )).count;
 
             const genderStats = await db.all(`
                 SELECT gender, COUNT(*) as count 
                 FROM students 
-                WHERE status = 'active' 
+                WHERE status = 'active' AND school_id = ?
                 GROUP BY gender
-            `);
+            `, [schoolId]);
             const genderSummary = { Male: 0, Female: 0 };
             genderStats.forEach(g => {
                 if (g.gender === 'Male' || g.gender === 'Female') {
@@ -49,28 +63,30 @@ const getDashboard = async (req, res) => {
             const recentEnrollments = await db.all(`
                 SELECT s.first_name, s.last_name, s.admission_date,
                        (
-                           SELECT c.name 
-                           FROM student_enrollments se 
-                           JOIN classes c ON se.class_id = c.id 
-                           JOIN sections sec ON c.section_id = sec.id
-                           WHERE se.student_id = s.id AND se.session = sec.current_session 
-                           LIMIT 1
+                            SELECT c.name 
+                            FROM student_enrollments se 
+                            JOIN classes c ON se.class_id = c.id 
+                            JOIN sections sec ON c.section_id = sec.id
+                            WHERE se.student_id = s.id AND se.session = sec.current_session 
+                            LIMIT 1
                        ) as class_name
                 FROM students s
+                WHERE s.school_id = ?
                 ORDER BY s.admission_date DESC
                 LIMIT 5
-            `);
+            `, [schoolId]);
 
             const announcements = await db.all(`
                 SELECT * FROM announcements 
+                WHERE school_id = ?
                 ORDER BY created_at DESC LIMIT 10
-            `);
+            `, [schoolId]);
 
             const upcomingEvents = await db.all(`
                 SELECT * FROM term_events 
-                WHERE event_date >= ? 
+                WHERE event_date >= ? AND school_id = ?
                 ORDER BY event_date ASC LIMIT 3
-            `, [today]);
+            `, [today, schoolId]);
 
             return res.render('dashboard', {
                 title: 'Nexus SIS - Admin Dashboard',
@@ -92,16 +108,16 @@ const getDashboard = async (req, res) => {
                 SELECT DISTINCT c.id, c.name 
                 FROM class_assignments ca
                 JOIN classes c ON ca.class_id = c.id
-                WHERE ca.staff_id = ?
-            `, [user.id]);
+                WHERE ca.staff_id = ? AND c.school_id = ?
+            `, [user.id, schoolId]);
 
             const assignedSubjects = await db.all(`
                 SELECT DISTINCT s.id, s.name, c.name as class_name
                 FROM subject_assignments sa
                 JOIN subjects s ON sa.subject_id = s.id
                 JOIN classes c ON sa.class_id = c.id
-                WHERE sa.teacher_id = ?
-            `, [user.id]);
+                WHERE sa.teacher_id = ? AND c.school_id = ?
+            `, [user.id, schoolId]);
 
             const myStudentsCount = (await db.get(`
                 SELECT COUNT(DISTINCT se.student_id) as count 
@@ -111,34 +127,36 @@ const getDashboard = async (req, res) => {
                 JOIN sections sec ON c.section_id = sec.id
                 WHERE se.session = sec.current_session AND se.class_id IN (
                     SELECT class_id FROM class_assignments WHERE staff_id = ?
-                ) AND s.status = 'active'
-            `, [user.id])).count;
+                ) AND s.status = 'active' AND s.school_id = ?
+            `, [user.id, schoolId])).count;
 
             const myAttendanceData = await db.get(`
                 SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN status = 'Present' THEN 1 ELSE 0 END) as present
-                FROM attendance 
-                WHERE date = ? AND class_id IN (
+                    SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present
+                FROM attendance a
+                JOIN classes c ON a.class_id = c.id
+                WHERE a.date = ? AND c.school_id = ? AND a.class_id IN (
                     SELECT class_id FROM class_assignments WHERE staff_id = ?
                 )
-            `, [today, user.id]);
+            `, [today, schoolId, user.id]);
 
-            const myAttendance = myAttendanceData.total > 0
+            const myAttendance = myAttendanceData && myAttendanceData.total > 0
                 ? ((myAttendanceData.present / myAttendanceData.total) * 100).toFixed(1) + '%'
                 : 'Pending';
 
             const announcements = await db.all(`
                 SELECT * FROM announcements 
                 WHERE is_published = 1 AND (target_role = ? OR target_role = 'All')
+                  AND school_id = ?
                 ORDER BY created_at DESC LIMIT 5
-            `, [user.role]);
+            `, [user.role, schoolId]);
 
             const upcomingEvents = await db.all(`
                 SELECT * FROM term_events 
-                WHERE event_date >= ? 
+                WHERE event_date >= ? AND school_id = ?
                 ORDER BY event_date ASC LIMIT 3
-            `, [today]);
+            `, [today, schoolId]);
 
             return res.render('dashboard_staff', {
                 title: 'Nexus SIS - Staff Dashboard',
@@ -161,5 +179,5 @@ const getDashboard = async (req, res) => {
     }
 };
 
-
 module.exports = { getDashboard };
+

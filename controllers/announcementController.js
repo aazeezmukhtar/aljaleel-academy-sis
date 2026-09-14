@@ -1,7 +1,11 @@
-const db = require('../utils/db');
+﻿const db = require('../utils/db');
 
 exports.getIndex = async (req, res) => {
-    const announcements = await db.all('SELECT a.*, s.name as section_name FROM announcements a LEFT JOIN sections s ON a.section_id = s.id ORDER BY a.created_at DESC');
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const announcements = await db.all(
+        'SELECT a.*, s.name as section_name FROM announcements a LEFT JOIN sections s ON a.section_id = s.id WHERE a.school_id = ? ORDER BY a.created_at DESC',
+        [schoolId]
+    );
     
     res.render('announcements/index', {
         title: 'Announcement Management',
@@ -11,7 +15,8 @@ exports.getIndex = async (req, res) => {
 };
 
 exports.createAnnouncement = async (req, res) => {
-    const sections = await db.all('SELECT * FROM sections');
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const sections = await db.all('SELECT * FROM sections WHERE school_id = ?', [schoolId]);
     res.render('announcements/form', {
         title: 'Create Announcement',
         path: '/announcements',
@@ -20,15 +25,17 @@ exports.createAnnouncement = async (req, res) => {
 };
 
 exports.storeAnnouncement = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
         const { title, content, target_role, is_published, type, event_date, section_id } = req.body;
         const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
         const image_path = req.file ? req.file.filename : null;
 
         await db.run(`
-            INSERT INTO announcements (title, slug, content, target_role, image_path, is_published, type, event_date, section_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO announcements (school_id, title, slug, content, target_role, image_path, is_published, type, event_date, section_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `, [
+            schoolId,
             title, 
             slug, 
             content, 
@@ -48,19 +55,25 @@ exports.storeAnnouncement = async (req, res) => {
 };
 
 exports.toggleAnnouncement = async (req, res) => {
-    await db.run(`UPDATE announcements SET is_published = CASE WHEN is_published = 1 THEN 0 ELSE 1 END WHERE id = ?`, [req.params.id]);
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    await db.run(
+        `UPDATE announcements SET is_published = CASE WHEN is_published = 1 THEN 0 ELSE 1 END WHERE id = ? AND school_id = ?`,
+        [req.params.id, schoolId]
+    );
     res.redirect('/announcements');
 };
 
 exports.deleteAnnouncement = async (req, res) => {
-    await db.run('DELETE FROM announcements WHERE id = ?', [req.params.id]);
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    await db.run('DELETE FROM announcements WHERE id = ? AND school_id = ?', [req.params.id, schoolId]);
     res.redirect('/announcements?success=Announcement deleted');
 };
 
 exports.viewAnnouncement = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const id = req.params.id;
     try {
-        const announcement = await db.get('SELECT * FROM announcements WHERE id = ?', [id]);
+        const announcement = await db.get('SELECT * FROM announcements WHERE id = ? AND school_id = ?', [id, schoolId]);
         if (!announcement) return res.status(404).send('Announcement not found');
         
         res.render('announcements/view', {
@@ -73,4 +86,5 @@ exports.viewAnnouncement = async (req, res) => {
         res.status(500).send('Database Error');
     }
 };
+
 

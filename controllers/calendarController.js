@@ -1,8 +1,13 @@
 const db = require('../utils/db');
+const sessionHelper = require('../utils/sessionHelper');
 
 exports.getCalendar = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
-        const events = await db.all('SELECT * FROM term_events ORDER BY event_date ASC');
+        const events = await db.all(
+            'SELECT * FROM term_events WHERE school_id = ? ORDER BY event_date ASC',
+            [schoolId]
+        );
         res.render('calendar/index', {
             title: 'School Calendar',
             events,
@@ -15,17 +20,23 @@ exports.getCalendar = async (req, res) => {
 };
 
 exports.getManageCalendar = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const user = req.session.staff;
     if (!user || user.role !== 'Admin') return res.status(403).send('Access Denied');
     
     try {
-        const events = await db.all('SELECT e.*, s.name as section_name FROM term_events e LEFT JOIN sections s ON e.section_id = s.id ORDER BY event_date DESC');
-        const sections = await db.all('SELECT * FROM sections ORDER BY name');
-        const sessionRows = await db.all('SELECT * FROM sessions ORDER BY name DESC').catch(() => []);
+        const events = await db.all(
+            'SELECT e.*, s.name as section_name FROM term_events e LEFT JOIN sections s ON e.section_id = s.id WHERE e.school_id = ? ORDER BY event_date DESC',
+            [schoolId]
+        );
+        const sections = await db.all('SELECT * FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
+        const available_sessions = await sessionHelper.getAvailableSessions(schoolId);
         const school = {};
-        (await db.all('SELECT key, value FROM settings')).forEach(r => school[r.key] = r.value);
+        (await db.all('SELECT key, value FROM settings WHERE school_id = ?', [schoolId])).forEach(r => school[r.key] = r.value);
         
-        const sessionList = sessionRows.length > 0 ? sessionRows : [{ name: school.current_session || '2025/2026' }];
+        const sessionList = available_sessions.length > 0 
+            ? available_sessions.map(s => ({ name: s })) 
+            : (school.current_session ? [{ name: school.current_session }] : []);
         
         res.render('calendar/manage', {
             title: 'Manage Calendar',
@@ -41,6 +52,7 @@ exports.getManageCalendar = async (req, res) => {
 };
 
 exports.createEvent = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { title, description, event_date, type, section_id } = req.body;
     const user = req.session.staff;
     if (!user || user.role !== 'Admin') return res.status(403).send('Access Denied');
@@ -49,21 +61,30 @@ exports.createEvent = async (req, res) => {
         // Derive session and term from the chosen section (or global if no section)
         let session, term;
         if (section_id) {
-            const sec = await db.get('SELECT current_session, current_term FROM sections WHERE id = ?', [section_id]);
+            const sec = await db.get(
+                'SELECT current_session, current_term FROM sections WHERE id = ? AND school_id = ?',
+                [section_id, schoolId]
+            );
             session = sec ? sec.current_session : null;
             term = sec ? sec.current_term : null;
         }
         if (!session || !term) {
-            const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
-            const termRow = await db.get("SELECT value FROM settings WHERE key = 'current_term'");
-            session = session || (sessionRow ? sessionRow.value : '2024/2025');
+            const sessionRow = await db.get(
+                "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ? ORDER BY school_id DESC LIMIT 1",
+                [schoolId]
+            );
+            const termRow = await db.get(
+                "SELECT value FROM settings WHERE key = 'current_term' AND school_id = ? ORDER BY school_id DESC LIMIT 1",
+                [schoolId]
+            );
+            session = session || (sessionRow ? sessionRow.value : '2025/2026');
             term = term || (termRow ? termRow.value : '1st Term');
         }
 
         await db.run(`
-            INSERT INTO term_events (title, description, event_date, type, session, term, section_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        `, [title, description, event_date, type, session, term, section_id || null]);
+            INSERT INTO term_events (school_id, title, description, event_date, type, session, term, section_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [schoolId, title, description, event_date, type, session, term, section_id || null]);
         res.redirect('/calendar/manage?success=Event added');
     } catch (err) {
         console.error('Create Event Error:', err);
@@ -72,14 +93,16 @@ exports.createEvent = async (req, res) => {
 };
 
 exports.deleteEvent = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const user = req.session.staff;
     if (!user || user.role !== 'Admin') return res.status(403).send('Access Denied');
 
     try {
-        await db.run('DELETE FROM term_events WHERE id = ?', [req.params.id]);
+        await db.run('DELETE FROM term_events WHERE id = ? AND school_id = ?', [req.params.id, schoolId]);
         res.redirect('/calendar/manage?success=Event deleted');
     } catch (err) {
         console.error('Delete Event Error:', err);
         res.redirect('/calendar/manage?error=Failed to delete event');
     }
 };
+

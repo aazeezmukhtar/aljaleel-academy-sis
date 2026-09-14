@@ -119,9 +119,16 @@ async function runMigrations() {
         )
     `);
 
-    // 8. Seed Default Sections
-    await db.run("INSERT OR IGNORE INTO sections (name, description) VALUES (?, ?)", ['Academy', 'Western Education Section']);
-    await db.run("INSERT OR IGNORE INTO sections (name, description) VALUES (?, ?)", ['Tahfeez', "Qur'an Memorization Section"]);
+    // 8. Seed Default Sections (Guarded for single-school / dev bootstrap)
+    try {
+        const existingSections = await db.all("SELECT id, name FROM sections");
+        if (!existingSections || existingSections.length === 0) {
+            await db.run("INSERT OR IGNORE INTO sections (name, description) VALUES (?, ?)", ['Academy', 'Western Education Section']);
+            await db.run("INSERT OR IGNORE INTO sections (name, description) VALUES (?, ?)", ['Tahfeez', "Qur'an Memorization Section"]);
+        }
+    } catch (e) {
+        console.error('[migrate] sections seed check error:', e.message);
+    }
 
     // Assign existing classes to Academy section if NULL
     const sections = await db.all("SELECT id, name FROM sections");
@@ -229,8 +236,121 @@ async function runMigrations() {
         }
     }
 
+    // 13. Create schools table (local dev bootstrap & runtime safety)
+    await db.run(`
+        CREATE TABLE IF NOT EXISTS schools (
+            id ${serialType},
+            name TEXT NOT NULL,
+            slug TEXT UNIQUE NOT NULL,
+            code TEXT UNIQUE,
+            status TEXT DEFAULT 'active',
+            logo_url TEXT,
+            motto TEXT,
+            primary_color TEXT DEFAULT '#1e3a8a',
+            secondary_color TEXT DEFAULT '#fbba00',
+            address TEXT,
+            phone TEXT,
+            email TEXT,
+            website TEXT,
+            current_session TEXT DEFAULT '2025/2026',
+            current_term TEXT DEFAULT '1st Term',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Ensure default Al-Jaleel Academy school record exists for single-school baseline
+    try {
+        const schoolCount = await db.get('SELECT COUNT(*) as c FROM schools');
+        if (Number(schoolCount?.c || 0) === 0) {
+            await db.run(`
+                INSERT INTO schools (name, slug, code, status, motto, primary_color, secondary_color, current_session, current_term)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            `, [
+                'Al-Jaleel Academy', 'al-jaleel', 'AJA', 'active',
+                'Igniting a Brighter Future', '#fbba00', '#180746',
+                '2025/2026', '1st Term'
+            ]);
+            console.log('[migrate] Seeded default Al-Jaleel Academy school record');
+        }
+    } catch (e) {
+        console.error('[migrate] schools seed check failed:', e.message);
+    }
+
+    // 14. Add school_id to settings table
+    try {
+        await db.run("ALTER TABLE settings ADD COLUMN school_id INTEGER");
+        console.log('[migrate] Added school_id to settings');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] settings.school_id failed:', e.message);
+        }
+    }
+
+    // Backfill settings.school_id for existing rows
+    try {
+        const defaultSchool = await db.get("SELECT id FROM schools ORDER BY id ASC LIMIT 1");
+        if (defaultSchool) {
+            await db.run("UPDATE settings SET school_id = ? WHERE school_id IS NULL", [defaultSchool.id]);
+        }
+    } catch (e) {
+        console.error('[migrate] settings.school_id backfill failed:', e.message);
+    }
+
+    // 14b. Ensure settings table has composite PRIMARY KEY (school_id, key) in SQLite
+    if (!isPostgres) {
+        try {
+            const settingsCols = await db.all("PRAGMA table_info(settings)");
+            const pkCols = settingsCols.filter(c => c.pk > 0);
+            if (pkCols.length === 1 && pkCols[0].name === 'key') {
+                console.log('[migrate] Upgrading settings table to composite PRIMARY KEY (school_id, key)...');
+                await db.transaction(async () => {
+                    await db.run(`
+                        CREATE TABLE settings_composite (
+                            school_id INTEGER NOT NULL,
+                            key TEXT NOT NULL,
+                            value TEXT NOT NULL,
+                            PRIMARY KEY (school_id, key)
+                        )
+                    `);
+                    await db.run(`
+                        INSERT OR IGNORE INTO settings_composite (school_id, key, value)
+                        SELECT COALESCE(school_id, 1), key, value FROM settings
+                    `);
+                    await db.run("DROP TABLE settings");
+                    await db.run("ALTER TABLE settings_composite RENAME TO settings");
+                });
+                console.log('[migrate] Upgraded settings table to composite PRIMARY KEY (school_id, key).');
+            }
+        } catch (e) {
+            console.error('[migrate] settings composite PK upgrade failed:', e.message);
+        }
+    }
+
+    // 15. Ensure school_id column exists on direct school tables for local dev / runtime parity
+    const tenantTables = [
+        'students', 'staff', 'classes', 'subjects', 'sections',
+        'fee_categories', 'announcements', 'term_events', 'grading_systems',
+        'gallery_images', 'public_pages', 'news_posts', 'audit_logs'
+    ];
+    for (const tbl of tenantTables) {
+        try {
+            await db.run(`ALTER TABLE ${tbl} ADD COLUMN school_id INTEGER`);
+            console.log(`[migrate] Added school_id to ${tbl}`);
+        } catch (e) {
+            // Already exists
+        }
+        try {
+            const defaultSchool = await db.get("SELECT id FROM schools ORDER BY id ASC LIMIT 1");
+            if (defaultSchool) {
+                await db.run(`UPDATE ${tbl} SET school_id = ? WHERE school_id IS NULL`, [defaultSchool.id]);
+            }
+        } catch (e) {}
+    }
+
     console.log('[migrate] Startup migrations complete.');
 }
 
 module.exports = { runMigrations };
+
 

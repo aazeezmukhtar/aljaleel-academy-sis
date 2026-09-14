@@ -81,29 +81,28 @@ async function getAvailableSessions(schoolId) {
             return bYear - aYear;
         });
 
-        return sessionArray.length > 0 ? sessionArray : [BOOTSTRAP_SESSION_FALLBACK];
+        return sessionArray;
     } catch (err) {
         console.error('[sessionHelper] Error fetching available sessions for school', schoolId, err);
-        return [BOOTSTRAP_SESSION_FALLBACK];
+        return [];
     }
 }
 
 /**
  * Get the current academic session for a specific tenant school.
  * Resolution hierarchy:
- *   a. settings.current_session WHERE school_id = schoolId
- *   b. schools.current_session WHERE id = schoolId
- *   c. Bootstrap fallback (documented, isolated)
+ *   1. tenant settings.current_session WHERE school_id = schoolId
+ *   2. schools.current_session WHERE id = schoolId
+ *   3. null (explicit unconfigured state)
  *
  * Never falls back to another school's setting.
  *
  * @param {number} schoolId - Required tenant school ID
- * @returns {Promise<string>} Current session string
+ * @returns {Promise<string|null>} Current session string or null
  */
 async function getCurrentSession(schoolId) {
     if (!schoolId) {
-        console.warn('[sessionHelper] getCurrentSession called without schoolId');
-        return BOOTSTRAP_SESSION_FALLBACK;
+        return null;
     }
 
     try {
@@ -118,29 +117,26 @@ async function getCurrentSession(schoolId) {
         const schoolRow = await db.get('SELECT current_session FROM schools WHERE id = ?', [schoolId]);
         if (schoolRow && schoolRow.current_session) return schoolRow.current_session;
 
-        // Bootstrap fallback — school has no config yet
-        console.warn('[sessionHelper] No session config found for school', schoolId, '— using bootstrap fallback');
-        return BOOTSTRAP_SESSION_FALLBACK;
+        return null;
     } catch (err) {
         console.error('[sessionHelper] Error fetching current session for school', schoolId, err);
-        return BOOTSTRAP_SESSION_FALLBACK;
+        return null;
     }
 }
 
 /**
  * Get the current academic term for a specific tenant school.
  * Resolution hierarchy:
- *   a. settings.current_term WHERE school_id = schoolId
- *   b. schools.current_term WHERE id = schoolId
- *   c. Bootstrap fallback
+ *   1. tenant settings.current_term WHERE school_id = schoolId
+ *   2. schools.current_term WHERE id = schoolId
+ *   3. null (explicit unconfigured state)
  *
  * @param {number} schoolId - Required tenant school ID
- * @returns {Promise<string>} Current term string
+ * @returns {Promise<string|null>} Current term string or null
  */
 async function getCurrentTerm(schoolId) {
     if (!schoolId) {
-        console.warn('[sessionHelper] getCurrentTerm called without schoolId');
-        return BOOTSTRAP_TERM_FALLBACK;
+        return null;
     }
 
     try {
@@ -155,12 +151,10 @@ async function getCurrentTerm(schoolId) {
         const schoolRow = await db.get('SELECT current_term FROM schools WHERE id = ?', [schoolId]);
         if (schoolRow && schoolRow.current_term) return schoolRow.current_term;
 
-        // Bootstrap fallback
-        console.warn('[sessionHelper] No term config found for school', schoolId, '— using bootstrap fallback');
-        return BOOTSTRAP_TERM_FALLBACK;
+        return null;
     } catch (err) {
         console.error('[sessionHelper] Error fetching current term for school', schoolId, err);
-        return BOOTSTRAP_TERM_FALLBACK;
+        return null;
     }
 }
 
@@ -175,22 +169,25 @@ function getAvailableTerms() {
 /**
  * Get academic context (session and term) for a specific class, scoped to a tenant.
  * Resolution hierarchy:
- *   a. section-level context (class → section.current_session/term) if section belongs to school
- *   b. tenant settings
- *   c. schools table
- *   d. bootstrap fallback
+ *   1. First verify classes.id = classId AND classes.school_id = schoolId
+ *   2. Section-level override, if the class is associated with a section
+ *   3. Tenant settings
+ *   4. Schools.current_session/current_term
+ *   5. null
+ *
+ * Never crosses tenant boundaries.
  *
  * @param {number} classId - Class ID
  * @param {number} schoolId - Required tenant school ID
- * @returns {Promise<{session: string, term: string}>}
+ * @returns {Promise<{session: string|null, term: string|null}>}
  */
 async function getAcademicContext(classId, schoolId) {
     if (!schoolId) {
-        console.warn('[sessionHelper] getAcademicContext called without schoolId');
+        return { session: null, term: null };
     }
 
     try {
-        if (classId && schoolId) {
+        if (classId) {
             // Verify class belongs to this school and get its section context
             const section = await db.get(`
                 SELECT s.current_session, s.current_term
@@ -210,23 +207,24 @@ async function getAcademicContext(classId, schoolId) {
         return { session, term };
     } catch (err) {
         console.error('[sessionHelper] Error fetching academic context for class', classId, err);
-        return { session: BOOTSTRAP_SESSION_FALLBACK, term: BOOTSTRAP_TERM_FALLBACK };
+        return { session: null, term: null };
     }
 }
 
 /**
  * Get section-specific academic context, scoped to a tenant.
+ * Verifies sections.id = sectionId AND sections.school_id = schoolId
  * @param {number} sectionId - Section ID
  * @param {number} schoolId - Required tenant school ID
- * @returns {Promise<{session: string, term: string}>}
+ * @returns {Promise<{session: string|null, term: string|null}>}
  */
 async function getSectionContext(sectionId, schoolId) {
     if (!schoolId) {
-        console.warn('[sessionHelper] getSectionContext called without schoolId');
+        return { session: null, term: null };
     }
 
     try {
-        if (sectionId && schoolId) {
+        if (sectionId) {
             const section = await db.get(
                 'SELECT current_session, current_term FROM sections WHERE id = ? AND school_id = ?',
                 [sectionId, schoolId]
@@ -242,6 +240,7 @@ async function getSectionContext(sectionId, schoolId) {
         return { session, term };
     } catch (err) {
         console.error('[sessionHelper] Error fetching section context for section', sectionId, err);
+        return { session: null, term: null };
     }
 }
 
@@ -252,7 +251,6 @@ module.exports = {
     getAvailableTerms,
     getAcademicContext,
     getSectionContext,
-    // Export constants so callers can identify bootstrap fallback values if needed
     BOOTSTRAP_SESSION_FALLBACK,
     BOOTSTRAP_TERM_FALLBACK
 };

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const studentController = require('../controllers/studentController');
 const bulkStudentController = require('../controllers/bulkStudentController');
@@ -23,10 +23,10 @@ const upload = multer({ storage });
 // GET /students
 router.get('/', studentController.getStudents);
 
-// GET /students/enroll (Form)
+// GET /students/enroll (Form) ΓÇö Admin and Registrar only (checked inside controller)
 router.get('/enroll', studentController.getEnrollmentForm);
 
-// POST /students/enroll (Action)
+// POST /students/enroll (Action) ΓÇö Admin and Registrar only (enforced via controller role check)
 router.post('/enroll', upload.single('passport'), studentController.enrollStudent);
 
 // GET /students/view/:id
@@ -35,24 +35,23 @@ router.get('/view/:id', studentController.getStudentProfile);
 // GET /students/edit/:id
 router.get('/edit/:id', studentController.getEditForm);
 
-// POST /students/update/:id
+// POST /students/update/:id ΓÇö Admin and Registrar only (enforced via controller role check)
 router.post('/update/:id', upload.single('passport'), studentController.updateStudent);
 
-// POST /students/delete/:id
+// POST /students/delete/:id ΓÇö Admin only
 router.post('/delete/:id', isAdmin, studentController.deleteStudent);
 
-// POST /students/reset-password/:id
+// POST /students/reset-password/:id ΓÇö Admin only
 router.post('/reset-password/:id', isAdmin, studentController.resetStudentPassword);
 
-// POST /students/promote/:id
-router.post('/promote/:id', isAdmin, studentController.promoteStudent);
+// Bulk Import Routes ΓÇö Admin only
+router.get('/bulk-import', isAdmin, bulkStudentController.getBulkImportPage);
+router.post('/bulk-import', isAdmin, upload.single('studentFile'), bulkStudentController.processBulkImport);
 
-// Bulk Import Routes
-router.get('/bulk-import', bulkStudentController.getBulkImportPage);
-router.post('/bulk-import', upload.single('studentFile'), bulkStudentController.processBulkImport);
-
-// Health Record
+// Health Record ΓÇö Admin and Registrar only (enforced via controller role check)
 router.post('/health', studentController.saveHealthRecord);
 
 module.exports = router;
+
+
 

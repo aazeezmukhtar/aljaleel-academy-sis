@@ -54,23 +54,47 @@ async function getClassSection(classId) {
 }
 
 /**
- * Get the result config for a specific section.
+ * Get the result config for a specific section or tenant.
+ * Hierarchy: section_result_config -> settings[result.*] -> legacy result_config -> safe defaults
  */
-async function getSectionResultConfig(sectionId) {
-    if (sectionId) {
-        const cfg = await db.get('SELECT * FROM section_result_config WHERE section_id = ?', [sectionId]);
-        if (cfg) return cfg;
+async function getSectionResultConfig(sectionId, schoolId) {
+    const defaults = { ca_count: 2, ca1_max: 20, ca2_max: 20, exam_max: 60 };
+
+    // 1. Legacy result_config
+    const rows = await db.all('SELECT * FROM result_config').catch(() => []);
+    rows.forEach(r => { if (r.value !== undefined) defaults[r.key] = parseInt(r.value) || defaults[r.key]; });
+
+    // 2. Resolve school_id from section if missing
+    if (sectionId && !schoolId) {
+        const sec = await db.get('SELECT school_id FROM sections WHERE id = ?', [sectionId]);
+        if (sec && sec.school_id) schoolId = sec.school_id;
     }
 
-    const rows = await db.all('SELECT * FROM result_config');
-    const config = {};
-    rows.forEach(r => config[r.key] = r.value);
-    return {
-        ca_count: parseInt(config.ca_count) || 2,
-        ca1_max: parseInt(config.ca1_max) || 20,
-        ca2_max: parseInt(config.ca2_max) || 20,
-        exam_max: parseInt(config.exam_max) || 60
-    };
+    // 3. Tenant settings override
+    if (schoolId) {
+        const tenantSettings = await db.all(
+            "SELECT key, value FROM settings WHERE school_id = ? AND (key LIKE 'result.%' OR key IN ('ca_count', 'ca1_max', 'ca2_max', 'exam_max'))",
+            [schoolId]
+        );
+        tenantSettings.forEach(r => {
+            const cleanKey = r.key.startsWith('result.') ? r.key.replace('result.', '') : r.key;
+            if (r.value !== undefined && r.value !== null) {
+                defaults[cleanKey] = parseInt(r.value) || defaults[cleanKey];
+            }
+        });
+    }
+
+    // 4. Section overrides from section_result_config (key-value rows)
+    if (sectionId) {
+        const sectionRows = await db.all('SELECT key, value FROM section_result_config WHERE section_id = ?', [sectionId]);
+        sectionRows.forEach(r => {
+            if (r.value !== undefined && r.value !== null) {
+                defaults[r.key] = parseInt(r.value) || defaults[r.key];
+            }
+        });
+    }
+
+    return defaults;
 }
 
 module.exports = { getEnrolledStudents, getClassSection, getSectionResultConfig };

@@ -5,6 +5,7 @@ exports.getLatestNotifications = async (req, res) => {
         const userId = req.session.staff ? req.session.staff.id : (req.session.student ? req.session.student.id : null);
         const userType = req.session.staff ? 'staff' : 'student';
         const role = req.session.staff ? req.session.staff.role : 'Student';
+        const schoolId = req.schoolId || (req.session.staff ? req.session.staff.school_id : (req.session.student ? req.session.student.school_id : 1));
 
         if (!userId) return res.json({ notifications: [], unreadCount: 0 });
 
@@ -12,13 +13,13 @@ exports.getLatestNotifications = async (req, res) => {
         let announcements = [];
         let assignments = [];
 
-        // Fetch Announcements (Admin sees all; Staff/Student filtered)
+        // Fetch Announcements (Admin sees all; Staff/Student filtered) scoped by school_id
         let announcementQuery = `
             SELECT id, title, type, event_date as date, created_at, 'announcement' as source_type
             FROM announcements 
-            WHERE is_published = 1
+            WHERE is_published = 1 AND school_id = ?
         `;
-        let params = [];
+        let params = [schoolId];
 
         if (role !== 'Admin') {
             const targetRole = role === 'Teacher' ? 'Staff' : 'Students';
@@ -28,30 +29,37 @@ exports.getLatestNotifications = async (req, res) => {
 
         announcements = await db.all(announcementQuery, params);
 
+
         // Fetch Assignments/Class Posts
         if (req.session.student) {
             const enrollRows = await db.all(`
-                SELECT class_id FROM student_enrollments WHERE student_id = ?
-            `, [userId]);
+                SELECT se.class_id 
+                FROM student_enrollments se
+                JOIN classes c ON se.class_id = c.id
+                WHERE se.student_id = ? AND c.school_id = ?
+            `, [userId, schoolId]);
             const enrolledClassIds = enrollRows.map(r => r.class_id);
             if (enrolledClassIds.length > 0) {
                 const placeholders = enrolledClassIds.map(() => '?').join(',');
                 assignments = await db.all(`
-                    SELECT id, title, post_type as type, due_date as date, created_at, 'class_post' as source_type
-                    FROM class_posts WHERE class_id IN (${placeholders})
-                `, enrolledClassIds);
+                    SELECT cp.id, cp.title, cp.post_type as type, cp.due_date as date, cp.created_at, 'class_post' as source_type
+                    FROM class_posts cp
+                    JOIN classes c ON cp.class_id = c.id
+                    WHERE cp.class_id IN (${placeholders}) AND c.school_id = ?
+                `, [...enrolledClassIds, schoolId]);
             }
         } else if (req.session.staff && req.session.staff.role === 'Admin') {
             // Admin should NOT see assignments in notification bell as requested
             assignments = []; 
         } else if (req.session.staff) {
-            // Teachers see posts for classes they are assigned to
+            // Teachers see posts for classes they are assigned to in their school
             assignments = await db.all(`
                 SELECT cp.id, cp.title, cp.post_type as type, cp.due_date as date, cp.created_at, 'class_post' as source_type
                 FROM class_posts cp
                 JOIN class_assignments ca ON cp.class_id = ca.class_id
-                WHERE ca.staff_id = ?
-            `, [userId]);
+                JOIN classes c ON cp.class_id = c.id
+                WHERE ca.staff_id = ? AND c.school_id = ?
+            `, [userId, schoolId]);
         }
 
         // 2. Merge and Sort

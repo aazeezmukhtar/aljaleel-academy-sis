@@ -1,0 +1,12 @@
+-- Analysis of the user request:
+-- "some of the students in R 2, have dual class assignments from the Academy section, the revert should just happen at Primary 2 in the Academy section."
+--
+-- This means:
+-- 1. Leave the Tahfeez section (R 2, etc.) completely alone.
+-- 2. In the Academy section: Primary 2 was given to these students mistakenly.
+-- 3. We must remove / revert the Primary 2 assignment from the Academy section for these students.
+-- 4. In students.current_class_id, these students were given Primary 2 (id = 28).
+--    - For the students who have an Academy class (Nursery 1, Nursery 2, Primary 1), revert their Academy class back to their proper pre-promotion Academy class!
+--    - For students who do NOT have an Academy class, revert them out of Primary 2 (back to their Tahfeez class R 2, so they don't have a fake Primary 2 assignment).
+-- 5. Also check if any student_enrollments were created for Primary 2 (class_id = 28).
+console.log("Revert strictly targeted at Primary 2 in Academy section.");

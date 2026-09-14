@@ -17,70 +17,108 @@ const getResultsDashboard = (req, res) => {
     });
 };
 
-const getSchoolSettings = async () => {
-    const settingsArr = await db.all('SELECT * FROM settings');
-    const configArr = await db.all('SELECT * FROM result_config');
+const getSchoolSettings = async (schoolId) => {
+    const sId = schoolId ? Number(schoolId) : null;
     const settings = {};
-    settingsArr.forEach(s => settings[s.key] = s.value);
-    configArr.forEach(c => settings[c.key] = c.value);
+    if (sId) {
+        const settingsArr = await db.all('SELECT key, value FROM settings WHERE school_id = ?', [sId]);
+        settingsArr.forEach(s => settings[s.key] = s.value);
+    }
+
+    // Load legacy global config as compatibility fallback
+    const configArr = await db.all('SELECT key, value FROM result_config').catch(() => []);
+    const legacy = {};
+    configArr.forEach(c => { legacy[c.key] = c.value; });
+
+    const safeDefaults = { ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
+    ['ca_count', 'ca1_max', 'ca2_max', 'exam_max'].forEach(k => {
+        const val = settings[`result.${k}`] || settings[k] || legacy[k] || safeDefaults[k];
+        settings[k] = val;
+        settings[`result.${k}`] = val;
+    });
+
     return settings;
 };
 
-// Get result config for a specific class (section-aware, falls back to global)
-const getSectionResultConfig = async (class_id) => {
+// Get result config for a specific class (section-aware, falls back to tenant settings then legacy global)
+const getSectionResultConfig = async (class_id, schoolId) => {
+    const sId = schoolId ? Number(schoolId) : null;
     const defaults = { ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
 
-    // Load global config first
-    const globalRows = await db.all('SELECT key, value FROM result_config');
-    globalRows.forEach(r => { defaults[r.key] = r.value; });
+    // 1. Check legacy result_config
+    const legacyRows = await db.all('SELECT key, value FROM result_config').catch(() => []);
+    legacyRows.forEach(r => { if (r.value !== undefined) defaults[r.key] = String(r.value); });
 
-    if (!class_id) return defaults;
+    // 2. Overlay tenant-specific settings[result.*] if schoolId provided
+    if (sId) {
+        const tenantSettings = await db.all(
+            "SELECT key, value FROM settings WHERE school_id = ? AND (key LIKE 'result.%' OR key IN ('ca_count', 'ca1_max', 'ca2_max', 'exam_max'))",
+            [sId]
+        );
+        tenantSettings.forEach(r => {
+            const cleanKey = r.key.startsWith('result.') ? r.key.replace('result.', '') : r.key;
+            if (r.value !== undefined && r.value !== null) {
+                defaults[cleanKey] = String(r.value);
+            }
+        });
+    }
 
-    // Try to find the section for this class
-    const classRow = await db.get('SELECT section_id FROM classes WHERE id = ?', [class_id]);
-    if (!classRow || !classRow.section_id) return defaults;
+    // 3. Overlay section-specific overrides if class has a section
+    if (class_id) {
+        const classRow = sId
+            ? await db.get('SELECT section_id FROM classes WHERE id = ? AND school_id = ?', [class_id, sId])
+            : await db.get('SELECT section_id FROM classes WHERE id = ?', [class_id]);
 
-    // Load section-specific overrides
-    const sectionRows = await db.all(
-        'SELECT key, value FROM section_result_config WHERE section_id = ?',
-        [classRow.section_id]
-    );
-    sectionRows.forEach(r => { defaults[r.key] = r.value; });
+        if (classRow && classRow.section_id) {
+            const sectionRows = await db.all(
+                'SELECT key, value FROM section_result_config WHERE section_id = ?',
+                [classRow.section_id]
+            );
+            sectionRows.forEach(r => {
+                if (r.value !== undefined && r.value !== null) {
+                    defaults[r.key] = String(r.value);
+                }
+            });
+        }
+    }
 
     return defaults;
 };
 
-// Get active session/term for a specific class (section-aware)
-const getSectionAcademicContext = async (class_id) => {
-    if (class_id) {
+// Get active session/term for a specific class (section-aware, scoped to tenant)
+const getSectionAcademicContext = async (class_id, schoolId) => {
+    const sId = schoolId ? Number(schoolId) : null;
+    if (class_id && sId) {
         const sec = await db.get(`
             SELECT s.current_session, s.current_term 
             FROM sections s 
             JOIN classes c ON c.section_id = s.id 
-            WHERE c.id = ?
-        `, [class_id]);
+            WHERE c.id = ? AND c.school_id = ?
+        `, [class_id, sId]);
         if (sec && sec.current_session && sec.current_term) {
             return { session: sec.current_session, term: sec.current_term };
         }
     }
-    const school = await getSchoolSettings();
+    const session = sId ? await sessionHelper.getCurrentSession(sId) : null;
+    const term = sId ? await sessionHelper.getCurrentTerm(sId) : null;
     return {
-        session: school.current_session || '2024/2025',
-        term: school.current_term || '1st Term'
+        session: session || '2024/2025',
+        term: term || '1st Term'
     };
 };
 
 const getGradingSystem = async (req, res) => {
+    const schoolId = req ? (req.schoolId || (req.school ? req.school.id : 1)) : 1;
     try {
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
-        const config = await getSchoolSettings();
-        const sections = await db.all('SELECT * FROM sections ORDER BY name');
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
+        const config = await getSchoolSettings(schoolId);
+        const sections = await db.all('SELECT * FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
 
         // Load per-section configs
         const sectionConfigs = [];
         for (const sec of sections) {
             const rows = await db.all('SELECT key, value FROM section_result_config WHERE section_id = ?', [sec.id]);
-            const cfg = { section_id: sec.id, ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
+            const cfg = { section_id: sec.id, ca_count: config.ca_count || '2', ca1_max: config.ca1_max || '20', ca2_max: config.ca2_max || '20', exam_max: config.exam_max || '60' };
             rows.forEach(r => { cfg[r.key] = r.value; });
             sectionConfigs.push(cfg);
         }
@@ -103,10 +141,14 @@ const getGradingSystem = async (req, res) => {
 
 // POST /results/setup/section-config  — save per-section CA weights
 const saveResultConfigForSection = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { section_id, ca_count, ca1_max, ca2_max, exam_max } = req.body;
     if (!section_id) return res.status(400).json({ success: false, message: 'section_id required.' });
 
     try {
+        const section = await db.get('SELECT id FROM sections WHERE id = ? AND school_id = ?', [section_id, schoolId]);
+        if (!section) return res.status(403).json({ success: false, message: 'Section not found or access denied.' });
+
         const upsert = db.DB_TYPE === 'postgres'
             ? 'INSERT INTO section_result_config (section_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (section_id, key) DO UPDATE SET value = EXCLUDED.value'
             : 'INSERT INTO section_result_config (section_id, key, value) VALUES (?, ?, ?) ON CONFLICT(section_id, key) DO UPDATE SET value = excluded.value';
@@ -124,14 +166,38 @@ const saveResultConfigForSection = async (req, res) => {
 };
 
 const saveResultConfig = async (req, res) => {
+    const schoolId = (req.session && req.session.staff && req.session.staff.school_id)
+        ? Number(req.session.staff.school_id)
+        : (req.schoolId || (req.school ? req.school.id : 1));
     const { ca1_max, ca2_max, exam_max } = req.body;
+    const ca_count = req.body.ca_count || '2';
+
     try {
-        const sql = 'INSERT INTO result_config (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value';
+        const updates = [
+            { key: 'result.ca_count', value: String(ca_count) },
+            { key: 'result.ca1_max', value: String(ca1_max) },
+            { key: 'result.ca2_max', value: String(ca2_max) },
+            { key: 'result.exam_max', value: String(exam_max) }
+        ];
+
         await db.transaction(async () => {
-            await db.run(sql, ['ca_count', req.body.ca_count || '2']);
-            await db.run(sql, ['ca1_max', ca1_max]);
-            await db.run(sql, ['ca2_max', ca2_max]);
-            await db.run(sql, ['exam_max', exam_max]);
+            for (const item of updates) {
+                const existing = await db.get(
+                    'SELECT key FROM settings WHERE school_id = ? AND key = ?',
+                    [schoolId, item.key]
+                );
+                if (existing) {
+                    await db.run(
+                        'UPDATE settings SET value = ? WHERE school_id = ? AND key = ?',
+                        [item.value, schoolId, item.key]
+                    );
+                } else {
+                    await db.run(
+                        'INSERT INTO settings (school_id, key, value) VALUES (?, ?, ?)',
+                        [schoolId, item.key, item.value]
+                    );
+                }
+            }
         });
         res.json({ success: true, message: 'Assessment limits updated.' });
     } catch (err) {
@@ -141,23 +207,24 @@ const saveResultConfig = async (req, res) => {
 };
 
 const saveGradingSystem = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { grades } = req.body;
     try {
         const insertSql = `
-            INSERT INTO grading_systems (id, min_score, max_score, grade, remark)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO grading_systems (id, school_id, min_score, max_score, grade, remark)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET
             min_score=excluded.min_score, max_score=excluded.max_score,
-            grade=excluded.grade, remark=excluded.remark
+            grade=excluded.grade, remark=excluded.remark, school_id=excluded.school_id
         `;
-        const deleteSql = 'DELETE FROM grading_systems WHERE id = ?';
+        const deleteSql = 'DELETE FROM grading_systems WHERE id = ? AND school_id = ?';
 
         await db.transaction(async () => {
             for (const g of grades) {
                 if (g.deleted) {
-                    await db.run(deleteSql, [g.id]);
+                    await db.run(deleteSql, [g.id, schoolId]);
                 } else {
-                    await db.run(insertSql, [g.id || null, g.min, g.max, g.grade, g.remark]);
+                    await db.run(insertSql, [g.id || null, schoolId, g.min, g.max, g.grade, g.remark]);
                 }
             }
         });
@@ -170,65 +237,65 @@ const saveGradingSystem = async (req, res) => {
 };
 
 
+
 const getResultManager = async (req, res) => {
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { class_id, subject_id } = req.query;
 
     // Derive session/term from the selected class's section (falls back to global)
-    const sectionCtx = await getSectionAcademicContext(class_id || null);
-    const settings = await getSchoolSettings();
+    const sectionCtx = await getSectionAcademicContext(class_id || null, schoolId);
+    const settings = await getSchoolSettings(schoolId);
     const activeSession = req.query.session || sectionCtx.session || settings.current_session || '2024/2025';
     const activeTerm = req.query.term || sectionCtx.term || settings.current_term || '1st Term';
 
     // Section-specific result config (ca weights, exam max)
-    const resultConfig = await getSectionResultConfig(class_id || null);
+    const resultConfig = await getSectionResultConfig(class_id || null, schoolId);
 
-    try {        // Determine subjects to display:
-        // If a class is selected, load subjects that are linked to that class via subject_assignments.
-        // This ensures a class teacher sees all subjects for their class, even if they aren't directly assigned to each subject.
+    try {
+        // Determine subjects to display
         let subjects = [];
         if (class_id) {
-            // Get distinct subject IDs for the class
+            // Verify class belongs to tenant
+            const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+            if (!classCheck) return res.redirect('/results?error=Class not found');
+
             const subjectIdRows = await db.all('SELECT DISTINCT subject_id FROM subject_assignments WHERE class_id = ?', [class_id]);
             const subjectIds = subjectIdRows.map(r => r.subject_id);
             if (subjectIds.length > 0) {
-                // Fetch subject details for those IDs
                 const placeholders = subjectIds.map(() => '?').join(',');
-                subjects = await db.all(`SELECT * FROM subjects WHERE id IN (${placeholders})`, subjectIds);
+                subjects = await db.all(`SELECT * FROM subjects WHERE id IN (${placeholders}) AND school_id = ?`, [...subjectIds, schoolId]);
             } else {
-                // No specific assignments, fall back to all subjects (class teacher can still edit any)
-                subjects = await db.all('SELECT * FROM subjects');
+                subjects = await db.all('SELECT * FROM subjects WHERE school_id = ?', [schoolId]);
             }
         } else {
-            // No class filter, show all subjects
-            subjects = await db.all('SELECT * FROM subjects');
+            subjects = await db.all('SELECT * FROM subjects WHERE school_id = ?', [schoolId]);
         }
 
         let classes;
-        
         if (user.role === 'Admin' || user.role === 'Examination Officer') {
             classes = await db.all(`
                 SELECT c.*, s.current_session as sec_session, s.current_term as sec_term 
                 FROM classes c 
                 LEFT JOIN sections s ON c.section_id = s.id
-            `);
+                WHERE c.school_id = ?
+            `, [schoolId]);
         } else {
-            // Include classes where user is: form teacher, class-assigned teacher, or subject teacher
             classes = await db.all(`
                 SELECT DISTINCT c.*, s.current_session as sec_session, s.current_term as sec_term 
                 FROM classes c
                 LEFT JOIN sections s ON c.section_id = s.id
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
-                WHERE c.form_teacher_id = ? OR sa.id IS NOT NULL OR ca.id IS NOT NULL
-            `, [user.id, user.id, user.id]);
+                WHERE (c.form_teacher_id = ? OR sa.id IS NOT NULL OR ca.id IS NOT NULL)
+                  AND c.school_id = ?
+            `, [user.id, user.id, user.id, schoolId]);
         }
 
         let students = [];
 
         if (class_id && subject_id) {
             if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
-                // Allow if: subject teacher, class-assigned teacher, OR form/class teacher of this class
                 const hasAccess = await db.get(`
                     SELECT 1
                     WHERE EXISTS (
@@ -242,7 +309,6 @@ const getResultManager = async (req, res) => {
                 if (!hasAccess) return res.redirect('/results?error=Access Denied to this Subject/Class combination');
             }
 
-            // Use centralized helper (handles student_enrollments + current_class_id fallback + case-insensitive status)
             const enrolledStudents = await getEnrolledStudents(class_id, activeSession);
             if (enrolledStudents.length > 0) {
                 const studentIds = enrolledStudents.map(s => Number(s.id));
@@ -253,13 +319,14 @@ const getResultManager = async (req, res) => {
                     LEFT JOIN results r ON s.id = r.student_id
                         AND r.subject_id = ? AND r.term = ? AND r.session = ?
                     WHERE s.id IN (${studentIds.map(() => '?').join(',')})
+                      AND s.school_id = ?
                     ORDER BY s.first_name, s.last_name
-                `, [subject_id, activeTerm, activeSession, ...studentIds]);
+                `, [subject_id, activeTerm, activeSession, ...studentIds, schoolId]);
             }
         }
 
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
-        const availableSessions = await getAvailableSessions();
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
+        const availableSessions = await getAvailableSessions(schoolId);
 
         res.render('results/manager', {
             title: 'Result Management',
@@ -281,28 +348,35 @@ const getResultManager = async (req, res) => {
 const saveResults = async (req, res) => {
     const { results, term, session, subject_id, class_id, status } = req.body; 
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     if (!results || results.length === 0) {
         return res.json({ success: false, message: 'No results to save.' });
     }
 
     try {
+        // Pre-validate tenant ownership of class and subject
+        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class context.' });
+
+        const subjectCheck = await db.get('SELECT id FROM subjects WHERE id = ? AND school_id = ?', [subject_id, schoolId]);
+        if (!subjectCheck) return res.status(403).json({ success: false, message: 'Unauthorized subject context.' });
+
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
-            // Allow if: direct subject teacher, class-assigned teacher with subject in class, OR form/class teacher
             const hasAccess = await db.get(`
-            SELECT 1
-            WHERE (
-                EXISTS (SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?)
-                OR (
-                    EXISTS (SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?)
-                    AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
+                SELECT 1
+                WHERE (
+                    EXISTS (SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?)
+                    OR (
+                        EXISTS (SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?)
+                        AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
+                    )
+                    OR (
+                        EXISTS (SELECT id FROM classes WHERE id = ? AND form_teacher_id = ?)
+                        AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
+                    )
                 )
-                OR (
-                    EXISTS (SELECT id FROM classes WHERE id = ? AND form_teacher_id = ?)
-                    AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
-                )
-            )
-        `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id, class_id, user.id, class_id, subject_id]);
+            `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id, class_id, user.id, class_id, subject_id]);
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
             const checkLock = await db.get("SELECT status FROM results WHERE student_id = ? AND subject_id = ? AND term = ? AND session = ?", [results[0]?.student_id, subject_id, term, session]);
@@ -321,24 +395,27 @@ const saveResults = async (req, res) => {
         `;
 
         await db.transaction(async () => {
-                for (const item of results) {
-                    // Compute total and grade server-side to avoid client reliance
-                    const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
-                    await db.run(sql, [
-                        item.student_id,
-                        subject_id,
-                        term,
-                        session,
-                        item.ca1 || 0,
-                        item.ca2 || 0,
-                        item.exam || 0,
-                        total,
-                        grade,
-                        (item.remark || '').trim(),
-                        status || 'draft'
-                    ]);
-                }
-            });
+            for (const item of results) {
+                // Verify student belongs to this tenant
+                const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [item.student_id, schoolId]);
+                if (!studentCheck) continue; // Skip unauthorized student IDs
+
+                const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
+                await db.run(sql, [
+                    item.student_id,
+                    subject_id,
+                    term,
+                    session,
+                    item.ca1 || 0,
+                    item.ca2 || 0,
+                    item.exam || 0,
+                    total,
+                    grade,
+                    (item.remark || '').trim(),
+                    status || 'draft'
+                ]);
+            }
+        });
 
         res.json({ success: true, message: `Results ${status === 'submitted' ? 'submitted' : 'saved'} successfully.` });
     } catch (err) {
@@ -350,37 +427,34 @@ const saveResults = async (req, res) => {
 const getReportCard = async (req, res) => {
     const { student_id } = req.params;
     const { term, session } = req.query;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     try {
-        const school = await getSchoolSettings();
-        const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
+        const school = await getSchoolSettings(schoolId);
+        const student = await db.get('SELECT * FROM students WHERE id = ? AND school_id = ?', [student_id, schoolId]);
         if (!student) return res.status(404).send('Student not found');
 
         const { class_name } = req.query;
         let classObj;
         if (class_name) {
-            classObj = await db.get('SELECT * FROM classes WHERE name = ?', [class_name]);
+            classObj = await db.get('SELECT * FROM classes WHERE name = ? AND school_id = ?', [class_name, schoolId]);
         }
         
         if (!classObj) {
-            // Find first enrolled class for the session
             classObj = await db.get(`
                 SELECT c.* FROM classes c
                 JOIN student_enrollments se ON c.id = se.class_id
-                WHERE se.student_id = ? AND se.session = ?
-            `, [student_id, session]);
+                WHERE se.student_id = ? AND se.session = ? AND c.school_id = ?
+            `, [student_id, session, schoolId]);
         }
 
-                if (!classObj) return res.status(404).send('No class enrollment found for this session');
+        if (!classObj) return res.status(404).send('No class enrollment found for this session');
         
         student.class_name = classObj.name;
         const target_class_id = classObj.id;
 
-        const resultConfig = await getSectionResultConfig(target_class_id);
+        const resultConfig = await getSectionResultConfig(target_class_id, schoolId);
 
-        // Results with subject rank — fetch ALL results for the student in this term/session
-        // Do NOT filter by subject_assignments, because subjects may have results entered
-        // without a formal subject_assignment row for this class/session.
         const results = await db.all(`
             SELECT r.*, s.name as subject_name,
             (SELECT COUNT(*) + 1 FROM results r2 
@@ -392,7 +466,6 @@ const getReportCard = async (req, res) => {
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
         `, [target_class_id, session, student_id, term, session]);
 
-        // Overall Position — sum all results for enrolled students, not just SA-matched ones
         const classPerformance = await db.all(`
             SELECT r.student_id, SUM(r.total) as student_total
             FROM results r
@@ -420,7 +493,7 @@ const getReportCard = async (req, res) => {
         const traits = {};
         traitRows.forEach(t => traits[t.trait_name] = t.score);
 
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
 
         // Performance Analysis Logic
         const myIndex = classPerformance.findIndex(p => p.student_id == student_id);
@@ -469,25 +542,25 @@ const getReportCard = async (req, res) => {
 const getCumulativeReport = async (req, res) => {
     const { student_id } = req.params;
     const { session } = req.query;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     try {
-        const school = await getSchoolSettings();
-        const student = await db.get('SELECT * FROM students WHERE id = ?', [student_id]);
+        const school = await getSchoolSettings(schoolId);
+        const student = await db.get('SELECT * FROM students WHERE id = ? AND school_id = ?', [student_id, schoolId]);
         if (!student) return res.status(404).send('Student not found');
 
         const { class_name } = req.query;
         let classObj;
         if (class_name) {
-            classObj = await db.get('SELECT * FROM classes WHERE name = ?', [class_name]);
+            classObj = await db.get('SELECT * FROM classes WHERE name = ? AND school_id = ?', [class_name, schoolId]);
         }
         
         if (!classObj) {
-            // Find first enrolled class for the session
             classObj = await db.get(`
                 SELECT c.* FROM classes c
                 JOIN student_enrollments se ON c.id = se.class_id
-                WHERE se.student_id = ? AND se.session = ?
-            `, [student_id, session]);
+                WHERE se.student_id = ? AND se.session = ? AND c.school_id = ?
+            `, [student_id, session, schoolId]);
         }
 
         if (!classObj) return res.status(404).send('No class enrollment found for this session');
@@ -545,7 +618,7 @@ const getCumulativeReport = async (req, res) => {
             }
         }
 
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
 
         res.render('results/cumulative', {
             title: 'Cumulative Report',
@@ -568,19 +641,20 @@ const getCumulativeReport = async (req, res) => {
 const getBulkReport = async (req, res) => {
     const { class_id, term, session } = req.query;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     try {
         if (!class_id || !term || !session) {
             let classes;
             if (user.role === 'Admin' || user.role === 'Examination Officer') {
-                classes = await db.all('SELECT * FROM classes ORDER BY name');
+                classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name', [schoolId]);
             } else {
                 classes = await db.all(`
                     SELECT DISTINCT c.* FROM classes c
                     JOIN class_assignments ca ON c.id = ca.class_id
-                    WHERE ca.staff_id = ?
+                    WHERE ca.staff_id = ? AND c.school_id = ?
                     ORDER BY c.name
-                `, [user.id]);
+                `, [user.id, schoolId]);
             }
             return res.render('results/bulk_select', {
                 title: 'Print Report Cards',
@@ -595,12 +669,12 @@ const getBulkReport = async (req, res) => {
             return res.redirect(`/results/bulk-cumulative?class_id=${class_id}&session=${encodeURIComponent(session)}`);
         }
 
-        const school = await getSchoolSettings();
-        const resultConfig = await getSectionResultConfig(class_id);
-        // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
+        const school = await getSchoolSettings(schoolId);
+        const resultConfig = await getSectionResultConfig(class_id, schoolId);
         const students = await getEnrolledStudents(class_id, session);
-        const classInfo = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);
-        const className = classInfo ? classInfo.name : 'Class';
+        const classInfo = await db.get('SELECT name FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!classInfo) return res.redirect('/results/bulk?error=Class not found');
+        const className = classInfo.name;
 
         const classPerformance = await db.all(`
             SELECT student_id, SUM(total) as student_total
@@ -670,7 +744,7 @@ const getBulkReport = async (req, res) => {
             });
         }
 
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
 
         res.render('results/bulk_report', {
             title: `Bulk Report - ${className}`,
@@ -688,15 +762,15 @@ const getBulkReport = async (req, res) => {
     }
 };
 
-
 const getBulkCumulative = async (req, res) => {
     const { class_id, session } = req.query;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
-        const school = await getSchoolSettings();
-        // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
+        const school = await getSchoolSettings(schoolId);
         const students = await getEnrolledStudents(class_id, session);
-        const classInfo = await db.get('SELECT name FROM classes WHERE id = ?', [class_id]);
-        const className = classInfo ? classInfo.name : 'Class';
+        const classInfo = await db.get('SELECT name FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!classInfo) return res.redirect('/results/bulk?error=Class not found');
+        const className = classInfo.name;
 
         const sessionPerformance = await db.all(`
             SELECT student_id, AVG(total) as session_avg
@@ -755,7 +829,7 @@ const getBulkCumulative = async (req, res) => {
             });
         }
 
-        const grading = await db.all('SELECT * FROM grading_systems ORDER BY min_score DESC');
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
 
         res.render('results/bulk_cumulative', {
             title: `Bulk Cumulative - ${className}`,
@@ -775,21 +849,26 @@ const getBulkCumulative = async (req, res) => {
 const getTraitsForm = async (req, res) => {
     const { class_id, term, session } = req.query;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     try {
         let classes;
         if (user.role === 'Admin' || user.role === 'Examination Officer') {
-            classes = await db.all('SELECT * FROM classes');
+            classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name', [schoolId]);
         } else {
             classes = await db.all(`
                 SELECT DISTINCT c.* FROM classes c
                 JOIN class_assignments ca ON c.id = ca.class_id
-                WHERE ca.staff_id = ?
-            `, [user.id]);
+                WHERE ca.staff_id = ? AND c.school_id = ?
+                ORDER BY c.name
+            `, [user.id, schoolId]);
         }
 
         let students = [];
         if (class_id) {
+            const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+            if (!classCheck) return res.redirect('/results/traits?error=Class not found');
+
             if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
                 const isAssigned = await db.get(`
                     SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
@@ -797,7 +876,6 @@ const getTraitsForm = async (req, res) => {
                 if (!isAssigned) return res.redirect('/results/traits?error=Access Denied');
             }
 
-            // Use centralized helper — handles enrollment table + current_class_id fallback + case-insensitive status
             const enrolledForTraits = await getEnrolledStudents(class_id, session);
             if (enrolledForTraits.length > 0) {
                 const traitIds = enrolledForTraits.map(s => Number(s.id));
@@ -806,9 +884,9 @@ const getTraitsForm = async (req, res) => {
                            ap.trait_name, ap.score
                     FROM students s
                     LEFT JOIN affective_psychomotor ap ON s.id = ap.student_id AND ap.term = ? AND ap.session = ?
-                    WHERE s.id IN (${traitIds.map(() => '?').join(',')})
+                    WHERE s.id IN (${traitIds.map(() => '?').join(',')}) AND s.school_id = ?
                     ORDER BY s.first_name, s.last_name
-                `, [term, session, ...traitIds]);
+                `, [term, session, ...traitIds, schoolId]);
             }
         }
 
@@ -836,8 +914,12 @@ const getTraitsForm = async (req, res) => {
 const saveTraits = async (req, res) => {
     const { traits, term, session, class_id } = req.body;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     try {
+        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class context' });
+
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
             const isAssigned = await db.get(`
                 SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
@@ -853,6 +935,10 @@ const saveTraits = async (req, res) => {
 
         await db.transaction(async () => {
             for (const [student_id, studentTraits] of Object.entries(traits)) {
+                // Verify student belongs to this tenant
+                const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [parseInt(student_id), schoolId]);
+                if (!studentCheck) continue;
+
                 for (const [trait_name, score] of Object.entries(studentTraits)) {
                     await db.run(sql, [parseInt(student_id), trait_name, parseInt(score), term, session]);
                 }
@@ -866,14 +952,17 @@ const saveTraits = async (req, res) => {
     }
 };
 
-
 const approveResults = async (req, res) => {
     const { subject_id, class_id, term, session } = req.body;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
+        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class' });
+
         const info = await db.run(`
             UPDATE results
             SET status = 'approved', approved_by = ?
@@ -890,10 +979,14 @@ const approveResults = async (req, res) => {
 const lockResults = async (req, res) => {
     const { subject_id, class_id, term, session } = req.body;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
+        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class' });
+
         const info = await db.run(`
             UPDATE results
             SET status = 'locked'
@@ -910,12 +1003,16 @@ const lockResults = async (req, res) => {
 const publishBulkResults = async (req, res) => {
     const { class_id, term, session } = req.body;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
     if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
         let info;
         if (class_id) {
+            const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+            if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class' });
+
             info = await db.run(`
                 UPDATE results
                 SET status = 'published', approved_by = ?
@@ -926,8 +1023,9 @@ const publishBulkResults = async (req, res) => {
             info = await db.run(`
                 UPDATE results 
                 SET status = 'published', approved_by = ?
-                WHERE term = ? AND session = ? 
-            `, [user.id, term, session]);
+                WHERE term = ? AND session = ?
+                AND student_id IN (SELECT s.id FROM students s WHERE s.school_id = ?)
+            `, [user.id, term, session, schoolId]);
         }
         res.json({ success: true, message: `Successfully published ${info.changes} result entries across the system.` });
     } catch (err) {
@@ -952,5 +1050,8 @@ module.exports = {
     saveGradingSystem,
     approveResults,
     lockResults,
-    publishBulkResults
+    publishBulkResults,
+    getSectionResultConfig,
+    getSchoolSettings
 };
+

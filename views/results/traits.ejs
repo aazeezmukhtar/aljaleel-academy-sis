@@ -39,8 +39,13 @@
                                     </option>
                                 </select>
                                 <select name="session" required class="form-control">
-                                    <option value="2025/2026" <%=filters.session=='2025/2026' ? 'selected' : '' %>
-                                        >2025/2026</option>
+                                    <% if (typeof available_sessions !== 'undefined' && available_sessions && available_sessions.length > 0) { %>
+                                        <% available_sessions.forEach(sess => { %>
+                                            <option value="<%= sess %>" <%= (typeof filters !== 'undefined' && filters.session === sess) || (typeof current_session !== 'undefined' && current_session === sess) ? 'selected' : '' %>><%= sess %></option>
+                                        <% }); %>
+                                    <% } else if (typeof school !== 'undefined' && school.current_session) { %>
+                                        <option value="<%= school.current_session %>"><%= school.current_session %></option>
+                                    <% } %>
                                 </select>
                             </div>
                         </div>

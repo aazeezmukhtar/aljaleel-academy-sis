@@ -1,4 +1,4 @@
-const db = require('../utils/db');
+﻿const db = require('../utils/db');
 const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
@@ -6,8 +6,9 @@ const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
 
 const getBulkImportPage = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     try {
-        const classes = await db.all('SELECT * FROM classes ORDER BY name ASC');
+        const classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
         res.render('students/bulk-import', {
             title: 'Bulk Student Import',
             classes
@@ -19,6 +20,7 @@ const getBulkImportPage = async (req, res) => {
 };
 
 const processBulkImport = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { default_class_id } = req.body;
     const file = req.file;
 
@@ -92,10 +94,7 @@ const processBulkImport = async (req, res) => {
             }
 
             if (student.admission_number) {
-                admissionNumbers.push({
-                    number: student.admission_number.toString(),
-                    row: rowNum
-                });
+                admissionNumbers.push({ number: String(student.admission_number).trim(), row: rowNum });
             }
 
             validStudents.push({ ...student, rowNum });
@@ -104,8 +103,8 @@ const processBulkImport = async (req, res) => {
         if (admissionNumbers.length > 0) {
             const placeholders = admissionNumbers.map(() => '?').join(',');
             const existingAdmissions = await db.all(
-                `SELECT admission_number FROM students WHERE admission_number IN (${placeholders})`,
-                admissionNumbers.map(a => a.number)
+                `SELECT admission_number FROM students WHERE admission_number IN (${placeholders}) AND school_id = ?`,
+                [...admissionNumbers.map(a => a.number), schoolId]
             );
 
             const existingSet = new Set(existingAdmissions.map(a => a.admission_number));
@@ -131,9 +130,12 @@ const processBulkImport = async (req, res) => {
             });
         }
 
-        let currentSession = '2024/2025';
+        let currentSession = '2025/2026';
         try {
-            const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'");
+            const sessionRow = await db.get(
+                "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ? ORDER BY school_id DESC LIMIT 1",
+                [schoolId]
+            );
             if (sessionRow && sessionRow.value) currentSession = sessionRow.value;
         } catch (e) {}
 
@@ -143,10 +145,11 @@ const processBulkImport = async (req, res) => {
                 const hashedPassword = await bcrypt.hash(admission_number.toString(), 10);
                 await db.run(`
                     INSERT INTO students (
-                        first_name, last_name, gender, dob, admission_number,
+                        school_id, first_name, last_name, gender, dob, admission_number,
                         current_class_id, password, status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'active')
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
                 `, [
+                    schoolId,
                     student.first_name,
                     student.last_name,
                     student.gender,
@@ -157,7 +160,10 @@ const processBulkImport = async (req, res) => {
                 ]);
 
                 if (student.class_id) {
-                    const studentRow = await db.get("SELECT id FROM students WHERE admission_number = ?", [admission_number]);
+                    const studentRow = await db.get(
+                        "SELECT id FROM students WHERE admission_number = ? AND school_id = ?",
+                        [admission_number, schoolId]
+                    );
                     if (studentRow) {
                         await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, currentSession]);
                     }
@@ -184,4 +190,3 @@ const processBulkImport = async (req, res) => {
 };
 
 module.exports = { getBulkImportPage, processBulkImport };
-

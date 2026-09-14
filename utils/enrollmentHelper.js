@@ -7,7 +7,52 @@ const db = require('./db');
 async function getEnrolledStudents(classId, session = null) {
     const classIdNum = Number(classId);
 
+    // Base enrollment query
     let enrollmentQuery = `
+        SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number,
+               s.passport_photo_path, s.gender, s.status
+        FROM students s
+        JOIN student_enrollments se ON s.id = se.student_id
+        WHERE se.class_id = ?
+    `;
+    const params = [classIdNum];
+    if (session) {
+        enrollmentQuery += " AND se.session = ?";
+        params.push(session);
+    }
+    enrollmentQuery += " AND (s.status = 'active' OR s.status = 'Active' OR s.status IS NULL)";
+    enrollmentQuery += " ORDER BY s.last_name, s.first_name";
+
+    // Execute enrollment query
+    let students = await db.all(enrollmentQuery, params);
+
+    // Fallback to current_class_id for any students not enrolled for the given session
+    // This ensures newly enrolled students appear even if their enrollment record is missing or session mismatch.
+    const fallbackQuery = `
+        SELECT id, first_name, last_name, admission_number,
+               passport_photo_path, gender, status
+        FROM students
+        WHERE current_class_id = ?
+          AND (status = 'active' OR status = 'Active' OR status IS NULL)
+        ORDER BY last_name, first_name
+    `;
+    const fallbackStudents = await db.all(fallbackQuery, [classIdNum]);
+
+    // Merge and deduplicate by student id
+    const studentMap = new Map();
+    for (const s of students) {
+        studentMap.set(s.id, s);
+    }
+    for (const s of fallbackStudents) {
+        if (!studentMap.has(s.id)) {
+            studentMap.set(s.id, s);
+        }
+    }
+    return Array.from(studentMap.values());
+}
+
+
+
         SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number, 
                s.passport_photo_path, s.gender, s.status
         FROM students s

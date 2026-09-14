@@ -44,7 +44,7 @@ router.post('/update', upload.single('school_logo'), settingsController.updateSe
 
 // Promotion Routes
 router.get('/promotion', settingsController.getPromotionPage);
-router.post('/promotion/preview', settingsController.previewPromotion);
+// router.post('/promotion/preview', settingsController.previewPromotion); // disabled: preview handler not implemented
 router.post('/promotion', settingsController.processPromotion);
 
 // Section Calendar Routes

@@ -113,8 +113,18 @@ const updateSettings = async (req, res) => {
                     schoolParams.push(schoolId);
                     await db.run(`UPDATE schools SET ${schoolFields.join(', ')} WHERE id = ?`, schoolParams);
                 }
+
+                // Also keep sections table current_session and current_term in sync with school settings
+                if (current_session || current_term) {
+                    const secFields = [];
+                    const secParams = [];
+                    if (current_session) { secFields.push('current_session = ?'); secParams.push(current_session); }
+                    if (current_term) { secFields.push('current_term = ?'); secParams.push(current_term); }
+                    secParams.push(schoolId);
+                    await db.run(`UPDATE sections SET ${secFields.join(', ')} WHERE school_id = ?`, secParams);
+                }
             } catch (sErr) {
-                // Non-fatal if schools table does not have matching columns yet
+                // Non-fatal if schools or sections update encounters an error
             }
         });
 
@@ -169,7 +179,7 @@ const getPromotionPage = async (req, res) => {
 // POST /settings/promotion
 const processPromotion = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
-    const { mapping } = req.body;
+    const { mapping, target_session } = req.body;
     
     try {
         const classes = await db.all(`
@@ -186,6 +196,8 @@ const processPromotion = async (req, res) => {
             classSectionIdMap[c.id] = c.section_id;
         });
 
+        let advancedSession = target_session || null;
+
         await db.transaction(async () => {
             for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
                 const classId = parseInt(classIdStr);
@@ -193,7 +205,8 @@ const processPromotion = async (req, res) => {
                 if (!currentSession) continue;
 
                 const parts = currentSession.split('/');
-                const nextSession = parts.length === 2 ? `${parseInt(parts[0]) + 1}/${parseInt(parts[1]) + 1}` : '2026/2027';
+                const nextSession = target_session || (parts.length === 2 ? `${parseInt(parts[0]) + 1}/${parseInt(parts[1]) + 1}` : '2026/2027');
+                if (!advancedSession) advancedSession = nextSession;
 
                 if (targetId === 'graduate') {
                     const enrolledStudents = await db.all(`
@@ -239,7 +252,17 @@ const processPromotion = async (req, res) => {
                     }
                 }
             }
+
+            // Auto-advance section calendar and global settings to the new session
+            if (advancedSession) {
+                await db.run('UPDATE sections SET current_session = ? WHERE school_id = ?', [advancedSession, schoolId]);
+                await db.run("UPDATE settings SET value = ? WHERE key = 'current_session' AND school_id = ?", [advancedSession, schoolId]);
+                await db.run('UPDATE schools SET current_session = ? WHERE id = ?', [advancedSession, schoolId]);
+            }
         });
+
+        // Invalidate tenant cache
+        tenantHelper.clearTenantCache();
         
         res.redirect('/settings/promotion?success=Promotion completed successfully');
     } catch (err) {

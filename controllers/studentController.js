@@ -1,5 +1,5 @@
-﻿const db = require('../utils/db');
-const { getAcademicContext, getSectionContext } = require('../utils/sessionHelper');
+const db = require('../utils/db');
+const { getAcademicContext, getSectionContext, getCurrentSession } = require('../utils/sessionHelper');
 const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
@@ -209,10 +209,13 @@ const getEnrollmentForm = async (req, res) => {
             [schoolId]
         );
 
+        const activeSession = await getCurrentSession(schoolId);
+
         res.render('students/enroll', {
             title: 'Enroll New Student',
             classes,
-            sections
+            sections,
+            activeSession
         });
     } catch (err) {
         console.error('Fetch Metadata Error:', err);
@@ -264,6 +267,17 @@ const enrollStudent = async (req, res) => {
             }
         }
 
+        // If no section-specific class was selected but a primary class was provided, resolve its section
+        if (primary_class_id && enrolledClassIds.length === 0) {
+            const classRow = await db.get(
+                'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
+                [primary_class_id, schoolId]
+            );
+            if (classRow) {
+                enrolledClassIds.push({ sectionId: classRow.section_id, classId: classRow.id });
+            }
+        }
+
         const hashedPassword = await bcrypt.hash(admission_number, 10);
         const sql = `
             INSERT INTO students (
@@ -287,11 +301,13 @@ const enrollStudent = async (req, res) => {
         );
         const studentId = studentRow.id;
         
+        const activeSession = await getCurrentSession(schoolId);
         for (const item of enrolledClassIds) {
             const context = await getSectionContext(item.sectionId, schoolId);
+            const sessionToUse = (context && context.session) || activeSession || '2026/2027';
             await db.run(
                 "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                [studentId, item.classId, context.session]
+                [studentId, item.classId, sessionToUse]
             );
         }
         
@@ -453,31 +469,60 @@ const updateStudent = async (req, res) => {
         );
 
         let primary_class_id = current_class_id || null;
+        const activeSession = await getCurrentSession(schoolId);
+        let updatedAnySection = false;
 
         for (const sec of allSections) {
             const chosenClassId = req.body[`section_${sec.id}_class_id`] ||
                                   (sec.name === 'Academy' ? req.body.academy_class_id : null) ||
                                   (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null) || null;
 
-            if (chosenClassId && !primary_class_id) {
-                primary_class_id = chosenClassId;
+            if (chosenClassId) {
+                updatedAnySection = true;
+                if (!primary_class_id) primary_class_id = chosenClassId;
             }
 
             const ctx = await getSectionContext(sec.id, schoolId);
-            if (ctx) {
+            const sessionToUse = (ctx && ctx.session) || activeSession;
+            if (sessionToUse) {
                 // Remove existing enrollment for this section and session
                 await db.run(`
                     DELETE FROM student_enrollments 
                     WHERE student_id = ? 
                       AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?) 
                       AND session = ?
-                `, [id, sec.id, schoolId, ctx.session]);
+                `, [id, sec.id, schoolId, sessionToUse]);
 
                 // Re-enroll if a class was chosen
                 if (chosenClassId) {
                     await db.run(
                         "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                        [id, chosenClassId, ctx.session]
+                        [id, chosenClassId, sessionToUse]
+                    );
+                }
+            }
+        }
+
+        // Fallback for single class selection when section-specific fields were not sent
+        if (!updatedAnySection && primary_class_id) {
+            const classRow = await db.get(
+                'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
+                [primary_class_id, schoolId]
+            );
+            if (classRow) {
+                const ctx = await getSectionContext(classRow.section_id, schoolId);
+                const sessionToUse = (ctx && ctx.session) || activeSession;
+                if (sessionToUse) {
+                    await db.run(`
+                        DELETE FROM student_enrollments 
+                        WHERE student_id = ? 
+                          AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?) 
+                          AND session = ?
+                    `, [id, classRow.section_id, schoolId, sessionToUse]);
+
+                    await db.run(
+                        "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
+                        [id, classRow.id, sessionToUse]
                     );
                 }
             }

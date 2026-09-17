@@ -1,4 +1,5 @@
-﻿const db = require('../utils/db');
+const db = require('../utils/db');
+const sessionHelper = require('../utils/sessionHelper');
 const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
@@ -130,14 +131,7 @@ const processBulkImport = async (req, res) => {
             });
         }
 
-        let currentSession = '2025/2026';
-        try {
-            const sessionRow = await db.get(
-                "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ? ORDER BY school_id DESC LIMIT 1",
-                [schoolId]
-            );
-            if (sessionRow && sessionRow.value) currentSession = sessionRow.value;
-        } catch (e) {}
+        let currentSession = await sessionHelper.getCurrentSession(schoolId) || '2026/2027';
 
         await db.transaction(async () => {
             for (const student of validStudents) {
@@ -165,7 +159,13 @@ const processBulkImport = async (req, res) => {
                         [admission_number, schoolId]
                     );
                     if (studentRow) {
-                        await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, currentSession]);
+                        const classRow = await db.get('SELECT section_id FROM classes WHERE id = ? AND school_id = ?', [student.class_id, schoolId]);
+                        let sessionToUse = currentSession;
+                        if (classRow && classRow.section_id) {
+                            const secCtx = await sessionHelper.getSectionContext(classRow.section_id, schoolId);
+                            if (secCtx && secCtx.session) sessionToUse = secCtx.session;
+                        }
+                        await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, sessionToUse]);
                     }
                 }
             }

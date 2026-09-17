@@ -96,36 +96,35 @@ const updateSettings = async (req, res) => {
             }
 
             // Also keep the parent schools table in sync if it exists
-            try {
-                const schoolFields = [];
-                const schoolParams = [];
-                if (school_name) { schoolFields.push('name = ?'); schoolParams.push(school_name); }
-                if (school_motto) { schoolFields.push('motto = ?'); schoolParams.push(school_motto); }
-                if (primary_color) { schoolFields.push('primary_color = ?'); schoolParams.push(primary_color); }
-                if (secondary_color) { schoolFields.push('secondary_color = ?'); schoolParams.push(secondary_color); }
-                if (address) { schoolFields.push('address = ?'); schoolParams.push(address); }
-                if (phone) { schoolFields.push('phone = ?'); schoolParams.push(phone); }
-                if (current_session) { schoolFields.push('current_session = ?'); schoolParams.push(current_session); }
-                if (current_term) { schoolFields.push('current_term = ?'); schoolParams.push(current_term); }
-                if (logoFile) { schoolFields.push('logo_url = ?'); schoolParams.push('/uploads/' + logoFile.filename); }
+            const schoolFields = [];
+            const schoolParams = [];
+            if (school_name) { schoolFields.push('name = ?'); schoolParams.push(school_name); }
+            if (school_motto) { schoolFields.push('motto = ?'); schoolParams.push(school_motto); }
+            if (primary_color) { schoolFields.push('primary_color = ?'); schoolParams.push(primary_color); }
+            if (secondary_color) { schoolFields.push('secondary_color = ?'); schoolParams.push(secondary_color); }
+            if (address) { schoolFields.push('address = ?'); schoolParams.push(address); }
+            if (phone) { schoolFields.push('phone = ?'); schoolParams.push(phone); }
+            if (current_session) { schoolFields.push('current_session = ?'); schoolParams.push(current_session); }
+            if (current_term) { schoolFields.push('current_term = ?'); schoolParams.push(current_term); }
+            if (logoFile) { schoolFields.push('logo_url = ?'); schoolParams.push('/uploads/' + logoFile.filename); }
 
-                if (schoolFields.length > 0) {
-                    schoolParams.push(schoolId);
-                    await db.run(`UPDATE schools SET ${schoolFields.join(', ')} WHERE id = ?`, schoolParams);
-                }
-
-                // Also keep sections table current_session and current_term in sync with school settings
-                if (current_session || current_term) {
-                    const secFields = [];
-                    const secParams = [];
-                    if (current_session) { secFields.push('current_session = ?'); secParams.push(current_session); }
-                    if (current_term) { secFields.push('current_term = ?'); secParams.push(current_term); }
-                    secParams.push(schoolId);
-                    await db.run(`UPDATE sections SET ${secFields.join(', ')} WHERE school_id = ?`, secParams);
-                }
-            } catch (sErr) {
-                // Non-fatal if schools or sections update encounters an error
+            if (schoolFields.length > 0) {
+                schoolParams.push(schoolId);
+                await db.run(`UPDATE schools SET ${schoolFields.join(', ')} WHERE id = ?`, schoolParams);
             }
+
+            // CRITICAL: always sync sections to match the global session/term setting for this school
+            // This is what getAcademicContext() reads first — if sections are out of date, enrollment
+            // and attendance will silently use the wrong session.
+            if (current_session || current_term) {
+                const secFields = [];
+                const secParams = [];
+                if (current_session) { secFields.push('current_session = ?'); secParams.push(current_session); }
+                if (current_term) { secFields.push('current_term = ?'); secParams.push(current_term); }
+                secParams.push(schoolId);
+                await db.run(`UPDATE sections SET ${secFields.join(', ')} WHERE school_id = ?`, secParams);
+            }
+
         });
 
         // Invalidate tenant cache

@@ -1,10 +1,10 @@
 const db = require('../utils/db');
-const sessionHelper = require('../utils/sessionHelper');
 const path = require('path');
 const xlsx = require('xlsx');
 const fs = require('fs');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
+const sessionHelper = require('../utils/sessionHelper');
 
 const getBulkImportPage = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
@@ -131,7 +131,7 @@ const processBulkImport = async (req, res) => {
             });
         }
 
-        let currentSession = await sessionHelper.getCurrentSession(schoolId) || '2026/2027';
+        const currentSession = (await sessionHelper.getCurrentSession(schoolId)) || '2025/2026';
 
         await db.transaction(async () => {
             for (const student of validStudents) {
@@ -159,12 +159,8 @@ const processBulkImport = async (req, res) => {
                         [admission_number, schoolId]
                     );
                     if (studentRow) {
-                        const classRow = await db.get('SELECT section_id FROM classes WHERE id = ? AND school_id = ?', [student.class_id, schoolId]);
-                        let sessionToUse = currentSession;
-                        if (classRow && classRow.section_id) {
-                            const secCtx = await sessionHelper.getSectionContext(classRow.section_id, schoolId);
-                            if (secCtx && secCtx.session) sessionToUse = secCtx.session;
-                        }
+                        const context = await sessionHelper.getAcademicContext(student.class_id, schoolId);
+                        const sessionToUse = context.session || currentSession;
                         await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, sessionToUse]);
                     }
                 }

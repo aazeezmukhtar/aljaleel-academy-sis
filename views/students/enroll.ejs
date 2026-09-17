@@ -74,14 +74,7 @@
                         Back
                         to Directory</a>
                     <h1 style="margin-top: 10px;">Enroll New Student</h1>
-                    <p class="text-muted">Register a new student for the current academic session.</p>
-                    <% if (typeof activeSession !== 'undefined' && activeSession) { %>
-                        <div style="margin-top: 8px;">
-                            <span class="badge" style="background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 4px 14px; border-radius: 20px; font-weight: 700; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-calendar-check"></i> Enrolling for Session: <%= activeSession %>
-                            </span>
-                        </div>
-                    <% } %>
+                    <p class="text-muted">Register a new student for the active academic calendar (<strong style="color: var(--school-primary, #6366f1);"><%= typeof currentTerm !== 'undefined' ? currentTerm : '' %> <%= typeof currentSession !== 'undefined' ? currentSession : '' %></strong>).</p>
                 </header>
 
                 <div class="card form-container">
@@ -204,9 +197,9 @@
                                     <option value="">Assign Later</option>
                                     <% classes.forEach(cls=> { %>
                                         <option value="<%= cls.id %>">
-                                            <%= cls.name %>
+                                            <%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %>
                                         </option>
-                                        <% }); %>
+                                    <% }); %>
                                 </select>
                             </div>
                         </div>

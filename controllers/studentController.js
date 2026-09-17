@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { getAcademicContext, getSectionContext, getCurrentSession } = require('../utils/sessionHelper');
+const { getAcademicContext, getSectionContext, getCurrentSession, getCurrentTerm } = require('../utils/sessionHelper');
 const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
@@ -209,13 +209,15 @@ const getEnrollmentForm = async (req, res) => {
             [schoolId]
         );
 
-        const activeSession = await getCurrentSession(schoolId);
+        const currentSession = (await getCurrentSession(schoolId)) || '2025/2026';
+        const currentTerm = (await getCurrentTerm(schoolId)) || '1st Term';
 
         res.render('students/enroll', {
             title: 'Enroll New Student',
             classes,
             sections,
-            activeSession
+            currentSession,
+            currentTerm
         });
     } catch (err) {
         console.error('Fetch Metadata Error:', err);
@@ -267,14 +269,17 @@ const enrollStudent = async (req, res) => {
             }
         }
 
-        // If no section-specific class was selected but a primary class was provided, resolve its section
-        if (primary_class_id && enrolledClassIds.length === 0) {
-            const classRow = await db.get(
-                'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
+        // If a primary class was selected from the main dropdown and not already collected, add it
+        if (primary_class_id && !enrolledClassIds.some(item => item.classId === parseInt(primary_class_id, 10))) {
+            const cls = await db.get(
+                "SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?",
                 [primary_class_id, schoolId]
             );
-            if (classRow) {
-                enrolledClassIds.push({ sectionId: classRow.section_id, classId: classRow.id });
+            if (cls) {
+                enrolledClassIds.push({
+                    sectionId: cls.section_id || null,
+                    classId: cls.id
+                });
             }
         }
 
@@ -303,8 +308,20 @@ const enrollStudent = async (req, res) => {
         
         const activeSession = await getCurrentSession(schoolId);
         for (const item of enrolledClassIds) {
-            const context = await getSectionContext(item.sectionId, schoolId);
-            const sessionToUse = (context && context.session) || activeSession || '2026/2027';
+            // Determine exact academic context (session) respecting section calendar & settings
+            let sessionToUse = null;
+            if (item.classId) {
+                const academicContext = await getAcademicContext(item.classId, schoolId);
+                sessionToUse = academicContext.session;
+            }
+            if (!sessionToUse && item.sectionId) {
+                const sectionContext = await getSectionContext(item.sectionId, schoolId);
+                sessionToUse = sectionContext.session;
+            }
+            if (!sessionToUse) {
+                sessionToUse = (await getCurrentSession(schoolId)) || '2025/2026';
+            }
+
             await db.run(
                 "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
                 [studentId, item.classId, sessionToUse]

@@ -39,7 +39,7 @@ if (DB_TYPE === 'postgres') {
     const PostgresStore = require('connect-pg-simple')(session);
     sessionStore = new PostgresStore({ 
         pool: db.pool,
-        createTableIfMissing: false,
+        createTableIfMissing: true,
         ttl: 5 * 60 * 60,
         pruneSessionInterval: false
     });
@@ -53,12 +53,20 @@ if (DB_TYPE === 'postgres') {
     console.log('[Session] Using SQLite Store');
 }
 
+// Trust the first proxy (required on Vercel / hosted environments for secure cookies)
+app.set('trust proxy', 1);
+
 app.use(session({
     store: sessionStore,
     secret: process.env.SESSION_SECRET || 'nexus-sis-secret-key-offline-first',
     resave: false,
     saveUninitialized: false,
-    cookie: { maxAge: 7 * 24 * 60 * 60 * 1000 }
+    cookie: {
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'lax'
+    }
 }));
 
 app.use(injectUser);

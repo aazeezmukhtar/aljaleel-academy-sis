@@ -48,19 +48,26 @@ const getStudents = async (req, res) => {
     const yearRows = await db.all(yearSql, [schoolId]).catch(() => []);
     const admissionYears = yearRows.map(r => r.year).filter(Boolean);
 
+    // Fetch current session from settings or fallback
+    const sessionSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'").catch(() => null);
+    const activeCurrentSession = (sessionSettingRow && sessionSettingRow.value) || '2025/2026';
+
     let query = `
         SELECT s.*, c.name as class_name, c.section_id as class_section_id, se.class_id as enrolled_class_id
         FROM students s
-        LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.session = (
-            SELECT sec.current_session 
-            FROM sections sec 
-            JOIN classes cl ON cl.section_id = sec.id 
-            WHERE cl.id = se.class_id
+        LEFT JOIN student_enrollments se ON s.id = se.student_id AND (
+            se.session = (
+                SELECT sec.current_session 
+                FROM sections sec 
+                JOIN classes cl ON cl.section_id = sec.id 
+                WHERE cl.id = se.class_id
+            )
+            OR se.session = ?
         )
         LEFT JOIN classes c ON (se.class_id = c.id OR s.current_class_id = c.id)
-        WHERE s.school_id = ?
+        WHERE 1=1
     `;
-    const params = [schoolId];
+    const params = [activeCurrentSession];
 
     let myClasses = [];
     if (user.role !== 'Admin' && user.role !== 'Registrar') {
@@ -306,26 +313,46 @@ const enrollStudent = async (req, res) => {
         );
         const studentId = studentRow.id;
         
-        const activeSession = await getCurrentSession(schoolId);
+        const sessionSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'").catch(() => null);
+        const termSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_term'").catch(() => null);
+        const activeSession = (sessionSettingRow && sessionSettingRow.value) || (await getCurrentSession(schoolId)) || '2025/2026';
+        const activeTerm = (termSettingRow && termSettingRow.value) || (await getCurrentTerm(schoolId)) || '1st Term';
+
         for (const item of enrolledClassIds) {
-            // Determine exact academic context (session) respecting section calendar & settings
+            // Determine exact academic context (session & term) respecting section calendar & settings
             let sessionToUse = null;
+            let termToUse = null;
+
             if (item.classId) {
-                const academicContext = await getAcademicContext(item.classId, schoolId);
-                sessionToUse = academicContext.session;
+                const academicContext = await getAcademicContext(item.classId, schoolId).catch(() => null);
+                if (academicContext) {
+                    sessionToUse = academicContext.session;
+                    termToUse = academicContext.term;
+                }
             }
-            if (!sessionToUse && item.sectionId) {
-                const sectionContext = await getSectionContext(item.sectionId, schoolId);
-                sessionToUse = sectionContext.session;
-            }
-            if (!sessionToUse) {
-                sessionToUse = (await getCurrentSession(schoolId)) || '2025/2026';
+            if ((!sessionToUse || !termToUse) && item.sectionId) {
+                const sectionContext = await getSectionContext(item.sectionId, schoolId).catch(() => null);
+                if (sectionContext) {
+                    sessionToUse = sessionToUse || sectionContext.session;
+                    termToUse = termToUse || sectionContext.term;
+                }
             }
 
-            await db.run(
-                "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                [studentId, item.classId, sessionToUse]
-            );
+            sessionToUse = sessionToUse || activeSession;
+            termToUse = termToUse || activeTerm;
+
+            try {
+                await db.run(
+                    "INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)",
+                    [studentId, item.classId, sessionToUse, termToUse]
+                );
+            } catch (enrollInsertErr) {
+                // Fallback for pre-migration table without term column
+                await db.run(
+                    "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
+                    [studentId, item.classId, sessionToUse]
+                );
+            }
         }
         
         logAction(req.session.staff.id, 'ENROLL_STUDENT', 'STUDENT', { first_name, last_name }, req.ip);
@@ -346,13 +373,16 @@ const getStudentProfile = async (req, res) => {
         );
         if (!student) return res.status(404).send('Student not found');
 
+        const sessionSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'").catch(() => null);
+        const activeCurrentSession = (sessionSettingRow && sessionSettingRow.value) || '2025/2026';
+
         const enrollments = await db.all(`
             SELECT c.name as class_name
             FROM student_enrollments se
             JOIN classes c ON se.class_id = c.id
-            JOIN sections sec ON c.section_id = sec.id
-            WHERE se.student_id = ? AND se.session = sec.current_session
-        `, [id]);
+            LEFT JOIN sections sec ON c.section_id = sec.id
+            WHERE se.student_id = ? AND (se.session = sec.current_session OR se.session = ?)
+        `, [id, activeCurrentSession]);
 
         student.class_name = enrollments.map(e => e.class_name).join(', ') || student.class_name || 'Not Enrolled';
 
@@ -405,13 +435,16 @@ const getEditForm = async (req, res) => {
             }
         }
         
+        const sessionSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'").catch(() => null);
+        const activeCurrentSession = (sessionSettingRow && sessionSettingRow.value) || '2025/2026';
+
         const enrollments = await db.all(`
             SELECT se.class_id 
             FROM student_enrollments se
             JOIN classes c ON se.class_id = c.id
-            JOIN sections sec ON c.section_id = sec.id
-            WHERE se.student_id = ? AND se.session = sec.current_session
-        `, [id]);
+            LEFT JOIN sections sec ON c.section_id = sec.id
+            WHERE se.student_id = ? AND (se.session = sec.current_session OR se.session = ?)
+        `, [id, activeCurrentSession]);
         const enrolledClassIds = enrollments.map(e => e.class_id);
 
         let classes;

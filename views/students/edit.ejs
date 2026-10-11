@@ -97,7 +97,7 @@
                             <% sections.forEach((sec, idx) => {
                                 const sectionClasses = classes.filter(c => c.section_id === sec.id);
                                 if (sectionClasses.length === 0) return;
-                                const fieldName = sec.id === 1 ? 'academy_class_id' : (sec.id === 2 ? 'tahfeez_class_id' : `section_${sec.id}_class_id`);
+                                const fieldName = `section_${sec.id}_class_id`;
                                 const currentEnrolledId = enrolledClassIds.find(cid => sectionClasses.some(sc => sc.id === cid));
                                 
                                 const theme = (sec.name === 'Academy' || sec.id === 1 || idx === 0)

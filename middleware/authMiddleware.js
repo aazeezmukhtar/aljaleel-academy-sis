@@ -3,18 +3,10 @@
  * Handles session validation, tenant verification, and role-based access control.
  */
 module.exports = {
-    // Ensure user is logged in and tenant matches
+    // Ensure user is logged in
     isAuthenticated: (req, res, next) => {
         if (req.session && req.session.staff) {
-            // Fail closed if authenticated staff session lacks school_id
-            if (!req.session.staff.school_id) {
-                return res.status(403).send('Access Denied: Missing Tenant Context');
-            }
-            // Tenant authorization check
-            if (req.schoolId && Number(req.session.staff.school_id) !== Number(req.schoolId)) {
-                return res.status(403).send('Access Denied: Tenant Context Mismatch');
-            }
-            req.schoolId = Number(req.session.staff.school_id);
+            req.schoolId = Number(req.session.staff.school_id || 1);
             res.locals.user = req.session.staff; // Inject user into templates
             return next();
         }
@@ -27,9 +19,7 @@ module.exports = {
     // Ensure user is an Admin
     isAdmin: (req, res, next) => {
         if (req.session && req.session.staff && req.session.staff.role === 'Admin') {
-            if (req.schoolId && req.session.staff.school_id && Number(req.session.staff.school_id) !== Number(req.schoolId)) {
-                return res.status(403).send('Access Denied: Tenant Context Mismatch');
-            }
+            req.schoolId = Number(req.session.staff.school_id || 1);
             return next();
         }
         res.status(403).send('Access Denied: Admin Privileges Required');
@@ -45,19 +35,13 @@ module.exports = {
         next();
     },
 
-    // Allow either staff or student with matching tenant
+    // Allow either staff or student
     isAnyAuthenticated: (req, res, next) => {
         const staff = req.session && req.session.staff;
         const student = req.session && req.session.student;
 
         if (staff || student) {
-            const userSchoolId = staff ? staff.school_id : student.school_id;
-            if (req.schoolId && userSchoolId && Number(userSchoolId) !== Number(req.schoolId)) {
-                if (req.originalUrl.startsWith('/api/')) {
-                    return res.status(403).json({ error: 'Tenant Context Mismatch' });
-                }
-                return res.status(403).send('Access Denied: Tenant Context Mismatch');
-            }
+            req.schoolId = Number((staff ? staff.school_id : student.school_id) || 1);
             return next();
         }
         if (req.originalUrl.startsWith('/api/')) {

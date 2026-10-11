@@ -159,9 +159,20 @@ const processBulkImport = async (req, res) => {
                         [admission_number, schoolId]
                     );
                     if (studentRow) {
-                        const context = await sessionHelper.getAcademicContext(student.class_id, schoolId);
-                        const sessionToUse = context.session || currentSession;
-                        await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, sessionToUse]);
+                        const context = await sessionHelper.getAcademicContext(student.class_id, schoolId).catch(() => ({}));
+                        const sessionToUse = (context && context.session) || currentSession;
+                        const termToUse = (context && context.term) || '1st Term';
+                        try {
+                            await db.run(
+                                "INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)",
+                                [studentRow.id, student.class_id, sessionToUse, termToUse]
+                            );
+                        } catch (bErr) {
+                            await db.run(
+                                "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
+                                [studentRow.id, student.class_id, sessionToUse]
+                            );
+                        }
                     }
                 }
             }

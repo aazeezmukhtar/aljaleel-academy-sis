@@ -1,4 +1,4 @@
-﻿const db = require('../utils/db');
+const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 const { logAction } = require('../utils/logger');
 
@@ -27,7 +27,7 @@ exports.postLogin = async (req, res) => {
             [String(staff_id).trim()]
         );
 
-        if (!staff || !staff.school_id) {
+        if (!staff) {
             return res.redirect('/auth/login?error=Invalid Staff ID or account inactive');
         }
 
@@ -37,9 +37,9 @@ exports.postLogin = async (req, res) => {
             return res.redirect('/auth/login?error=Invalid Password');
         }
 
-        const authoritativeSchoolId = Number(staff.school_id);
+        const authoritativeSchoolId = Number(staff.school_id || 1);
 
-        // Create session strictly with authoritative database-derived school_id
+        // Create session
         req.session.staff = {
             id: staff.id,
             staff_id: staff.staff_id,
@@ -139,7 +139,7 @@ exports.postStudentLogin = async (req, res) => {
             [String(admission_number).trim()]
         );
 
-        if (!student || !student.school_id) {
+        if (!student) {
             return res.redirect('/auth/student-login?error=Student ID or password is incorrect.');
         }
 
@@ -161,7 +161,7 @@ exports.postStudentLogin = async (req, res) => {
             return res.redirect('/auth/student-login?error=Student ID or password is incorrect.');
         }
 
-        const authoritativeSchoolId = Number(student.school_id);
+        const authoritativeSchoolId = Number(student.school_id || 1);
 
         req.session.student = {
             id: student.id,

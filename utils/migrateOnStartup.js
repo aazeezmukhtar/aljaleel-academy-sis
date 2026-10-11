@@ -80,9 +80,34 @@ async function runMigrations() {
             student_id INTEGER NOT NULL REFERENCES students(id),
             class_id INTEGER NOT NULL REFERENCES classes(id),
             session TEXT NOT NULL,
+            term TEXT,
             UNIQUE(student_id, class_id, session)
         )
     `);
+
+    try {
+        await db.run("ALTER TABLE student_enrollments ADD COLUMN term TEXT");
+        console.log('[migrate] Added term column to student_enrollments');
+    } catch (e) {
+        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
+            console.error('[migrate] student_enrollments.term failed:', e.message);
+        }
+    }
+
+    try {
+        await db.run("ALTER TABLE students ADD COLUMN admission_session TEXT");
+        console.log('[migrate] Added admission_session to students');
+    } catch (e) {}
+
+    try {
+        await db.run("ALTER TABLE students ADD COLUMN admission_term TEXT");
+        console.log('[migrate] Added admission_term to students');
+    } catch (e) {}
+
+    try {
+        await db.run("ALTER TABLE students ADD COLUMN password TEXT");
+        console.log('[migrate] Added password to students');
+    } catch (e) {}
 
     // 7. Create section_result_config table
     let needsRecreate = false;

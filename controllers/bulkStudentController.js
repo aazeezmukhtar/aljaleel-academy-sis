@@ -132,26 +132,47 @@ const processBulkImport = async (req, res) => {
         }
 
         const currentSession = (await sessionHelper.getCurrentSession(schoolId)) || '2025/2026';
+        const currentTerm = (await sessionHelper.getCurrentTerm(schoolId)) || '1st Term';
 
         await db.transaction(async () => {
             for (const student of validStudents) {
                 const admission_number = student.admission_number || await generateUniqueID();
                 const hashedPassword = await bcrypt.hash(admission_number.toString(), 10);
-                await db.run(`
-                    INSERT INTO students (
-                        school_id, first_name, last_name, gender, dob, admission_number,
-                        current_class_id, password, status
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
-                `, [
-                    schoolId,
-                    student.first_name,
-                    student.last_name,
-                    student.gender,
-                    student.dob || null,
-                    admission_number,
-                    student.class_id || null,
-                    hashedPassword
-                ]);
+                try {
+                    await db.run(`
+                        INSERT INTO students (
+                            school_id, first_name, last_name, gender, dob, admission_number,
+                            current_class_id, password, status, admission_session, admission_term
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
+                    `, [
+                        schoolId,
+                        student.first_name,
+                        student.last_name,
+                        student.gender,
+                        student.dob || null,
+                        admission_number,
+                        student.class_id || null,
+                        hashedPassword,
+                        currentSession,
+                        currentTerm
+                    ]);
+                } catch (insertErr) {
+                    await db.run(`
+                        INSERT INTO students (
+                            school_id, first_name, last_name, gender, dob, admission_number,
+                            current_class_id, password, status
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'active')
+                    `, [
+                        schoolId,
+                        student.first_name,
+                        student.last_name,
+                        student.gender,
+                        student.dob || null,
+                        admission_number,
+                        student.class_id || null,
+                        hashedPassword
+                    ]);
+                }
 
                 if (student.class_id) {
                     const studentRow = await db.get(
@@ -161,11 +182,17 @@ const processBulkImport = async (req, res) => {
                     if (studentRow) {
                         const context = await sessionHelper.getAcademicContext(student.class_id, schoolId);
                         const sessionToUse = context.session || currentSession;
-                        await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, sessionToUse]);
+                        const termToUse = context.term || currentTerm;
+                        try {
+                            await db.run("INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)", [studentRow.id, student.class_id, sessionToUse, termToUse]);
+                        } catch (e) {
+                            await db.run("INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)", [studentRow.id, student.class_id, sessionToUse]);
+                        }
                     }
                 }
             }
         });
+
 
         fs.unlinkSync(file.path);
 

@@ -122,7 +122,12 @@ const updateSettings = async (req, res) => {
                 if (current_session) { secFields.push('current_session = ?'); secParams.push(current_session); }
                 if (current_term) { secFields.push('current_term = ?'); secParams.push(current_term); }
                 secParams.push(schoolId);
-                await db.run(`UPDATE sections SET ${secFields.join(', ')} WHERE school_id = ?`, secParams);
+                // Also update legacy sections where school_id IS NULL if default tenant
+                if (schoolId === 1) {
+                    await db.run(`UPDATE sections SET ${secFields.join(', ')} WHERE school_id = ? OR school_id IS NULL`, secParams);
+                } else {
+                    await db.run(`UPDATE sections SET ${secFields.join(', ')} WHERE school_id = ?`, secParams);
+                }
             }
 
         });

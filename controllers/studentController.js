@@ -318,26 +318,29 @@ const enrollStudent = async (req, res) => {
         const activeSession = (sessionSettingRow && sessionSettingRow.value) || (await getCurrentSession(schoolId)) || '2025/2026';
         const activeTerm = (termSettingRow && termSettingRow.value) || (await getCurrentTerm(schoolId)) || '1st Term';
 
+        // Map sections by id for fast calendar lookup
+        const sectionMap = new Map();
+        allSections.forEach(s => sectionMap.set(s.id, s));
+
         for (const item of enrolledClassIds) {
-            // Determine exact academic context (session & term) respecting section calendar & settings
+            // Determine exact academic context (session & term) strictly from the class's section
             let sessionToUse = null;
             let termToUse = null;
 
-            if (item.classId) {
-                const academicContext = await getAcademicContext(item.classId, schoolId).catch(() => null);
-                if (academicContext) {
-                    sessionToUse = academicContext.session;
-                    termToUse = academicContext.term;
-                }
-            }
-            if ((!sessionToUse || !termToUse) && item.sectionId) {
-                const sectionContext = await getSectionContext(item.sectionId, schoolId).catch(() => null);
-                if (sectionContext) {
-                    sessionToUse = sessionToUse || sectionContext.session;
-                    termToUse = termToUse || sectionContext.term;
+            if (item.sectionId && sectionMap.has(item.sectionId)) {
+                const sec = sectionMap.get(item.sectionId);
+                sessionToUse = sec.current_session;
+                termToUse = sec.current_term;
+            } else if (item.classId) {
+                const cls = await db.get("SELECT section_id FROM classes WHERE id = ?", [item.classId]).catch(() => null);
+                if (cls && cls.section_id && sectionMap.has(cls.section_id)) {
+                    const sec = sectionMap.get(cls.section_id);
+                    sessionToUse = sec.current_session;
+                    termToUse = sec.current_term;
                 }
             }
 
+            // Fallback to active school settings only if section calendar is unset
             sessionToUse = sessionToUse || activeSession;
             termToUse = termToUse || activeTerm;
 
@@ -347,11 +350,11 @@ const enrollStudent = async (req, res) => {
                     [studentId, item.classId, sessionToUse, termToUse]
                 );
             } catch (enrollInsertErr) {
-                // Fallback for pre-migration table without term column
+                // Fallback for pre-migration table without term column or duplicate
                 await db.run(
                     "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
                     [studentId, item.classId, sessionToUse]
-                );
+                ).catch(() => {});
             }
         }
         
@@ -533,7 +536,8 @@ const updateStudent = async (req, res) => {
             }
 
             const ctx = await getSectionContext(sec.id, schoolId);
-            const sessionToUse = (ctx && ctx.session) || activeSession;
+            const sessionToUse = (ctx && ctx.session) || sec.current_session || activeSession;
+            const termToUse = (ctx && ctx.term) || sec.current_term || '1st Term';
             if (sessionToUse) {
                 // Remove existing enrollment for this section and session
                 await db.run(`
@@ -545,10 +549,17 @@ const updateStudent = async (req, res) => {
 
                 // Re-enroll if a class was chosen
                 if (chosenClassId) {
-                    await db.run(
-                        "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                        [id, chosenClassId, sessionToUse]
-                    );
+                    try {
+                        await db.run(
+                            "INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)",
+                            [id, chosenClassId, sessionToUse, termToUse]
+                        );
+                    } catch (insErr) {
+                        await db.run(
+                            "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
+                            [id, chosenClassId, sessionToUse]
+                        ).catch(() => {});
+                    }
                 }
             }
         }

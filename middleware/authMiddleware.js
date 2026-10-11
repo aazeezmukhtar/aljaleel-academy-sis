@@ -6,48 +6,40 @@
  * school_id is resolved from the DB if absent from the session (e.g. stale sessions,
  * or staff records created before school_id was backfilled).
  */
-const db = require('../utils/db');
 const tenantHelper = require('../utils/tenantHelper');
 
 module.exports = {
     // Ensure user is logged in; resolves school_id from DB if missing from session
     isAuthenticated: async (req, res, next) => {
-        if (req.session && req.session.staff) {
-            // If school_id is absent (stale session or pre-migration record), resolve it
-            if (!req.session.staff.school_id) {
-                try {
-                    const staffRow = await db.get(
-                        "SELECT school_id FROM staff WHERE id = ? AND status = 'active'",
-                        [req.session.staff.id]
-                    );
-                    if (staffRow && staffRow.school_id) {
-                        req.session.staff.school_id = Number(staffRow.school_id);
+        try {
+            if (req.session && req.session.staff) {
+                // school_id is normally set at login; resolve via fallback only if somehow absent
+                if (!req.session.staff.school_id) {
+                    const defaultSchool = await tenantHelper.getDefaultTenant();
+                    if (defaultSchool) {
+                        req.session.staff.school_id = Number(defaultSchool.id);
+                        // Persist the fix into the session store
+                        req.session.save((err) => { if (err) console.error('[Auth] Session save error:', err); });
                     } else {
-                        // Single-tenant fallback: use the primary active school
-                        const defaultSchool = await tenantHelper.getDefaultTenant();
-                        if (defaultSchool) {
-                            req.session.staff.school_id = Number(defaultSchool.id);
-                        } else {
-                            return res.status(403).send('Access Denied: School not configured');
-                        }
+                        return res.status(403).send('Access Denied: School not configured');
                     }
-                } catch (err) {
-                    console.error('[Auth] Error resolving school_id from DB:', err.message);
-                    return res.status(500).send('Authentication error');
                 }
+                // Tenant guard (no-op in single-tenant; prevents cross-school access)
+                if (req.schoolId && Number(req.session.staff.school_id) !== Number(req.schoolId)) {
+                    return res.status(403).send('Access Denied: Tenant Context Mismatch');
+                }
+                req.schoolId = Number(req.session.staff.school_id);
+                res.locals.user = req.session.staff;
+                return next();
             }
-            // Tenant check (no-op in single-tenant, guards against cross-school access in multi-tenant)
-            if (req.schoolId && Number(req.session.staff.school_id) !== Number(req.schoolId)) {
-                return res.status(403).send('Access Denied: Tenant Context Mismatch');
+            if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.method !== 'GET') {
+                return res.status(401).json({ success: false, message: 'Session expired' });
             }
-            req.schoolId = Number(req.session.staff.school_id);
-            res.locals.user = req.session.staff;
-            return next();
+            return res.redirect('/auth/login');
+        } catch (err) {
+            console.error('[Auth] isAuthenticated error:', err);
+            return next(err);
         }
-        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.method !== 'GET') {
-            return res.status(401).json({ success: false, message: 'Session expired' });
-        }
-        res.redirect('/auth/login');
     },
 
     // Ensure user is an Admin

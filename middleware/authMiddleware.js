@@ -1,21 +1,47 @@
 /**
  * Auth Middleware
  * Handles session validation, tenant verification, and role-based access control.
+ *
+ * This is a single-tenant application (Al-Jaleel Academy).
+ * school_id is resolved from the DB if absent from the session (e.g. stale sessions,
+ * or staff records created before school_id was backfilled).
  */
+const db = require('../utils/db');
+const tenantHelper = require('../utils/tenantHelper');
+
 module.exports = {
-    // Ensure user is logged in and tenant matches
-    isAuthenticated: (req, res, next) => {
+    // Ensure user is logged in; resolves school_id from DB if missing from session
+    isAuthenticated: async (req, res, next) => {
         if (req.session && req.session.staff) {
-            // Fail closed if authenticated staff session lacks school_id
+            // If school_id is absent (stale session or pre-migration record), resolve it
             if (!req.session.staff.school_id) {
-                return res.status(403).send('Access Denied: Missing Tenant Context');
+                try {
+                    const staffRow = await db.get(
+                        "SELECT school_id FROM staff WHERE id = ? AND status = 'active'",
+                        [req.session.staff.id]
+                    );
+                    if (staffRow && staffRow.school_id) {
+                        req.session.staff.school_id = Number(staffRow.school_id);
+                    } else {
+                        // Single-tenant fallback: use the primary active school
+                        const defaultSchool = await tenantHelper.getDefaultTenant();
+                        if (defaultSchool) {
+                            req.session.staff.school_id = Number(defaultSchool.id);
+                        } else {
+                            return res.status(403).send('Access Denied: School not configured');
+                        }
+                    }
+                } catch (err) {
+                    console.error('[Auth] Error resolving school_id from DB:', err.message);
+                    return res.status(500).send('Authentication error');
+                }
             }
-            // Tenant authorization check
+            // Tenant check (no-op in single-tenant, guards against cross-school access in multi-tenant)
             if (req.schoolId && Number(req.session.staff.school_id) !== Number(req.schoolId)) {
                 return res.status(403).send('Access Denied: Tenant Context Mismatch');
             }
             req.schoolId = Number(req.session.staff.school_id);
-            res.locals.user = req.session.staff; // Inject user into templates
+            res.locals.user = req.session.staff;
             return next();
         }
         if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.method !== 'GET') {

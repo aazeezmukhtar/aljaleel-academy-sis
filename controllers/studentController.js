@@ -48,25 +48,19 @@ const getStudents = async (req, res) => {
     const yearRows = await db.all(yearSql, [schoolId]).catch(() => []);
     const admissionYears = yearRows.map(r => r.year).filter(Boolean);
 
-    const activeSession = (await getCurrentSession(schoolId)) || '2025/2026';
-
     let query = `
         SELECT s.*, c.name as class_name, c.section_id as class_section_id, se.class_id as enrolled_class_id
         FROM students s
-        LEFT JOIN student_enrollments se ON s.id = se.student_id AND (
-            se.session = (
-                SELECT sec.current_session 
-                FROM sections sec 
-                JOIN classes cl ON cl.section_id = sec.id 
-                WHERE cl.id = se.class_id
-            )
-            OR se.session = ?
+        LEFT JOIN student_enrollments se ON s.id = se.student_id AND se.session = (
+            SELECT sec.current_session 
+            FROM sections sec 
+            JOIN classes cl ON cl.section_id = sec.id 
+            WHERE cl.id = se.class_id
         )
         LEFT JOIN classes c ON (se.class_id = c.id OR s.current_class_id = c.id)
         WHERE s.school_id = ?
     `;
-    const params = [activeSession, schoolId];
-
+    const params = [schoolId];
 
     let myClasses = [];
     if (user.role !== 'Admin' && user.role !== 'Registrar') {
@@ -256,11 +250,8 @@ const enrollStudent = async (req, res) => {
     const passport_photo_path = req.file ? `/uploads/${req.file.filename}` : null;
 
     try {
-        const activeSession = (req.body.session && String(req.body.session).trim()) || (await getCurrentSession(schoolId)) || '2025/2026';
-        const activeTerm = (req.body.term && String(req.body.term).trim()) || (await getCurrentTerm(schoolId)) || '1st Term';
-
         const allSections = await db.all(
-            'SELECT * FROM sections WHERE school_id = ? OR school_id IS NULL ORDER BY id ASC',
+            'SELECT * FROM sections WHERE school_id = ? ORDER BY id ASC',
             [schoolId]
         );
 
@@ -270,34 +261,18 @@ const enrollStudent = async (req, res) => {
 
         for (const sec of allSections) {
             const classVal = req.body[`section_${sec.id}_class_id`] || 
-                             req.body[`section_${sec.id}`] ||
                              (sec.name === 'Academy' ? req.body.academy_class_id : null) || 
-                             (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null) ||
-                             (sec.id === 1 ? req.body.academy_class_id : null) ||
-                             (sec.id === 2 ? req.body.tahfeez_class_id : null);
-            if (classVal && String(classVal).trim() !== '') {
-                const parsedClassId = parseInt(classVal, 10);
-                if (!isNaN(parsedClassId) && parsedClassId > 0) {
-                    enrolledClassIds.push({ sectionId: sec.id, classId: parsedClassId });
-                    if (!primary_class_id) primary_class_id = parsedClassId;
-                }
+                             (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null);
+            if (classVal) {
+                enrolledClassIds.push({ sectionId: sec.id, classId: parseInt(classVal, 10) });
+                if (!primary_class_id) primary_class_id = classVal;
             }
-        }
-
-        // Direct fallback for legacy field names if not captured
-        if (req.body.academy_class_id && !enrolledClassIds.some(i => i.classId === parseInt(req.body.academy_class_id, 10))) {
-            const cls = await db.get("SELECT id, section_id FROM classes WHERE id = ? AND (school_id = ? OR school_id IS NULL)", [req.body.academy_class_id, schoolId]);
-            if (cls) enrolledClassIds.push({ sectionId: cls.section_id || null, classId: cls.id });
-        }
-        if (req.body.tahfeez_class_id && !enrolledClassIds.some(i => i.classId === parseInt(req.body.tahfeez_class_id, 10))) {
-            const cls = await db.get("SELECT id, section_id FROM classes WHERE id = ? AND (school_id = ? OR school_id IS NULL)", [req.body.tahfeez_class_id, schoolId]);
-            if (cls) enrolledClassIds.push({ sectionId: cls.section_id || null, classId: cls.id });
         }
 
         // If a primary class was selected from the main dropdown and not already collected, add it
         if (primary_class_id && !enrolledClassIds.some(item => item.classId === parseInt(primary_class_id, 10))) {
             const cls = await db.get(
-                "SELECT id, section_id FROM classes WHERE id = ? AND (school_id = ? OR school_id IS NULL)",
+                "SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?",
                 [primary_class_id, schoolId]
             );
             if (cls) {
@@ -308,83 +283,22 @@ const enrollStudent = async (req, res) => {
             }
         }
 
-        if (!primary_class_id && enrolledClassIds.length > 0) {
-            primary_class_id = enrolledClassIds[0].classId;
-        }
-
         const hashedPassword = await bcrypt.hash(admission_number, 10);
-        const insertParams = [
+        const sql = `
+            INSERT INTO students (
+                school_id, first_name, last_name, gender, dob, current_class_id, 
+                phone, email, address, parent_phone, parent_address, parent_email, parent_phone_alt, 
+                admission_number, passport_photo_path, password, status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
+        `;
+        await db.run(sql, [
             schoolId, first_name, last_name, gender, dob, primary_class_id,
             phone || null, email || null, address || null,
             parent_phone || null, parent_address || null,
             parent_email || null, parent_phone_alt || null,
             admission_number, passport_photo_path, hashedPassword
-        ];
-
-        try {
-            await db.run(`
-                INSERT INTO students (
-                    school_id, first_name, last_name, gender, dob, current_class_id, 
-                    phone, email, address, parent_phone, parent_address, parent_email, parent_phone_alt, 
-                    admission_number, passport_photo_path, password, status, admission_session, admission_term
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?)
-            `, [...insertParams, activeSession, activeTerm]);
-        } catch (insertErr) {
-            // Fallback 1: admission_session/admission_term columns may not exist yet (pre-migration)
-            if (String(insertErr.message).includes('admission_session') || String(insertErr.message).includes('admission_term')) {
-                try {
-                    await db.run(`
-                        INSERT INTO students (
-                            school_id, first_name, last_name, gender, dob, current_class_id, 
-                            phone, email, address, parent_phone, parent_address, parent_email, parent_phone_alt, 
-                            admission_number, passport_photo_path, password, status
-                        )
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-                    `, insertParams);
-                } catch (fb1Err) {
-                    // Fallback 2: password column also missing — pre-migration database
-                    if (String(fb1Err.message).includes('password')) {
-                        const insertParamsNoPassword = [
-                            schoolId, first_name, last_name, gender, dob, primary_class_id,
-                            phone || null, email || null, address || null,
-                            parent_phone || null, parent_address || null,
-                            parent_email || null, parent_phone_alt || null,
-                            admission_number, passport_photo_path
-                        ];
-                        await db.run(`
-                            INSERT INTO students (
-                                school_id, first_name, last_name, gender, dob, current_class_id, 
-                                phone, email, address, parent_phone, parent_address, parent_email, parent_phone_alt, 
-                                admission_number, passport_photo_path, status
-                            )
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-                        `, insertParamsNoPassword);
-                    } else {
-                        throw fb1Err;
-                    }
-                }
-            } else if (String(insertErr.message).includes('password')) {
-                // Fallback for password column missing but session columns present
-                const insertParamsNoPassword = [
-                    schoolId, first_name, last_name, gender, dob, primary_class_id,
-                    phone || null, email || null, address || null,
-                    parent_phone || null, parent_address || null,
-                    parent_email || null, parent_phone_alt || null,
-                    admission_number, passport_photo_path
-                ];
-                await db.run(`
-                    INSERT INTO students (
-                        school_id, first_name, last_name, gender, dob, current_class_id, 
-                        phone, email, address, parent_phone, parent_address, parent_email, parent_phone_alt, 
-                        admission_number, passport_photo_path, status
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
-                `, insertParamsNoPassword);
-            } else {
-                throw insertErr;
-            }
-        }
+        ]);
         
         const studentRow = await db.get(
             "SELECT id FROM students WHERE admission_number = ? AND school_id = ?",
@@ -392,34 +306,26 @@ const enrollStudent = async (req, res) => {
         );
         const studentId = studentRow.id;
         
+        const activeSession = await getCurrentSession(schoolId);
         for (const item of enrolledClassIds) {
-            // Determine exact academic context (session & term) respecting section calendar & settings
+            // Determine exact academic context (session) respecting section calendar & settings
             let sessionToUse = null;
-            let termToUse = null;
             if (item.classId) {
                 const academicContext = await getAcademicContext(item.classId, schoolId);
                 sessionToUse = academicContext.session;
-                termToUse = academicContext.term;
             }
-            if ((!sessionToUse || !termToUse) && item.sectionId) {
+            if (!sessionToUse && item.sectionId) {
                 const sectionContext = await getSectionContext(item.sectionId, schoolId);
-                if (!sessionToUse) sessionToUse = sectionContext.session;
-                if (!termToUse) termToUse = sectionContext.term;
+                sessionToUse = sectionContext.session;
             }
-            if (!sessionToUse) sessionToUse = activeSession;
-            if (!termToUse) termToUse = activeTerm;
+            if (!sessionToUse) {
+                sessionToUse = (await getCurrentSession(schoolId)) || '2025/2026';
+            }
 
-            try {
-                await db.run(
-                    "INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)",
-                    [studentId, item.classId, sessionToUse, termToUse]
-                );
-            } catch (enrollErr) {
-                await db.run(
-                    "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                    [studentId, item.classId, sessionToUse]
-                );
-            }
+            await db.run(
+                "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
+                [studentId, item.classId, sessionToUse]
+            );
         }
         
         logAction(req.session.staff.id, 'ENROLL_STUDENT', 'STUDENT', { first_name, last_name }, req.ip);
@@ -440,14 +346,13 @@ const getStudentProfile = async (req, res) => {
         );
         if (!student) return res.status(404).send('Student not found');
 
-        const activeSession = (await getCurrentSession(schoolId)) || '2025/2026';
         const enrollments = await db.all(`
             SELECT c.name as class_name
             FROM student_enrollments se
             JOIN classes c ON se.class_id = c.id
-            LEFT JOIN sections sec ON c.section_id = sec.id
-            WHERE se.student_id = ? AND (se.session = sec.current_session OR se.session = ?)
-        `, [id, activeSession]);
+            JOIN sections sec ON c.section_id = sec.id
+            WHERE se.student_id = ? AND se.session = sec.current_session
+        `, [id]);
 
         student.class_name = enrollments.map(e => e.class_name).join(', ') || student.class_name || 'Not Enrolled';
 
@@ -500,16 +405,14 @@ const getEditForm = async (req, res) => {
             }
         }
         
-        const activeSession = (await getCurrentSession(schoolId)) || '2025/2026';
         const enrollments = await db.all(`
             SELECT se.class_id 
             FROM student_enrollments se
             JOIN classes c ON se.class_id = c.id
-            LEFT JOIN sections sec ON c.section_id = sec.id
-            WHERE se.student_id = ? AND (se.session = sec.current_session OR se.session = ?)
-        `, [id, activeSession]);
+            JOIN sections sec ON c.section_id = sec.id
+            WHERE se.student_id = ? AND se.session = sec.current_session
+        `, [id]);
         const enrolledClassIds = enrollments.map(e => e.class_id);
-
 
         let classes;
         if (user.role === 'Admin' || user.role === 'Registrar') {
@@ -578,22 +481,18 @@ const updateStudent = async (req, res) => {
 
     try {
         const allSections = await db.all(
-            'SELECT * FROM sections WHERE school_id = ? OR school_id IS NULL ORDER BY id ASC',
+            'SELECT * FROM sections WHERE school_id = ? ORDER BY id ASC',
             [schoolId]
         );
 
         let primary_class_id = current_class_id || null;
         const activeSession = await getCurrentSession(schoolId);
-        const activeTerm = await getCurrentTerm(schoolId);
         let updatedAnySection = false;
 
         for (const sec of allSections) {
             const chosenClassId = req.body[`section_${sec.id}_class_id`] ||
-                                  req.body[`section_${sec.id}`] ||
                                   (sec.name === 'Academy' ? req.body.academy_class_id : null) ||
-                                  (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null) ||
-                                  (sec.id === 1 ? req.body.academy_class_id : null) ||
-                                  (sec.id === 2 ? req.body.tahfeez_class_id : null) || null;
+                                  (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null) || null;
 
             if (chosenClassId) {
                 updatedAnySection = true;
@@ -602,29 +501,21 @@ const updateStudent = async (req, res) => {
 
             const ctx = await getSectionContext(sec.id, schoolId);
             const sessionToUse = (ctx && ctx.session) || activeSession;
-            const termToUse = (ctx && ctx.term) || activeTerm;
             if (sessionToUse) {
                 // Remove existing enrollment for this section and session
                 await db.run(`
                     DELETE FROM student_enrollments 
                     WHERE student_id = ? 
-                      AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND (school_id = ? OR school_id IS NULL)) 
+                      AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?) 
                       AND session = ?
                 `, [id, sec.id, schoolId, sessionToUse]);
 
                 // Re-enroll if a class was chosen
                 if (chosenClassId) {
-                    try {
-                        await db.run(
-                            "INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)",
-                            [id, chosenClassId, sessionToUse, termToUse]
-                        );
-                    } catch (e) {
-                        await db.run(
-                            "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                            [id, chosenClassId, sessionToUse]
-                        );
-                    }
+                    await db.run(
+                        "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
+                        [id, chosenClassId, sessionToUse]
+                    );
                 }
             }
         }
@@ -632,36 +523,27 @@ const updateStudent = async (req, res) => {
         // Fallback for single class selection when section-specific fields were not sent
         if (!updatedAnySection && primary_class_id) {
             const classRow = await db.get(
-                'SELECT id, section_id FROM classes WHERE id = ? AND (school_id = ? OR school_id IS NULL)',
+                'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
                 [primary_class_id, schoolId]
             );
             if (classRow) {
                 const ctx = await getSectionContext(classRow.section_id, schoolId);
                 const sessionToUse = (ctx && ctx.session) || activeSession;
-                const termToUse = (ctx && ctx.term) || activeTerm;
                 if (sessionToUse) {
                     await db.run(`
                         DELETE FROM student_enrollments 
                         WHERE student_id = ? 
-                          AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND (school_id = ? OR school_id IS NULL)) 
+                          AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?) 
                           AND session = ?
                     `, [id, classRow.section_id, schoolId, sessionToUse]);
 
-                    try {
-                        await db.run(
-                            "INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)",
-                            [id, classRow.id, sessionToUse, termToUse]
-                        );
-                    } catch (e) {
-                        await db.run(
-                            "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                            [id, classRow.id, sessionToUse]
-                        );
-                    }
+                    await db.run(
+                        "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
+                        [id, classRow.id, sessionToUse]
+                    );
                 }
             }
         }
-
 
         const sql = `
             UPDATE students SET

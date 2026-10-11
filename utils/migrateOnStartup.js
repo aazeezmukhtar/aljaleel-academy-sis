@@ -80,20 +80,9 @@ async function runMigrations() {
             student_id INTEGER NOT NULL REFERENCES students(id),
             class_id INTEGER NOT NULL REFERENCES classes(id),
             session TEXT NOT NULL,
-            term TEXT,
             UNIQUE(student_id, class_id, session)
         )
     `);
-
-    try {
-        await db.run("ALTER TABLE student_enrollments ADD COLUMN term TEXT");
-        console.log('[migrate] Added term column to student_enrollments');
-    } catch (e) {
-        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
-            console.error('[migrate] student_enrollments.term failed:', e.message);
-        }
-    }
-
 
     // 7. Create section_result_config table
     let needsRecreate = false;
@@ -246,33 +235,6 @@ async function runMigrations() {
             console.error('[migrate] students.parent_phone_alt failed:', e.message);
         }
     }
-
-    // 12b. Add admission_session, admission_term, and password columns to students table
-    try {
-        await db.run("ALTER TABLE students ADD COLUMN admission_session TEXT");
-        console.log('[migrate] Added admission_session to students');
-    } catch (e) {
-        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
-            console.error('[migrate] students.admission_session failed:', e.message);
-        }
-    }
-    try {
-        await db.run("ALTER TABLE students ADD COLUMN admission_term TEXT");
-        console.log('[migrate] Added admission_term to students');
-    } catch (e) {
-        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
-            console.error('[migrate] students.admission_term failed:', e.message);
-        }
-    }
-    try {
-        await db.run("ALTER TABLE students ADD COLUMN password TEXT");
-        console.log('[migrate] Added password to students');
-    } catch (e) {
-        if (!e.message.includes('already exists') && !e.message.includes('duplicate column')) {
-            console.error('[migrate] students.password failed:', e.message);
-        }
-    }
-
 
     // 13. Create schools table (local dev bootstrap & runtime safety)
     await db.run(`

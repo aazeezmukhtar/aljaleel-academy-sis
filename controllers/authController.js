@@ -1,7 +1,6 @@
-const db = require('../utils/db');
+﻿const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 const { logAction } = require('../utils/logger');
-const tenantHelper = require('../utils/tenantHelper');
 
 exports.getLogin = (req, res) => {
     // If already logged in, redirect to dashboard
@@ -9,7 +8,7 @@ exports.getLogin = (req, res) => {
         return res.redirect('/dashboard');
     }
     res.render('auth/login', {
-        title: 'Staff Login — AcadMe',
+        title: 'Staff Login ΓÇö AcadMe',
         error: req.query.error || null
     });
 };
@@ -28,7 +27,7 @@ exports.postLogin = async (req, res) => {
             [String(staff_id).trim()]
         );
 
-        if (!staff) {
+        if (!staff || !staff.school_id) {
             return res.redirect('/auth/login?error=Invalid Staff ID or account inactive');
         }
 
@@ -38,21 +37,7 @@ exports.postLogin = async (req, res) => {
             return res.redirect('/auth/login?error=Invalid Password');
         }
 
-        // Resolve school_id: use staff record value, or fall back to primary active school
-        let authoritativeSchoolId = staff.school_id ? Number(staff.school_id) : null;
-        if (!authoritativeSchoolId) {
-            const defaultSchool = await tenantHelper.getDefaultTenant();
-            if (!defaultSchool) {
-                return res.redirect('/auth/login?error=School not configured. Contact administrator.');
-            }
-            authoritativeSchoolId = Number(defaultSchool.id);
-            // Backfill the DB record so future logins won't need this fallback
-            try {
-                await db.run('UPDATE staff SET school_id = ? WHERE id = ?', [authoritativeSchoolId, staff.id]);
-            } catch (e) {
-                console.error('[Auth] Failed to backfill staff.school_id:', e.message);
-            }
-        }
+        const authoritativeSchoolId = Number(staff.school_id);
 
         // Create session strictly with authoritative database-derived school_id
         req.session.staff = {

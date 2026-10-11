@@ -1,45 +1,27 @@
 /**
  * Auth Middleware
  * Handles session validation, tenant verification, and role-based access control.
- *
- * This is a single-tenant application (Al-Jaleel Academy).
- * school_id is resolved from the DB if absent from the session (e.g. stale sessions,
- * or staff records created before school_id was backfilled).
  */
-const tenantHelper = require('../utils/tenantHelper');
-
 module.exports = {
-    // Ensure user is logged in; resolves school_id from DB if missing from session
-    isAuthenticated: async (req, res, next) => {
-        try {
-            if (req.session && req.session.staff) {
-                // school_id is normally set at login; resolve via fallback only if somehow absent
-                if (!req.session.staff.school_id) {
-                    const defaultSchool = await tenantHelper.getDefaultTenant();
-                    if (defaultSchool) {
-                        req.session.staff.school_id = Number(defaultSchool.id);
-                        // Persist the fix into the session store
-                        req.session.save((err) => { if (err) console.error('[Auth] Session save error:', err); });
-                    } else {
-                        return res.status(403).send('Access Denied: School not configured');
-                    }
-                }
-                // Tenant guard (no-op in single-tenant; prevents cross-school access)
-                if (req.schoolId && Number(req.session.staff.school_id) !== Number(req.schoolId)) {
-                    return res.status(403).send('Access Denied: Tenant Context Mismatch');
-                }
-                req.schoolId = Number(req.session.staff.school_id);
-                res.locals.user = req.session.staff;
-                return next();
+    // Ensure user is logged in and tenant matches
+    isAuthenticated: (req, res, next) => {
+        if (req.session && req.session.staff) {
+            // Fail closed if authenticated staff session lacks school_id
+            if (!req.session.staff.school_id) {
+                return res.status(403).send('Access Denied: Missing Tenant Context');
             }
-            if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.method !== 'GET') {
-                return res.status(401).json({ success: false, message: 'Session expired' });
+            // Tenant authorization check
+            if (req.schoolId && Number(req.session.staff.school_id) !== Number(req.schoolId)) {
+                return res.status(403).send('Access Denied: Tenant Context Mismatch');
             }
-            return res.redirect('/auth/login');
-        } catch (err) {
-            console.error('[Auth] isAuthenticated error:', err);
-            return next(err);
+            req.schoolId = Number(req.session.staff.school_id);
+            res.locals.user = req.session.staff; // Inject user into templates
+            return next();
         }
+        if (req.xhr || (req.headers.accept && req.headers.accept.includes('json')) || req.method !== 'GET') {
+            return res.status(401).json({ success: false, message: 'Session expired' });
+        }
+        res.redirect('/auth/login');
     },
 
     // Ensure user is an Admin

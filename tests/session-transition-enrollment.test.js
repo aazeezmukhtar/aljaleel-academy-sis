@@ -49,19 +49,17 @@ async function runTests() {
     );
     const secSecondary = await db.get("SELECT * FROM sections WHERE school_id = ? AND name = ?", [schoolId, sec2Name]);
 
-    // Create classes with unique names per run to avoid UNIQUE constraint collisions
-    const cls1Name = `Grade1_${ts}`;
-    const cls2Name = `Grade2_${ts}`;
-    await db.run("INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)", [schoolId, secPrimary.id, cls1Name]);
-    const classGrade1 = await db.get("SELECT * FROM classes WHERE school_id = ? AND name = ?", [schoolId, cls1Name]);
+    // Create classes
+    await db.run("INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, 'Grade 1')", [schoolId, secPrimary.id]);
+    const classGrade1 = await db.get("SELECT * FROM classes WHERE school_id = ? AND name = 'Grade 1'", [schoolId]);
 
-    await db.run("INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)", [schoolId, secPrimary.id, cls2Name]);
-    const classGrade2 = await db.get("SELECT * FROM classes WHERE school_id = ? AND name = ?", [schoolId, cls2Name]);
+    await db.run("INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, 'Grade 2')", [schoolId, secPrimary.id]);
+    const classGrade2 = await db.get("SELECT * FROM classes WHERE school_id = ? AND name = 'Grade 2'", [schoolId]);
 
     // Create an existing student in Grade 1 for 2025/2026
     const testAdminNum = 'TEST' + Date.now().toString().slice(-6);
     await db.run(
-        "INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'Ahmed', 'Bello', 'Male', '2014-01-15', ?, ?, 'active')",
+        "INSERT INTO students (school_id, first_name, last_name, gender, admission_number, current_class_id, status) VALUES (?, 'Ahmed', 'Bello', 'Male', ?, ?, 'active')",
         [schoolId, testAdminNum, classGrade1.id]
     );
     const student1 = await db.get("SELECT * FROM students WHERE admission_number = ? AND school_id = ?", [testAdminNum, schoolId]);
@@ -90,7 +88,7 @@ async function runTests() {
         await settingsController.previewPromotion(reqPreview, resPreview);
         assert.strictEqual(previewResponse.success, true, 'Preview should succeed');
         assert.strictEqual(previewResponse.totalStudents, 1, 'Should find 1 student to promote');
-        assert.strictEqual(previewResponse.preview[0].targetClassName, cls2Name, `Target class should be ${cls2Name}`);
+        assert.strictEqual(previewResponse.preview[0].targetClassName, 'Grade 2', 'Target class should be Grade 2');
         console.log('✓ Dry-run preview returned expected student count and target class');
 
         // --- TEST 2: Process Promotion & Academic Transition ---

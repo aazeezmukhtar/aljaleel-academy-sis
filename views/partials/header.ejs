@@ -13,15 +13,8 @@
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#6366f1">
     <link rel="apple-touch-icon" href="/img/logo-512.png">
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('SW Registered'))
-                    .catch(err => console.log('SW Register Error', err));
-            });
-        }
-    </script>
+    <link rel="stylesheet" href="/css/pwa-prompt.css">
+    <script src="/js/pwa-installer.js" defer></script>
     <style>
         :root {
             --school-primary: <%= (typeof school !== 'undefined' && school.primary_color) || (typeof currentSchool !== 'undefined' && currentSchool.primary_color) || '#6366f1' %>;

@@ -1,8 +1,10 @@
-const CACHE_NAME = 'nexus-sis-v4';
+const CACHE_NAME = 'aljaleel-sis-v5';
 
 const STATIC_ASSETS = [
     '/css/main.css',
     '/css/report.css',
+    '/css/pwa-prompt.css',
+    '/js/pwa-installer.js',
     '/js/offline-handler.js',
     '/js/table-export.js',
     '/img/logo-512.png',

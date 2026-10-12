@@ -40,6 +40,10 @@ function getSupabase() {
     try {
         const { createClient } = require('@supabase/supabase-js');
         _supabase = createClient(url, key);
+        // Ensure bucket exists and is public asynchronously
+        _supabase.storage.updateBucket(BUCKET, { public: true }).catch(err => {
+            console.debug('[storageHelper] Auto-ensure bucket public notice:', err.message);
+        });
     } catch (e) {
         console.error('[storageHelper] Failed to create Supabase client:', e.message);
         return null;

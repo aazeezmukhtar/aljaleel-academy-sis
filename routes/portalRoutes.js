@@ -4,17 +4,9 @@ const multer = require('multer');
 const router = express.Router();
 const portalController = require('../controllers/portalController');
 
-// Multer config for profile photo uploads
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, path.join(__dirname, '..', 'public', 'uploads'));
-    },
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, `student_${req.session.student.id}_${Date.now()}${ext}`);
-    }
-});
-const upload = multer({ storage });
+// Memory storage for profile photo uploads
+const upload = multer({ storage: multer.memoryStorage() });
+
 
 // Main dashboard
 router.get('/', portalController.getDashboard);

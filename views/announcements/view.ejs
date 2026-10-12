@@ -17,7 +17,7 @@
 
         <div class="card" style="max-width: 800px; margin: 0 auto; padding: 40px;">
             <% if (announcement.image_path) { %>
-                <img src="/uploads/<%= announcement.image_path %>" alt="<%= announcement.title %>" style="width: 100%; border-radius: 12px; margin-bottom: 30px; max-height: 400px; object-fit: cover;">
+                <img src="<%= announcement.image_path && (announcement.image_path.startsWith('http') || announcement.image_path.startsWith('/')) ? announcement.image_path : '/uploads/' + announcement.image_path %>" alt="<%= announcement.title %>" style="width: 100%; border-radius: 12px; margin-bottom: 30px; max-height: 400px; object-fit: cover;">
             <% } %>
 
             <div style="display: flex; gap: 10px; margin-bottom: 25px;">

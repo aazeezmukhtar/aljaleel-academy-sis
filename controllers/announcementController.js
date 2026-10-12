@@ -1,4 +1,5 @@
-﻿const db = require('../utils/db');
+const db = require('../utils/db');
+const { uploadFile } = require('../utils/storageHelper');
 
 exports.getIndex = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
@@ -29,7 +30,7 @@ exports.storeAnnouncement = async (req, res) => {
     try {
         const { title, content, target_role, is_published, type, event_date, section_id } = req.body;
         const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Date.now();
-        const image_path = req.file ? req.file.filename : null;
+        const image_path = req.file ? await uploadFile(req.file, 'announcements') : null;
 
         await db.run(`
             INSERT INTO announcements (school_id, title, slug, content, target_role, image_path, is_published, type, event_date, section_id)

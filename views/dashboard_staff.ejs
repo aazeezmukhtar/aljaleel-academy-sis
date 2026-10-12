@@ -191,7 +191,7 @@
                                     </div>
                                     <p class="post-content" style="margin: 0; color: #64748b; line-height: 1.6; font-size: 0.95rem; white-space: pre-wrap;"><%= post.content %></p>
                                     <% if (post.image_path) { %>
-                                        <img src="/uploads/<%= post.image_path %>" style="margin-top: 15px; border-radius: 8px; max-height: 200px; width: auto; max-width: 100%; display: block;">
+                                        <img src="<%= post.image_path && (post.image_path.startsWith('http') || post.image_path.startsWith('/')) ? post.image_path : '/uploads/' + post.image_path %>" style="margin-top: 15px; border-radius: 8px; max-height: 200px; width: auto; max-width: 100%; display: block;">
                                     <% } %>
                                 </a>
                             <% }) %>

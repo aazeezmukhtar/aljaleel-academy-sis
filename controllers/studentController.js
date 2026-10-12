@@ -3,6 +3,7 @@ const { getAcademicContext, getSectionContext, getCurrentSession, getCurrentTerm
 const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
+const { uploadFile } = require('../utils/storageHelper');
 
 const getStudents = async (req, res) => {
     const user = req.session.staff;
@@ -254,7 +255,7 @@ const enrollStudent = async (req, res) => {
     } = req.body;
     
     const admission_number = await generateUniqueID();
-    const passport_photo_path = req.file ? `/uploads/${req.file.filename}` : null;
+    const passport_photo_path = req.file ? await uploadFile(req.file, 'students') : null;
 
     try {
         const allSections = await db.all(
@@ -512,7 +513,7 @@ const updateStudent = async (req, res) => {
 
     let passport_photo_path = req.body.existing_photo && req.body.existing_photo.trim() !== '' ? req.body.existing_photo : null;
     if (req.file) {
-        passport_photo_path = `/uploads/${req.file.filename}`;
+        passport_photo_path = await uploadFile(req.file, 'students');
     }
 
     try {

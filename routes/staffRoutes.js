@@ -3,22 +3,11 @@ const router = express.Router();
 const staffController = require('../controllers/staffController');
 const { isAdmin } = require('../middleware/authMiddleware');
 const path = require('path');
-const fs = require('fs');
 const multer = require('multer');
 
-const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Memory storage — buffer sent to Supabase Storage in prod, written to disk in dev
+const upload = multer({ storage: multer.memoryStorage() });
 
-const storage = multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-        const prefix = file.fieldname === 'avatar_image' ? 'staff-' : 'board-';
-        cb(null, prefix + Date.now() + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage });
 
 router.get('/', staffController.getAllStaff);
 router.get('/add', isAdmin, staffController.addStaffForm);

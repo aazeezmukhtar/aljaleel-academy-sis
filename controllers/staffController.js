@@ -1,5 +1,6 @@
-﻿const db = require('../utils/db');
+const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
+const { uploadFile } = require('../utils/storageHelper');
 
 // GET /staff - Show all staff members
 const getAllStaff = async (req, res) => {
@@ -25,7 +26,7 @@ const addStaffForm = (req, res) => {
 const saveStaff = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { first_name, last_name, staff_id, role, designation, public_bio, show_on_website } = req.body;
-    const avatar_image = req.file ? req.file.filename : null;
+    const avatar_image = req.file ? await uploadFile(req.file, 'staff') : null;
     const defaultPassword = bcrypt.hashSync(`${staff_id}123`, 10);
 
     try {
@@ -117,7 +118,7 @@ const updateStaff = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { id } = req.params;
     const { first_name, last_name, staff_id, role, designation, status, public_bio, show_on_website } = req.body;
-    const avatar_image = req.file ? req.file.filename : null;
+    const avatar_image = req.file ? await uploadFile(req.file, 'staff') : null;
 
     try {
         if (avatar_image) {
@@ -306,7 +307,7 @@ const getClassBoard = async (req, res) => {
 const postClassBoard = async (req, res) => {
     const user = req.session.staff;
     const { class_id, subject_id, student_id, post_type, title, due_date, content } = req.body;
-    const attachment = req.file ? req.file.filename : null;
+    const attachment = req.file ? await uploadFile(req.file, 'board') : null;
     const normalizedStudentId = student_id && student_id.trim() !== '' ? parseInt(student_id, 10) : null;
     try {
         await db.run('INSERT INTO class_posts (class_id, teacher_id, subject_id, student_id, post_type, title, content, due_date, attachment_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 

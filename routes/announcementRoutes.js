@@ -3,21 +3,10 @@ const router = express.Router();
 const announcementController = require('../controllers/announcementController');
 const { isAdmin } = require('../middleware/authMiddleware');
 const multer = require('multer');
-const path = require('path');
 
-const os = require('os');
-const uploadDir = os.platform() === 'win32' ? './uploads/' : '/tmp/uploads/';
-if (!require('fs').existsSync(uploadDir)) {
-    require('fs').mkdirSync(uploadDir, { recursive: true });
-}
+// Memory storage — buffer forwarded to Supabase Storage in prod, local disk in dev
+const upload = multer({ storage: multer.memoryStorage() });
 
-const storage = multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-        cb(null, 'announcement-' + Date.now() + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage });
 
 // View (Accessible by all)
 router.get('/view/:id', announcementController.viewAnnouncement);

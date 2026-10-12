@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const tenantHelper = require('../utils/tenantHelper');
 const sessionHelper = require('../utils/sessionHelper');
+const { uploadFile } = require('../utils/storageHelper');
 
 // Get Settings Page
 const getSettingsPage = async (req, res) => {
@@ -67,7 +68,7 @@ const updateSettings = async (req, res) => {
     ];
 
     if (logoFile) {
-        const logoPath = '/uploads/' + logoFile.filename;
+        const logoPath = await uploadFile(logoFile, 'logos');
         updates.push({ key: 'school_logo', value: logoPath });
     }
 

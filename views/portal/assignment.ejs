@@ -68,7 +68,7 @@
             </div>
 
             <% if (post.attachment_path) { %>
-                <a href="/uploads/<%= post.attachment_path %>" target="_blank" download class="acm-attachment-card">
+                <a href="<%= post.attachment_path && (post.attachment_path.startsWith('http') || post.attachment_path.startsWith('/')) ? post.attachment_path : '/uploads/' + post.attachment_path %>" target="_blank" download class="acm-attachment-card">
                     <div style="display:flex; align-items:center; gap:var(--acm-sp-10);">
                         <i class="bi bi-paperclip" style="font-size:1.25rem; color:var(--school-primary, var(--acm-navy));" aria-hidden="true"></i>
                         <div>

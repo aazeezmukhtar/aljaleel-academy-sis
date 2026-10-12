@@ -49,7 +49,7 @@
             </div>
 
             <% if (announcement.image_path) { %>
-                <img src="/uploads/<%= announcement.image_path %>" alt="Announcement Media" class="acm-detail-img">
+                <img src="<%= announcement.image_path && (announcement.image_path.startsWith('http') || announcement.image_path.startsWith('/')) ? announcement.image_path : '/uploads/' + announcement.image_path %>" alt="Announcement Media" class="acm-detail-img">
             <% } %>
 
             <div class="acm-detail-body">

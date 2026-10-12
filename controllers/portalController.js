@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
+const { uploadFile } = require('../utils/storageHelper');
 
 const getStudentSchoolId = async (req) => {
     if (req.session && req.session.student) {
@@ -239,7 +240,7 @@ exports.postUpdateProfile = async (req, res) => {
     const { dob, phone, email, address, parent_phone, parent_phone_alt, parent_email, parent_address } = req.body;
     let passport_photo_path = null;
     if (req.file) {
-        passport_photo_path = `/uploads/${req.file.filename}`;
+        passport_photo_path = await uploadFile(req.file, 'students');
     }
 
     try {

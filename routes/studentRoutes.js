@@ -1,4 +1,4 @@
-﻿const express = require('express');
+const express = require('express');
 const router = express.Router();
 const studentController = require('../controllers/studentController');
 const bulkStudentController = require('../controllers/bulkStudentController');
@@ -7,18 +7,15 @@ const multer = require('multer');
 const fs = require('fs');
 const path = require('path');
 
+// Memory storage for passport photo uploads (Supabase Storage in prod, disk fallback in dev)
+const upload = multer({ storage: multer.memoryStorage() });
+
+// Disk storage kept ONLY for bulk-import spreadsheets (read via file.path, deleted immediately)
 const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
 }
-const storage = multer.diskStorage({
-    destination: uploadDir,
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, 'student-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-const upload = multer({ storage });
+const bulkUpload = multer({ dest: uploadDir });
 
 // GET /students
 router.get('/', studentController.getStudents);
@@ -46,7 +43,7 @@ router.post('/reset-password/:id', isAdmin, studentController.resetStudentPasswo
 
 // Bulk Import Routes ΓÇö Admin only
 router.get('/bulk-import', isAdmin, bulkStudentController.getBulkImportPage);
-router.post('/bulk-import', isAdmin, upload.single('studentFile'), bulkStudentController.processBulkImport);
+router.post('/bulk-import', isAdmin, bulkUpload.single('studentFile'), bulkStudentController.processBulkImport);
 
 // Health Record ΓÇö Admin and Registrar only (enforced via controller role check)
 router.post('/health', studentController.saveHealthRecord);

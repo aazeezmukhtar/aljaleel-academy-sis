@@ -1,4 +1,4 @@
-﻿const db = require('../utils/db');
+const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 
 const getStudentSchoolId = async (req) => {
@@ -13,7 +13,7 @@ const getStudentSchoolId = async (req) => {
             return Number(student.school_id);
         }
     }
-    return req.schoolId ? Number(req.schoolId) : (req.school ? Number(req.school.id) : null);
+    return req.schoolId ? Number(req.schoolId) : (req.school ? Number(req.school.id) : 1);
 };
 
 const getSettings = async (schoolId) => {

@@ -89,8 +89,26 @@ async function uploadFile(file, folder = '') {
         return data.publicUrl;
     }
 
-    // ---- DEV PATH: write to public/uploads/ --------------------------------
-    const uploadDir = path.join(__dirname, '..', 'public', 'uploads');
+    // ---- FALLBACK PATH: write to disk -------------------------------------
+    // On Vercel the app root (/var/task) is read-only.
+    // Use /tmp when running on Vercel (or any serverless env where VERCEL=1 / NOW_REGION is set).
+    // In true local development, write to public/uploads/ so Express serves files normally.
+    const isVercel   = process.env.VERCEL === '1' || !!process.env.NOW_REGION;
+
+    if (isVercel) {
+        // Supabase credentials are missing but we are on Vercel — warn loudly.
+        console.error(
+            '[storageHelper] WARNING: SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set on Vercel! ' +
+            'File uploads will be written to /tmp and will be LOST when the lambda restarts. ' +
+            'Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your Vercel project environment variables.'
+        );
+    }
+
+    // Choose a writable directory: /tmp on Vercel, public/uploads locally
+    const uploadDir = isVercel
+        ? '/tmp/uploads'
+        : path.join(__dirname, '..', 'public', 'uploads');
+
     if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
     }
@@ -98,6 +116,9 @@ async function uploadFile(file, folder = '') {
     const destPath = path.join(uploadDir, filename);
     fs.writeFileSync(destPath, file.buffer);
 
+    // Return a path the browser can resolve.
+    // On Vercel /tmp is not served statically, so this URL will be broken —
+    // that is intentional: it signals to the operator that credentials must be added.
     return `/uploads/${filename}`;
 }
 

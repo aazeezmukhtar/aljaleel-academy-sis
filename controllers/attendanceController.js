@@ -105,8 +105,8 @@ const schoolInfo = await db.get('SELECT name, phone FROM schools WHERE id = ?', 
                     if (!record.reason || record.reason.trim() === '' || record.reason === 'Unknown') {
                         stats.absences_without_reason++;
                     }
-                } else if (record.status === 'Present' || record.status === 'Late') {
-                    // Reset current streak on presence or lateness
+                } else if (record.status === 'Present' || record.status === 'Late' || record.status === 'Leave') {
+                    // Reset current streak on presence, lateness, or authorized leave
                     stats.current_streak = 0;
                     stats.current_consecutive_absent_days = 0;
                 }

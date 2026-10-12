@@ -67,9 +67,10 @@ const updateSettings = async (req, res) => {
         { key: 'attendance.term_absence_limit', value: attendance_term_absence_limit }
     ];
 
+    let uploadedLogoPath = null;
     if (logoFile) {
-        const logoPath = await uploadFile(logoFile, 'logos');
-        updates.push({ key: 'school_logo', value: logoPath });
+        uploadedLogoPath = await uploadFile(logoFile, 'logos');
+        updates.push({ key: 'school_logo', value: uploadedLogoPath });
     }
 
     try {
@@ -107,7 +108,7 @@ const updateSettings = async (req, res) => {
             if (phone) { schoolFields.push('phone = ?'); schoolParams.push(phone); }
             if (current_session) { schoolFields.push('current_session = ?'); schoolParams.push(current_session); }
             if (current_term) { schoolFields.push('current_term = ?'); schoolParams.push(current_term); }
-            if (logoFile) { schoolFields.push('logo_url = ?'); schoolParams.push('/uploads/' + logoFile.filename); }
+            if (uploadedLogoPath) { schoolFields.push('logo_url = ?'); schoolParams.push(uploadedLogoPath); }
 
             if (schoolFields.length > 0) {
                 schoolParams.push(schoolId);

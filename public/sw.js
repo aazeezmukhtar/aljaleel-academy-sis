@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v5';
+const CACHE_NAME = 'aljaleel-sis-v6';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -16,7 +16,8 @@ const PAGE_CACHE = [
     '/dashboard',
     '/attendance',
     '/results/manage',
-    '/students'
+    '/students',
+    '/offline-unavailable.html'
 ];
 
 // ─── Install ──────────────────────────────────────────────────────────────
@@ -90,7 +91,7 @@ self.addEventListener('fetch', (event) => {
         fetch(request)
             .then((res) => {
                 // Cache successful navigation responses for offline fallback
-                if (res && res.status === 200 && (request.mode === 'navigate' || url.pathname === '/attendance/take' || url.pathname === '/results/manage')) {
+                if (res && res.status === 200 && !res.redirected && (request.mode === 'navigate' || url.pathname === '/attendance/take' || url.pathname === '/results/manage')) {
                     caches.open(CACHE_NAME).then((cache) => cache.put(request, res.clone()));
                 }
                 return res;
@@ -116,7 +117,40 @@ self.addEventListener('fetch', (event) => {
                         }
                     }
 
-                    // For navigation requests: serve the cached dashboard shell
+                    // Never replace an attendance/result entry request with the dashboard.
+                    // A dashboard response looks like a successful navigation but loses the
+                    // selected class/subject context and hides the actual offline cache miss.
+                    if (url.pathname === '/attendance/take' || url.pathname === '/results/manage') {
+                        const cache = await caches.open(CACHE_NAME);
+                        const keys = await cache.keys();
+                        const requestedKeys = ['class_id', 'subject_id', 'session', 'term'];
+                        for (const key of keys) {
+                            const cachedUrl = new URL(key.url);
+                            if (cachedUrl.origin !== url.origin || cachedUrl.pathname !== url.pathname) continue;
+                            const matchesContext = requestedKeys.every((name) => {
+                                const requestedValue = url.searchParams.get(name);
+                                return requestedValue === null || cachedUrl.searchParams.get(name) === requestedValue;
+                            });
+                            if (matchesContext) {
+                                const matched = await cache.match(key);
+                                if (matched) return matched;
+                            }
+                        }
+                        const fallback = await cache.match('/offline-unavailable.html');
+                        if (fallback) {
+                            return new Response(await fallback.text(), {
+                                status: 503,
+                                statusText: 'Offline entry data unavailable',
+                                headers: { 'Content-Type': 'text/html; charset=utf-8' }
+                            });
+                        }
+                        return new Response('This entry page is not available offline yet. Reconnect and open this class/subject once to prepare it for offline use.', {
+                            status: 503,
+                            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+                        });
+                    }
+
+                    // For other navigation requests, keep the existing dashboard fallback.
                     if (request.mode === 'navigate') {
                         return caches.match('/dashboard');
                     }

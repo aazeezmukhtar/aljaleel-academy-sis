@@ -176,9 +176,10 @@
                 ));
             }
         };
-        window.addEventListener('load', () => {
-            if (navigator.onLine) prepare().catch(err => console.warn('[AcadMe] Offline attendance preparation failed', err));
-        }, { once: true });
+        // This script is rendered at the bottom of the page, so the load event
+        // may already have fired. Start immediately (the form values are present),
+        // and re-check connectivity before each batch.
+        prepare().catch(err => console.warn('[AcadMe] Offline attendance preparation failed', err));
     })();
 </script>
 

@@ -566,20 +566,51 @@
                     body: JSON.stringify(payload)
                 });
 
+                if (res.redirected || res.status === 401) {
+                    alert('Your session may have expired. Reconnect and sign in before syncing; this save was not queued automatically.');
+                    btn.innerHTML = oldText;
+                    btn.disabled = false;
+                    return;
+                }
                 const data = await res.json();
                 if (data.success) {
                     alert(data.message);
                     if (status === 'submitted') location.reload();
                 } else {
-                    alert('Error: ' + data.message);
+                    alert('Error: ' + (data.message || 'The server rejected this save.'));
                 }
 
                 btn.innerHTML = oldText;
                 btn.disabled = false;
 
             } catch (err) {
-                console.error(err);
-                alert('Network Error');
+                // Queue only network failures. Parsing/server errors must remain visible,
+                // rather than being misrepresented as a successful local save.
+                if (navigator.onLine && !(err instanceof TypeError)) {
+                    console.error('[AcadMe] Result save failed for a non-network reason:', err);
+                    alert('The result save failed. Nothing was queued offline. Please retry or reconnect and review the server response.');
+                    btn.innerHTML = oldText;
+                    btn.disabled = false;
+                    return;
+                }
+                console.warn('[AcadMe Offline] Result save request failed; queueing locally.', err);
+                try {
+                    if (!window.NexusOffline || typeof window.NexusOffline.saveResultOffline !== 'function') {
+                        throw new Error('Offline storage is unavailable. Reconnect before leaving this page.');
+                    }
+                    // Approval/submission is a server-side action. Queue offline work as a draft
+                    // and require the user to submit it explicitly after sync.
+                    const offlinePayload = { ...payload, status: 'draft' };
+                    await window.NexusOffline.saveResultOffline(offlinePayload);
+                    alert(status === 'submitted'
+                        ? 'Scores saved on this device as a pending draft. They have NOT been submitted. Reconnect, sync, review, and submit them online.'
+                        : 'Scores saved on this device as a pending draft. They have not yet been saved to the school database.');
+                } catch (queueError) {
+                    alert('Could not save results offline: ' + queueError.message + '. Keep this page open and reconnect before leaving.');
+                } finally {
+                    btn.innerHTML = oldText;
+                    btn.disabled = false;
+                }
             }
         }
 

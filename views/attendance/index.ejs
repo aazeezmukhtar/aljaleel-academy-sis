@@ -153,4 +153,34 @@
             </main>
     </div>
 
+
+<script>
+    // Prepare every assigned class sheet in the background while online so staff
+    // can open attendance entry offline without having visited each class manually.
+    (() => {
+        if (!navigator.onLine || !('serviceWorker' in navigator)) return;
+        const classes = <%- JSON.stringify((classes || []).map(c => ({ id: c.id }))) %>;
+        const dateInput = document.querySelector('input[name="date"]');
+        const date = dateInput && dateInput.value;
+        if (!date || !classes.length) return;
+
+        const prepare = async () => {
+            // Keep concurrency low to avoid flooding the school server.
+            for (let i = 0; i < classes.length; i += 3) {
+                const batch = classes.slice(i, i + 3);
+                await Promise.allSettled(batch.map(c =>
+                    fetch('/attendance/take?class_id=' + encodeURIComponent(c.id) + '&date=' + encodeURIComponent(date), {
+                        credentials: 'same-origin',
+                        headers: { 'X-AcadMe-Offline-Prepare': '1' }
+                    })
+                ));
+            }
+        };
+        // This script is rendered at the bottom of the page, so the load event
+        // may already have fired. Start immediately (the form values are present),
+        // and re-check connectivity before each batch.
+        prepare().catch(err => console.warn('[AcadMe] Offline attendance preparation failed', err));
+    })();
+</script>
+
     <%- include('../partials/footer') %>

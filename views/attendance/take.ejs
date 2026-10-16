@@ -342,7 +342,7 @@
     (() => {
         const requestedDate = new URLSearchParams(window.location.search).get('date');
         const dateInput = document.querySelector('#attendance-form [name="date"]');
-        if (requestedDate && dateInput && /^\\d{4}-\\d{2}-\\d{2}$/.test(requestedDate)) {
+        if (requestedDate && dateInput && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)) {
             dateInput.value = requestedDate;
             const label = document.getElementById('attendance-date-label');
             if (label) {

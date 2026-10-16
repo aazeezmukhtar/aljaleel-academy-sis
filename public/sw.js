@@ -92,7 +92,14 @@ self.addEventListener('fetch', (event) => {
             .then((res) => {
                 // Cache successful navigation responses for offline fallback
                 if (res && res.status === 200 && !res.redirected && (request.mode === 'navigate' || url.pathname === '/attendance/take' || url.pathname === '/results/manage')) {
-                    caches.open(CACHE_NAME).then((cache) => cache.put(request, res.clone()));
+                    // Wait for the cache write so the preparation fetch does not finish
+                    // before the offline copy has actually been stored.
+                    try {
+                        const cache = await caches.open(CACHE_NAME);
+                        await cache.put(request, res.clone());
+                    } catch (cacheError) {
+                        console.warn('[SW] Could not cache page response:', url.pathname, cacheError);
+                    }
                 }
                 return res;
             })

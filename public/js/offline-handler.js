@@ -135,16 +135,15 @@ async function syncData() {
             }
             if (res.ok && !res.redirected) {
                 const data = await res.json().catch(() => ({}));
-                if (data.success || res.status === 409) {
+                if (data.success) {
                     await deleteQueued('attendance_sync', id);
                     successCount++;
                 } else {
+                    // Keep conflicts and validation failures queued for explicit review.
                     failCount++;
                 }
-            } else if (res.status === 409) {
-                await deleteQueued('attendance_sync', id);
-                successCount++;
             } else {
+                // Never treat an HTTP conflict as proof that the record was saved.
                 failCount++;
             }
         } catch {

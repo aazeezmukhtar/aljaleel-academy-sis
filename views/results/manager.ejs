@@ -578,8 +578,24 @@
                 btn.disabled = false;
 
             } catch (err) {
-                console.error(err);
-                alert('Network Error');
+                console.warn('[AcadMe Offline] Result save request failed; queueing locally.', err);
+                try {
+                    if (!window.NexusOffline || typeof window.NexusOffline.saveResultOffline !== 'function') {
+                        throw new Error('Offline storage is unavailable. Reconnect before leaving this page.');
+                    }
+                    // Approval/submission is a server-side action. Queue offline work as a draft
+                    // and require the user to submit it explicitly after sync.
+                    const offlinePayload = { ...payload, status: 'draft' };
+                    await window.NexusOffline.saveResultOffline(offlinePayload);
+                    alert(status === 'submitted'
+                        ? 'Scores saved on this device as a pending draft. They have NOT been submitted. Reconnect, sync, review, and submit them online.'
+                        : 'Scores saved on this device as a pending draft. They have not yet been saved to the school database.');
+                } catch (queueError) {
+                    alert('Could not save results offline: ' + queueError.message + '. Keep this page open and reconnect before leaving.');
+                } finally {
+                    btn.innerHTML = oldText;
+                    btn.disabled = false;
+                }
             }
         }
 

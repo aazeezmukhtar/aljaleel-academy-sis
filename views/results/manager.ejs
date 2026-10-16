@@ -566,12 +566,18 @@
                     body: JSON.stringify(payload)
                 });
 
+                if (res.redirected || res.status === 401) {
+                    alert('Your session may have expired. Reconnect and sign in before syncing; this save was not queued automatically.');
+                    btn.innerHTML = oldText;
+                    btn.disabled = false;
+                    return;
+                }
                 const data = await res.json();
                 if (data.success) {
                     alert(data.message);
                     if (status === 'submitted') location.reload();
                 } else {
-                    alert('Error: ' + data.message);
+                    alert('Error: ' + (data.message || 'The server rejected this save.'));
                 }
 
                 btn.innerHTML = oldText;

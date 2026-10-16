@@ -584,6 +584,15 @@
                 btn.disabled = false;
 
             } catch (err) {
+                // Queue only network failures. Parsing/server errors must remain visible,
+                // rather than being misrepresented as a successful local save.
+                if (navigator.onLine && !(err instanceof TypeError)) {
+                    console.error('[AcadMe] Result save failed for a non-network reason:', err);
+                    alert('The result save failed. Nothing was queued offline. Please retry or reconnect and review the server response.');
+                    btn.innerHTML = oldText;
+                    btn.disabled = false;
+                    return;
+                }
                 console.warn('[AcadMe Offline] Result save request failed; queueing locally.', err);
                 try {
                     if (!window.NexusOffline || typeof window.NexusOffline.saveResultOffline !== 'function') {

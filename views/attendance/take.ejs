@@ -20,7 +20,7 @@
             <div class="header-meta">
                 <div style="display: flex; gap: 8px; flex: 1;">
                     <span class="meta-pill"><i class="bi bi-door-open"></i> <%= clazz.name %></span>
-                    <span class="meta-pill"><i class="bi bi-calendar-event"></i> <%= new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
+                    <span class="meta-pill" id="attendance-date-label"><i class="bi bi-calendar-event"></i> <%= new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
                 </div>
                 <button type="button" class="btn btn-outline btn-xs" onclick="markAllPresent()">
                     Mark All Present
@@ -277,14 +277,14 @@
             date: formData.get('date'),
             session: formData.get('session'),
             term: formData.get('term'),
-            attendance: {}
+            attendance: {},
+            reasons: {},
+            custom_reasons: {}
         };
 
         for (let [key, value] of formData.entries()) {
-            if (key.startsWith('attendance[')) {
-                const id = key.match(/\[(\d+)\]/)[1];
-                data.attendance[id] = value;
-            }
+            const match = key.match(/^(attendance|reasons|custom_reasons)\[(\d+)\]$/);
+            if (match) data[match[1]][match[2]] = value;
         }
 
         try {
@@ -317,8 +317,16 @@
                 alert('Server Error: ' + (result.message || 'Unknown error occurred'));
             }
         } catch (err) {
-            console.error('Fetch Error:', err);
-            alert('System Error: ' + err.message);
+            console.warn('[AcadMe Offline] Attendance save request failed; queueing locally.', err);
+            try {
+                if (!window.NexusOffline || typeof window.NexusOffline.saveAttendanceOffline !== 'function') {
+                    throw new Error('Offline storage is unavailable. Reconnect before leaving this page.');
+                }
+                await window.NexusOffline.saveAttendanceOffline(data);
+                alert('Attendance saved on this device. It is pending sync and has not yet been saved to the school database.');
+            } catch (queueError) {
+                alert('Could not save attendance offline: ' + queueError.message + '. Keep this page open and reconnect before leaving.');
+            }
         } finally {
             submitBtns.forEach(btn => {
                 btn.disabled = false;
@@ -326,6 +334,23 @@
             });
         }
     });
+</script>
+
+
+<script>
+    // Reuse a prepared class sheet for the selected date while offline.
+    (() => {
+        const requestedDate = new URLSearchParams(window.location.search).get('date');
+        const dateInput = document.querySelector('#attendance-form [name="date"]');
+        if (requestedDate && dateInput && /^\\d{4}-\\d{2}-\\d{2}$/.test(requestedDate)) {
+            dateInput.value = requestedDate;
+            const label = document.getElementById('attendance-date-label');
+            if (label) {
+                const d = new Date(requestedDate + 'T12:00:00');
+                label.innerHTML = '<i class="bi bi-calendar-event"></i> ' + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            }
+        }
+    })();
 </script>
 
 <%- include('../partials/footer') %>

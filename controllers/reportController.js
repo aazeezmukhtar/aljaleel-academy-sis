@@ -7,22 +7,8 @@ const getAuditLogs = async (req, res) => {
         return res.status(403).send('Access Denied');
     }
     try {
-        const logs = await db.all(`
-            SELECT
-                al.*,
-                al.created_at AS timestamp,
-                st.first_name,
-                st.last_name,
-                st.staff_id
-            FROM audit_logs al
-            LEFT JOIN staff st
-                ON st.id = al.user_id
-                AND st.school_id = al.school_id
-            WHERE al.school_id = ?
-            ORDER BY al.created_at DESC
-            LIMIT 100
-        `, [schoolId]);
-        res.render('reports/audit', { title: 'Audit Logs', logs });
+        const logs = await db.all('SELECT * FROM audit_logs WHERE school_id = ? ORDER BY created_at DESC LIMIT 100', [schoolId]);
+        res.render('settings/audit', { title: 'Audit Logs', logs });
     } catch (err) {
         console.error('Audit Log Error:', err);
         res.status(500).send('Database Error');

@@ -33,6 +33,10 @@ for (const role of ['Teacher', 'Staff', undefined, 'Student']) {
 const feeRoutes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'feeRoutes.js'), 'utf8');
 assert.match(feeRoutes, /router\.use\(isAdminOrBursar\)/, 'all fee routes must have finance role protection');
 
+const auditController = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'reportController.js'), 'utf8');
+assert.match(auditController, /res\.render\('reports\/audit'/, 'audit logs must render the existing reports/audit view');
+assert.match(auditController, /LEFT JOIN staff/, 'audit log rows should include staff identity details');
+
 const reportRoutes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'reportRoutes.js'), 'utf8');
 assert.match(reportRoutes, /router\.get\('\/finance',\s*isAdminOrBursar,/, 'finance report dashboard must be restricted');
 assert.match(reportRoutes, /router\.get\('\/health',\s*isAdmin,/, 'health reports must be restricted to Admin');

@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
+
+// Fees and payment records are restricted to Admin and Bursar accounts.
+router.use(isAdminOrBursar);
 const feeController = require('../controllers/feeController');
+const { isAdminOrBursar } = require('../middleware/authMiddleware');
 
 // Fee Setup
 router.get('/setup', feeController.getSetup);

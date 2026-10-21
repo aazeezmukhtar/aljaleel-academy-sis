@@ -48,6 +48,6 @@ router.get('/health/contacts', healthReportController.getEmergencyContacts);
 
 // Legacy / Migration (Audit can stay for now or move to mainReportController if simple)
 router.get('/audit', isAdmin, reportController.getAuditLogs);
-router.get('/fees', reportController.getFeeReports);
+router.get('/fees', isAdminOrBursar, reportController.getFeeReports);
 
 module.exports = router;

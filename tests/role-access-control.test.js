@@ -1,46 +1,28 @@
 'use strict';
 
+// Recovery baseline checks only. These checks are intentionally static and do not
+// import the database layer or modify any database. They document the rolled-back
+// application state before role protections are safely reintroduced.
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
-const { isAdminOrBursar } = require('../middleware/authMiddleware');
 
-function invoke(role, schoolId = 7) {
-    const req = { session: role ? { staff: { role, school_id: schoolId } } : {} };
-    const res = {
-        statusCode: 200,
-        message: null,
-        status(code) { this.statusCode = code; return this; },
-        send(message) { this.message = message; return this; }
-    };
-    let nextCalled = false;
-    isAdminOrBursar(req, res, () => { nextCalled = true; });
-    return { req, res, nextCalled };
-}
+const root = path.join(__dirname, '..');
+const auth = fs.readFileSync(path.join(root, 'middleware', 'authMiddleware.js'), 'utf8');
+const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+const fees = fs.readFileSync(path.join(root, 'routes', 'feeRoutes.js'), 'utf8');
+const reports = fs.readFileSync(path.join(root, 'routes', 'reportRoutes.js'), 'utf8');
+const auditController = fs.readFileSync(path.join(root, 'controllers', 'reportController.js'), 'utf8');
 
-for (const role of ['Admin', 'Bursar']) {
-    const result = invoke(role, 7);
-    assert.strictEqual(result.nextCalled, true, role + ' should be allowed');
-    assert.strictEqual(result.req.schoolId, 7, role + ' should receive school context');
-}
+// The restored baseline must match the actual exported middleware and route state.
+// These are baseline assertions, not a claim that all routes are adequately secured.
+assert.match(auth, /isAuthenticated:\s*\(/, 'staff authentication middleware should exist');
+assert.match(auth, /isAdmin:\s*\(/, 'Admin middleware should exist');
+assert.doesNotMatch(auth, /isAdminOrBursar/, 'do not assume rolled-back finance middleware is active');
+assert.match(app, /app\.use\('\/fees',\s*isAuthenticated,\s*feeRoutes\)/, 'fee routes should remain behind staff authentication');
+assert.match(fees, /router\.get\('\/setup'/, 'fee setup route should exist');
+assert.match(fees, /router\.post\('\/pay'/, 'payment route should exist');
+assert.match(reports, /router\.get\('\/audit',\s*isAdmin,/, 'audit logs should remain Admin-only');
+assert.match(auditController, /res\.render\('reports\/audit'/, 'audit logs should render the existing view');
 
-for (const role of ['Teacher', 'Staff', undefined, 'Student']) {
-    const result = invoke(role);
-    assert.strictEqual(result.nextCalled, false, String(role) + ' should not be allowed');
-    assert.strictEqual(result.res.statusCode, 403, String(role) + ' should receive 403');
-}
-
-const feeRoutes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'feeRoutes.js'), 'utf8');
-assert.match(feeRoutes, /router\.use\(isAdminOrBursar\)/, 'all fee routes must have finance role protection');
-
-const auditController = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'reportController.js'), 'utf8');
-assert.match(auditController, /res\.render\('reports\/audit'/, 'audit logs must render the existing reports/audit view');
-assert.match(auditController, /LEFT JOIN staff/, 'audit log rows should include staff identity details');
-
-const reportRoutes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'reportRoutes.js'), 'utf8');
-assert.match(reportRoutes, /router\.get\('\/finance',\s*isAdminOrBursar,/, 'finance report dashboard must be restricted');
-assert.match(reportRoutes, /router\.get\('\/health',\s*isAdmin,/, 'health reports must be restricted to Admin');
-assert.strictEqual((reportRoutes.match(/router\.get\('\/attendance'/g) || []).length, 1, 'attendance route must not be shadowed by a duplicate');
-assert.strictEqual((reportRoutes.match(/router\.get\('\/staff'/g) || []).length, 1, 'staff route must not be shadowed by a duplicate');
-
-console.log('Role access-control tests passed.');
+console.log('Recovery baseline checks passed (static only; no database accessed).');

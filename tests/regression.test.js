@@ -1,24 +1,30 @@
 'use strict';
 
-// The legacy database-backed suites assume a pre-populated application schema.
-// The repository does not currently provide a clean schema bootstrap/fixture for
-// CI, and running startup migrations alone against an empty SQLite file fails.
-// Do not run those suites against production or pretend they passed. Until an
-// isolated fixture is added, CI runs only the static recovery-baseline checks.
 const { spawnSync } = require('child_process');
 const path = require('path');
 
-const staticTest = path.join(__dirname, 'role-access-control.test.js');
-console.log('=== AcadMe Recovery Baseline Checks ===');
-console.log('Database-backed legacy suites are intentionally not run: clean SQLite schema fixture is missing.');
+const tests = [
+  ['role-access-control.test.js', 'Static recovery baseline'],
+  ['database-fixture.test.js', 'Isolated SQLite schema smoke test']
+];
 
-const result = spawnSync(process.execPath, [staticTest], { stdio: 'inherit', env: { ...process.env } });
-if (result.error) {
-  console.error('Unable to start static baseline test:', result.error.message);
-  process.exit(1);
+let failed = 0;
+console.log('=== AcadMe Recovery Regression Checks ===');
+console.log('Legacy tenant-isolation suites are excluded because they assert multi-school behavior, which is outside this project scope.');
+
+for (const [file, label] of tests) {
+  console.log('\n--- ' + label + ' ---');
+  const result = spawnSync(process.execPath, [path.join(__dirname, file)], {
+    stdio: 'inherit',
+    env: { ...process.env, DB_TYPE: 'sqlite', DB_PATH: process.env.DB_PATH || '.test-database.sqlite' }
+  });
+  if (result.error || result.status !== 0) {
+    failed++;
+    console.error('FAILED: ' + label);
+  } else {
+    console.log('PASSED: ' + label);
+  }
 }
-if (result.status !== 0) {
-  process.exit(result.status || 1);
-}
-console.log('Static baseline checks: PASS');
-console.log('Full database regression coverage: NOT RUN (fixture prerequisite outstanding)');
+
+console.log('\nSummary: ' + (tests.length - failed) + ' passed, ' + failed + ' failed.');
+if (failed) process.exit(1);

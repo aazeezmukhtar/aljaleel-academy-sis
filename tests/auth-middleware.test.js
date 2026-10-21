@@ -3,7 +3,7 @@
 // Unit tests for authentication/authorization middleware.
 // Uses only synthetic request/response objects; no database or live service.
 const assert = require('assert');
-const { isAuthenticated, isAdmin } = require('../middleware/authMiddleware');
+const { isAuthenticated, isAdmin, isAdminOrBursar } = require('../middleware/authMiddleware');
 
 function response() {
   return {
@@ -74,4 +74,22 @@ function invoke(middleware, req) {
   assert.strictEqual(denied.nextCalled, false);
 }
 
-console.log('Authentication middleware unit tests passed (synthetic requests only).');
+// Finance authorization must allow Admin/Bursar and reject ordinary staff.
+{
+  for (const role of ['Admin', 'Bursar']) {
+    const allowed = invoke(isAdminOrBursar, request({
+      session: { staff: { id: 10, role, school_id: 1 } }
+    }));
+    assert.strictEqual(allowed.nextCalled, true, role + ' should access finance actions');
+    assert.strictEqual(allowed.req.schoolId, 1);
+  }
+
+  const denied = invoke(isAdminOrBursar, request({
+    session: { staff: { id: 11, role: 'Teacher', school_id: 1 } }
+  }));
+  assert.strictEqual(denied.res.statusCode, 403);
+  assert.strictEqual(denied.res.body, 'Access Denied: Finance Privileges Required');
+  assert.strictEqual(denied.nextCalled, false);
+}
+
+console.log('Authentication and finance authorization middleware tests passed (synthetic requests only).');

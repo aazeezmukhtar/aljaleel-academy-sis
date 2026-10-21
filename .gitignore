@@ -3,6 +3,9 @@ node_modules/
 database.sqlite
 database.sqlite-shm
 database.sqlite-wal
+.test-database.sqlite
+.test-database.sqlite-shm
+.test-database.sqlite-wal
 uploads/*
 !uploads/.gitkeep
 tmp/

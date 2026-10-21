@@ -1,0 +1,35 @@
+name: Recovery Baseline Checks
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [audit/recovery-test-alignment]
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-baseline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      DB_TYPE: sqlite
+      DB_PATH: .test-database.sqlite
+      NODE_ENV: test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Build a fresh disposable SQLite database
+        run: node tests/fixtures/prepare-sqlite.js
+      - name: Run recovery and schema smoke checks
+        run: npm run test:regression
+      - name: Remove disposable SQLite database
+        if: always()
+        run: rm -f .test-database.sqlite .test-database.sqlite-shm .test-database.sqlite-wal

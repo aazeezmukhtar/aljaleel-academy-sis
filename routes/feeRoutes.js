@@ -1,19 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const feeController = require('../controllers/feeController');
+const { isAdminOrBursar } = require('../middleware/authMiddleware');
 
-// Fee Setup
-router.get('/setup', feeController.getSetup);
-router.post('/setup/add', feeController.addFeeCategory);
+// Fee setup and changes affect school-wide financial configuration.
+router.get('/setup', isAdminOrBursar, feeController.getSetup);
+router.post('/setup/add', isAdminOrBursar, feeController.addFeeCategory);
 
-// Fee Management
+// Existing controller checks preserve assigned-class, read-only access for teachers.
 router.get('/manager', feeController.getFeeManager);
 router.get('/student/:student_id', feeController.getStudentFees);
-router.post('/student/assign', feeController.assignFee);
 
-// Payments
-router.get('/pay/:student_fee_id', feeController.getPayForm);
-router.post('/pay', feeController.processPayment);
-router.get('/receipt/:receipt_number', feeController.getReceipt);
+// Assigning charges, viewing payment forms, recording payments, and receipts are restricted.
+router.post('/student/assign', isAdminOrBursar, feeController.assignFee);
+router.get('/pay/:student_fee_id', isAdminOrBursar, feeController.getPayForm);
+router.post('/pay', isAdminOrBursar, feeController.processPayment);
+router.get('/receipt/:receipt_number', isAdminOrBursar, feeController.getReceipt);
 
 module.exports = router;

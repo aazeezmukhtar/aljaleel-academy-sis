@@ -96,7 +96,14 @@ self.addEventListener('fetch', (event) => {
                     // before the offline copy has actually been stored.
                     try {
                         const cache = await caches.open(CACHE_NAME);
-                        await cache.put(request, res.clone());
+                        // Use a stable cache key: the preparation fetch carries a custom
+                        // header, while a real page navigation does not. Avoid making
+                        // the offline entry depend on that request-only header.
+                        const cacheKey = new Request(request.url, {
+                            method: 'GET',
+                            credentials: 'same-origin'
+                        });
+                        await cache.put(cacheKey, res.clone());
                     } catch (cacheError) {
                         console.warn('[SW] Could not cache page response:', url.pathname, cacheError);
                     }

@@ -15,10 +15,15 @@ const auditController = fs.readFileSync(path.join(root, 'controllers', 'reportCo
 
 assert.ok(auth.includes('isAuthenticated:'), 'staff authentication middleware should exist');
 assert.ok(auth.includes('isAdmin:'), 'Admin middleware should exist');
-assert.ok(!auth.includes('isAdminOrBursar'), 'rolled-back finance middleware must not be assumed active');
+assert.ok(auth.includes('isAdminOrBursar:'), 'finance role middleware should exist');
 assert.ok(app.includes("app.use('/fees', isAuthenticated, feeRoutes)"), 'fee routes should remain behind staff authentication');
-assert.ok(fees.includes("router.get('/setup'"), 'fee setup route should exist');
-assert.ok(fees.includes("router.post('/pay'"), 'payment route should exist');
+assert.ok(fees.includes("router.get('/setup', isAdminOrBursar"), 'fee setup must be restricted to finance roles');
+assert.ok(fees.includes("router.post('/pay', isAdminOrBursar"), 'payment processing must be restricted to finance roles');
+assert.ok(fees.includes("router.get('/manager', feeController.getFeeManager)"), 'existing manager route remains available for controller-level assigned-class checks');
+assert.ok(reports.includes("router.get('/finance', isAdminOrBursar"), 'finance report dashboard must be restricted to finance roles');
+assert.strictEqual((reports.match(/router.get\('\/attendance'/g) || []).length, 1, 'attendance dashboard route must be registered once');
+assert.strictEqual((reports.match(/router.get\('\/staff'/g) || []).length, 1, 'staff dashboard route must be registered once');
+assert.strictEqual((reports.match(/router.get\('\/health'/g) || []).length, 1, 'health dashboard route must be registered once');
 assert.ok(reports.includes("router.get('/audit', isAdmin"), 'audit logs should remain Admin-only');
 assert.ok(auditController.includes("res.render('settings/audit'"), 'audit logs should render the existing settings/audit view');
 

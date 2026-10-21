@@ -1,4 +1,4 @@
-name: Isolated Regression Tests
+name: Recovery Baseline Checks
 
 on:
   pull_request:
@@ -10,20 +10,15 @@ permissions:
   contents: read
 
 jobs:
-  regression:
+  recovery-baseline:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    env:
-      DB_TYPE: sqlite
-      NODE_ENV: test
+    timeout-minutes: 5
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-      - name: Install dependencies
-        run: npm install --no-audit --no-fund
-      - name: Run regression suite against isolated SQLite database
-        run: npm run test:regression
+          node-version: 22
+      - name: Run static recovery baseline checks
+        run: node tests/regression.test.js

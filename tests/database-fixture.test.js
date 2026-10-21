@@ -25,7 +25,7 @@ const db = require('../utils/db');
 
   const school = await db.get('SELECT id, name, slug, status FROM schools ORDER BY id ASC LIMIT 1');
   assert.ok(school, 'Migration should seed one synthetic default school');
-  assert.strictEqual(school.slug, 'al-jaleel-academy');
+  assert.strictEqual(school.slug, 'al-jaleel');
   assert.strictEqual(school.status, 'active');
 
   const students = await db.get('SELECT COUNT(*) AS count FROM students');

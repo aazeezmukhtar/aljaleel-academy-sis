@@ -3,7 +3,7 @@ const path = require('path');
 const { computeResult, getGrade } = require('../utils/resultHelper');
 const { logAction } = require('../utils/logger');
 const { getEnrolledStudents } = require('../utils/enrollmentHelper');
-const { getAvailableSessions } = require('../utils/sessionHelper');
+const { getAvailableSessions, getCurrentSession, getCurrentTerm } = require('../utils/sessionHelper');
 
 const getOrdinal = (n) => {
     const s = ['th', 'st', 'nd', 'rd'];
@@ -99,8 +99,8 @@ const getSectionAcademicContext = async (class_id, schoolId) => {
             return { session: sec.current_session, term: sec.current_term };
         }
     }
-    const session = sId ? await sessionHelper.getCurrentSession(sId) : null;
-    const term = sId ? await sessionHelper.getCurrentTerm(sId) : null;
+    const session = sId ? await getCurrentSession(sId) : null;
+    const term = sId ? await getCurrentTerm(sId) : null;
     return {
         session: session || '2024/2025',
         term: term || '1st Term'

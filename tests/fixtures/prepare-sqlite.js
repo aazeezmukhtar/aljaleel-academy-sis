@@ -31,7 +31,7 @@ schema = schema.replace(
 schema = schema
   .replace(/SERIAL PRIMARY KEY/g, 'INTEGER PRIMARY KEY AUTOINCREMENT')
   .replace(/DOUBLE PRECISION/g, 'REAL')
-  .replace(/TIMESTAMP/g, 'TEXT');
+  .replace(/\bTIMESTAMP\b/g, 'TEXT');
 
 const sqlite = new Database(dbPath);
 try {

@@ -44,6 +44,7 @@
                             <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">Start
                                 Marking</button>
                         </form>
+                        <p id="attendance-offline-prep-status" role="status" aria-live="polite" style="margin-top:12px;font-size:0.85rem;color:var(--text-muted);">Offline attendance preparation will be checked while you are online.</p>
                     </div>
 
                     <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
@@ -155,31 +156,58 @@
 
 
 <script>
-    // Prepare every assigned class sheet in the background while online so staff
-    // can open attendance entry offline without having visited each class manually.
+    // Prepare assigned class sheets and report real failures instead of silently ignoring them.
     (() => {
-        if (!navigator.onLine || !('serviceWorker' in navigator)) return;
-        const classes = <%- JSON.stringify((classes || []).map(c => ({ id: c.id }))) %>;
+        const status = document.getElementById('attendance-offline-prep-status');
+        const setStatus = (message, error = false) => {
+            if (!status) return;
+            status.textContent = message;
+            status.style.color = error ? '#b91c1c' : 'var(--text-muted)';
+        };
+        if (!navigator.onLine || !('serviceWorker' in navigator)) {
+            setStatus('Offline preparation requires internet. Open Attendance while online before testing offline.', true);
+            return;
+        }
+        const classes = <%- JSON.stringify((classes || []).map(c => ({ id: c.id, name: c.name }))) %>;
         const dateInput = document.querySelector('input[name="date"]');
         const date = dateInput && dateInput.value;
-        if (!date || !classes.length) return;
-
+        if (!date || !classes.length) {
+            setStatus('No assigned classes are available to prepare.', true);
+            return;
+        }
         const prepare = async () => {
-            // Keep concurrency low to avoid flooding the school server.
+            let prepared = 0;
+            const failures = [];
+            setStatus('Preparing offline attendance pages…');
             for (let i = 0; i < classes.length; i += 3) {
                 const batch = classes.slice(i, i + 3);
-                await Promise.allSettled(batch.map(c =>
-                    fetch('/attendance/take?class_id=' + encodeURIComponent(c.id) + '&date=' + encodeURIComponent(date), {
+                const results = await Promise.allSettled(batch.map(async c => {
+                    const response = await fetch('/attendance/take?class_id=' + encodeURIComponent(c.id) + '&date=' + encodeURIComponent(date), {
                         credentials: 'same-origin',
-                        headers: { 'X-AcadMe-Offline-Prepare': '1' }
-                    })
-                ));
+                        headers: { 'X-AcadMe-Offline-Prepare': '1' },
+                        cache: 'no-store'
+                    });
+                    if (!response.ok || response.redirected || !(response.headers.get('content-type') || '').includes('text/html')) {
+                        throw new Error('Attendance page request failed or redirected to login.');
+                    }
+                    return c;
+                }));
+                results.forEach((result, index) => {
+                    if (result.status === 'fulfilled') prepared++;
+                    else failures.push(batch[index].name || ('Class ' + batch[index].id));
+                });
+                setStatus('Offline attendance pages prepared: ' + prepared + ' of ' + classes.length + ' classes.');
+            }
+            if (failures.length) {
+                setStatus('Offline preparation incomplete. Could not prepare: ' + failures.join(', ') + '. Stay online and refresh.', true);
+            } else {
+                setStatus('Offline attendance pages prepared for all ' + prepared + ' assigned classes. You can now test offline entry.');
             }
         };
-        // This script is rendered at the bottom of the page, so the load event
-        // may already have fired. Start immediately (the form values are present),
-        // and re-check connectivity before each batch.
-        prepare().catch(err => console.warn('[AcadMe] Offline attendance preparation failed', err));
+        prepare().catch(err => {
+            console.warn('[AcadMe] Offline attendance preparation failed', err);
+            setStatus('Offline preparation failed. Stay online and refresh before testing offline.', true);
+        });
     })();
 </script>
 

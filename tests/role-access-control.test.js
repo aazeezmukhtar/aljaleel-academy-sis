@@ -12,10 +12,14 @@ const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
 const fees = fs.readFileSync(path.join(root, 'routes', 'feeRoutes.js'), 'utf8');
 const reports = fs.readFileSync(path.join(root, 'routes', 'reportRoutes.js'), 'utf8');
 const auditController = fs.readFileSync(path.join(root, 'controllers', 'reportController.js'), 'utf8');
+const sessionConfig = fs.readFileSync(path.join(root, 'utils', 'sessionSecret.js'), 'utf8');
 
 assert.ok(auth.includes('isAuthenticated:'), 'staff authentication middleware should exist');
 assert.ok(auth.includes('isAdmin:'), 'Admin middleware should exist');
 assert.ok(auth.includes('isAdminOrBursar:'), 'finance role middleware should exist');
+assert.ok(app.includes('secret: resolveSessionSecret()'), 'app must use validated session secret configuration');
+assert.ok(sessionConfig.includes("env.NODE_ENV === 'production'"), 'session secret helper must validate production configuration');
+assert.ok(sessionConfig.includes('SESSION_SECRET is required in production'), 'production must fail closed without SESSION_SECRET');
 assert.ok(app.includes("app.use('/fees', isAuthenticated, feeRoutes)"), 'fee routes should remain behind staff authentication');
 assert.ok(fees.includes("router.get('/setup', isAdminOrBursar"), 'fee setup must be restricted to finance roles');
 assert.ok(fees.includes("router.post('/pay', isAdminOrBursar"), 'payment processing must be restricted to finance roles');

@@ -16,13 +16,13 @@ const auditController = fs.readFileSync(path.join(root, 'controllers', 'reportCo
 
 // The restored baseline must match the actual exported middleware and route state.
 // These are baseline assertions, not a claim that all routes are adequately secured.
-assert.match(auth, /isAuthenticated:\s*\(/, 'staff authentication middleware should exist');
-assert.match(auth, /isAdmin:\s*\(/, 'Admin middleware should exist');
+assert.match(auth, /isAuthenticated:\\s*\\(/, 'staff authentication middleware should exist');
+assert.match(auth, /isAdmin:\\s*\\(/, 'Admin middleware should exist');
 assert.doesNotMatch(auth, /isAdminOrBursar/, 'do not assume rolled-back finance middleware is active');
-assert.match(app, /app\.use\('\/fees',\s*isAuthenticated,\s*feeRoutes\)/, 'fee routes should remain behind staff authentication');
-assert.match(fees, /router\.get\('\/setup'/, 'fee setup route should exist');
-assert.match(fees, /router\.post\('\/pay'/, 'payment route should exist');
-assert.match(reports, /router\.get\('\/audit',\s*isAdmin,/, 'audit logs should remain Admin-only');
-assert.match(auditController, /res\.render\('reports\/audit'/, 'audit logs should render the existing view');
+assert.match(app, /app\\.use\\('\\/fees',\\s*isAuthenticated,\\s*feeRoutes\\)/, 'fee routes should remain behind staff authentication');
+assert.match(fees, /router\\.get\\('\\/setup'/, 'fee setup route should exist');
+assert.match(fees, /router\\.post\\('\\/pay'/, 'payment route should exist');
+assert.match(reports, /router\\.get\\('\\/audit',\\s*isAdmin,/, 'audit logs should remain Admin-only');
+assert.match(auditController, /res\\.render\\('settings\\/audit'/, 'audit logs should render the existing settings/audit view');
 
 console.log('Recovery baseline checks passed (static only; no database accessed).');

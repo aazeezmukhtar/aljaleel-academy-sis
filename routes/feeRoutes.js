@@ -1,10 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const feeController = require('../controllers/feeController');
-const { isAdminOrBursar } = require('../middleware/authMiddleware');
-
-// Fees and payment records are restricted to Admin and Bursar accounts.
-router.use(isAdminOrBursar);
 
 // Fee Setup
 router.get('/setup', feeController.getSetup);

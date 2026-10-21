@@ -25,6 +25,7 @@ assert.ok(fees.includes("router.get('/setup', isAdminOrBursar"), 'fee setup must
 assert.ok(fees.includes("router.post('/pay', isAdminOrBursar"), 'payment processing must be restricted to finance roles');
 assert.ok(fees.includes("router.get('/manager', feeController.getFeeManager)"), 'existing manager route remains available for controller-level assigned-class checks');
 assert.ok(reports.includes("router.get('/finance', isAdminOrBursar"), 'finance report dashboard must be restricted to finance roles');
+assert.ok(reports.includes("router.get('/fees', isAdminOrBursar, reportController.getFeeReports)"), 'legacy fee report with financial totals must be restricted to finance roles');
 assert.strictEqual((reports.match(/router.get\('\/attendance'/g) || []).length, 1, 'attendance dashboard route must be registered once');
 assert.strictEqual((reports.match(/router.get\('\/staff'/g) || []).length, 1, 'staff dashboard route must be registered once');
 assert.strictEqual((reports.match(/router.get\('\/health'/g) || []).length, 1, 'health dashboard route must be registered once');

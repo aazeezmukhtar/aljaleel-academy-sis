@@ -25,6 +25,18 @@ module.exports = {
         res.status(403).send('Access Denied: Admin Privileges Required');
     },
 
+    // Allow staff roles that manage school finances.
+    // Teachers may retain the existing assigned-class read-only fee views,
+    // but cannot configure fees, assign charges, or record payments.
+    isAdminOrBursar: (req, res, next) => {
+        const staff = req.session && req.session.staff;
+        if (staff && (staff.role === 'Admin' || staff.role === 'Bursar')) {
+            req.schoolId = Number(staff.school_id || 1);
+            return next();
+        }
+        return res.status(403).send('Access Denied: Finance Privileges Required');
+    },
+
     // Inject user info into all responses (if logged in)
     injectUser: (req, res, next) => {
         if (req.session && req.session.staff) {

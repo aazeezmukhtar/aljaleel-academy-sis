@@ -8,15 +8,15 @@ const attendanceReportController = require('../controllers/reporting/attendanceR
 const staffReportController = require('../controllers/reporting/staffReportController');
 const financeReportController = require('../controllers/reporting/financeReportController');
 const healthReportController = require('../controllers/reporting/healthReportController');
-const { isAdmin, isAdminOrBursar } = require('../middleware/authMiddleware');
+const { isAdmin } = require('../middleware/authMiddleware');
 
 router.get('/', mainReportController.getReportDashboard);
 
 // Student Reports
-router.get('/students', studentReportController.getStudentDashboard);
+router.get('/students', studentReportController.getStudentDashboard); // NEW DASHBOARD
 router.get('/students/list', studentReportController.getClassListReport);
 router.get('/students/demographics', studentReportController.getDemographicsReport);
-router.get('/students/audit', isAdmin, studentReportController.getProfileAuditReport);
+router.get('/students/audit', studentReportController.getProfileAuditReport);
 
 // Academic Reports
 router.get('/academic', academicReportController.getAcademicDashboard); // NEW DASHBOARD
@@ -31,24 +31,26 @@ router.get('/attendance/low', attendanceReportController.getLowAttendance);
 router.get('/attendance/daily', attendanceReportController.getDailyAttendance);
 
 // Staff Reports
-router.get('/staff', isAdmin, staffReportController.getStaffDashboard);
-router.get('/staff/directory', isAdmin, staffReportController.getStaffDirectory);
-router.get('/staff/workload', isAdmin, staffReportController.getWorkloadReport);
-router.get('/staff/activity', isAdmin, staffReportController.getActivityLog);
+router.get('/staff', staffReportController.getStaffDashboard);
+router.get('/staff/directory', staffReportController.getStaffDirectory);
+router.get('/staff/workload', staffReportController.getWorkloadReport);
+router.get('/staff/activity', staffReportController.getActivityLog);
 
 // Finance Reports
-router.get('/finance', isAdminOrBursar, financeReportController.getFinanceDashboard);
-router.get('/finance/status', isAdminOrBursar, financeReportController.getFeeStatusReport);
-router.get('/finance/debtors', isAdminOrBursar, financeReportController.getDebtorsList);
+router.get('/finance', financeReportController.getFinanceDashboard);
+router.get('/finance/status', financeReportController.getFeeStatusReport);
+router.get('/finance/debtors', financeReportController.getDebtorsList);
 
 // Health Reports
-router.get('/health', isAdmin, healthReportController.getHealthDashboard);
-router.get('/health/alerts', isAdmin, healthReportController.getMedicalAlerts);
-router.get('/health/contacts', isAdmin, healthReportController.getEmergencyContacts);
+router.get('/health', healthReportController.getHealthDashboard);
+router.get('/health/alerts', healthReportController.getMedicalAlerts);
+router.get('/health/contacts', healthReportController.getEmergencyContacts);
 
-// Legacy report pages retained only where no replacement route exists.
-// Keep sensitive legacy fee reports protected as well.
+// Legacy / Migration (Audit can stay for now or move to mainReportController if simple)
 router.get('/audit', isAdmin, reportController.getAuditLogs);
-router.get('/fees', isAdminOrBursar, reportController.getFeeReports);
+router.get('/attendance', reportController.getAttendanceReports);
+router.get('/fees', reportController.getFeeReports);
+router.get('/staff', isAdmin, reportController.getStaffReports);
+router.get('/health', reportController.getHealthReports);
 
 module.exports = router;

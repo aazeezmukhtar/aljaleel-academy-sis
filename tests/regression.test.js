@@ -5,7 +5,8 @@ const testFiles = [
   'tenant-isolation.test.js',
   'phase2-auth-security.test.js',
   'phase2.1-security-audit.test.js',
-  'phase3-session-tenant.test.js'
+  'phase3-session-tenant.test.js',
+  'role-access-control.test.js'
 ];
 
 let passed = 0;

@@ -1,10 +1,6 @@
 node_modules/
 .env
 database.sqlite
-database.sqlite-shm
-database.sqlite-wal
-uploads/*
-!uploads/.gitkeep
-tmp/
-.vercel/
-*.log
+.test-database.sqlite
+.test-database.sqlite-shm
+.test-database.sqlite-wal

@@ -84,6 +84,10 @@ function invoke(middleware, req) {
     assert.strictEqual(allowed.req.schoolId, 1);
   }
 
+  const anonymous = invoke(isAdminOrBursar, request());
+  assert.strictEqual(anonymous.res.statusCode, 403, 'anonymous requests must not enter finance handlers');
+  assert.strictEqual(anonymous.nextCalled, false, 'anonymous requests must not reach finance handlers');
+
   const denied = invoke(isAdminOrBursar, request({
     session: { staff: { id: 11, role: 'Teacher', school_id: 1 } }
   }));

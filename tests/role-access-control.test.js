@@ -23,8 +23,14 @@ assert.ok(sessionConfig.includes('SESSION_SECRET is required in production'), 'p
 assert.ok(app.includes("app.use('/fees', isAuthenticated, feeRoutes)"), 'fee routes should remain behind staff authentication');
 assert.ok(fees.includes("router.get('/setup', isAdminOrBursar"), 'fee setup must be restricted to finance roles');
 assert.ok(fees.includes("router.post('/pay', isAdminOrBursar"), 'payment processing must be restricted to finance roles');
+assert.ok(fees.includes("router.post('/setup/add', isAdminOrBursar"), 'adding fee categories must be restricted to finance roles');
+assert.ok(fees.includes("router.post('/student/assign', isAdminOrBursar"), 'assigning charges must be restricted to finance roles');
+assert.ok(fees.includes("router.get('/pay/:student_fee_id', isAdminOrBursar"), 'payment form must be restricted to finance roles');
+assert.ok(fees.includes("router.get('/receipt/:receipt_number', isAdminOrBursar"), 'receipt access must be restricted to finance roles');
 assert.ok(fees.includes("router.get('/manager', feeController.getFeeManager)"), 'existing manager route remains available for controller-level assigned-class checks');
 assert.ok(reports.includes("router.get('/finance', isAdminOrBursar"), 'finance report dashboard must be restricted to finance roles');
+assert.ok(reports.includes("router.get('/finance/status', isAdminOrBursar"), 'finance status report must be restricted to finance roles');
+assert.ok(reports.includes("router.get('/finance/debtors', isAdminOrBursar"), 'debtors report must be restricted to finance roles');
 assert.ok(reports.includes("router.get('/fees', isAdminOrBursar, reportController.getFeeReports)"), 'legacy fee report with financial totals must be restricted to finance roles');
 assert.strictEqual((reports.match(/router.get\('\/attendance'/g) || []).length, 1, 'attendance dashboard route must be registered once');
 assert.strictEqual((reports.match(/router.get\('\/staff'/g) || []).length, 1, 'staff dashboard route must be registered once');

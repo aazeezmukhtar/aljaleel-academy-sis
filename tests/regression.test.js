@@ -21,7 +21,7 @@ for (const file of testFiles) {
     console.log(`✅ ${file} passed`);
     passed++;
   } catch (e) {
-    console.error(`❌ ${file} failed`);
+    console.error(`❌ ${file} failed (exit status ${e.status ?? 'unknown'})`);
     failed++;
   }
 }

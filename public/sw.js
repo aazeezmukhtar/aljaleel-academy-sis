@@ -89,7 +89,7 @@ self.addEventListener('fetch', (event) => {
     // Network-first for all app pages
     event.respondWith(
         fetch(request)
-            .then((res) => {
+            .then(async (res) => {
                 // Cache successful navigation responses for offline fallback
                 if (res && res.status === 200 && !res.redirected && (request.mode === 'navigate' || url.pathname === '/attendance/take' || url.pathname === '/results/manage')) {
                     // Wait for the cache write so the preparation fetch does not finish

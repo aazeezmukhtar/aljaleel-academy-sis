@@ -13,6 +13,7 @@ const settingsRoutes = require('./routes/settingsRoutes');
 const authRoutes = require('./routes/authRoutes');
 const reportRoutes = require('./routes/reportRoutes');
 const session = require('express-session');
+const { resolveSessionSecret } = require('./utils/sessionSecret');
 const { isAuthenticated, injectUser, isAnyAuthenticated } = require('./middleware/authMiddleware');
 
 const app = express();
@@ -58,7 +59,7 @@ app.set('trust proxy', 1);
 
 app.use(session({
     store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'nexus-sis-secret-key-offline-first',
+    secret: resolveSessionSecret(),
     resave: false,
     saveUninitialized: false,
     cookie: {

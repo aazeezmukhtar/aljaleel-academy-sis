@@ -6,6 +6,7 @@ const path = require('path');
 const tests = [
   ['role-access-control.test.js', 'Static recovery baseline'],
   ['auth-middleware.test.js', 'Authentication middleware unit tests'],
+  ['session-secret.test.js', 'Session secret configuration unit tests'],
   ['database-fixture.test.js', 'Isolated SQLite schema smoke test']
 ];
 

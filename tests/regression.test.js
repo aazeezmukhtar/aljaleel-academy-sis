@@ -9,12 +9,13 @@ const tests = [
   ['session-secret.test.js', 'Session secret configuration unit tests'],
   ['database-fixture.test.js', 'Isolated SQLite schema smoke test'],
   ['result-helper.test.js', 'Result scoring unit tests'],
+  ['attendance-streak.test.js', 'Attendance streak and history unit tests'],
   ['app-smoke.test.js', 'Application HTTP smoke test']
 ];
 
 let failed = 0;
 console.log('=== AcadMe Recovery Regression Checks ===');
-console.log('Database tests use disposable SQLite only; result scoring tests are pure unit tests. No production credentials or data are used.');
+console.log('Database tests use disposable SQLite only; result scoring and attendance streak tests are pure unit tests. No production credentials or data are used.');
 
 for (const [file, label] of tests) {
   console.log('\n--- ' + label + ' ---');

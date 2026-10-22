@@ -2,12 +2,13 @@ const db = require('./db');
 
 /**
  * Get students enrolled in a class for a given session.
- * Uses student_enrollments junction table with fallback to current_class_id.
+ * Session-specific lookups must rely on enrollment history for that session.
+ * The legacy current_class_id fallback is retained only for callers that do
+ * not request a particular session.
  */
 async function getEnrolledStudents(classId, session = null) {
     const classIdNum = Number(classId);
 
-    // Base enrollment query
     let enrollmentQuery = `
         SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number,
                s.passport_photo_path, s.gender, s.status
@@ -23,11 +24,15 @@ async function getEnrolledStudents(classId, session = null) {
     enrollmentQuery += " AND (s.status = 'active' OR s.status = 'Active' OR s.status IS NULL)";
     enrollmentQuery += " ORDER BY s.last_name, s.first_name";
 
-    // Execute enrollment query
-    let students = await db.all(enrollmentQuery, params);
+    const students = await db.all(enrollmentQuery, params);
 
-    // Fallback to current_class_id for any students not enrolled for the given session
-    // This ensures newly enrolled students appear even if their enrollment record is missing or session mismatch.
+    // Legacy callers without a session may still rely on current_class_id.
+    // Do not use this fallback for session-specific requests: current_class_id
+    // cannot establish that a student is enrolled in the requested session.
+    if (session) {
+        return students;
+    }
+
     const fallbackQuery = `
         SELECT id, first_name, last_name, admission_number,
                passport_photo_path, gender, status
@@ -38,31 +43,22 @@ async function getEnrolledStudents(classId, session = null) {
     `;
     const fallbackStudents = await db.all(fallbackQuery, [classIdNum]);
 
-    // Merge and deduplicate by student id
     const studentMap = new Map();
-    for (const s of students) {
-        studentMap.set(s.id, s);
-    }
-    for (const s of fallbackStudents) {
-        if (!studentMap.has(s.id)) {
-            studentMap.set(s.id, s);
-        }
+    for (const student of students) studentMap.set(student.id, student);
+    for (const student of fallbackStudents) {
+        if (!studentMap.has(student.id)) studentMap.set(student.id, student);
     }
     return Array.from(studentMap.values());
 }
-
-
-
-
 
 /**
  * Get the section for a given class.
  */
 async function getClassSection(classId) {
     const row = await db.get(`
-        SELECT s.id, s.name 
-        FROM sections s 
-        JOIN classes c ON c.section_id = s.id 
+        SELECT s.id, s.name
+        FROM sections s
+        JOIN classes c ON c.section_id = s.id
         WHERE c.id = ?
     `, [classId]);
     return row || null;
@@ -75,17 +71,14 @@ async function getClassSection(classId) {
 async function getSectionResultConfig(sectionId, schoolId) {
     const defaults = { ca_count: 2, ca1_max: 20, ca2_max: 20, exam_max: 60 };
 
-    // 1. Legacy result_config
     const rows = await db.all('SELECT * FROM result_config').catch(() => []);
     rows.forEach(r => { if (r.value !== undefined) defaults[r.key] = parseInt(r.value) || defaults[r.key]; });
 
-    // 2. Resolve school_id from section if missing
     if (sectionId && !schoolId) {
         const sec = await db.get('SELECT school_id FROM sections WHERE id = ?', [sectionId]);
         if (sec && sec.school_id) schoolId = sec.school_id;
     }
 
-    // 3. Tenant settings override
     if (schoolId) {
         const tenantSettings = await db.all(
             "SELECT key, value FROM settings WHERE school_id = ? AND (key LIKE 'result.%' OR key IN ('ca_count', 'ca1_max', 'ca2_max', 'exam_max'))",
@@ -99,7 +92,6 @@ async function getSectionResultConfig(sectionId, schoolId) {
         });
     }
 
-    // 4. Section overrides from section_result_config (key-value rows)
     if (sectionId) {
         const sectionRows = await db.all('SELECT key, value FROM section_result_config WHERE section_id = ?', [sectionId]);
         sectionRows.forEach(r => {
@@ -113,4 +105,3 @@ async function getSectionResultConfig(sectionId, schoolId) {
 }
 
 module.exports = { getEnrolledStudents, getClassSection, getSectionResultConfig };
-

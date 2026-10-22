@@ -75,42 +75,8 @@ const schoolInfo = await db.get('SELECT name, phone FROM schools WHERE id = ?', 
                 ORDER BY a.student_id, a.date ASC
             `, [cls.id, academicSettings.term, academicSettings.session]);
 
-            const studentStats = {};
-            for (const record of attendanceRecords) {
-                if (!studentStats[record.student_id]) {
-                                            studentStats[record.student_id] = {
-                            id: record.student_id,
-                            first_name: record.first_name,
-                            last_name: record.last_name,
-                            parent_phone: record.parent_phone,
-                            total_absent_days: 0,
-                            longest_consecutive_absent_days: 0,
-                            current_consecutive_absent_days: 0,
-                            current_streak: 0,
-                            absences_without_reason: 0
-                        };
-                }
-
-                const stats = studentStats[record.student_id];
-
-                if (record.status === 'Absent') {
-                    stats.total_absent_days++;
-                    stats.current_streak++;
-                    // Update current consecutive absent days
-                    stats.current_consecutive_absent_days = stats.current_streak;
-                    // Update longest consecutive absent days if this streak is greater
-                    if (stats.current_streak > stats.longest_consecutive_absent_days) {
-                        stats.longest_consecutive_absent_days = stats.current_streak;
-                    }
-                    if (!record.reason || record.reason.trim() === '' || record.reason === 'Unknown') {
-                        stats.absences_without_reason++;
-                    }
-                } else if (record.status === 'Present' || record.status === 'Late' || record.status === 'Leave') {
-                    // Reset current streak on presence, lateness, or authorized leave
-                    stats.current_streak = 0;
-                    stats.current_consecutive_absent_days = 0;
-                }
-            }
+            const { summarizeAttendanceRecords } = require('../utils/attendanceStreakHelper');
+            const studentStats = summarizeAttendanceRecords(attendanceRecords);
 
             // Determine flagged students based on total and current consecutive absences
             const flagged = Object.values(studentStats).filter(s => {

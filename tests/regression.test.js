@@ -10,6 +10,7 @@ const tests = [
   ['database-fixture.test.js', 'Isolated SQLite schema smoke test'],
   ['result-helper.test.js', 'Result scoring unit tests'],
   ['attendance-streak.test.js', 'Attendance streak and history unit tests'],
+  ['enrollment-session.test.js', 'Enrollment session isolation unit tests'],
   ['app-smoke.test.js', 'Application HTTP smoke test']
 ];
 

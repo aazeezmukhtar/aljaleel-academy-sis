@@ -317,9 +317,34 @@ const processPromotion = async (req, res) => {
         `, [schoolId]);
         
         const classSectionIdMap = {};
+        const validClassIds = new Set();
         classes.forEach(c => {
             classSectionIdMap[c.id] = c.section_id;
+            validClassIds.add(Number(c.id));
         });
+
+        // Validate the entire requested mapping before making any writes.
+        // Invalid or foreign-school class IDs must not partially promote
+        // students or advance the school's academic calendar.
+        for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
+            if (!targetId || targetId === 'none') continue;
+
+            const classId = Number(classIdStr);
+            if (!Number.isInteger(classId) || !validClassIds.has(classId)) {
+                const message = 'Promotion mapping contains an invalid source class.';
+                if (isAjax) return res.status(400).json({ success: false, message });
+                return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+            }
+
+            if (targetId !== 'graduate') {
+                const targetClassId = Number(targetId);
+                if (!/^\d+$/.test(String(targetId)) || !Number.isInteger(targetClassId) || !validClassIds.has(targetClassId)) {
+                    const message = 'Promotion mapping contains an invalid target class.';
+                    if (isAjax) return res.status(400).json({ success: false, message });
+                    return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+                }
+            }
+        }
 
         let advancedSession = target_session || null;
 

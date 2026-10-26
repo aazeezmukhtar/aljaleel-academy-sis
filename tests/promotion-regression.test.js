@@ -24,9 +24,16 @@ async function run() {
   const token = Date.now().toString();
   const slug = 'promotion-regression-' + token;
   let schoolId = null;
+  let foreignSchoolId = null;
   try {
     await db.run("INSERT INTO schools (name, slug, current_session, current_term, status) VALUES (?, ?, '2025/2026', '2nd Term', 'active')", ['Promotion Test ' + token, slug]);
     schoolId = (await db.get('SELECT id FROM schools WHERE slug = ?', [slug])).id;
+    await db.run("INSERT INTO schools (name, slug, current_session, current_term, status) VALUES (?, ?, '2025/2026', '2nd Term', 'active')", ['Foreign Test ' + token, 'promotion-foreign-' + token]);
+    foreignSchoolId = (await db.get('SELECT id FROM schools WHERE slug = ?', ['promotion-foreign-' + token])).id;
+    await db.run("INSERT INTO sections (school_id, name, current_session, current_term) VALUES (?, ?, '2025/2026', '2nd Term')", [foreignSchoolId, 'Foreign Section ' + token]);
+    const foreignSectionId = (await db.get('SELECT id FROM sections WHERE school_id = ? AND name = ?', [foreignSchoolId, 'Foreign Section ' + token])).id;
+    await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [foreignSchoolId, foreignSectionId, 'Foreign Class ' + token]);
+    const foreignClassId = (await db.get('SELECT id FROM classes WHERE school_id = ? AND name = ?', [foreignSchoolId, 'Foreign Class ' + token])).id;
     await db.run("INSERT INTO settings (school_id, key, value) VALUES (?, 'current_session', '2025/2026')", [schoolId]);
     await db.run("INSERT INTO settings (school_id, key, value) VALUES (?, 'current_term', '2nd Term')", [schoolId]);
 
@@ -59,6 +66,25 @@ async function run() {
     assert.strictEqual(preview.data.success, true);
     assert.strictEqual(preview.data.totalStudents, 1, 'Preview must exclude students enrolled only in a different session');
     assert.strictEqual(preview.data.preview[0].studentCount, 1);
+
+    // Invalid targets must be rejected before student records or calendars change.
+    for (const invalidTargetId of ['999999999', String(foreignClassId)]) {
+      const invalid = response();
+      await controller.processPromotion({
+        schoolId, xhr: true,
+        body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: invalidTargetId } }
+      }, invalid);
+      assert.strictEqual(invalid.statusCode, 400, 'Invalid or foreign-school target classes must be rejected');
+      assert.strictEqual(invalid.data.success, false);
+      assert.match(invalid.data.message, /invalid target class/i);
+      const unchangedStudent = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [currentStudent, schoolId]);
+      assert.strictEqual(Number(unchangedStudent.current_class_id), Number(sourceClass), 'Invalid target must not change student class');
+      const unchangedEnrollments = await db.all('SELECT class_id, session FROM student_enrollments WHERE student_id = ?', [currentStudent]);
+      assert.strictEqual(unchangedEnrollments.length, 2, 'Invalid target must not alter enrollment history');
+      const unchangedCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
+      assert.strictEqual(unchangedCalendar.current_session, '2025/2026', 'Invalid target must not advance calendar');
+      assert.strictEqual(unchangedCalendar.current_term, '2nd Term');
+    }
 
     // Force the target enrollment INSERT to fail after earlier promotion writes.
     // This exercises transaction rollback without relying on SQLite FK settings.
@@ -115,6 +141,11 @@ async function run() {
       await db.run('DELETE FROM sections WHERE school_id = ?', [schoolId]);
       await db.run('DELETE FROM settings WHERE school_id = ?', [schoolId]);
       await db.run('DELETE FROM schools WHERE id = ?', [schoolId]);
+    }
+    if (foreignSchoolId !== null) {
+      await db.run('DELETE FROM classes WHERE school_id = ?', [foreignSchoolId]);
+      await db.run('DELETE FROM sections WHERE school_id = ?', [foreignSchoolId]);
+      await db.run('DELETE FROM schools WHERE id = ?', [foreignSchoolId]);
     }
   }
 }

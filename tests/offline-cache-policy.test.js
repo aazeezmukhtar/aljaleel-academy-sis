@@ -37,12 +37,27 @@ check('authenticated navigation caching requires successful, non-redirected HTML
   assert.match(source, /includes\('text\/html'\)/);
 });
 
-check('explicit attendance preparation fetches are cached and can be verified', () => {
+check('explicit attendance and results preparation requests require complete context and can be verified', () => {
   assert.match(source, /function isOfflinePreparationRequest\(request, url\)/);
-  assert.match(source, /request\.headers\.get\('X-AcadMe-Offline-Prepare'\) === '1'/);
+  assert.match(source, /request\.headers\.get\('X-AcadMe-Offline-Prepare'\) !== '1'/);
+  assert.match(source, /url\.pathname === '\/attendance\/take'/);
+  assert.match(source, /url\.pathname === '\/results\/manage'/);
+  assert.match(source, /\['class_id', 'date'\]\.every/);
+  assert.match(source, /\['class_id', 'subject_id', 'session', 'term'\]\.every/);
   assert.match(source, /isOfflinePage\(request, url\) \|\| isPreparation/);
   assert.match(source, /headers\.set\('X-AcadMe-Offline-Cached', '1'\)/);
   assert.match(source, /cachedSuccessfully/);
+});
+
+check('result entry page offers explicit offline preparation for the exact academic context', () => {
+  const manager = fs.readFileSync(path.join(__dirname, '..', 'views', 'results', 'manager.ejs'), 'utf8');
+  assert.match(manager, /id="prepareResultsOfflineBtn"/);
+  assert.match(manager, /function prepareResultsOffline\(\)/);
+  assert.match(manager, /X-AcadMe-Offline-Prepare/);
+  assert.match(manager, /X-AcadMe-Offline-Cached/);
+  for (const key of ['class_id', 'subject_id', 'session', 'term']) {
+    assert.ok(manager.includes("'" + key + "'"), 'missing result context key: ' + key);
+  }
 });
 
 check('attendance page prepares a rolling seven-calendar-day window and includes an out-of-window selected date', () => {

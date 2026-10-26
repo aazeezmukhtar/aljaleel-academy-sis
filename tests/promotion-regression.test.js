@@ -99,7 +99,7 @@ async function run() {
     assert.strictEqual(sameSession.data.success, true, 'Same-session individual promotion must remain allowed');
     assert.strictEqual(sameSession.data.calendarAdvanced, false);
     const movedStudent = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [sameSessionStudent, schoolId]);
-    assert.strictEqual(Number(movedStudent.current_class_id), Number(targetClass), 'Same-session promotion must update the student's class');
+    assert.strictEqual(Number(movedStudent.current_class_id), Number(targetClass), "Same-session promotion must update the student's class");
     const movedEnrollment = await db.get('SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ?', [sameSessionStudent, '2025/2026']);
     assert.strictEqual(Number(movedEnrollment.class_id), Number(targetClass), 'Same-session target enrollment must be recorded');
     const sameSessionCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);

@@ -227,18 +227,18 @@
 
             const dates = buildAttendancePreparationDates(new Date(), selectedDate);
             const totalSheets = dates.length * classes.length;
-            let checkedSheets = 0;
             const failures = [];
 
             const readyDates = () => dates.filter(date =>
                 classes.every(c => preparedSheets.has(sheetKey(c.id, date)))
             );
+            const readySheetCount = () => dates.reduce((count, date) =>
+                count + classes.filter(c => preparedSheets.has(sheetKey(c.id, date))).length, 0
+            );
 
             setStatus('Preparing offline attendance for ' + dates.length + ' dates, including the next 7 calendar days…');
             for (const date of dates) {
                 if (thisRun !== runId) return;
-                const dateFailures = [];
-
                 for (let i = 0; i < classes.length; i += 3) {
                     if (thisRun !== runId) return;
                     const batch = classes.slice(i, i + 3).filter(c => !preparedSheets.has(sheetKey(c.id, date)));
@@ -261,19 +261,17 @@
                     }));
 
                     results.forEach((result, index) => {
-                        checkedSheets++;
                         if (result.status === 'fulfilled') {
                             preparedSheets.add(sheetKey(result.value.id, date));
                         } else {
                             const className = batch[index].name || ('Class ' + batch[index].id);
-                            dateFailures.push(className);
                             failures.push(date + ' — ' + className);
                         }
                     });
                 }
 
                 const ready = readyDates();
-                setStatus('Preparing offline attendance: ' + preparedSheets.size + ' of ' + totalSheets +
+                setStatus('Preparing offline attendance: ' + readySheetCount() + ' of ' + totalSheets +
                     ' class/date sheets ready. Ready dates: ' + (ready.join(', ') || 'none') + '.');
             }
 

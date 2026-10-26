@@ -248,17 +248,26 @@ const previewPromotion = async (req, res) => {
         classes.forEach(c => { classMap[c.id] = c; });
 
         const preview = [];
+        const warnings = [];
         let totalStudents = 0;
         let totalClasses = 0;
 
         for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
             if (!targetId || targetId === 'none') continue;
-            const classId = parseInt(classIdStr, 10);
-            const sourceClass = classMap[classId];
-            if (!sourceClass) continue;
+            const classId = Number(classIdStr);
+            const sourceClass = Number.isInteger(classId) ? classMap[classId] : null;
+            if (!sourceClass) {
+                warnings.push(`Source class "${classIdStr}" is not available. No preview was generated for this mapping.`);
+                continue;
+            }
 
             const isGraduate = targetId === 'graduate';
-            const targetClass = isGraduate ? null : classMap[parseInt(targetId, 10)];
+            const targetClassId = Number(targetId);
+            const targetClass = isGraduate ? null : (Number.isInteger(targetClassId) ? classMap[targetClassId] : null);
+            if (!isGraduate && !targetClass) {
+                warnings.push(`Destination for "${sourceClass.name}" is not a valid academy class. No preview was generated for this mapping.`);
+                continue;
+            }
 
             const students = await db.all(`
                 SELECT s.id, s.admission_number, s.first_name || ' ' || s.last_name as name
@@ -290,7 +299,8 @@ const previewPromotion = async (req, res) => {
             success: true,
             totalStudents,
             totalClasses,
-            preview
+            preview,
+            warnings
         });
     } catch (err) {
         console.error('Preview Promotion Error:', err);

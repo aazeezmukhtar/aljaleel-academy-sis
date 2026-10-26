@@ -521,6 +521,43 @@ const updateStudent = async (req, res) => {
             'SELECT * FROM sections WHERE school_id = ? ORDER BY id ASC',
             [schoolId]
         );
+        const schoolClasses = await db.all(
+            'SELECT id, section_id FROM classes WHERE school_id = ?',
+            [schoolId]
+        );
+
+        // Validate every submitted class assignment before removing or adding
+        // any enrollment. A mismatched section or unknown class must be a no-op.
+        const validateClass = (rawId, expectedSectionId = null) => {
+            if (rawId === undefined || rawId === null || String(rawId).trim() === '') return null;
+            const parsedId = Number(rawId);
+            if (!Number.isInteger(parsedId) || parsedId <= 0) return false;
+            const match = schoolClasses.find(c => Number(c.id) === parsedId);
+            if (!match) return false;
+            if (expectedSectionId !== null && Number(match.section_id) !== Number(expectedSectionId)) return false;
+            return match.id;
+        };
+
+        if (current_class_id) {
+            const validPrimaryClass = validateClass(current_class_id);
+            if (!validPrimaryClass) {
+                return res.status(400).json({ success: false, message: 'Invalid class assignment.' });
+            }
+        }
+        for (const sec of allSections) {
+            const rawClassId = req.body[`section_${sec.id}_class_id`] ||
+                               (sec.name === 'Academy' ? req.body.academy_class_id : null) ||
+                               (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null) || null;
+            if (rawClassId) {
+                const validClassId = validateClass(rawClassId, sec.id);
+                if (!validClassId) {
+                    return res.status(400).json({
+                        success: false,
+                        message: 'The selected class does not belong to the chosen section.'
+                    });
+                }
+            }
+        }
 
         let primary_class_id = current_class_id || null;
         const activeSession = await getCurrentSession(schoolId);

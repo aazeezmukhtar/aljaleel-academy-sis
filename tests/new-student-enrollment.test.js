@@ -75,8 +75,11 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
       if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }];
       throw new Error('Unexpected list query: ' + sql);
     };
-    db.get = async (sql) => {
-      if (sql.includes('SELECT id FROM students WHERE admission_number = ?')) return null;
+    db.get = async (sql, params, client) => {
+      if (sql.includes('SELECT id FROM students WHERE admission_number = ? AND school_id = ?')) {
+        assert.strictEqual(client, fakeClient, 'Student lookup should use transaction client');
+        return { id: 77 };
+      }
       if (sql.includes('FROM sections s') && sql.includes('JOIN classes c')) {
         return { current_session: '2026/2027', current_term: '2nd Term' };
       }

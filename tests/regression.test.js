@@ -14,6 +14,7 @@ const tests = [
   ['student-enrollment-update.test.js', 'Student update class validation tests'],
   ['new-student-enrollment.test.js', 'New student enrollment consistency tests'],
   ['bulk-student-import.test.js', 'Bulk student import validation and atomicity tests'],
+  ['section-calendar-isolation.test.js', 'Global and section academic calendar isolation tests'],
   ['class-deletion-history.test.js', 'Historical enrollment and attendance protection tests'],
   ['promotion-regression.test.js', 'Promotion history, session, rollback, and calendar regression tests'],
   ['promotion-preview-rendering.test.js', 'Promotion preview HTML escaping checks'],

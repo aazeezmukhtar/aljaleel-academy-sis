@@ -107,82 +107,104 @@ async function syncData() {
     if (!navigator.onLine || _isSyncing) return;
     _isSyncing = true;
 
-    const pending = await getPendingCount();
-    if (pending === 0) {
-        _isSyncing = false;
-        updateSyncUI();
-        return;
-    }
-
-    updateSyncUI('syncing');
-
     let successCount = 0;
     let failCount = 0;
 
-    // ── Sync Attendance ──
-    const attendanceItems = await getAllQueued('attendance_sync');
-    for (const item of attendanceItems) {
+    try {
+        const pending = await getPendingCount();
+        if (pending === 0) {
+            updateSyncUI();
+            return;
+        }
+
+        updateSyncUI('syncing');
+
+        // A failure reading one queue must not permanently lock syncing or
+        // prevent the other queue from being processed.
+        let attendanceItems = [];
         try {
-            const { id, _savedAt, ...payload } = item;
-            const res = await fetch('/attendance/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (res.redirected) {
-                failCount++;
-                continue;
-            }
-            if (res.ok && !res.redirected) {
-                const data = await res.json().catch(() => ({}));
-                if (data.success) {
-                    await deleteQueued('attendance_sync', id);
-                    successCount++;
-                } else {
-                    // Keep conflicts and validation failures queued for explicit review.
-                    failCount++;
-                }
-            } else {
-                // Never treat an HTTP conflict as proof that the record was saved.
-                failCount++;
-            }
-        } catch {
+            attendanceItems = await getAllQueued('attendance_sync');
+        } catch (err) {
+            console.error('[NexusOffline] Could not read attendance queue:', err);
             failCount++;
         }
-    }
 
-    // ── Sync Results ──
-    const resultItems = await getAllQueued('results_sync');
-    for (const item of resultItems) {
-        try {
-            const { id, _savedAt, ...payload } = item;
-            const res = await fetch('/results/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (res.redirected) {
+        for (const item of attendanceItems) {
+            try {
+                const { id, _savedAt, ...payload } = item;
+                const res = await fetch('/attendance/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.redirected) {
+                    failCount++;
+                    continue;
+                }
+                if (res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    if (data.success) {
+                        await deleteQueued('attendance_sync', id);
+                        successCount++;
+                    } else {
+                        // Keep conflicts and validation failures queued for explicit review.
+                        failCount++;
+                    }
+                } else {
+                    // Never treat an HTTP conflict or server error as proof of success.
+                    failCount++;
+                }
+            } catch (err) {
+                console.warn('[NexusOffline] Attendance sync item remains queued:', err);
                 failCount++;
-                continue;
             }
-            if (res.ok && !res.redirected) {
-                const data = await res.json().catch(() => ({}));
-                if (data.success) {
-                    await deleteQueued('results_sync', id);
-                    successCount++;
+        }
+
+        let resultItems = [];
+        try {
+            resultItems = await getAllQueued('results_sync');
+        } catch (err) {
+            console.error('[NexusOffline] Could not read results queue:', err);
+            failCount++;
+        }
+
+        for (const item of resultItems) {
+            try {
+                const { id, _savedAt, ...payload } = item;
+                const res = await fetch('/results/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.redirected) {
+                    failCount++;
+                    continue;
+                }
+                if (res.ok) {
+                    const data = await res.json().catch(() => ({}));
+                    if (data.success) {
+                        await deleteQueued('results_sync', id);
+                        successCount++;
+                    } else {
+                        failCount++;
+                    }
                 } else {
                     failCount++;
                 }
-            } else {
+            } catch (err) {
+                console.warn('[NexusOffline] Result sync item remains queued:', err);
                 failCount++;
             }
-        } catch {
-            failCount++;
         }
-    }
 
-    _isSyncing = false;
-    updateSyncUI(failCount > 0 ? 'partial' : 'done', successCount, failCount);
+        updateSyncUI(failCount > 0 ? 'partial' : 'done', successCount, failCount);
+    } catch (err) {
+        // Always release the lock, even if IndexedDB or UI preparation fails.
+        console.error('[NexusOffline] Sync cycle failed; queued data was retained where possible:', err);
+        updateSyncUI('partial', successCount, failCount + 1);
+    } finally {
+        _isSyncing = false;
+    }
 }
 
 // ─── UI Updates ────────────────────────────────────────────────────────────

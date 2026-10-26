@@ -506,14 +506,11 @@ const updateSectionCalendar = async (req, res) => {
         for (const sec of sections) {
             const session = String((req.body || {})[`sections_${sec.id}_session`] || '').trim();
             const term = String((req.body || {})[`sections_${sec.id}_term`] || '').trim();
-            if (!/^\\d{4}\\/\\d{4}$/.test(session) || !validTerms.has(term)) {
+            if (!/^\d{4}\/\d{4}$/.test(session) || !validTerms.has(term)) {
                 return res.redirect('/settings?error=Invalid or incomplete section calendar');
             }
             sectionUpdates.push({ id: sec.id, session, term });
         }
-
-        let primarySession = null;
-        let primaryTerm = null;
 
         await db.transaction(async () => {
             for (const sectionUpdate of sectionUpdates) {
@@ -528,45 +525,7 @@ const updateSectionCalendar = async (req, res) => {
                 );
             }
 
-            // Sync school & settings level active calendar with primary section
-            if (primarySession && primaryTerm) {
-                await db.run(
-                    'UPDATE schools SET current_session = ?, current_term = ? WHERE id = ?',
-                    [primarySession, primaryTerm, schoolId]
-                );
 
-                const existingSession = await db.get(
-                                        "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ?",
-                    [schoolId]
-                );
-                if (existingSession) {
-                    await db.run(
-                        "UPDATE settings SET value = ? WHERE key = 'current_session' AND school_id = ?",
-                        [primarySession, schoolId]
-                    );
-                } else {
-                    await db.run(
-                        "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_session', ?)",
-                        [schoolId, primarySession]
-                    );
-                }
-
-                const existingTerm = await db.get(
-                    "SELECT value FROM settings WHERE key = 'current_term' AND school_id = ?",
-                    [schoolId]
-                );
-                if (existingTerm) {
-                    await db.run(
-                        "UPDATE settings SET value = ? WHERE key = 'current_term' AND school_id = ?",
-                        [primaryTerm, schoolId]
-                    );
-                } else {
-                    await db.run(
-                        "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_term', ?)",
-                        [schoolId, primaryTerm]
-                    );
-                }
-            }
         });
 
         // Invalidate tenant cache

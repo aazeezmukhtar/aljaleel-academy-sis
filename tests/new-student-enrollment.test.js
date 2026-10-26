@@ -76,6 +76,7 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
       throw new Error('Unexpected list query: ' + sql);
     };
     db.get = async (sql, params, client) => {
+      if (sql.trim() === 'SELECT id FROM students WHERE admission_number = ?') return null;
       if (sql.includes('SELECT id FROM students WHERE admission_number = ? AND school_id = ?')) {
         assert.strictEqual(client, fakeClient, 'Student lookup should use transaction client');
         return { id: 77 };

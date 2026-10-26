@@ -40,7 +40,9 @@ const getSettingsPage = async (req, res) => {
 
 // Update Settings
 const updateSettings = async (req, res) => {
-    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const schoolId = (req.session && req.session.staff && req.session.staff.school_id)
+        ? Number(req.session.staff.school_id)
+        : (req.schoolId || (req.school ? req.school.id : 1));
     const { 
         school_name, school_motto, primary_color, secondary_color, 
         address, phone, next_term_start_date, show_watermark,
@@ -115,17 +117,8 @@ const updateSettings = async (req, res) => {
                 await db.run(`UPDATE schools SET ${schoolFields.join(', ')} WHERE id = ?`, schoolParams);
             }
 
-            // CRITICAL: always sync sections to match the global session/term setting for this school
-            // This is what getAcademicContext() reads first — if sections are out of date, enrollment
-            // and attendance will silently use the wrong session.
-            if (current_session || current_term) {
-                const secFields = [];
-                const secParams = [];
-                if (current_session) { secFields.push('current_session = ?'); secParams.push(current_session); }
-                if (current_term) { secFields.push('current_term = ?'); secParams.push(current_term); }
-                secParams.push(schoolId);
-                await db.run(`UPDATE sections SET ${secFields.join(', ')} WHERE school_id = ? OR school_id IS NULL`, secParams);
-            }
+            // Section calendars are independently configured below. Global settings must not
+            // overwrite them: getAcademicContext() intentionally prefers a section's own calendar.
 
         });
 
@@ -508,23 +501,31 @@ const updateSectionCalendar = async (req, res) => {
         : (req.schoolId || (req.school ? req.school.id : 1));
     try {
         const sections = await db.all('SELECT id FROM sections WHERE school_id = ? ORDER BY id ASC', [schoolId]);
+        const validTerms = new Set(['1st Term', '2nd Term', '3rd Term']);
+        const sectionUpdates = [];
+        for (const sec of sections) {
+            const session = String((req.body || {})[`sections_${sec.id}_session`] || '').trim();
+            const term = String((req.body || {})[`sections_${sec.id}_term`] || '').trim();
+            if (!/^\\d{4}\\/\\d{4}$/.test(session) || !validTerms.has(term)) {
+                return res.redirect('/settings?error=Invalid or incomplete section calendar');
+            }
+            sectionUpdates.push({ id: sec.id, session, term });
+        }
+
         let primarySession = null;
         let primaryTerm = null;
 
         await db.transaction(async () => {
-            for (const sec of sections) {
-                const session = req.body[`sections_${sec.id}_session`];
-                const term = req.body[`sections_${sec.id}_term`];
-                if (session && term) {
-                    if (!primarySession) {
-                        primarySession = session;
-                        primaryTerm = term;
-                    }
-                    await db.run(
-                        'UPDATE sections SET current_session = ?, current_term = ? WHERE id = ? AND school_id = ?',
-                        [session, term, sec.id, schoolId]
-                    );
+            for (const sectionUpdate of sectionUpdates) {
+                const { id, session, term } = sectionUpdate;
+                if (!primarySession) {
+                    primarySession = session;
+                    primaryTerm = term;
                 }
+                await db.run(
+                    'UPDATE sections SET current_session = ?, current_term = ? WHERE id = ? AND school_id = ?',
+                    [session, term, id, schoolId]
+                );
             }
 
             // Sync school & settings level active calendar with primary section

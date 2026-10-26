@@ -419,63 +419,69 @@ const processPromotion = async (req, res) => {
             }
 
 
-            // CRITICAL: Advance Active Academic Calendar for School & All Sections
-            await db.run(
-                "UPDATE sections SET current_session = ?, current_term = '1st Term' WHERE school_id = ?",
-                [targetSession, schoolId]
-            );
-
-            await db.run(
-                "UPDATE schools SET current_session = ?, current_term = '1st Term' WHERE id = ?",
-                [targetSession, schoolId]
-            );
-
-            // Upsert current_session in settings
-            const existingSession = await db.get(
-                "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ?",
-                [schoolId]
-            );
-            if (existingSession) {
+            // Only end-of-session promotions advance the school calendar.
+            // Same-session promotions are valid for individual student movement,
+            // but must leave the current session and term untouched.
+            if (targetSession !== sourceSession) {
+                // CRITICAL: Advance Active Academic Calendar for School & All Sections
                 await db.run(
-                    "UPDATE settings SET value = ? WHERE key = 'current_session' AND school_id = ?",
+                    "UPDATE sections SET current_session = ?, current_term = '1st Term' WHERE school_id = ?",
                     [targetSession, schoolId]
                 );
-            } else {
+    
                 await db.run(
-                    "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_session', ?)",
-                    [schoolId, targetSession]
+                    "UPDATE schools SET current_session = ?, current_term = '1st Term' WHERE id = ?",
+                    [targetSession, schoolId]
                 );
+    
+                // Upsert current_session in settings
+                const existingSession = await db.get(
+                    "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ?",
+                    [schoolId]
+                );
+                if (existingSession) {
+                    await db.run(
+                        "UPDATE settings SET value = ? WHERE key = 'current_session' AND school_id = ?",
+                        [targetSession, schoolId]
+                    );
+                } else {
+                    await db.run(
+                        "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_session', ?)",
+                        [schoolId, targetSession]
+                    );
+                }
+    
+                // Upsert current_term in settings
+                const existingTerm = await db.get(
+                    "SELECT value FROM settings WHERE key = 'current_term' AND school_id = ?",
+                    [schoolId]
+                );
+                if (existingTerm) {
+                    await db.run(
+                        "UPDATE settings SET value = '1st Term' WHERE key = 'current_term' AND school_id = ?",
+                        [schoolId]
+                    );
+                } else {
+                    await db.run(
+                        "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_term', '1st Term')",
+                        [schoolId]
+                    );
+                }
             }
 
-            // Upsert current_term in settings
-            const existingTerm = await db.get(
-                "SELECT value FROM settings WHERE key = 'current_term' AND school_id = ?",
-                [schoolId]
-            );
-            if (existingTerm) {
-                await db.run(
-                    "UPDATE settings SET value = '1st Term' WHERE key = 'current_term' AND school_id = ?",
-                    [schoolId]
-                );
-            } else {
-                await db.run(
-                    "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_term', '1st Term')",
-                    [schoolId]
-                );
-            }
         });
 
         // Invalidate tenant cache so next requests see new session
 
         tenantHelper.clearTenantCache();
         
+        const successMessage = targetSession === sourceSession
+            ? `Promotion completed successfully within ${sourceSession}. The academic calendar was not changed.`
+            : `Promotion completed successfully! Active session transitioned to ${targetSession} (1st Term).`;
         if (isAjax) {
-            return res.json({
-                success: true,
-                message: `Promotion completed successfully! Active session transitioned to ${targetSession} (1st Term).`
-            });
+            return res.json({ success: true, message: successMessage, calendarAdvanced: targetSession !== sourceSession });
         }
-        res.redirect(`/settings/promotion?success=${encodeURIComponent(`Promotion completed successfully! Active session transitioned to ${targetSession} (1st Term).`)}`);
+        res.redirect(`/settings/promotion?success=${encodeURIComponent(successMessage)}`);
     } catch (err) {
         console.error('Process Promotion Error:', err);
         if (isAjax) {

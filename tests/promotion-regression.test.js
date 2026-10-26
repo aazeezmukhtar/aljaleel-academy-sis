@@ -86,6 +86,30 @@ async function run() {
       assert.strictEqual(unchangedCalendar.current_term, '2nd Term');
     }
 
+    // Same-session individual promotion is valid, but must not reset the school's term.
+    await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'SameSession', 'Promotion', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-SAME-SESSION-' + token, sourceClass]);
+    const sameSessionStudent = (await db.get('SELECT id FROM students WHERE school_id = ? AND admission_number = ?', [schoolId, 'PROMO-SAME-SESSION-' + token])).id;
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [sameSessionStudent, sourceClass, '2025/2026']);
+    const sameSession = response();
+    await controller.processPromotion({
+      schoolId, xhr: true,
+      body: { source_session: '2025/2026', target_session: '2025/2026', mapping: { [sourceClass]: String(targetClass) } }
+    }, sameSession);
+    assert.strictEqual(sameSession.statusCode, 200);
+    assert.strictEqual(sameSession.data.success, true, 'Same-session individual promotion must remain allowed');
+    assert.strictEqual(sameSession.data.calendarAdvanced, false);
+    const movedStudent = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [sameSessionStudent, schoolId]);
+    assert.strictEqual(Number(movedStudent.current_class_id), Number(targetClass), 'Same-session promotion must update the student's class');
+    const movedEnrollment = await db.get('SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ?', [sameSessionStudent, '2025/2026']);
+    assert.strictEqual(Number(movedEnrollment.class_id), Number(targetClass), 'Same-session target enrollment must be recorded');
+    const sameSessionCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
+    assert.strictEqual(sameSessionCalendar.current_session, '2025/2026');
+    assert.strictEqual(sameSessionCalendar.current_term, '2nd Term', 'Same-session promotion must not reset the current term');
+    const sameSessionSettings = await db.get("SELECT value FROM settings WHERE school_id = ? AND key = 'current_term'", [schoolId]);
+    assert.strictEqual(sameSessionSettings.value, '2nd Term', 'School term setting must remain unchanged');
+    const sameSessionSections = await db.all('SELECT current_session, current_term FROM sections WHERE school_id = ?', [schoolId]);
+    assert.ok(sameSessionSections.every(row => row.current_session === '2025/2026' && row.current_term === '2nd Term'), 'Same-session promotion must not change section calendars');
+
     // Invalid source class IDs must be rejected before any student or calendar writes.
     const invalidSource = response();
     await controller.processPromotion({

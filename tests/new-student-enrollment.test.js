@@ -57,8 +57,8 @@ async function testRejectsClassFromWrongSectionBeforeWrites() {
       ip: '127.0.0.1'
     }, res);
 
-    assert.strictEqual(res.redirectedTo, '/students/enroll?error=Enrollment failed',
-      'A class from another section must be rejected');
+    assert.strictEqual(res.redirectedTo, '/students/enroll?error=Invalid class assignment',
+      'A class from another section must be rejected with a validation error');
     assert.strictEqual(writes.length, 0, 'Invalid assignment must be rejected before any writes');
   });
 }

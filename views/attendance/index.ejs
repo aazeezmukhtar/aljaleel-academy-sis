@@ -156,7 +156,7 @@
 
 
 <script>
-    // Prepare assigned class sheets and report real failures instead of silently ignoring them.
+    // Prepare and verify the exact class/date sheets the service worker will need offline.
     (() => {
         const status = document.getElementById('attendance-offline-prep-status');
         const setStatus = (message, error = false) => {
@@ -164,31 +164,57 @@
             status.textContent = message;
             status.style.color = error ? '#b91c1c' : 'var(--text-muted)';
         };
-        if (!navigator.onLine || !('serviceWorker' in navigator)) {
-            setStatus('Offline preparation requires internet. Open Attendance while online before testing offline.', true);
+
+        if (!navigator.onLine || !('serviceWorker' in navigator) || !('caches' in window)) {
+            setStatus('Offline preparation requires internet and browser offline storage. Reconnect before preparing class lists.', true);
             return;
         }
+
         const classes = <%- JSON.stringify((classes || []).map(c => ({ id: c.id, name: c.name }))) %>;
         const dateInput = document.querySelector('input[name="date"]');
-        const date = dateInput && dateInput.value;
-        if (!date || !classes.length) {
+        if (!dateInput || !classes.length) {
             setStatus('No assigned classes are available to prepare.', true);
             return;
         }
+
+        let runId = 0;
         const prepare = async () => {
+            const thisRun = ++runId;
+            const date = dateInput.value;
+            if (!date) {
+                setStatus('Choose an attendance date before preparing offline class lists.', true);
+                return;
+            }
+            if (!navigator.onLine) {
+                setStatus('You are offline. Reconnect to prepare or refresh class lists.', true);
+                return;
+            }
+            if (!navigator.serviceWorker.controller) {
+                setStatus('Offline support is not active on this page yet. Refresh Attendance while online, then wait for preparation to finish.', true);
+                return;
+            }
+
             let prepared = 0;
             const failures = [];
-            setStatus('Preparing offline attendance pages…');
+            setStatus('Preparing offline class lists for ' + date + '…');
+            const cache = await caches.open('aljaleel-sis-v8');
+
             for (let i = 0; i < classes.length; i += 3) {
+                if (thisRun !== runId) return;
                 const batch = classes.slice(i, i + 3);
                 const results = await Promise.allSettled(batch.map(async c => {
-                    const response = await fetch('/attendance/take?class_id=' + encodeURIComponent(c.id) + '&date=' + encodeURIComponent(date), {
+                    const url = '/attendance/take?class_id=' + encodeURIComponent(c.id) + '&date=' + encodeURIComponent(date);
+                    const response = await fetch(url, {
                         credentials: 'same-origin',
                         headers: { 'X-AcadMe-Offline-Prepare': '1' },
                         cache: 'no-store'
                     });
-                    if (!response.ok || response.redirected || !(response.headers.get('content-type') || '').includes('text/html')) {
+                    if (!response.ok || response.redirected || !(response.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
                         throw new Error('Attendance page request failed or redirected to login.');
+                    }
+                    const cached = await cache.match(new URL(url, window.location.origin).href);
+                    if (!cached) {
+                        throw new Error('The service worker did not confirm that the class sheet was cached.');
                     }
                     return c;
                 }));
@@ -196,17 +222,26 @@
                     if (result.status === 'fulfilled') prepared++;
                     else failures.push(batch[index].name || ('Class ' + batch[index].id));
                 });
-                setStatus('Offline attendance pages prepared: ' + prepared + ' of ' + classes.length + ' classes.');
+                setStatus('Offline class lists prepared for ' + date + ': ' + prepared + ' of ' + classes.length + ' classes.');
             }
+
+            if (thisRun !== runId) return;
             if (failures.length) {
-                setStatus('Offline preparation incomplete. Could not prepare: ' + failures.join(', ') + '. Stay online and refresh.', true);
+                setStatus('Offline preparation incomplete for ' + date + '. Could not prepare: ' + failures.join(', ') + '. Stay online and refresh.', true);
             } else {
-                setStatus('Offline attendance pages prepared for all ' + prepared + ' assigned classes. You can now test offline entry.');
+                setStatus('Verified: offline class lists for ' + prepared + ' assigned classes are ready for ' + date + '.', false);
             }
         };
+
         prepare().catch(err => {
             console.warn('[AcadMe] Offline attendance preparation failed', err);
             setStatus('Offline preparation failed. Stay online and refresh before testing offline.', true);
+        });
+        dateInput.addEventListener('change', () => {
+            prepare().catch(err => {
+                console.warn('[AcadMe] Offline attendance preparation failed', err);
+                setStatus('Offline preparation failed. Stay online and refresh before testing offline.', true);
+            });
         });
     })();
 </script>

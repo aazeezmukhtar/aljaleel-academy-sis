@@ -89,10 +89,27 @@ function matchesOfflineEntryContext(requestedUrl, cachedUrl) {
 }
 
 function isOfflinePreparationRequest(request, url) {
-    return request.method === 'GET' &&
-        url.origin === self.location.origin &&
-        url.pathname === '/attendance/take' &&
-        request.headers.get('X-AcadMe-Offline-Prepare') === '1';
+    if (request.method !== 'GET' ||
+        url.origin !== self.location.origin ||
+        request.headers.get('X-AcadMe-Offline-Prepare') !== '1') {
+        return false;
+    }
+
+    if (url.pathname === '/attendance/take') {
+        return ['class_id', 'date'].every((key) => {
+            const value = url.searchParams.get(key);
+            return value !== null && value.trim() !== '';
+        });
+    }
+
+    if (url.pathname === '/results/manage') {
+        return ['class_id', 'subject_id', 'session', 'term'].every((key) => {
+            const value = url.searchParams.get(key);
+            return value !== null && value.trim() !== '';
+        });
+    }
+
+    return false;
 }
 
 async function clearPrivatePageCache(cache) {

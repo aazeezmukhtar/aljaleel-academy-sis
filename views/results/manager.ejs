@@ -113,10 +113,18 @@
                                 <%= selClass %> <span style="color: #cbd5e1; margin: 0 6px;">•</span> <span style="color: var(--school-primary);"><%= selSubj %></span>
                             </div>
                         </div>
-                        <a href="/results/manage" class="btn btn-outline btn-sm" style="flex-shrink: 0;">
-                            <i class="bi bi-pencil-square"></i> Change
-                        </a>
+                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end;">
+                            <button type="button" id="prepareResultsOfflineBtn" class="btn btn-outline btn-sm"
+                                onclick="prepareResultsOffline()" style="flex-shrink: 0;">
+                                <i class="bi bi-download"></i> Prepare for Offline Use
+                            </button>
+                            <a href="/results/manage" class="btn btn-outline btn-sm" style="flex-shrink: 0;">
+                                <i class="bi bi-pencil-square"></i> Change
+                            </a>
+                        </div>
                     </div>
+                    <p id="resultsOfflinePreparationStatus" role="status" aria-live="polite"
+                        class="text-muted" style="margin: -10px 0 20px; font-size: 0.9rem;"></p>
                 <% } %>
 
                 <% if (students && students.length> 0) { %>
@@ -253,6 +261,47 @@
 
         // Grading System from Backend
         const GRADING = <%- JSON.stringify(grading || []) %>;
+
+        async function prepareResultsOffline() {
+            const button = document.getElementById('prepareResultsOfflineBtn');
+            const status = document.getElementById('resultsOfflinePreparationStatus');
+            if (!button || !status) return;
+
+            const context = {};
+            for (const key of ['class_id', 'subject_id', 'session', 'term']) {
+                const field = document.querySelector('input[name="' + key + '"]');
+                context[key] = field ? field.value.trim() : '';
+            }
+
+            if (Object.values(context).some(value => !value)) {
+                status.textContent = 'Cannot prepare this sheet: class, subject, session and term must all be selected.';
+                return;
+            }
+
+            const target = new URL('/results/manage', window.location.origin);
+            Object.entries(context).forEach(([key, value]) => target.searchParams.set(key, value));
+
+            button.disabled = true;
+            status.textContent = 'Preparing this exact results sheet for offline use…';
+            try {
+                const response = await fetch(target.pathname + target.search, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    cache: 'no-store',
+                    headers: { 'X-AcadMe-Offline-Prepare': '1' }
+                });
+                if (!response.ok ||
+                    response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
+                    throw new Error('The active service worker did not confirm caching.');
+                }
+                status.textContent = 'Ready offline. This exact class, subject, session and term sheet has been cached.';
+            } catch (error) {
+                console.warn('[AcadMe] Results offline preparation failed:', error);
+                status.textContent = 'Could not confirm offline preparation. Stay online and try again before disconnecting.';
+            } finally {
+                button.disabled = false;
+            }
+        }
     </script>
 
     <style>

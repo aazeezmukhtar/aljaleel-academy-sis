@@ -112,6 +112,17 @@ check('entry cache context matcher behaves safely for actual URL combinations', 
     false,
     'a missing requested term must not match a cached sheet with a term'
   );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/results/manage?class_id=4&subject_id=2&term=1st%20Term'), url('/results/manage?class_id=4&subject_id=2&term=1st%20Term')),
+    false,
+    'results without an explicit session must not be considered fully prepared'
+  );
+});
+
+check('exact cached entry pages are not served when required context is missing', () => {
+  assert.match(source, /const hasRequiredEntryContext = url\.pathname === '\/attendance\/take'/);
+  assert.match(source, /\['class_id', 'subject_id', 'session', 'term'\]\.every/);
+  assert.match(source, /if \(exact && hasRequiredEntryContext\) return exact/);
 });
 
 check('login and logout routes are not served from offline page cache', () => {

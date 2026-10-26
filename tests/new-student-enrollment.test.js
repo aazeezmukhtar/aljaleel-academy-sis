@@ -77,12 +77,12 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
       throw new Error('Unexpected list query: ' + sql);
     };
     db.get = async (sql, params, client) => {
-      if (sql.includes('SELECT id FROM students WHERE admission_number = ?')) return null;
       if (sql.includes('SELECT id FROM students WHERE admission_number = ? AND school_id = ?')) {
         assert.strictEqual(client, fakeClient, 'Student lookup should use transaction client');
         return { id: 77 };
       }
-      if (sql.includes('SELECT current_session, current_term FROM sections WHERE id = ? AND school_id = ?')) {
+      if (sql.includes('SELECT id FROM students WHERE admission_number = ?')) return null;
+      if (sql.includes('FROM sections s') && sql.includes('JOIN classes c')) {
         return { current_session: '2026/2027', current_term: '2nd Term' };
       }
       if (sql.includes("key = 'current_session' AND school_id = ?")) return { value: '2026/2027' };

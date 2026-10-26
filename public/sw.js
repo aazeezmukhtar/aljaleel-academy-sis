@@ -8,6 +8,7 @@ const STATIC_ASSETS = [
     '/js/offline-handler.js',
     '/js/table-export.js',
     '/img/logo-512.png',
+    '/offline-unavailable.html',
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css'
 ];
 

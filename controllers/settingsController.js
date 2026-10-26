@@ -515,10 +515,6 @@ const updateSectionCalendar = async (req, res) => {
         await db.transaction(async () => {
             for (const sectionUpdate of sectionUpdates) {
                 const { id, session, term } = sectionUpdate;
-                if (!primarySession) {
-                    primarySession = session;
-                    primaryTerm = term;
-                }
                 await db.run(
                     'UPDATE sections SET current_session = ?, current_term = ? WHERE id = ? AND school_id = ?',
                     [session, term, id, schoolId]

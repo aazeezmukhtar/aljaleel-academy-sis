@@ -18,7 +18,8 @@ const tests = [
   ['class-deletion-history.test.js', 'Historical enrollment and attendance protection tests'],
   ['promotion-regression.test.js', 'Promotion history, session, rollback, and calendar regression tests'],
   ['promotion-preview-rendering.test.js', 'Promotion preview HTML escaping checks'],
-  ['app-smoke.test.js', 'Application HTTP smoke test']
+  ['app-smoke.test.js', 'Application HTTP smoke test'],
+  ['offline-cache-policy.test.js', 'Offline service-worker cache privacy policy tests']
 ];
 
 let failed = 0;

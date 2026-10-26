@@ -1,6 +1,6 @@
 const db = require('../utils/db');
 const { logAction } = require('../utils/logger');
-const { getEnrolledStudents } = require('../utils/enrollmentHelper');
+const { getAttendanceStudents } = require('../utils/attendanceStudentHelper');
 const sessionHelper = require('../utils/sessionHelper');
 const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
 
@@ -154,20 +154,12 @@ const getTakeAttendance = async (req, res) => {
 
         const settings = await getAcademicSettings(Number(class_id), schoolId);
 
-        const enrolledStudents = await getEnrolledStudents(Number(class_id), settings.session);
-        let students = [];
-        if (enrolledStudents.length > 0) {
-            const studentIds = enrolledStudents.map(s => Number(s.id));
-            students = await db.all(`
-                SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
-                       a.status
-                FROM students s
-                LEFT JOIN attendance a ON s.id = a.student_id AND a.date = ? AND a.class_id = ?
-                WHERE s.id IN (${studentIds.map(() => '?').join(',')})
-                  AND s.school_id = ?
-                ORDER BY s.last_name, s.first_name
-            `, [date, Number(class_id), ...studentIds, schoolId]);
-        }
+        const students = await getAttendanceStudents(
+            Number(class_id),
+            settings.session,
+            schoolId,
+            date
+        );
 
         res.render('attendance/take', {
             title: 'Mark Attendance',

@@ -258,6 +258,18 @@ const enrollStudent = async (req, res) => {
         const classById = new Map(schoolClasses.map(cls => [Number(cls.id), cls]));
         const sectionIds = new Set(allSections.map(section => Number(section.id)));
         const assignments = [];
+        const hasSectionSelectors = Object.keys(req.body || {}).some(field => /^section_\d+_class_id$/.test(field));
+
+        // Validate the legacy class field too, if supplied, even when section
+        // selectors are present. Never silently ignore a contradictory value.
+        let legacyClass = null;
+        if (current_class_id !== undefined && current_class_id !== null && String(current_class_id).trim() !== '') {
+            const legacyId = Number(current_class_id);
+            if (!Number.isInteger(legacyId) || legacyId <= 0 || !classById.has(legacyId)) {
+                return res.redirect('/students/enroll?error=Invalid class assignment');
+            }
+            legacyClass = classById.get(legacyId);
+        }
 
         // Reject unknown sections, invalid class IDs, and classes assigned to
         // a different section before generating uploads or writing student data.
@@ -276,15 +288,14 @@ const enrollStudent = async (req, res) => {
             assignments.push({ sectionId, classId: cls.id });
         }
 
-        // Backward-compatible single-class form when section selectors are not present.
-        if (assignments.length === 0 && current_class_id !== undefined &&
-            current_class_id !== null && String(current_class_id).trim() !== '') {
-            const classId = Number(current_class_id);
-            if (!Number.isInteger(classId) || classId <= 0 || !classById.has(classId)) {
-                return res.redirect('/students/enroll?error=Invalid class assignment');
-            }
-            const cls = classById.get(classId);
-            assignments.push({ sectionId: cls.section_id || null, classId: cls.id });
+        // Backward-compatible single-class form is used only when this form
+        // did not submit section selectors at all (blank selectors mean "skip").
+        if (!hasSectionSelectors && assignments.length === 0 && legacyClass) {
+            assignments.push({ sectionId: legacyClass.section_id || null, classId: legacyClass.id });
+        } else if (hasSectionSelectors && legacyClass &&
+                   assignments.length > 0 &&
+                   !assignments.some(item => Number(item.classId) === Number(legacyClass.id))) {
+            return res.redirect('/students/enroll?error=Conflicting class assignments');
         }
 
         // Resolve and validate academic context before beginning any writes.

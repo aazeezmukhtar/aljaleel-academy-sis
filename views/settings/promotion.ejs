@@ -97,7 +97,7 @@
                                         <i class="bi bi-layers-fill" style="margin-right: 6px;"></i><%= secData.name %> Section
                                     </span>
                                     <span class="badge" style="background: #e2e8f0; color: #475569; font-weight: 600; margin-left: 10px;">
-                                        Strict Section Isolation Active
+                                        Section History Preserved
                                     </span>
                                 </td>
                             </tr>
@@ -112,19 +112,21 @@
                                         </span>
                                     </td>
                                     <td style="vertical-align: middle;">
-                                        <!-- STRICT SECTION AFFINITY: Can ONLY select target classes from the same section -->
+                                        <!-- Cross-section progression is supported; the controller preserves other-section enrollments. -->
                                         <select name="mapping[<%= cls.id %>]" class="form-control mapping-select" data-source-id="<%= cls.id %>" data-source-name="<%= cls.name %>" style="max-width: 340px;">
                                             <option value="none">-- No Change --</option>
                                             <option value="graduate" style="color: #b91c1c; font-weight: 600;">🎓 Graduating / Alumni</option>
                                             
-                                            <optgroup label="<%= secData.name %> Classes:">
-                                                <% 
-                                                const allowedTargets = secData.classes.filter(t => t.id !== cls.id);
-                                                allowedTargets.forEach(target => { 
-                                                %>
-                                                    <option value="<%= target.id %>"><%= target.name %></option>
-                                                <% }) %>
-                                            </optgroup>
+                                            <% Object.values(sectionsMap).forEach(targetSection => {
+                                                const allowedTargets = targetSection.classes.filter(t => t.id !== cls.id);
+                                                if (allowedTargets.length) {
+                                            %>
+                                                <optgroup label="<%= targetSection.name %> Section Classes:">
+                                                    <% allowedTargets.forEach(target => { %>
+                                                        <option value="<%= target.id %>"><%= target.name %></option>
+                                                    <% }) %>
+                                                </optgroup>
+                                            <% } }) %>
                                         </select>
                                     </td>
                                 </tr>

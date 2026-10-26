@@ -59,7 +59,7 @@ check('attendance and results fallback use explicit context matching', () => {
 check('entry cache matching requires class/date for attendance and class/subject for results', () => {
   assert.match(source, /function matchesOfflineEntryContext\(requestedUrl, cachedUrl\)/);
   assert.match(source, /requiredKeys = \['class_id', 'date'\]/);
-  assert.match(source, /requiredKeys = \['class_id', 'subject_id'\]/);
+  assert.match(source, /requiredKeys = \['class_id', 'subject_id', 'session', 'term'\]/);
   assert.match(source, /requestedUrl\.searchParams\.get\(key\) === cachedUrl\.searchParams\.get\(key\)/);
 });
 

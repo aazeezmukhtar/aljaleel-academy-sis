@@ -63,6 +63,51 @@ async function testRejectsClassFromWrongSectionBeforeWrites() {
   });
 }
 
+async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
+  await withMockedDb(async () => {
+    const fakeClient = { transactionClient: true };
+    const writes = [];
+    let rolledBack = false;
+    db.all = async (sql) => {
+      if (sql.includes('FROM sections WHERE school_id = ?')) {
+        return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }];
+      }
+      if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }];
+      throw new Error('Unexpected list query: ' + sql);
+    };
+    db.get = async (sql) => {
+      if (sql.includes('SELECT id FROM students WHERE admission_number = ?')) return null;
+      if (sql.includes('FROM sections s') && sql.includes('JOIN classes c')) {
+        return { current_session: '2026/2027', current_term: '2nd Term' };
+      }
+      throw new Error('Unexpected lookup query: ' + sql);
+    };
+    db.run = async (sql, params, client) => {
+      writes.push({ sql, client });
+      if (sql.includes('INSERT INTO student_enrollments')) throw new Error('Injected enrollment insert failure');
+      return { changes: 1, lastInsertRowid: 77 };
+    };
+    db.transaction = async (callback) => {
+      try { return await callback(fakeClient); }
+      catch (error) { rolledBack = true; throw error; }
+    };
+
+    const res = responseRecorder();
+    await studentController.enrollStudent({
+      schoolId: 1,
+      session: { staff: { id: 9, role: 'Admin', school_id: 1 } },
+      body: { first_name: 'Test', last_name: 'Student', gender: 'Female', current_class_id: '10' },
+      ip: '127.0.0.1'
+    }, res);
+
+    assert.strictEqual(rolledBack, true, 'Enrollment failure must roll back the student insert');
+    assert.ok(writes.some(w => w.sql.includes('INSERT INTO students')), 'Student insert should be attempted');
+    assert.ok(writes.every(w => w.client === fakeClient), 'Writes must use the same transaction client');
+    assert.strictEqual(res.redirectedTo, '/students/enroll?error=Enrollment failed',
+      'Failed enrollment should report failure rather than success');
+  });
+}
+
 async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
   await withMockedDb(async () => {
     const writes = [];
@@ -126,6 +171,7 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
 (async () => {
   await testRejectsClassFromWrongSectionBeforeWrites();
   await testEnrollmentUsesSectionSessionAndTermAndOneTransaction();
+  await testEnrollmentFailureRollsBackStudentAndEnrollment();
   console.log('[new-student-enrollment] Class validation, session/term context, and transaction tests passed.');
 })().catch(error => {
   console.error('[new-student-enrollment] Test failed:', error);

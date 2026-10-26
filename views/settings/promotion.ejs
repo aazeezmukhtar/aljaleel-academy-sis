@@ -201,6 +201,16 @@
                 return;
             }
 
+            if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+                alert('Preview needs attention:\\n\\n' + data.warnings.join('\\n'));
+                return;
+            }
+
+            if (!Array.isArray(data.preview) || data.preview.length === 0) {
+                alert('No valid class mappings were available to preview. Check your selections and try again.');
+                return;
+            }
+
             const previewSection = document.getElementById('previewSection');
             const previewContent = document.getElementById('previewContent');
             const summaryBadge = document.getElementById('previewSummaryBadge');

@@ -67,6 +67,28 @@ async function run() {
     assert.strictEqual(preview.data.totalStudents, 1, 'Preview must exclude students enrolled only in a different session');
     assert.strictEqual(preview.data.preview[0].studentCount, 1);
 
+    // Preview should explain invalid source/destination mappings instead of silently
+    // skipping them or showing "Unknown Class". It must not write any data.
+    const invalidPreview = response();
+    await controller.previewPromotion({
+      schoolId,
+      body: {
+        source_session: '2025/2026',
+        target_session: '2026/2027',
+        mapping: { '999999999': String(targetClass), [sourceClass]: '999999999', [sourceClass + 'x']: String(targetClass) }
+      }
+    }, invalidPreview);
+    assert.strictEqual(invalidPreview.statusCode, 200, 'Preview warnings should not cause a server error');
+    assert.strictEqual(invalidPreview.data.success, true);
+    assert.ok(Array.isArray(invalidPreview.data.warnings));
+    assert.strictEqual(invalidPreview.data.warnings.length, 3, 'Each invalid mapping should have a clear warning');
+    assert.strictEqual(invalidPreview.data.preview.length, 0, 'Invalid mappings must not appear as valid preview rows');
+    const previewSafetyStudent = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [currentStudent, schoolId]);
+    assert.strictEqual(Number(previewSafetyStudent.current_class_id), Number(sourceClass), 'Preview must not change student records');
+    const previewSafetyCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
+    assert.strictEqual(previewSafetyCalendar.current_session, '2025/2026');
+    assert.strictEqual(previewSafetyCalendar.current_term, '2nd Term');
+
     // Invalid targets must be rejected before student records or calendars change.
     for (const invalidTargetId of ['999999999', String(foreignClassId)]) {
       const invalid = response();

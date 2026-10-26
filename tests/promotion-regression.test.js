@@ -67,6 +67,24 @@ async function run() {
     assert.strictEqual(preview.data.totalStudents, 1, 'Preview must exclude students enrolled only in a different session');
     assert.strictEqual(preview.data.preview[0].studentCount, 1);
 
+    // Preview must reject invalid mappings instead of silently skipping them
+    // or presenting an "Unknown Class" destination.
+    const invalidPreviewMappings = [
+      { mapping: { '999999999': String(targetClass) }, pattern: /invalid source class/i },
+      { mapping: { [sourceClass]: '999999999' }, pattern: /invalid target class/i },
+      { mapping: { [sourceClass]: String(foreignClassId) }, pattern: /invalid target class/i }
+    ];
+    for (const scenario of invalidPreviewMappings) {
+      const invalidPreview = response();
+      await controller.previewPromotion({
+        schoolId,
+        body: { source_session: '2025/2026', target_session: '2026/2027', mapping: scenario.mapping }
+      }, invalidPreview);
+      assert.strictEqual(invalidPreview.statusCode, 400, 'Invalid preview mapping must be rejected');
+      assert.strictEqual(invalidPreview.data.success, false);
+      assert.match(invalidPreview.data.message, scenario.pattern);
+    }
+
     // Invalid targets must be rejected before student records or calendars change.
     for (const invalidTargetId of ['999999999', String(foreignClassId)]) {
       const invalid = response();

@@ -45,6 +45,31 @@ check('explicit attendance preparation fetches are cached and can be verified', 
   assert.match(source, /cachedSuccessfully/);
 });
 
+check('attendance page prepares a rolling seven-calendar-day window and includes an out-of-window selected date', () => {
+  const attendanceIndex = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'index.ejs'), 'utf8');
+  assert.match(attendanceIndex, /function buildAttendancePreparationDates\(today, selectedDate\)/);
+  assert.match(attendanceIndex, /for \(let offset = 0; offset < 7; offset\+\+\)/);
+  assert.match(attendanceIndex, /if \(selectedDate && !dates\.includes\(selectedDate\)\) dates\.push\(selectedDate\)/);
+  assert.match(attendanceIndex, /X-AcadMe-Offline-Prepare/);
+  assert.match(attendanceIndex, /Ready dates:/);
+
+  const start = attendanceIndex.indexOf('function buildAttendancePreparationDates(today, selectedDate) {');
+  const end = attendanceIndex.indexOf('\n\n    (() => {', start);
+  assert.notStrictEqual(start, -1, 'date builder must exist');
+  assert.notStrictEqual(end, -1, 'date builder must end before preparation routine');
+  const builderSource = attendanceIndex.slice(start, end);
+  const buildAttendancePreparationDates = new Function('today', 'selectedDate', builderSource + '\nreturn buildAttendancePreparationDates;')();
+  const date = (year, month, day) => new Date(year, month, day, 12, 0, 0);
+  assert.deepStrictEqual(
+    buildAttendancePreparationDates(date(2026, 9, 26), '2026-10-26'),
+    ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01']
+  );
+  assert.deepStrictEqual(
+    buildAttendancePreparationDates(date(2026, 11, 29), '2027-01-15'),
+    ['2026-12-29', '2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02', '2027-01-03', '2027-01-04', '2027-01-15']
+  );
+});
+
 check('attendance page relies on active-worker confirmation, not a hard-coded cache version', () => {
   const attendanceIndex = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'index.ejs'), 'utf8');
   assert.match(attendanceIndex, /X-AcadMe-Offline-Cached/);

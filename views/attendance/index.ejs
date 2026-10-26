@@ -156,7 +156,26 @@
 
 
 <script>
-    // Prepare and verify the exact class/date sheets the service worker will need offline.
+    // Prepare a rolling seven-calendar-day window, plus the chosen date when it falls outside that window.
+    function buildAttendancePreparationDates(today, selectedDate) {
+        const start = new Date(today.getTime());
+        start.setHours(12, 0, 0, 0);
+        const dates = [];
+
+        for (let offset = 0; offset < 7; offset++) {
+            const day = new Date(start.getTime());
+            day.setDate(start.getDate() + offset);
+            dates.push(
+                day.getFullYear() + '-' +
+                String(day.getMonth() + 1).padStart(2, '0') + '-' +
+                String(day.getDate()).padStart(2, '0')
+            );
+        }
+
+        if (selectedDate && !dates.includes(selectedDate)) dates.push(selectedDate);
+        return dates.sort();
+    }
+
     (() => {
         const status = document.getElementById('attendance-offline-prep-status');
         const setStatus = (message, error = false) => {
@@ -177,16 +196,28 @@
             return;
         }
 
+        const formatLocalDate = (date) => {
+            return date.getFullYear() + '-' +
+                String(date.getMonth() + 1).padStart(2, '0') + '-' +
+                String(date.getDate()).padStart(2, '0');
+        };
+        const serverRenderedDefault = <%- JSON.stringify(new Date().toISOString().split('T')[0]) %>;
+        const localToday = formatLocalDate(new Date());
+        if (dateInput.value === serverRenderedDefault) dateInput.value = localToday;
+
         let runId = 0;
+        const preparedSheets = new Set();
+        const sheetKey = (classId, date) => String(classId) + '|' + date;
+
         const prepare = async () => {
             const thisRun = ++runId;
-            const date = dateInput.value;
-            if (!date) {
+            const selectedDate = dateInput.value;
+            if (!selectedDate) {
                 setStatus('Choose an attendance date before preparing offline class lists.', true);
                 return;
             }
             if (!navigator.onLine) {
-                setStatus('You are offline. Reconnect to prepare or refresh class lists.', true);
+                setStatus('You are offline. Only previously prepared class/date sheets are available. Reconnect to prepare more dates.', true);
                 return;
             }
             if (!navigator.serviceWorker.controller) {
@@ -194,39 +225,67 @@
                 return;
             }
 
-            let prepared = 0;
+            const dates = buildAttendancePreparationDates(new Date(), selectedDate);
+            const totalSheets = dates.length * classes.length;
             const failures = [];
-            setStatus('Preparing offline class lists for ' + date + '…');
-            for (let i = 0; i < classes.length; i += 3) {
+
+            const readyDates = () => dates.filter(date =>
+                classes.every(c => preparedSheets.has(sheetKey(c.id, date)))
+            );
+            const readySheetCount = () => dates.reduce((count, date) =>
+                count + classes.filter(c => preparedSheets.has(sheetKey(c.id, date))).length, 0
+            );
+
+            setStatus('Preparing offline attendance for ' + dates.length + ' dates, including the next 7 calendar days…');
+            for (const date of dates) {
                 if (thisRun !== runId) return;
-                const batch = classes.slice(i, i + 3);
-                const results = await Promise.allSettled(batch.map(async c => {
-                    const url = '/attendance/take?class_id=' + encodeURIComponent(c.id) + '&date=' + encodeURIComponent(date);
-                    const response = await fetch(url, {
-                        credentials: 'same-origin',
-                        headers: { 'X-AcadMe-Offline-Prepare': '1' },
-                        cache: 'no-store'
+                for (let i = 0; i < classes.length; i += 3) {
+                    if (thisRun !== runId) return;
+                    const batch = classes.slice(i, i + 3).filter(c => !preparedSheets.has(sheetKey(c.id, date)));
+                    if (!batch.length) continue;
+
+                    const results = await Promise.allSettled(batch.map(async c => {
+                        const url = '/attendance/take?class_id=' + encodeURIComponent(c.id) + '&date=' + encodeURIComponent(date);
+                        const response = await fetch(url, {
+                            credentials: 'same-origin',
+                            headers: { 'X-AcadMe-Offline-Prepare': '1' },
+                            cache: 'no-store'
+                        });
+                        if (!response.ok || response.redirected || !(response.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+                            throw new Error('Attendance page request failed or redirected to login.');
+                        }
+                        if (response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
+                            throw new Error('The active service worker did not confirm that this class sheet was cached.');
+                        }
+                        return c;
+                    }));
+
+                    results.forEach((result, index) => {
+                        if (result.status === 'fulfilled') {
+                            preparedSheets.add(sheetKey(result.value.id, date));
+                        } else {
+                            const className = batch[index].name || ('Class ' + batch[index].id);
+                            failures.push(date + ' — ' + className);
+                        }
                     });
-                    if (!response.ok || response.redirected || !(response.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
-                        throw new Error('Attendance page request failed or redirected to login.');
-                    }
-                    if (response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
-                        throw new Error('The active service worker did not confirm that this class sheet was cached.');
-                    }
-                    return c;
-                }));
-                results.forEach((result, index) => {
-                    if (result.status === 'fulfilled') prepared++;
-                    else failures.push(batch[index].name || ('Class ' + batch[index].id));
-                });
-                setStatus('Offline class lists prepared for ' + date + ': ' + prepared + ' of ' + classes.length + ' classes.');
+                }
+
+                const ready = readyDates();
+                setStatus('Preparing offline attendance: ' + readySheetCount() + ' of ' + totalSheets +
+                    ' class/date sheets ready. Ready dates: ' + (ready.join(', ') || 'none') + '.');
             }
 
             if (thisRun !== runId) return;
+            const ready = readyDates();
             if (failures.length) {
-                setStatus('Offline preparation incomplete for ' + date + '. Could not prepare: ' + failures.join(', ') + '. Keep internet connected, wait for the offline update to finish, then refresh and retry.', true);
+                const shownFailures = failures.slice(0, 5).join('; ');
+                const moreFailures = failures.length > 5 ? ' (and ' + (failures.length - 5) + ' more)' : '';
+                setStatus('Offline preparation incomplete. Ready dates: ' + (ready.join(', ') || 'none') +
+                    '. Failed sheets: ' + shownFailures + moreFailures +
+                    '. Keep internet connected and retry before working offline.', true);
             } else {
-                setStatus('Verified: offline class lists for ' + prepared + ' assigned classes are ready for ' + date + '.', false);
+                setStatus('Verified: offline attendance is ready for ' + ready.length + ' dates: ' + ready.join(', ') +
+                    '. The selected date is included even when outside the rolling 7-day window.', false);
             }
         };
 

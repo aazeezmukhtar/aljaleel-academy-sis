@@ -67,7 +67,7 @@ function matchesOfflineEntryContext(requestedUrl, cachedUrl) {
     if (requestedUrl.pathname === '/attendance/take') {
         requiredKeys = ['class_id', 'date'];
     } else if (requestedUrl.pathname === '/results/manage') {
-        requiredKeys = ['class_id', 'subject_id'];
+        requiredKeys = ['class_id', 'subject_id', 'session', 'term'];
     } else {
         return false;
     }
@@ -231,7 +231,18 @@ self.addEventListener('fetch', (event) => {
                 // Only approved pages can be served from the private offline cache.
                 if (isOfflinePage(request, url)) {
                     const exact = await cache.match(request);
-                    if (exact) return exact;
+                    const hasRequiredEntryContext = url.pathname === '/attendance/take'
+                        ? ['class_id', 'date'].every((key) => {
+                            const value = url.searchParams.get(key);
+                            return value !== null && value.trim() !== '';
+                        })
+                        : url.pathname === '/results/manage'
+                            ? ['class_id', 'subject_id', 'session', 'term'].every((key) => {
+                                const value = url.searchParams.get(key);
+                                return value !== null && value.trim() !== '';
+                            })
+                            : true;
+                    if (exact && hasRequiredEntryContext) return exact;
 
                     // Match only the same entry context. Query parameter order may
                     // differ, but class/date or class/subject/session/term must not.

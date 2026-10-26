@@ -9,7 +9,7 @@ const helperMatch = template.match(/function escapePromotionPreviewHtml\(value\)
 assert.ok(helperMatch, 'Promotion preview must define its HTML escaping helper');
 
 // Exercise the exact helper source from the EJS template without a browser or database.
-const escapeHtml = new Function(`return (${helperMatch[0]}; escapePromotionPreviewHtml);`)();
+const escapeHtml = new Function(helperMatch[0] + '; return escapePromotionPreviewHtml;')();
 assert.strictEqual(escapeHtml(`<script>alert("x")</script>`), '&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
 assert.strictEqual(escapeHtml(`O'Reilly & Sons`), 'O&#39;Reilly &amp; Sons');
 assert.strictEqual(escapeHtml(null), '');

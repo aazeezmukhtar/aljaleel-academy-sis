@@ -61,6 +61,68 @@ const studentController = require('../controllers/studentController');
     assert.strictEqual(responseBody.success, false, 'Rejected update must report failure');
     assert.strictEqual(writes.length, 0, 'Invalid class ID must be rejected before any database writes');
     console.log('[student-enrollment-update] Invalid class assignment is rejected before writes.');
+
+    // A later profile-write failure must abort the same transaction that
+    // contains the enrollment delete/insert operations.
+    writes.length = 0;
+    statusCode = 200;
+    responseBody = null;
+    const fakeClient = { transactionClient: true };
+    let transactionStarted = false;
+    let transactionCommitted = false;
+    let transactionRolledBack = false;
+
+    db.all = async (sql) => {
+      if (sql.includes('FROM sections WHERE school_id = ?')) {
+        return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }];
+      }
+      if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }];
+      throw new Error('Unexpected database list query: ' + sql);
+    };
+    db.get = async (sql) => {
+      if (sql.includes("key = 'current_session' AND school_id = ?")) return { value: '2026/2027' };
+      if (sql.includes('SELECT current_session, current_term FROM sections')) {
+        return { current_session: '2026/2027', current_term: '2nd Term' };
+      }
+      throw new Error('Unexpected database lookup: ' + sql);
+    };
+    db.run = async (sql, params, client) => {
+      writes.push({ sql, client });
+      if (sql.includes('UPDATE students SET')) throw new Error('Injected profile update failure');
+      return { changes: 1 };
+    };
+    db.transaction = async (callback) => {
+      transactionStarted = true;
+      try {
+        const result = await callback(fakeClient);
+        transactionCommitted = true;
+        return result;
+      } catch (error) {
+        transactionRolledBack = true;
+        throw error;
+      }
+    };
+
+    const validReq = {
+      params: { id: '55' },
+      schoolId: 1,
+      session: { staff: { id: 1, role: 'Admin', school_id: 1 } },
+      body: {
+        first_name: 'Test', last_name: 'Student', gender: 'Female',
+        dob: '2015-01-01', admission_number: 'TEST-55',
+        status: 'active', section_3_class_id: '10'
+      }
+    };
+    await studentController.updateStudent(validReq, res);
+
+    assert.strictEqual(transactionStarted, true, 'Enrollment changes must start a transaction');
+    assert.strictEqual(transactionCommitted, false, 'Injected failure must prevent commit');
+    assert.strictEqual(transactionRolledBack, true, 'Injected failure must roll back the transaction');
+    assert.ok(writes.length >= 2, 'Enrollment delete and insert should be attempted before the injected failure');
+    assert.ok(writes.every(write => write.client === fakeClient),
+      'Every enrollment/profile write must use the same transaction client');
+    assert.strictEqual(statusCode, 500, 'Failed update should report an error');
+    console.log('[student-enrollment-update] Enrollment/profile writes share a rollback-capable transaction.');
   } finally {
     db.all = originalAll;
     db.get = originalGet;

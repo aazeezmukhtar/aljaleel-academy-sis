@@ -521,15 +521,48 @@ const updateStudent = async (req, res) => {
             'SELECT * FROM sections WHERE school_id = ? ORDER BY id ASC',
             [schoolId]
         );
+        const schoolClasses = await db.all(
+            'SELECT id, section_id FROM classes WHERE school_id = ?',
+            [schoolId]
+        );
 
-        let primary_class_id = current_class_id || null;
+        // Validate all submitted class choices before changing any enrollment.
+        const validateClass = (rawId, expectedSectionId = null) => {
+            if (rawId === undefined || rawId === null || String(rawId).trim() === '') return null;
+            const parsedId = Number(rawId);
+            if (!Number.isInteger(parsedId) || parsedId <= 0) return false;
+            const match = schoolClasses.find(c => Number(c.id) === parsedId);
+            if (!match) return false;
+            if (expectedSectionId !== null && Number(match.section_id) !== Number(expectedSectionId)) return false;
+            return match.id;
+        };
+
+        if (current_class_id && !validateClass(current_class_id)) {
+            return res.status(400).json({ success: false, message: 'Invalid class assignment.' });
+        }
+        for (const sec of allSections) {
+            const rawClassId = req.body[`section_${sec.id}_class_id`] ||
+                               (sec.name === 'Academy' ? req.body.academy_class_id : null) ||
+                               (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null) || null;
+            if (rawClassId && !validateClass(rawClassId, sec.id)) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'The selected class does not belong to the chosen section.'
+                });
+            }
+        }
+
+        let primary_class_id = current_class_id ? validateClass(current_class_id) : null;
         const activeSession = await getCurrentSession(schoolId);
         let updatedAnySection = false;
+        const sectionPlans = [];
 
+        // Resolve each section's session and term before performing any writes.
         for (const sec of allSections) {
-            const chosenClassId = req.body[`section_${sec.id}_class_id`] ||
-                                  (sec.name === 'Academy' ? req.body.academy_class_id : null) ||
-                                  (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null) || null;
+            const rawClassId = req.body[`section_${sec.id}_class_id`] ||
+                               (sec.name === 'Academy' ? req.body.academy_class_id : null) ||
+                               (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null) || null;
+            const chosenClassId = rawClassId ? validateClass(rawClassId, sec.id) : null;
 
             if (chosenClassId) {
                 updatedAnySection = true;
@@ -537,69 +570,39 @@ const updateStudent = async (req, res) => {
             }
 
             const ctx = await getSectionContext(sec.id, schoolId);
-            const sessionToUse = (ctx && ctx.session) || sec.current_session || activeSession;
-            const termToUse = (ctx && ctx.term) || sec.current_term || '1st Term';
-            if (sessionToUse) {
-                // Remove existing enrollment for this section and session
-                await db.run(`
-                    DELETE FROM student_enrollments 
-                    WHERE student_id = ? 
-                      AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?) 
-                      AND session = ?
-                `, [id, sec.id, schoolId, sessionToUse]);
-
-                // Re-enroll if a class was chosen
-                if (chosenClassId) {
-                    try {
-                        await db.run(
-                            "INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)",
-                            [id, chosenClassId, sessionToUse, termToUse]
-                        );
-                    } catch (insErr) {
-                        await db.run(
-                            "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                            [id, chosenClassId, sessionToUse]
-                        ).catch(() => {});
-                    }
-                }
-            }
+            sectionPlans.push({
+                sectionId: sec.id,
+                chosenClassId,
+                session: (ctx && ctx.session) || sec.current_session || activeSession,
+                term: (ctx && ctx.term) || sec.current_term || '1st Term'
+            });
         }
 
-        // Fallback for single class selection when section-specific fields were not sent
+        // Legacy single-class form used when section assignment fields are absent.
         if (!updatedAnySection && primary_class_id) {
-            const classRow = await db.get(
-                'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
-                [primary_class_id, schoolId]
-            );
-            if (classRow) {
-                const ctx = await getSectionContext(classRow.section_id, schoolId);
-                const sessionToUse = (ctx && ctx.session) || activeSession;
-                if (sessionToUse) {
-                    await db.run(`
-                        DELETE FROM student_enrollments 
-                        WHERE student_id = ? 
-                          AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?) 
-                          AND session = ?
-                    `, [id, classRow.section_id, schoolId, sessionToUse]);
-
-                    await db.run(
-                        "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                        [id, classRow.id, sessionToUse]
-                    );
-                }
+            const classRow = schoolClasses.find(c => Number(c.id) === Number(primary_class_id));
+            if (!classRow) {
+                return res.status(400).json({ success: false, message: 'Invalid class assignment.' });
             }
+            const ctx = await getSectionContext(classRow.section_id, schoolId);
+            sectionPlans.push({
+                sectionId: classRow.section_id,
+                chosenClassId: classRow.id,
+                session: (ctx && ctx.session) || activeSession,
+                term: (ctx && ctx.term) || '1st Term',
+                legacySingleClass: true
+            });
         }
 
         const sql = `
             UPDATE students SET
-                first_name = ?, last_name = ?, gender = ?, dob = ?, 
-                admission_number = ?, current_class_id = ?, 
+                first_name = ?, last_name = ?, gender = ?, dob = ?,
+                admission_number = ?, current_class_id = ?,
                 parent_phone = ?, parent_address = ?, parent_email = ?, parent_phone_alt = ?,
                 email = ?, phone = ?, address = ?, passport_photo_path = ?, status = ?
             WHERE id = ? AND school_id = ?
         `;
-
-        await db.run(sql, [
+        const studentParams = [
             first_name, last_name, gender, dob,
             admission_number || null,
             primary_class_id,
@@ -614,7 +617,43 @@ const updateStudent = async (req, res) => {
             status,
             id,
             schoolId
-        ]);
+        ];
+
+        // Keep enrollment changes and profile updates atomic in both SQLite and
+        // PostgreSQL. Every PostgreSQL write uses the same transaction client.
+        await db.transaction(async (client = null) => {
+            for (const plan of sectionPlans) {
+                if (!plan.session) continue;
+
+                if (plan.legacySingleClass && plan.sectionId == null) {
+                    await db.run(
+                        'DELETE FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
+                        [id, plan.chosenClassId, plan.session],
+                        client
+                    );
+                } else {
+                    await db.run(`
+                        DELETE FROM student_enrollments
+                        WHERE student_id = ?
+                          AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?)
+                          AND session = ?
+                    `, [id, plan.sectionId, schoolId, plan.session], client);
+                }
+
+                if (plan.chosenClassId) {
+                    await db.run(
+                        `INSERT INTO student_enrollments (student_id, class_id, session, term)
+                         VALUES (?, ?, ?, ?)
+                         ON CONFLICT(student_id, class_id, session)
+                         DO UPDATE SET term = excluded.term`,
+                        [id, plan.chosenClassId, plan.session, plan.term],
+                        client
+                    );
+                }
+            }
+
+            await db.run(sql, studentParams, client);
+        });
 
         res.json({ success: true, message: 'Student updated successfully.' });
 

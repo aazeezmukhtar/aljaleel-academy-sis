@@ -51,9 +51,9 @@ check('attendance page relies on active-worker confirmation, not a hard-coded ca
   assert.doesNotMatch(attendanceIndex, /caches\.open\(['"]aljaleel-sis-v\d+['"]\)/);
 });
 
-check('attendance fallback never reuses a different date for the same class', () => {
-  assert.match(source, /Attendance must match the exact class AND date/);
-  assert.doesNotMatch(source, /cachedUrl\.searchParams\.get\('class_id'\) === classId/);
+check('attendance and results fallback use explicit context matching', () => {
+  assert.match(source, /matchesOfflineEntryContext\(url, cachedUrl\)/);
+  assert.doesNotMatch(source, /Attendance must match the exact class AND date/);
 });
 
 check('entry cache matching requires class/date for attendance and class/subject for results', () => {

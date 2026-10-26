@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v8'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v9'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -74,11 +74,35 @@ check('cross-origin requests are not broadly intercepted or cached', () => {
 
 check('unknown offline routes do not fall back to a cached dashboard', () => {
   assert.doesNotMatch(source, /return caches\.match\('\/dashboard'\)/);
-  assert.match(source, /No generic dashboard fallback/);
+  assert.match(source, /No generic dashboard fallback|No generic dashboard fallback/);
 });
 
 check('safe offline fallback page is included among static assets', () => {
   assert.match(source, /'\/offline-unavailable\.html'/);
+});
+
+check('approved read-only routes include dashboard, students, academics, results, calendar, and announcements', () => {
+  for (const route of ['/dashboard', '/students', '/academics', '/results', '/calendar', '/announcements']) {
+    assert.ok(source.includes("'" + route + "'"), 'missing approved route: ' + route);
+  }
+  assert.doesNotMatch(source, /'\/fees(?:\/manager)?'|'\/reports'|'\/settings'/);
+});
+
+check('versioned same-origin assets share an unversioned cache key', () => {
+  assert.match(source, /function staticCacheKey\(url\)/);
+  assert.match(source, /url\.origin \+ url\.pathname/);
+});
+
+check('installed PWA registers service worker before standalone early return', () => {
+  const installer = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'pwa-installer.js'), 'utf8');
+  assert.ok(installer.indexOf("navigator.serviceWorker.register('/sw.js')") < installer.indexOf('if (isStandalone)'));
+});
+
+check('manifest and Home links use protected dashboard route', () => {
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'manifest.json'), 'utf8'));
+  const sidebar = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'sidebar.ejs'), 'utf8');
+  assert.strictEqual(manifest.start_url, '/dashboard');
+  assert.ok((sidebar.match(/href="\/dashboard" class=/g) || []).length >= 2);
 });
 
 if (process.exitCode) process.exit(process.exitCode);

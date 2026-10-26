@@ -2,7 +2,7 @@
   "name": "Al-Jaleel Academy SIS",
   "short_name": "Al-Jaleel Academy",
   "description": "School Information System for Al-Jaleel Academy",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#6366f1",

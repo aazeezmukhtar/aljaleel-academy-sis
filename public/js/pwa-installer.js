@@ -7,7 +7,17 @@
     // Only run in browser environments
     if (typeof window === 'undefined') return;
 
-    // Check if already in standalone / installed mode
+    // Register the service worker for installed and browser-launched sessions.
+    // This must happen before the install-prompt early returns below.
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+                .catch(err => console.debug('[PWA] SW registration notice:', err));
+        });
+    }
+
+    // Check if already in standalone / installed mode. Installed apps still
+    // need the service worker; only the install-prompt UI should be skipped.
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
                          window.navigator.standalone === true;
 
@@ -24,14 +34,6 @@
     }
 
     let deferredPrompt = null;
-
-    // Register service worker if not already registered
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js')
-                .catch(err => console.debug('[PWA] SW registration notice:', err));
-        });
-    }
 
     function createBanner({ isIOS = false }) {
         if (document.getElementById('pwa-install-banner')) return;

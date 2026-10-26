@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v8';
+const CACHE_NAME = 'aljaleel-sis-v9';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -19,7 +19,11 @@ const OFFLINE_PAGE_PATHS = new Set([
     '/attendance',
     '/students',
     '/attendance/take',
-    '/results/manage'
+    '/results',
+    '/results/manage',
+    '/academics',
+    '/calendar',
+    '/announcements'
 ]);
 
 const AUTH_PATHS = new Set([
@@ -36,6 +40,15 @@ function isStaticAsset(url) {
     return STATIC_ASSETS.some((asset) => {
         if (asset.startsWith('https://')) return url.href === asset;
         return url.origin === self.location.origin && url.pathname === asset;
+    });
+}
+
+// Ignore cache-busting query strings for same-origin static assets so
+// /css/main.css and /css/main.css?v=3.0 share the same offline cache entry.
+function staticCacheKey(url) {
+    return new Request(url.origin + url.pathname, {
+        method: 'GET',
+        credentials: 'same-origin'
     });
 }
 
@@ -107,15 +120,19 @@ self.addEventListener('fetch', (event) => {
     if (isStaticAsset(url)) {
         event.respondWith(
             caches.open(CACHE_NAME).then(async (cache) => {
-                const cached = await cache.match(request);
+                const key = url.origin === self.location.origin ? staticCacheKey(url) : request;
+                const cached = await cache.match(key);
                 const fetchPromise = fetch(request)
                     .then((res) => {
                         if (res && res.status === 200 && !res.redirected) {
-                            return cache.put(request, res.clone()).then(() => res);
+                            return cache.put(key, res.clone()).then(() => res);
                         }
                         return res;
                     })
-                    .catch(() => cached);
+                    .catch(() => cached || new Response('', {
+                        status: 503,
+                        headers: { 'Cache-Control': 'no-store' }
+                    }));
                 return cached || fetchPromise;
             })
         );
@@ -190,6 +207,8 @@ self.addEventListener('fetch', (event) => {
 
                     // Match results only when all context supplied by the request
                     // agrees with the cached class/subject/session/term.
+                    // Attendance must match the exact class AND date; never reuse another day's form.
+                    // Match results only when all context supplied by the request agrees.
                     if (url.pathname === '/results/manage') {
                         const requestedKeys = ['class_id', 'subject_id', 'session', 'term'];
                         const keys = await cache.keys();
@@ -223,6 +242,7 @@ self.addEventListener('fetch', (event) => {
 
                 // No generic dashboard fallback: it can falsely imply that a
                 // different module loaded successfully or expose another cached page.
+                // No generic dashboard fallback: another module must never display dashboard HTML.
                 return new Response('This page is not available offline. Reconnect to continue.', {
                     status: 503,
                     headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }

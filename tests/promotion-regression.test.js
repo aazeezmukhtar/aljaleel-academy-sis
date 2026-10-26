@@ -87,13 +87,16 @@ async function run() {
     }
 
     // Same-session individual promotion is valid, but must not reset the school's term.
-    await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'SameSession', 'Promotion', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-SAME-SESSION-' + token, sourceClass]);
+    // Use a dedicated source class so this scenario cannot alter other tests' student fixtures.
+    await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Same Session Source ' + token]);
+    const sameSessionSourceClass = (await db.get('SELECT id FROM classes WHERE school_id = ? AND name = ?', [schoolId, 'Same Session Source ' + token])).id;
+    await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'SameSession', 'Promotion', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-SAME-SESSION-' + token, sameSessionSourceClass]);
     const sameSessionStudent = (await db.get('SELECT id FROM students WHERE school_id = ? AND admission_number = ?', [schoolId, 'PROMO-SAME-SESSION-' + token])).id;
-    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [sameSessionStudent, sourceClass, '2025/2026']);
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [sameSessionStudent, sameSessionSourceClass, '2025/2026']);
     const sameSession = response();
     await controller.processPromotion({
       schoolId, xhr: true,
-      body: { source_session: '2025/2026', target_session: '2025/2026', mapping: { [sourceClass]: String(targetClass) } }
+      body: { source_session: '2025/2026', target_session: '2025/2026', mapping: { [sameSessionSourceClass]: String(targetClass) } }
     }, sameSession);
     assert.strictEqual(sameSession.statusCode, 200);
     assert.strictEqual(sameSession.data.success, true, 'Same-session individual promotion must remain allowed');

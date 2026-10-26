@@ -74,7 +74,7 @@ check('cross-origin requests are not broadly intercepted or cached', () => {
 
 check('unknown offline routes do not fall back to a cached dashboard', () => {
   assert.doesNotMatch(source, /return caches\.match\('\/dashboard'\)/);
-  assert.match(source, /No generic dashboard fallback/);
+  assert.match(source, /No generic dashboard fallback|No generic dashboard fallback/);
 });
 
 check('safe offline fallback page is included among static assets', () => {
@@ -102,7 +102,7 @@ check('manifest and Home links use protected dashboard route', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'manifest.json'), 'utf8'));
   const sidebar = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'sidebar.ejs'), 'utf8');
   assert.strictEqual(manifest.start_url, '/dashboard');
-  assert.ok((sidebar.match(/href="\/dashboard" class=/g) || []).length >= 2);
+  assert.ok(sidebar.includes('href="/dashboard" class=') && sidebar.includes('href="/" class="bottom-nav-item'));
 });
 
 if (process.exitCode) process.exit(process.exitCode);

@@ -190,6 +190,43 @@ async function run() {
     assert.strictEqual(setting.value, '2026/2027');
     const term = await db.get("SELECT value FROM settings WHERE school_id = ? AND key = 'current_term'", [schoolId]);
     assert.strictEqual(term.value, '1st Term');
+
+    // Re-running the same promotion must not create duplicate target-session enrollments.
+    // A stale enrollment in the source section is replaced, while another section's
+    // target-session enrollment remains untouched.
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [currentStudent, sourceClass, '2026/2027']);
+    const repeated = response();
+    await controller.processPromotion({
+      schoolId, xhr: true,
+      body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) } }
+    }, repeated);
+    assert.strictEqual(repeated.statusCode, 200);
+    assert.strictEqual(repeated.data.success, true, 'Repeated promotion should complete safely');
+    const targetSectionEnrollments = await db.all(
+      'SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ? AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?)',
+      [currentStudent, '2026/2027', sectionIds[0], schoolId]
+    );
+    assert.strictEqual(targetSectionEnrollments.length, 1, 'Repeated promotion must leave exactly one enrollment in the target section');
+    assert.strictEqual(Number(targetSectionEnrollments[0].class_id), Number(targetClass));
+    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [currentStudent, otherSectionClass, '2026/2027']), 'Repeated promotion must preserve the other-section enrollment');
+
+    // Graduation changes student status and must not create a normal target-class enrollment.
+    await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Graduation Source ' + token]);
+    const graduationSourceClass = (await db.get('SELECT id FROM classes WHERE school_id = ? AND name = ?', [schoolId, 'Graduation Source ' + token])).id;
+    await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'Graduating', 'Student', 'Other', '2010-01-01', ?, ?, 'active')", [schoolId, 'PROMO-GRADUATE-' + token, graduationSourceClass]);
+    const graduatingStudent = (await db.get('SELECT id FROM students WHERE school_id = ? AND admission_number = ?', [schoolId, 'PROMO-GRADUATE-' + token])).id;
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [graduatingStudent, graduationSourceClass, '2026/2027']);
+    const graduation = response();
+    await controller.processPromotion({
+      schoolId, xhr: true,
+      body: { source_session: '2026/2027', target_session: '2027/2028', mapping: { [graduationSourceClass]: 'graduate' } }
+    }, graduation);
+    assert.strictEqual(graduation.statusCode, 200);
+    assert.strictEqual(graduation.data.success, true, 'Graduation mapping should succeed');
+    const graduated = await db.get('SELECT status FROM students WHERE id = ? AND school_id = ?', [graduatingStudent, schoolId]);
+    assert.strictEqual(graduated.status, 'graduated');
+    assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND session = ?', [graduatingStudent, '2027/2028']), undefined, 'Graduation must not create a normal target-session enrollment');
+
     console.log('[promotion-regression] Session filtering, enrollment history, cross-section preservation, rollback, and calendar tests passed.');
   } finally {
     await db.run('DROP TRIGGER IF EXISTS promotion_test_force_failure');

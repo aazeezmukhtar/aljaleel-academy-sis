@@ -21,15 +21,19 @@ console.log('Database tests use disposable SQLite only; result scoring and atten
 
 for (const [file, label] of tests) {
   console.log('\n--- ' + label + ' ---');
+  const testEnv = {
+    ...process.env,
+    NODE_ENV: 'test',
+    DB_TYPE: 'sqlite',
+    DB_PATH: process.env.DB_PATH || '.test-database.sqlite',
+    SESSION_SECRET: 'ci-only-session-secret-that-is-long-enough-123456'
+  };
+  // Never pass production database connection strings to child test processes.
+  delete testEnv.DATABASE_URL;
+  delete testEnv.DB_POOL_URL;
   const result = spawnSync(process.execPath, [path.join(__dirname, file)], {
     stdio: 'inherit',
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      DB_TYPE: 'sqlite',
-      DB_PATH: process.env.DB_PATH || '.test-database.sqlite',
-      SESSION_SECRET: 'ci-only-session-secret-that-is-long-enough-123456'
-    },
+    env: testEnv,
     timeout: 30000
   });
   if (result.error || result.status !== 0) {

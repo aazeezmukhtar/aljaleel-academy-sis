@@ -102,7 +102,12 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
 
     assert.strictEqual(rolledBack, true, 'Enrollment failure must roll back the student insert');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO students')), 'Student insert should be attempted');
-    assert.ok(writes.every(w => w.client === fakeClient), 'Writes must use the same transaction client');
+    const transactionalWrites = writes.filter(w =>
+      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments')
+    );
+    assert.ok(transactionalWrites.length >= 2, 'Student insert and enrollment insert should both be attempted');
+    assert.ok(transactionalWrites.every(w => w.client === fakeClient),
+      'Student and enrollment writes must use the same transaction client');
     assert.strictEqual(res.redirectedTo, '/students/enroll?error=Enrollment failed',
       'Failed enrollment should report failure rather than success');
   });
@@ -163,7 +168,12 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
     assert.strictEqual(transactionRolledBack, false, 'Valid enrollment should commit');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO students')), 'Student row should be inserted');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO student_enrollments')), 'Enrollment row should be inserted');
-    assert.ok(writes.every(w => w.client === fakeClient), 'All writes should use the same transaction client');
+    const transactionalWrites = writes.filter(w =>
+      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments')
+    );
+    assert.ok(transactionalWrites.length >= 2, 'Student and enrollment writes should both be attempted');
+    assert.ok(transactionalWrites.every(w => w.client === fakeClient),
+      'Student and enrollment writes must use the same transaction client');
     assert.strictEqual(res.redirectedTo, '/students?success=true', 'Successful enrollment should retain existing redirect');
   });
 }

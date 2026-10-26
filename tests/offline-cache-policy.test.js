@@ -40,7 +40,15 @@ check('authenticated navigation caching requires successful, non-redirected HTML
 check('explicit attendance preparation fetches are cached and can be verified', () => {
   assert.match(source, /function isOfflinePreparationRequest\(request, url\)/);
   assert.match(source, /request\.headers\.get\('X-AcadMe-Offline-Prepare'\) === '1'/);
-  assert.match(source, /isOfflinePage\(request, url\) \|\| isOfflinePreparationRequest\(request, url\)/);
+  assert.match(source, /isOfflinePage\(request, url\) \|\| isPreparation/);
+  assert.match(source, /headers\.set\('X-AcadMe-Offline-Cached', '1'\)/);
+  assert.match(source, /cachedSuccessfully/);
+});
+
+check('attendance page relies on active-worker confirmation, not a hard-coded cache version', () => {
+  const attendanceIndex = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'index.ejs'), 'utf8');
+  assert.match(attendanceIndex, /X-AcadMe-Offline-Cached/);
+  assert.doesNotMatch(attendanceIndex, /caches\.open\(['"]aljaleel-sis-v\d+['"]\)/);
 });
 
 check('attendance fallback never reuses a different date for the same class', () => {

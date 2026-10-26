@@ -197,8 +197,6 @@
             let prepared = 0;
             const failures = [];
             setStatus('Preparing offline class lists for ' + date + '…');
-            const cache = await caches.open('aljaleel-sis-v8');
-
             for (let i = 0; i < classes.length; i += 3) {
                 if (thisRun !== runId) return;
                 const batch = classes.slice(i, i + 3);
@@ -212,9 +210,8 @@
                     if (!response.ok || response.redirected || !(response.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
                         throw new Error('Attendance page request failed or redirected to login.');
                     }
-                    const cached = await cache.match(new URL(url, window.location.origin).href);
-                    if (!cached) {
-                        throw new Error('The service worker did not confirm that the class sheet was cached.');
+                    if (response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
+                        throw new Error('The active service worker did not confirm that this class sheet was cached.');
                     }
                     return c;
                 }));
@@ -227,7 +224,7 @@
 
             if (thisRun !== runId) return;
             if (failures.length) {
-                setStatus('Offline preparation incomplete for ' + date + '. Could not prepare: ' + failures.join(', ') + '. Stay online and refresh.', true);
+                setStatus('Offline preparation incomplete for ' + date + '. Could not prepare: ' + failures.join(', ') + '. Keep internet connected, wait for the offline update to finish, then refresh and retry.', true);
             } else {
                 setStatus('Verified: offline class lists for ' + prepared + ' assigned classes are ready for ' + date + '.', false);
             }

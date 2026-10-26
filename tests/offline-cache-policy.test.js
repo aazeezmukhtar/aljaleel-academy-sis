@@ -102,7 +102,7 @@ check('manifest and Home links use protected dashboard route', () => {
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'public', 'manifest.json'), 'utf8'));
   const sidebar = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'sidebar.ejs'), 'utf8');
   assert.strictEqual(manifest.start_url, '/dashboard');
-  assert.ok(sidebar.includes('href="/dashboard" class=') && sidebar.includes('href="/" class="bottom-nav-item'));
+  assert.ok((sidebar.match(/href="\/dashboard" class=/g) || []).length >= 2);
 });
 
 if (process.exitCode) process.exit(process.exitCode);

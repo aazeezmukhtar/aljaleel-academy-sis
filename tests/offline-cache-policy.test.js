@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v7'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v8'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -31,10 +31,21 @@ check('only explicit approved paths qualify for offline page caching', () => {
   assert.match(source, /OFFLINE_PAGE_PATHS\.has\(url\.pathname\)/);
 });
 
-check('authenticated page caching requires a successful, non-redirected HTML navigation', () => {
+check('authenticated navigation caching requires successful, non-redirected HTML', () => {
   assert.match(source, /res\.status === 200 && !res\.redirected/);
   assert.match(source, /request\.mode === 'navigate'/);
   assert.match(source, /includes\('text\/html'\)/);
+});
+
+check('explicit attendance preparation fetches are cached and can be verified', () => {
+  assert.match(source, /function isOfflinePreparationRequest\(request, url\)/);
+  assert.match(source, /request\.headers\.get\('X-AcadMe-Offline-Prepare'\) === '1'/);
+  assert.match(source, /isOfflinePage\(request, url\) \|\| isOfflinePreparationRequest\(request, url\)/);
+});
+
+check('attendance fallback never reuses a different date for the same class', () => {
+  assert.match(source, /Attendance must match the exact class AND date/);
+  assert.doesNotMatch(source, /cachedUrl\.searchParams\.get\('class_id'\) === classId/);
 });
 
 check('login and logout routes are not served from offline page cache', () => {

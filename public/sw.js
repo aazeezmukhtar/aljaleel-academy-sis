@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v7';
+const CACHE_NAME = 'aljaleel-sis-v8';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -42,6 +42,13 @@ function isStaticAsset(url) {
 function isOfflinePage(request, url) {
     return request.mode === 'navigate' && url.origin === self.location.origin &&
         OFFLINE_PAGE_PATHS.has(url.pathname);
+}
+
+function isOfflinePreparationRequest(request, url) {
+    return request.method === 'GET' &&
+        url.origin === self.location.origin &&
+        url.pathname === '/attendance/take' &&
+        request.headers.get('X-AcadMe-Offline-Prepare') === '1';
 }
 
 async function clearPrivatePageCache(cache) {
@@ -131,7 +138,7 @@ self.addEventListener('fetch', (event) => {
                     await clearPrivatePageCache(cache);
                 }
 
-                if (isOfflinePage(request, url) &&
+                if ((isOfflinePage(request, url) || isOfflinePreparationRequest(request, url)) &&
                     res && res.status === 200 && !res.redirected &&
                     (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
                     try {
@@ -163,23 +170,8 @@ self.addEventListener('fetch', (event) => {
                     const exact = await cache.match(request);
                     if (exact) return exact;
 
-                    // Attendance sheets may be prepared with a date in the URL.
-                    // Match the same class while allowing the requested date to differ.
-                    if (url.pathname === '/attendance/take') {
-                        const classId = url.searchParams.get('class_id');
-                        if (classId) {
-                            const keys = await cache.keys();
-                            for (const key of keys) {
-                                const cachedUrl = new URL(key.url);
-                                if (cachedUrl.origin === url.origin &&
-                                    cachedUrl.pathname === url.pathname &&
-                                    cachedUrl.searchParams.get('class_id') === classId) {
-                                    const matched = await cache.match(key);
-                                    if (matched) return matched;
-                                }
-                            }
-                        }
-                    }
+                    // Attendance must match the exact class AND date. Reusing a
+                    // different date's cached form could save records against the wrong day.
 
                     // Match results only when all context supplied by the request
                     // agrees with the cached class/subject/session/term.

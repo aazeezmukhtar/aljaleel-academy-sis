@@ -19,7 +19,8 @@ const tests = [
   ['promotion-regression.test.js', 'Promotion history, session, rollback, and calendar regression tests'],
   ['promotion-preview-rendering.test.js', 'Promotion preview HTML escaping checks'],
   ['app-smoke.test.js', 'Application HTTP smoke test'],
-  ['offline-cache-policy.test.js', 'Offline service-worker cache privacy policy tests']
+  ['offline-cache-policy.test.js', 'Offline service-worker cache privacy policy tests'],
+  ['offline-sync-recovery.test.js', 'Offline sync lock recovery regression tests']
 ];
 
 let failed = 0;

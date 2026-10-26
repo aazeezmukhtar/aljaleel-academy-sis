@@ -78,7 +78,7 @@ async function all(sql, params = []) {
  * @param {string} sql 
  * @param {Array} params 
  */
-async function get(sql, params = []) {
+async function get(sql, params = [], client = null) {
     if (DB_TYPE === 'postgres') {
         let counter = 1;
         let pgSql = sql.replace(/\?/g, () => `$${counter++}`);
@@ -90,7 +90,8 @@ async function get(sql, params = []) {
             if (p === undefined) return null;
             return p;
         });
-        const result = await pool.query(pgSql, pgParams);
+        const queryExecutor = client || pool;
+        const result = await queryExecutor.query(pgSql, pgParams);
         return result.rows[0];
     } else {
         return sqliteDb.prepare(sql).get(params);

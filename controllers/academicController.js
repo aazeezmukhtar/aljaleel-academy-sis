@@ -97,6 +97,22 @@ const deleteClass = async (req, res) => {
             return res.status(404).send('Class not found');
         }
 
+        // Preserve academic history: a class with enrollment or attendance
+        // records cannot be permanently deleted.
+        const enrollmentHistory = await db.get(
+            'SELECT COUNT(*) AS count FROM student_enrollments WHERE class_id = ?',
+            [id]
+        );
+        const attendanceHistory = await db.get(
+            'SELECT COUNT(*) AS count FROM attendance WHERE class_id = ?',
+            [id]
+        );
+        if (Number(enrollmentHistory?.count || 0) > 0 || Number(attendanceHistory?.count || 0) > 0) {
+            return res.status(409).send(
+                'This class has historical enrollment or attendance records and cannot be deleted. Preserve the records and stop using the class instead.'
+            );
+        }
+
         await db.transaction(async () => {
             await db.run(`
                 UPDATE students 

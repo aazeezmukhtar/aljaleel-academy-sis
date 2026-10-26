@@ -245,31 +245,7 @@ const previewPromotion = async (req, res) => {
         `, [schoolId]);
 
         const classMap = {};
-        classes.forEach(c => { classMap[Number(c.id)] = c; });
-
-        // Validate mappings before previewing so the dry run cannot silently
-        // skip invalid source classes or display an unknown target class.
-        for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
-            if (!targetId || targetId === 'none') continue;
-
-            const classId = Number(classIdStr);
-            if (!/^\d+$/.test(String(classIdStr)) || !Number.isInteger(classId) || !classMap[classId]) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'Promotion mapping contains an invalid source class.'
-                });
-            }
-
-            if (targetId !== 'graduate') {
-                const targetClassId = Number(targetId);
-                if (!/^\d+$/.test(String(targetId)) || !Number.isInteger(targetClassId) || !classMap[targetClassId]) {
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Promotion mapping contains an invalid target class.'
-                    });
-                }
-            }
-        }
+        classes.forEach(c => { classMap[c.id] = c; });
 
         const preview = [];
         let totalStudents = 0;
@@ -277,11 +253,12 @@ const previewPromotion = async (req, res) => {
 
         for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
             if (!targetId || targetId === 'none') continue;
-            const classId = Number(classIdStr);
+            const classId = parseInt(classIdStr, 10);
             const sourceClass = classMap[classId];
+            if (!sourceClass) continue;
 
             const isGraduate = targetId === 'graduate';
-            const targetClass = isGraduate ? null : classMap[Number(targetId)];
+            const targetClass = isGraduate ? null : classMap[parseInt(targetId, 10)];
 
             const students = await db.all(`
                 SELECT s.id, s.admission_number, s.first_name || ' ' || s.last_name as name

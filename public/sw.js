@@ -57,6 +57,37 @@ function isOfflinePage(request, url) {
         OFFLINE_PAGE_PATHS.has(url.pathname);
 }
 
+function matchesOfflineEntryContext(requestedUrl, cachedUrl) {
+    if (requestedUrl.origin !== cachedUrl.origin ||
+        requestedUrl.pathname !== cachedUrl.pathname) {
+        return false;
+    }
+
+    let requiredKeys;
+    if (requestedUrl.pathname === '/attendance/take') {
+        requiredKeys = ['class_id', 'date'];
+    } else if (requestedUrl.pathname === '/results/manage') {
+        requiredKeys = ['class_id', 'subject_id'];
+    } else {
+        return false;
+    }
+
+    // Never guess the missing context. In particular, a results URL without
+    // class and subject must not match an arbitrary cached grade sheet.
+    if (requiredKeys.some((key) => {
+        const value = requestedUrl.searchParams.get(key);
+        return value === null || value.trim() === '';
+    })) {
+        return false;
+    }
+
+    // Query parameter order is irrelevant, but every context parameter must
+    // agree, including session/term when present (or absent) in either URL.
+    return ['class_id', 'date', 'subject_id', 'session', 'term'].every((key) =>
+        requestedUrl.searchParams.get(key) === cachedUrl.searchParams.get(key)
+    );
+}
+
 function isOfflinePreparationRequest(request, url) {
     return request.method === 'GET' &&
         url.origin === self.location.origin &&
@@ -202,27 +233,15 @@ self.addEventListener('fetch', (event) => {
                     const exact = await cache.match(request);
                     if (exact) return exact;
 
-                    // Attendance must match the exact class AND date. Reusing a
-                    // different date's cached form could save records against the wrong day.
-
-                    // Match results only when all context supplied by the request
-                    // agrees with the cached class/subject/session/term.
-                    // Attendance must match the exact class AND date; never reuse another day's form.
-                    // Match results only when all context supplied by the request agrees.
-                    if (url.pathname === '/results/manage') {
-                        const requestedKeys = ['class_id', 'subject_id', 'session', 'term'];
+                    // Match only the same entry context. Query parameter order may
+                    // differ, but class/date or class/subject/session/term must not.
+                    if (url.pathname === '/attendance/take' || url.pathname === '/results/manage') {
                         const keys = await cache.keys();
                         for (const key of keys) {
                             const cachedUrl = new URL(key.url);
-                            if (cachedUrl.origin !== url.origin || cachedUrl.pathname !== url.pathname) continue;
-                            const matchesContext = requestedKeys.every((name) => {
-                                const requestedValue = url.searchParams.get(name);
-                                return requestedValue === null || cachedUrl.searchParams.get(name) === requestedValue;
-                            });
-                            if (matchesContext) {
-                                const matched = await cache.match(key);
-                                if (matched) return matched;
-                            }
+                            if (!matchesOfflineEntryContext(url, cachedUrl)) continue;
+                            const matched = await cache.match(key);
+                            if (matched) return matched;
                         }
                     }
 

@@ -190,6 +190,8 @@ self.addEventListener('fetch', (event) => {
 
                     // Match results only when all context supplied by the request
                     // agrees with the cached class/subject/session/term.
+                    // Attendance must match the exact class AND date; never reuse another day's form.
+                    // Match results only when all context supplied by the request agrees.
                     if (url.pathname === '/results/manage') {
                         const requestedKeys = ['class_id', 'subject_id', 'session', 'term'];
                         const keys = await cache.keys();
@@ -223,6 +225,7 @@ self.addEventListener('fetch', (event) => {
 
                 // No generic dashboard fallback: it can falsely imply that a
                 // different module loaded successfully or expose another cached page.
+                // No generic dashboard fallback: another module must never display dashboard HTML.
                 return new Response('This page is not available offline. Reconnect to continue.', {
                     status: 503,
                     headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }

@@ -346,7 +346,14 @@ const processPromotion = async (req, res) => {
             }
         }
 
-        let advancedSession = target_session || null;
+        const hasActionableMapping = Object.values(mapping || {}).some(
+            targetId => targetId === 'graduate' || (targetId && targetId !== 'none')
+        );
+        if (!hasActionableMapping) {
+            const message = 'No promotion mappings were selected; the academic calendar was not changed.';
+            if (isAjax) return res.json({ success: true, message, calendarAdvanced: false });
+            return res.redirect(`/settings/promotion?message=${encodeURIComponent(message)}`);
+        }
 
         await db.transaction(async () => {
             for (const [classIdStr, targetId] of Object.entries(mapping || {})) {

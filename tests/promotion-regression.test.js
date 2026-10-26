@@ -86,6 +86,38 @@ async function run() {
       assert.strictEqual(unchangedCalendar.current_term, '2nd Term');
     }
 
+    // Invalid source class IDs must be rejected before any student or calendar writes.
+    const invalidSource = response();
+    await controller.processPromotion({
+      schoolId, xhr: true,
+      body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { '999999999': String(targetClass) } }
+    }, invalidSource);
+    assert.strictEqual(invalidSource.statusCode, 400);
+    assert.strictEqual(invalidSource.data.success, false);
+    assert.match(invalidSource.data.message, /invalid source class/i);
+    const sourceUnchanged = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [currentStudent, schoolId]);
+    assert.strictEqual(Number(sourceUnchanged.current_class_id), Number(sourceClass));
+    const sourceCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
+    assert.strictEqual(sourceCalendar.current_session, '2025/2026');
+    assert.strictEqual(sourceCalendar.current_term, '2nd Term');
+
+    // Empty and explicit "none" mappings are no-ops: they must not advance the calendar.
+    for (const noOpMapping of [{}, { [sourceClass]: 'none' }]) {
+      const noOp = response();
+      await controller.processPromotion({
+        schoolId, xhr: true,
+        body: { source_session: '2025/2026', target_session: '2026/2027', mapping: noOpMapping }
+      }, noOp);
+      assert.strictEqual(noOp.statusCode, 200);
+      assert.strictEqual(noOp.data.success, true);
+      assert.strictEqual(noOp.data.calendarAdvanced, false);
+      const unchanged = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
+      assert.strictEqual(unchanged.current_session, '2025/2026');
+      assert.strictEqual(unchanged.current_term, '2nd Term');
+      const unchangedStudent = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [currentStudent, schoolId]);
+      assert.strictEqual(Number(unchangedStudent.current_class_id), Number(sourceClass));
+    }
+
     // Force the target enrollment INSERT to fail after earlier promotion writes.
     // This exercises transaction rollback without relying on SQLite FK settings.
     await db.run("CREATE TRIGGER promotion_test_force_failure BEFORE INSERT ON student_enrollments WHEN NEW.session = '2026/2027' AND NEW.class_id = " + Number(targetClass) + " BEGIN SELECT RAISE(ABORT, 'intentional promotion regression test failure'); END");

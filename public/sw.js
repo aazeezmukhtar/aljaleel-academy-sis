@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v6';
+const CACHE_NAME = 'aljaleel-sis-v7';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -11,14 +11,48 @@ const STATIC_ASSETS = [
     'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css'
 ];
 
-// Pages to cache for offline shell
-const PAGE_CACHE = [
+// Only these authenticated pages may be retained for intentional offline workflows.
+// Never cache arbitrary navigations, login pages, redirects, or server error pages.
+const OFFLINE_PAGE_PATHS = new Set([
     '/dashboard',
     '/attendance',
-    '/results/manage',
     '/students',
-    '/offline-unavailable.html'
-];
+    '/attendance/take',
+    '/results/manage'
+]);
+
+const AUTH_PATHS = new Set([
+    '/auth/login',
+    '/auth/student-login'
+]);
+
+const LOGOUT_PATHS = new Set([
+    '/auth/logout',
+    '/auth/student-logout'
+]);
+
+function isStaticAsset(url) {
+    return STATIC_ASSETS.some((asset) => {
+        if (asset.startsWith('https://')) return url.href === asset;
+        return url.origin === self.location.origin && url.pathname === asset;
+    });
+}
+
+function isOfflinePage(request, url) {
+    return request.mode === 'navigate' && url.origin === self.location.origin &&
+        OFFLINE_PAGE_PATHS.has(url.pathname);
+}
+
+async function clearPrivatePageCache(cache) {
+    const keys = await cache.keys();
+    await Promise.all(keys.map(async (key) => {
+        const keyUrl = new URL(key.url);
+        if (keyUrl.origin === self.location.origin &&
+            (OFFLINE_PAGE_PATHS.has(keyUrl.pathname) || AUTH_PATHS.has(keyUrl.pathname))) {
+            await cache.delete(key);
+        }
+    }));
+}
 
 // ─── Install ──────────────────────────────────────────────────────────────
 
@@ -26,16 +60,11 @@ self.addEventListener('install', (event) => {
     self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then(async (cache) => {
-            // Cache static assets (fail-safe: don't let one failure block install)
+            // Cache only static assets during installation. Authenticated HTML is
+            // cached only after a successful, explicit visit to an approved page.
             await Promise.allSettled(
-                STATIC_ASSETS.map(url =>
-                    cache.add(url).catch(err => console.warn('[SW] Could not cache:', url, err))
-                )
-            );
-            // Cache app pages
-            await Promise.allSettled(
-                PAGE_CACHE.map(url =>
-                    cache.add(url).catch(err => console.warn('[SW] Could not cache page:', url, err))
+                STATIC_ASSETS.map((asset) =>
+                    cache.add(asset).catch((err) => console.warn('[SW] Could not cache asset:', asset, err))
                 )
             );
         })
@@ -48,13 +77,11 @@ self.addEventListener('activate', (event) => {
     event.waitUntil(
         caches.keys().then((keys) =>
             Promise.all(
-                keys
-                    .filter((key) => key !== CACHE_NAME)
-                    .map((key) => caches.delete(key))
+                keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
             )
         )
     );
-    self.clients.claim();
+    event.waitUntil(self.clients.claim());
 });
 
 // ─── Fetch ────────────────────────────────────────────────────────────────
@@ -63,19 +90,20 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Never intercept non-GET or cross-origin API calls
+    // Do not intercept writes. Offline form saves are handled by the application
+    // queue, not by the service worker's HTTP cache.
     if (request.method !== 'GET') return;
 
-    // Stale-while-revalidate for static assets + CDN
-    const isStatic = STATIC_ASSETS.some(a => request.url.includes(a) || url.pathname === a);
-    if (isStatic || url.origin !== self.location.origin) {
+    // Only the explicitly listed static assets may use the asset cache.
+    // Do not turn every third-party GET request into a cached response.
+    if (isStaticAsset(url)) {
         event.respondWith(
             caches.open(CACHE_NAME).then(async (cache) => {
                 const cached = await cache.match(request);
                 const fetchPromise = fetch(request)
                     .then((res) => {
-                        if (res && res.status === 200) {
-                            cache.put(request, res.clone());
+                        if (res && res.status === 200 && !res.redirected) {
+                            return cache.put(request, res.clone()).then(() => res);
                         }
                         return res;
                     })
@@ -86,44 +114,65 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Network-first for all app pages
+    // Leave all other cross-origin requests to the browser.
+    if (url.origin !== self.location.origin) return;
+
     event.respondWith(
         fetch(request)
             .then(async (res) => {
-                // Cache successful navigation responses for offline fallback
-                if (res && res.status === 200 && !res.redirected && (request.mode === 'navigate' || url.pathname === '/attendance/take' || url.pathname === '/results/manage')) {
-                    // Wait for the cache write so the preparation fetch does not finish
-                    // before the offline copy has actually been stored.
+                const redirectedToAuth = res.redirected &&
+                    [...AUTH_PATHS].some((path) => new URL(res.url).pathname === path);
+
+                // A login screen or a redirect to login means the prior local
+                // private-page snapshot must not remain available to the next user.
+                if (AUTH_PATHS.has(url.pathname) || LOGOUT_PATHS.has(url.pathname) || redirectedToAuth) {
+                    const cache = await caches.open(CACHE_NAME);
+                    await clearPrivatePageCache(cache);
+                }
+
+                if (isOfflinePage(request, url) &&
+                    res && res.status === 200 && !res.redirected &&
+                    (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
                     try {
                         const cache = await caches.open(CACHE_NAME);
-                        // Use a stable cache key: the preparation fetch carries a custom
-                        // header, while a real page navigation does not. Avoid making
-                        // the offline entry depend on that request-only header.
                         const cacheKey = new Request(request.url, {
                             method: 'GET',
                             credentials: 'same-origin'
                         });
                         await cache.put(cacheKey, res.clone());
                     } catch (cacheError) {
-                        console.warn('[SW] Could not cache page response:', url.pathname, cacheError);
+                        console.warn('[SW] Could not cache approved offline page:', url.pathname, cacheError);
                     }
                 }
                 return res;
             })
-            .catch(() => {
-                // Offline fallback
-                return caches.match(request).then(async (cached) => {
-                    if (cached) return cached;
+            .catch(async () => {
+                const cache = await caches.open(CACHE_NAME);
 
-                    // Special handling for /attendance/take: match ignoring date parameter
+                // Never serve cached authenticated pages for login/logout routes.
+                if (AUTH_PATHS.has(url.pathname) || LOGOUT_PATHS.has(url.pathname)) {
+                    return new Response('Sign-in and sign-out require an internet connection.', {
+                        status: 503,
+                        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+                    });
+                }
+
+                // Only approved pages can be served from the private offline cache.
+                if (isOfflinePage(request, url)) {
+                    const exact = await cache.match(request);
+                    if (exact) return exact;
+
+                    // Attendance sheets may be prepared with a date in the URL.
+                    // Match the same class while allowing the requested date to differ.
                     if (url.pathname === '/attendance/take') {
                         const classId = url.searchParams.get('class_id');
                         if (classId) {
-                            const cache = await caches.open(CACHE_NAME);
                             const keys = await cache.keys();
                             for (const key of keys) {
                                 const cachedUrl = new URL(key.url);
-                                if (cachedUrl.pathname === '/attendance/take' && cachedUrl.searchParams.get('class_id') === classId) {
+                                if (cachedUrl.origin === url.origin &&
+                                    cachedUrl.pathname === url.pathname &&
+                                    cachedUrl.searchParams.get('class_id') === classId) {
                                     const matched = await cache.match(key);
                                     if (matched) return matched;
                                 }
@@ -131,13 +180,11 @@ self.addEventListener('fetch', (event) => {
                         }
                     }
 
-                    // Never replace an attendance/result entry request with the dashboard.
-                    // A dashboard response looks like a successful navigation but loses the
-                    // selected class/subject context and hides the actual offline cache miss.
-                    if (url.pathname === '/attendance/take' || url.pathname === '/results/manage') {
-                        const cache = await caches.open(CACHE_NAME);
-                        const keys = await cache.keys();
+                    // Match results only when all context supplied by the request
+                    // agrees with the cached class/subject/session/term.
+                    if (url.pathname === '/results/manage') {
                         const requestedKeys = ['class_id', 'subject_id', 'session', 'term'];
+                        const keys = await cache.keys();
                         for (const key of keys) {
                             const cachedUrl = new URL(key.url);
                             if (cachedUrl.origin !== url.origin || cachedUrl.pathname !== url.pathname) continue;
@@ -150,24 +197,27 @@ self.addEventListener('fetch', (event) => {
                                 if (matched) return matched;
                             }
                         }
-                        const fallback = await cache.match('/offline-unavailable.html');
-                        if (fallback) {
-                            return new Response(await fallback.text(), {
-                                status: 503,
-                                statusText: 'Offline entry data unavailable',
-                                headers: { 'Content-Type': 'text/html; charset=utf-8' }
-                            });
-                        }
-                        return new Response('This entry page is not available offline yet. Reconnect and open this class/subject once to prepare it for offline use.', {
-                            status: 503,
-                            headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-                        });
                     }
 
-                    // For other navigation requests, keep the existing dashboard fallback.
-                    if (request.mode === 'navigate') {
-                        return caches.match('/dashboard');
+                    const fallback = await cache.match('/offline-unavailable.html');
+                    if (fallback) {
+                        return new Response(await fallback.text(), {
+                            status: 503,
+                            statusText: 'Offline entry data unavailable',
+                            headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }
+                        });
                     }
+                    return new Response('This page is not available offline. Reconnect and open it before trying again.', {
+                        status: 503,
+                        headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+                    });
+                }
+
+                // No generic dashboard fallback: it can falsely imply that a
+                // different module loaded successfully or expose another cached page.
+                return new Response('This page is not available offline. Reconnect to continue.', {
+                    status: 503,
+                    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
                 });
             })
     );
@@ -179,9 +229,7 @@ self.addEventListener('sync', (event) => {
     if (event.tag === 'sync-nexus') {
         event.waitUntil(
             self.clients.matchAll().then((clients) => {
-                clients.forEach((client) =>
-                    client.postMessage({ type: 'TRIGGER_SYNC' })
-                );
+                clients.forEach((client) => client.postMessage({ type: 'TRIGGER_SYNC' }));
             })
         );
     }

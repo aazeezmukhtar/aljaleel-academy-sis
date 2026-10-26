@@ -138,9 +138,11 @@ self.addEventListener('fetch', (event) => {
                     await clearPrivatePageCache(cache);
                 }
 
-                if ((isOfflinePage(request, url) || isOfflinePreparationRequest(request, url)) &&
+                const isPreparation = isOfflinePreparationRequest(request, url);
+                if ((isOfflinePage(request, url) || isPreparation) &&
                     res && res.status === 200 && !res.redirected &&
                     (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+                    let cachedSuccessfully = false;
                     try {
                         const cache = await caches.open(CACHE_NAME);
                         const cacheKey = new Request(request.url, {
@@ -148,8 +150,21 @@ self.addEventListener('fetch', (event) => {
                             credentials: 'same-origin'
                         });
                         await cache.put(cacheKey, res.clone());
+                        cachedSuccessfully = true;
                     } catch (cacheError) {
                         console.warn('[SW] Could not cache approved offline page:', url.pathname, cacheError);
+                    }
+
+                    // Confirm preparation only after this active worker has stored
+                    // the exact class/date response in its own cache.
+                    if (isPreparation && cachedSuccessfully) {
+                        const headers = new Headers(res.headers);
+                        headers.set('X-AcadMe-Offline-Cached', '1');
+                        return new Response(res.body, {
+                            status: res.status,
+                            statusText: res.statusText,
+                            headers
+                        });
                     }
                 }
                 return res;

@@ -240,130 +240,107 @@ const enrollStudent = async (req, res) => {
     }
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const {
-        first_name,
-        last_name,
-        gender,
-        dob,
-        current_class_id,
-        phone,
-        email,
-        address,
-        parent_phone,
-        parent_address,
-        parent_email,
-        parent_phone_alt
+        first_name, last_name, gender, dob, current_class_id,
+        phone, email, address, parent_phone, parent_address,
+        parent_email, parent_phone_alt
     } = req.body;
-    
-    const admission_number = await generateUniqueID();
-    const passport_photo_path = req.file ? await uploadFile(req.file, 'students') : null;
 
     try {
         const allSections = await db.all(
             'SELECT * FROM sections WHERE school_id = ? ORDER BY id ASC',
             [schoolId]
         );
+        const schoolClasses = await db.all(
+            'SELECT id, section_id FROM classes WHERE school_id = ?',
+            [schoolId]
+        );
 
-        // Collect class assignments across sections
-        const enrolledClassIds = [];
-        let primary_class_id = current_class_id || null;
+        const classById = new Map(schoolClasses.map(cls => [Number(cls.id), cls]));
+        const sectionIds = new Set(allSections.map(section => Number(section.id)));
+        const assignments = [];
 
-        for (const sec of allSections) {
-            const classVal = req.body[`section_${sec.id}_class_id`] || 
-                             (sec.name === 'Academy' ? req.body.academy_class_id : null) || 
-                             (sec.name === 'Tahfeez' ? req.body.tahfeez_class_id : null);
-            if (classVal) {
-                enrolledClassIds.push({ sectionId: sec.id, classId: parseInt(classVal, 10) });
-                if (!primary_class_id) primary_class_id = classVal;
+        // Reject unknown sections, invalid class IDs, and classes assigned to
+        // a different section before generating uploads or writing student data.
+        for (const [field, rawValue] of Object.entries(req.body || {})) {
+            const sectionField = field.match(/^section_(\d+)_class_id$/);
+            if (!sectionField || rawValue === undefined || rawValue === null || String(rawValue).trim() === '') continue;
+            const sectionId = Number(sectionField[1]);
+            const classId = Number(rawValue);
+            if (!sectionIds.has(sectionId) || !Number.isInteger(classId) || classId <= 0) {
+                return res.redirect('/students/enroll?error=Invalid class assignment');
             }
+            const cls = classById.get(classId);
+            if (!cls || Number(cls.section_id) !== sectionId) {
+                return res.redirect('/students/enroll?error=Invalid class assignment');
+            }
+            assignments.push({ sectionId, classId: cls.id });
         }
 
-        // If a primary class was selected from the main dropdown and not already collected, add it
-        if (primary_class_id && !enrolledClassIds.some(item => item.classId === parseInt(primary_class_id, 10))) {
-            const cls = await db.get(
-                "SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?",
-                [primary_class_id, schoolId]
-            );
-            if (cls) {
-                enrolledClassIds.push({
-                    sectionId: cls.section_id || null,
-                    classId: cls.id
-                });
+        // Backward-compatible single-class form when section selectors are not present.
+        if (assignments.length === 0 && current_class_id !== undefined &&
+            current_class_id !== null && String(current_class_id).trim() !== '') {
+            const classId = Number(current_class_id);
+            if (!Number.isInteger(classId) || classId <= 0 || !classById.has(classId)) {
+                return res.redirect('/students/enroll?error=Invalid class assignment');
             }
+            const cls = classById.get(classId);
+            assignments.push({ sectionId: cls.section_id || null, classId: cls.id });
         }
 
+        // Resolve and validate academic context before beginning any writes.
+        const assignmentPlans = [];
+        for (const assignment of assignments) {
+            const context = await getAcademicContext(assignment.classId, schoolId);
+            const session = context && context.session;
+            const term = context && context.term;
+            if (!session || !term) {
+                throw new Error('Academic session or term is not configured for the selected class.');
+            }
+            assignmentPlans.push({ ...assignment, session, term });
+        }
+
+        const admission_number = await generateUniqueID();
+        const passport_photo_path = req.file ? await uploadFile(req.file, 'students') : null;
         const hashedPassword = await bcrypt.hash(admission_number, 10);
         const sql = `
             INSERT INTO students (
-                school_id, first_name, last_name, gender, dob, current_class_id, 
-                phone, email, address, parent_phone, parent_address, parent_email, parent_phone_alt, 
+                school_id, first_name, last_name, gender, dob, current_class_id,
+                phone, email, address, parent_phone, parent_address, parent_email, parent_phone_alt,
                 admission_number, passport_photo_path, password, status
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active')
         `;
-        await db.run(sql, [
-            schoolId, first_name, last_name, gender, dob, primary_class_id,
+        const primaryClassId = assignmentPlans.length ? assignmentPlans[0].classId : null;
+        const studentParams = [
+            schoolId, first_name, last_name, gender, dob || null, primaryClassId,
             phone || null, email || null, address || null,
-            parent_phone || null, parent_address || null,
-            parent_email || null, parent_phone_alt || null,
+            parent_phone || null, parent_address || null, parent_email || null, parent_phone_alt || null,
             admission_number, passport_photo_path, hashedPassword
-        ]);
-        
-        const studentRow = await db.get(
-            "SELECT id FROM students WHERE admission_number = ? AND school_id = ?",
-            [admission_number, schoolId]
-        );
-        const studentId = studentRow.id;
-        
-        const sessionSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'").catch(() => null);
-        const termSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_term'").catch(() => null);
-        const activeSession = (sessionSettingRow && sessionSettingRow.value) || (await getCurrentSession(schoolId)) || '2025/2026';
-        const activeTerm = (termSettingRow && termSettingRow.value) || (await getCurrentTerm(schoolId)) || '1st Term';
+        ];
 
-        // Map sections by id for fast calendar lookup
-        const sectionMap = new Map();
-        allSections.forEach(s => sectionMap.set(s.id, s));
+        await db.transaction(async (client = null) => {
+            await db.run(sql, studentParams, client);
+            const studentRow = await db.get(
+                'SELECT id FROM students WHERE admission_number = ? AND school_id = ?',
+                [admission_number, schoolId],
+                client
+            );
+            if (!studentRow) throw new Error('Student record could not be verified after insertion.');
 
-        for (const item of enrolledClassIds) {
-            // Determine exact academic context (session & term) strictly from the class's section
-            let sessionToUse = null;
-            let termToUse = null;
-
-            if (item.sectionId && sectionMap.has(item.sectionId)) {
-                const sec = sectionMap.get(item.sectionId);
-                sessionToUse = sec.current_session;
-                termToUse = sec.current_term;
-            } else if (item.classId) {
-                const cls = await db.get("SELECT section_id FROM classes WHERE id = ?", [item.classId]).catch(() => null);
-                if (cls && cls.section_id && sectionMap.has(cls.section_id)) {
-                    const sec = sectionMap.get(cls.section_id);
-                    sessionToUse = sec.current_session;
-                    termToUse = sec.current_term;
-                }
-            }
-
-            // Fallback to active school settings only if section calendar is unset
-            sessionToUse = sessionToUse || activeSession;
-            termToUse = termToUse || activeTerm;
-
-            try {
+            for (const plan of assignmentPlans) {
                 await db.run(
-                    "INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)",
-                    [studentId, item.classId, sessionToUse, termToUse]
+                    'INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)',
+                    [studentRow.id, plan.classId, plan.session, plan.term],
+                    client
                 );
-            } catch (enrollInsertErr) {
-                // Fallback for pre-migration table without term column or duplicate
-                await db.run(
-                    "INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)",
-                    [studentId, item.classId, sessionToUse]
-                ).catch(() => {});
             }
-        }
-        
+        });
+
         logAction(req.session.staff.id, 'ENROLL_STUDENT', 'STUDENT', { first_name, last_name }, req.ip);
-        res.redirect('/students?success=true');
+        return res.redirect('/students?success=true');
     } catch (err) {
         console.error('Enroll Error:', err);
-        res.redirect('/students/enroll?error=Enrollment failed');
+        return res.redirect('/students/enroll?error=Enrollment failed');
     }
 };
 

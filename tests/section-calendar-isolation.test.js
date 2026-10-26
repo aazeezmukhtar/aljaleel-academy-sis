@@ -47,7 +47,7 @@ async function testGlobalSettingsDoNotOverwriteSectionCalendars() {
     assert.ok(res.redirected.includes('success=Settings updated successfully'));
     assert.ok(calls.some(c => c.sql.includes('UPDATE schools SET') && c.sql.includes('current_session')));
     assert.ok(!calls.some(c => c.sql.includes('UPDATE sections')), 'Global settings must not overwrite section-specific calendars');
-    assert.ok(calls.some(c => c.sql.includes("settings") && c.sql.includes('current_session')));
+    assert.ok(calls.some(c => c.sql.includes('INSERT INTO settings') && c.params.includes('current_session')));
   });
 }
 

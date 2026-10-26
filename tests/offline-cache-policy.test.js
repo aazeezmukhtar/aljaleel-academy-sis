@@ -51,9 +51,78 @@ check('attendance page relies on active-worker confirmation, not a hard-coded ca
   assert.doesNotMatch(attendanceIndex, /caches\.open\(['"]aljaleel-sis-v\d+['"]\)/);
 });
 
-check('attendance fallback never reuses a different date for the same class', () => {
-  assert.match(source, /Attendance must match the exact class AND date/);
-  assert.doesNotMatch(source, /cachedUrl\.searchParams\.get\('class_id'\) === classId/);
+check('attendance and results fallback use explicit context matching', () => {
+  assert.match(source, /matchesOfflineEntryContext\(url, cachedUrl\)/);
+  assert.doesNotMatch(source, /Attendance must match the exact class AND date/);
+});
+
+check('entry cache matching requires class/date for attendance and class/subject for results', () => {
+  assert.match(source, /function matchesOfflineEntryContext\(requestedUrl, cachedUrl\)/);
+  assert.match(source, /requiredKeys = \['class_id', 'date'\]/);
+  assert.match(source, /requiredKeys = \['class_id', 'subject_id', 'session', 'term'\]/);
+  assert.match(source, /requestedUrl\.searchParams\.get\(key\) === cachedUrl\.searchParams\.get\(key\)/);
+});
+
+check('entry cache context matcher behaves safely for actual URL combinations', () => {
+  const start = source.indexOf('function matchesOfflineEntryContext(requestedUrl, cachedUrl) {');
+  assert.notStrictEqual(start, -1, 'matcher function must exist');
+  const end = source.indexOf('\n}\n', start);
+  assert.notStrictEqual(end, -1, 'matcher function must close');
+  const matcherSource = source.slice(start, end + 2);
+  const matchesOfflineEntryContext = new Function('URL', matcherSource + '\nreturn matchesOfflineEntryContext;')(URL);
+  const url = (value) => new URL(value, 'https://acadme.example');
+
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/attendance/take?class_id=4&date=2026-10-26'), url('/attendance/take?date=2026-10-26&class_id=4')),
+    true,
+    'query parameter order should not matter'
+  );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/attendance/take?class_id=4&date=2026-10-26'), url('/attendance/take?class_id=4&date=2026-10-25')),
+    false,
+    'attendance must not reuse another date'
+  );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/attendance/take?class_id=5&date=2026-10-26'), url('/attendance/take?class_id=4&date=2026-10-26')),
+    false,
+    'attendance must not reuse another class'
+  );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/results/manage?class_id=4&subject_id=2&session=2026%2F2027&term=1st%20Term'), url('/results/manage?term=1st%20Term&subject_id=2&class_id=4&session=2026%2F2027')),
+    true,
+    'result context should match when only parameter order differs'
+  );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/results/manage?class_id=4&subject_id=2'), url('/results/manage?class_id=4&subject_id=3')),
+    false,
+    'results must not reuse another subject'
+  );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/results/manage?class_id=4&subject_id=2&session=2026%2F2027'), url('/results/manage?class_id=4&subject_id=2&session=2025%2F2026')),
+    false,
+    'results must not reuse another session'
+  );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/results/manage?class_id=4'), url('/results/manage?class_id=4&subject_id=2')),
+    false,
+    'results without a subject must not match an arbitrary sheet'
+  );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/results/manage?class_id=4&subject_id=2'), url('/results/manage?class_id=4&subject_id=2&term=2nd%20Term')),
+    false,
+    'a missing requested term must not match a cached sheet with a term'
+  );
+  assert.strictEqual(
+    matchesOfflineEntryContext(url('/results/manage?class_id=4&subject_id=2&term=1st%20Term'), url('/results/manage?class_id=4&subject_id=2&term=1st%20Term')),
+    false,
+    'results without an explicit session must not be considered fully prepared'
+  );
+});
+
+check('exact cached entry pages are not served when required context is missing', () => {
+  assert.match(source, /const hasRequiredEntryContext = url\.pathname === '\/attendance\/take'/);
+  assert.match(source, /\['class_id', 'subject_id', 'session', 'term'\]\.every/);
+  assert.match(source, /if \(exact && hasRequiredEntryContext\) return exact/);
 });
 
 check('login and logout routes are not served from offline page cache', () => {

@@ -30,6 +30,8 @@ jobs:
         run: node tests/fixtures/prepare-sqlite.js
       - name: Run recovery and schema smoke checks
         run: npm run test:regression
+      - name: Run offline cache policy and entry-context tests
+        run: node tests/offline-cache-policy.test.js
       - name: Remove disposable SQLite database
         if: always()
         run: rm -f .test-database.sqlite .test-database.sqlite-shm .test-database.sqlite-wal

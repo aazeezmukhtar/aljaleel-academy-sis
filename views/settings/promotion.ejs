@@ -289,13 +289,13 @@
         const source_session = document.getElementById('sourceSessionSelect').value;
         const target_session = document.getElementById('targetSessionSelect').value;
 
-        if (source_session === target_session) {
-            alert('Source session and Destination session cannot be identical. Please select different sessions.');
-            return;
-        }
+        const isSameSessionChange = source_session === target_session;
+        const operationDescription = isSameSessionChange
+            ? `You are about to change class assignments within ${source_session}. The student's class in this section/session will change; other-section enrollments will be preserved.`
+            : `You are about to promote enrolled students from ${source_session} into ${target_session}. Existing target-session placements will never be overwritten automatically; any conflict will stop the transaction.`;
 
         const commitBtn = document.getElementById('commitBtn');
-        if (confirm(`CRITICAL CONFIRMATION:\nYou are about to advance enrolled students from ${source_session} into ${target_session}.\n\nDual section assignments (e.g. Tahfeez) will be safely preserved.\n\nAre you sure you want to commit this promotion?`)) {
+        if (confirm(`CRITICAL CONFIRMATION:\\n${operationDescription}\\n\\nDual section assignments (e.g. Tahfeez) will be preserved.\\n\\nAre you sure you want to continue?`)) {
             commitBtn.disabled = true;
             commitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing Promotion...';
 

@@ -112,12 +112,12 @@
                                         </span>
                                     </td>
                                     <td style="vertical-align: middle;">
-                                        <!-- Cross-section progression is supported; the controller preserves other-section enrollments. -->
+                                        <!-- Promotion targets are restricted to the same section as the source class. -->
                                         <select name="mapping[<%= cls.id %>]" class="form-control mapping-select" data-source-id="<%= cls.id %>" data-source-name="<%= cls.name %>" style="max-width: 340px;">
                                             <option value="none">-- No Change --</option>
                                             <option value="graduate" style="color: #b91c1c; font-weight: 600;">🎓 Graduating / Alumni</option>
                                             
-                                            <% Object.values(sectionsMap).forEach(targetSection => {
+                                            <% Object.values(sectionsMap).filter(targetSection => Number(targetSection.id) === Number(secId)).forEach(targetSection => {
                                                 const allowedTargets = targetSection.classes.filter(t => t.id !== cls.id);
                                                 if (allowedTargets.length) {
                                             %>

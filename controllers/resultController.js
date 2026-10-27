@@ -260,13 +260,19 @@ const getResultManager = async (req, res) => {
             const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
             if (!classCheck) return res.redirect('/results?error=Class not found');
 
-            const subjectIdRows = await db.all('SELECT DISTINCT subject_id FROM subject_assignments WHERE class_id = ?', [class_id]);
+            const subjectIdRows = await db.all(`
+                SELECT DISTINCT sa.subject_id
+                FROM subject_assignments sa
+                JOIN subjects sub ON sub.id = sa.subject_id
+                WHERE sa.class_id = ? AND sub.school_id = ?
+            `, [class_id, schoolId]);
             const subjectIds = subjectIdRows.map(r => r.subject_id);
             if (subjectIds.length > 0) {
                 const placeholders = subjectIds.map(() => '?').join(',');
                 subjects = await db.all(`SELECT * FROM subjects WHERE id IN (${placeholders}) AND school_id = ?`, [...subjectIds, schoolId]);
             } else {
-                subjects = await db.all('SELECT * FROM subjects WHERE school_id = ?', [schoolId]);
+                // Fail closed: an unassigned subject must not be offered for this class.
+                subjects = [];
             }
         } else {
             subjects = await db.all('SELECT * FROM subjects WHERE school_id = ?', [schoolId]);
@@ -293,8 +299,12 @@ const getResultManager = async (req, res) => {
         }
 
         let students = [];
+        let contextError = null;
 
         if (class_id && subject_id) {
+            if (!subjects.some(subject => String(subject.id) === String(subject_id))) {
+                contextError = 'The selected subject is not assigned to this class. Choose a valid class and subject before entering results.';
+            }
             if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
                 const hasAccess = await db.get(`
                     SELECT 1
@@ -309,7 +319,7 @@ const getResultManager = async (req, res) => {
                 if (!hasAccess) return res.redirect('/results?error=Access Denied to this Subject/Class combination');
             }
 
-            const enrolledStudents = await getEnrolledStudents(class_id, activeSession);
+            const enrolledStudents = contextError ? [] : await getEnrolledStudents(class_id, activeSession);
             if (enrolledStudents.length > 0) {
                 const studentIds = enrolledStudents.map(s => Number(s.id));
                 students = await db.all(`
@@ -333,6 +343,7 @@ const getResultManager = async (req, res) => {
             classes,
             subjects,
             students,
+            contextError,
             sessions: availableSessions,
             filters: { class_id, subject_id, term: activeTerm, session: activeSession },
             school: settings,
@@ -355,12 +366,47 @@ const saveResults = async (req, res) => {
     }
 
     try {
-        // Pre-validate tenant ownership of class and subject
+        // Validate the complete academic context before any writes.
+        if (!class_id || !subject_id || !term || !session || !Array.isArray(results)) {
+            return res.status(400).json({ success: false, message: 'Class, subject, term, session, and a results list are required.' });
+        }
         const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
         if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class context.' });
 
         const subjectCheck = await db.get('SELECT id FROM subjects WHERE id = ? AND school_id = ?', [subject_id, schoolId]);
         if (!subjectCheck) return res.status(403).json({ success: false, message: 'Unauthorized subject context.' });
+
+        const assignmentCheck = await db.get(
+            'SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? LIMIT 1',
+            [class_id, subject_id]
+        );
+        if (!assignmentCheck) {
+            return res.status(400).json({ success: false, message: 'This subject is not assigned to the selected class. No results were saved.' });
+        }
+
+        const submittedStudentIds = results.map(item => Number(item && item.student_id));
+        if (submittedStudentIds.some(id => !Number.isInteger(id) || id <= 0) ||
+            new Set(submittedStudentIds).size !== submittedStudentIds.length) {
+            return res.status(400).json({ success: false, message: 'The submitted student list is invalid or contains duplicates. No results were saved.' });
+        }
+
+        // Reject the whole batch if any student is not enrolled in this class/session.
+        // Never silently skip a student and partially save the remaining marks.
+        for (const studentId of submittedStudentIds) {
+            const enrollmentCheck = await db.get(`
+                SELECT se.student_id
+                FROM student_enrollments se
+                JOIN students s ON s.id = se.student_id
+                WHERE se.student_id = ? AND se.class_id = ? AND se.session = ? AND s.school_id = ?
+                LIMIT 1
+            `, [studentId, class_id, session, schoolId]);
+            if (!enrollmentCheck) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'At least one submitted student is not enrolled in the selected class for this session. No results were saved.'
+                });
+            }
+        }
 
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
             const hasAccess = await db.get(`

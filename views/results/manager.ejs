@@ -132,8 +132,9 @@
                 <% } %>
 
                 <% if (students && students.length> 0) { %>
-                    <% const visibleStatuses = [...new Set(students.map(student => student.status).filter(Boolean))]; %>
-                    <% const sheetStatus = visibleStatuses.length === 1 && students.every(student => student.status === visibleStatuses[0]) ? visibleStatuses[0] : 'Mixed / Incomplete'; %>
+                    <% const studentStatuses = students.map(student => student.status || null); %>
+                    <% const visibleStatuses = [...new Set(studentStatuses.filter(Boolean))]; %>
+                    <% const sheetStatus = visibleStatuses.length === 0 ? 'New / Draft' : (visibleStatuses.length === 1 && studentStatuses.every(status => status === visibleStatuses[0]) ? visibleStatuses[0] : 'Mixed / Incomplete'); %>
                     <div class="card">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">

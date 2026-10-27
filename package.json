@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node app.js",
     "test:regression": "node tests/regression.test.js",
-    "pm2": "pm2 start app.js --name nexus-sis"
+    "pm2": "pm2 start app.js --name nexus-sis",
+    "test:results-context": "node tests/result-context-integrity.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

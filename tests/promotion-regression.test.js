@@ -163,7 +163,7 @@ async function run() {
     const crossSectionCurrentClass = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [crossSectionStudent, schoolId]);
     assert.strictEqual(Number(crossSectionCurrentClass.current_class_id), Number(crossSectionSourceClass), 'Rejected cross-section mapping must not change current class');
     assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [crossSectionStudent, crossSectionSourceClass, '2025/2026']), 'Source enrollment must remain');
-    assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND session = ?', [crossSectionStudent, '2026/2027']), null, 'Rejected mapping must not create a target enrollment');
+    assert.ok(!(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND session = ?', [crossSectionStudent, '2026/2027'])), 'Rejected mapping must not create a target enrollment');
     const crossSectionCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
     assert.strictEqual(crossSectionCalendar.current_session, '2025/2026');
     assert.strictEqual(crossSectionCalendar.current_term, '2nd Term');

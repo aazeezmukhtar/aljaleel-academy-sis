@@ -143,6 +143,15 @@ async function run() {
     await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'CrossSection', 'Promotion', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-CROSS-SECTION-' + token, crossSectionSourceClass]);
     const crossSectionStudent = (await db.get('SELECT id FROM students WHERE school_id = ? AND admission_number = ?', [schoolId, 'PROMO-CROSS-SECTION-' + token])).id;
     await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [crossSectionStudent, crossSectionSourceClass, '2025/2026']);
+    const crossSectionPreview = response();
+    await controller.previewPromotion({
+      schoolId,
+      body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [crossSectionSourceClass]: String(otherSectionClass) } }
+    }, crossSectionPreview);
+    assert.strictEqual(crossSectionPreview.data.success, true);
+    assert.strictEqual(crossSectionPreview.data.preview.length, 0, 'Preview must exclude cross-section mappings');
+    assert.ok(crossSectionPreview.data.warnings.some(w => /crosses sections/i.test(w)), 'Preview must explain the cross-section mapping');
+
     const crossSection = response();
     await controller.processPromotion({
       schoolId, xhr: true,

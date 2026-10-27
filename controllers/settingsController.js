@@ -325,6 +325,12 @@ const processPromotion = async (req, res) => {
             if (isAjax) return res.status(400).json({ success: false, message });
             return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
         }
+        if (sourceSession !== targetSession &&
+            Number(targetSession.slice(0, 4)) !== Number(sourceSession.slice(0, 4)) + 1) {
+            const message = 'End-of-session promotion must target the immediately following academic session. Use the same session only for a class change.';
+            if (isAjax) return res.status(400).json({ success: false, message });
+            return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+        }
 
         const classes = await db.all(`
             SELECT c.id, c.section_id
@@ -401,10 +407,10 @@ const processPromotion = async (req, res) => {
                             SELECT se.id
                             FROM student_enrollments se
                             JOIN classes c ON c.id = se.class_id AND c.school_id = ?
-                            WHERE se.student_id = ? AND se.session = ?
+                            WHERE se.student_id = ? AND se.session IN (?, ?)
                               AND c.section_id <> ?
                             LIMIT 1
-                        `, [schoolId, student.id, sourceSession, sourceSectionId]);
+                        `, [schoolId, student.id, sourceSession, targetSession, sourceSectionId]);
                         if (otherSectionEnrollment) {
                             throw new Error('Graduation stopped: at least one student is enrolled in another section for this session. Review these students individually before graduating them.');
                         }

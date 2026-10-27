@@ -200,6 +200,34 @@ async function run() {
       assert.strictEqual(Number(unchangedStudent.current_class_id), Number(sourceClass));
     }
 
+    // A pre-existing different target-session placement is a conflict, not something
+    // promotion may silently delete. Verify the transaction leaves every record intact.
+    await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'TargetConflict', 'Test', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-TARGET-CONFLICT-' + token, sourceClass]);
+    const conflictStudent = (await db.get('SELECT id FROM students WHERE school_id = ? AND admission_number = ?', [schoolId, 'PROMO-TARGET-CONFLICT-' + token])).id;
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [conflictStudent, sourceClass, '2025/2026']);
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [conflictStudent, sourceClass, '2026/2027']);
+    const conflict = response();
+    await controller.processPromotion({ schoolId, xhr: true, body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) } } }, conflict);
+    assert.strictEqual(conflict.statusCode, 500, 'Different target-session class placement must stop promotion');
+    assert.match(conflict.data.message, /already has a different enrollment/i);
+    const conflictRows = await db.all('SELECT class_id, session FROM student_enrollments WHERE student_id = ? ORDER BY session, class_id', [conflictStudent]);
+    assert.strictEqual(conflictRows.length, 2, 'Conflicting target placement and source history must both remain');
+    assert.ok(conflictRows.some(r => Number(r.class_id) === Number(sourceClass) && r.session === '2025/2026'));
+    assert.ok(conflictRows.some(r => Number(r.class_id) === Number(sourceClass) && r.session === '2026/2027'));
+    const conflictCurrentClass = await db.get('SELECT current_class_id FROM students WHERE id = ?', [conflictStudent]);
+    assert.strictEqual(Number(conflictCurrentClass.current_class_id), Number(sourceClass), 'Failed promotion must roll back current class');
+
+    // Global student status must not be changed by graduation in one section when
+    // the same student still has an enrollment in another section in that session.
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [crossSectionStudent, otherSectionClass, '2025/2026']);
+    const graduation = response();
+    await controller.processPromotion({ schoolId, xhr: true, body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [crossSectionSourceClass]: 'graduate' } } }, graduation);
+    assert.strictEqual(graduation.statusCode, 500, 'Cross-section active enrollment must block global graduation');
+    assert.match(graduation.data.message, /another section/i);
+    const graduationStatus = await db.get('SELECT status FROM students WHERE id = ?', [crossSectionStudent]);
+    assert.strictEqual(graduationStatus.status, 'active', 'Blocked graduation must preserve active student status');
+    await db.run('DELETE FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [crossSectionStudent, otherSectionClass, '2025/2026']);
+
     // Force the target enrollment INSERT to fail after earlier promotion writes.
     // This exercises transaction rollback without relying on SQLite FK settings.
     await db.run("CREATE TRIGGER promotion_test_force_failure BEFORE INSERT ON student_enrollments WHEN NEW.session = '2026/2027' AND NEW.class_id = " + Number(targetClass) + " BEGIN SELECT RAISE(ABORT, 'intentional promotion regression test failure'); END");

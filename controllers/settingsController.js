@@ -312,12 +312,18 @@ const processPromotion = async (req, res) => {
         : (req.schoolId || (req.school ? req.school.id : 1));
     const { source_session, target_session, mapping } = req.body;
     const requestedPromoteIds = req.body.promote_student_ids;
-    const hasExplicitStudentSelection = Array.isArray(requestedPromoteIds);
-    const promoteStudentIds = new Set(
-        (Array.isArray(requestedPromoteIds) ? requestedPromoteIds : [])
-            .map(id => Number(id))
-            .filter(id => Number.isSafeInteger(id) && id > 0)
-    );
+    const hasExplicitStudentSelection = !!requestedPromoteIds &&
+        typeof requestedPromoteIds === 'object' && !Array.isArray(requestedPromoteIds);
+    const promoteStudentIdsByClass = {};
+    if (hasExplicitStudentSelection) {
+        for (const [sourceClassId, ids] of Object.entries(requestedPromoteIds)) {
+            promoteStudentIdsByClass[sourceClassId] = new Set(
+                (Array.isArray(ids) ? ids : [])
+                    .map(id => Number(id))
+                    .filter(id => Number.isSafeInteger(id) && id > 0)
+            );
+        }
+    }
     const isAjax = req.xhr || (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) || (req.headers.accept && req.headers.accept.includes('application/json'));
 
     try {
@@ -421,18 +427,26 @@ const processPromotion = async (req, res) => {
                     // If the UI sent an explicit selection, validate every selected ID
                     // against the active source cohort before writing anything.
                     const sourceStudentIds = new Set(enrolledStudents.map(student => Number(student.id)));
+                    const classSelection = promoteStudentIdsByClass[String(classId)] || new Set();
                     if (hasExplicitStudentSelection) {
-                        for (const selectedId of promoteStudentIds) {
-                            const selectedIsInMappedSource = sourceStudentIds.has(selectedId) &&
-                                Object.prototype.hasOwnProperty.call(mapping || {}, String(classId));
-                            if (!selectedIsInMappedSource) {
-                                throw new Error('Promotion selection contains a student outside the mapped source class/session. Nothing was changed.');
+                        for (const selectedId of classSelection) {
+                            if (!sourceStudentIds.has(selectedId)) {
+                                throw new Error('Promotion selection contains a student outside its mapped source class/session. Nothing was changed.');
+                            }
+                        }
+                        for (const selectionClassId of Object.keys(promoteStudentIdsByClass)) {
+                            if (Number(selectionClassId) === Number(classId)) continue;
+                            const idsForOtherClass = promoteStudentIdsByClass[selectionClassId];
+                            for (const selectedId of idsForOtherClass) {
+                                if (sourceStudentIds.has(selectedId)) {
+                                    throw new Error('Promotion selection is ambiguous across source classes. Nothing was changed.');
+                                }
                             }
                         }
                     }
 
                     for (const student of enrolledStudents) {
-                        const selectedForPromotion = !hasExplicitStudentSelection || promoteStudentIds.has(Number(student.id));
+                        const selectedForPromotion = !hasExplicitStudentSelection || classSelection.has(Number(student.id));
                         const desiredClassId = selectedForPromotion ? targetClassId : classId;
                         const desiredSectionId = classSectionIdMap[desiredClassId];
 

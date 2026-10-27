@@ -127,14 +127,20 @@
                         class="text-muted" style="margin: -10px 0 20px; font-size: 0.9rem;"></p>
                 <% } %>
 
+                <% if (contextError) { %>
+                    <div class="alert alert-warning" role="alert"><%= contextError %></div>
+                <% } %>
+
                 <% if (students && students.length> 0) { %>
+                    <% const visibleStatuses = [...new Set(students.map(student => student.status).filter(Boolean))]; %>
+                    <% const sheetStatus = visibleStatuses.length === 1 && students.every(student => student.status === visibleStatuses[0]) ? visibleStatuses[0] : 'Mixed / Incomplete'; %>
                     <div class="card">
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3 style="margin: 0;">
                                 Grade Sheet
                                 <span class="badge badge-info" style="font-size: 0.8rem; vertical-align: middle;">
-                                    <%= students[0].status || 'New / Draft' %>
+                                    <%= sheetStatus %>
                                 </span>
                             </h3>
                             <div class="result-actions-group">

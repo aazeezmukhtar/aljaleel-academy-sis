@@ -314,8 +314,17 @@ const processPromotion = async (req, res) => {
     const isAjax = req.xhr || (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) || (req.headers.accept && req.headers.accept.includes('application/json'));
 
     try {
-        const targetSession = target_session || '2026/2027';
-        const sourceSession = source_session || '2025/2026';
+        const targetSession = String(target_session || '2026/2027').trim();
+        const sourceSession = String(source_session || '2025/2026').trim();
+        const validSession = value => {
+            const match = /^(\\d{4})\\/(\\d{4})$/.exec(value);
+            return !!match && Number(match[2]) === Number(match[1]) + 1;
+        };
+        if (!validSession(sourceSession) || !validSession(targetSession)) {
+            const message = 'Source and target must be valid academic sessions in YYYY/YYYY format.';
+            if (isAjax) return res.status(400).json({ success: false, message });
+            return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+        }
 
         const classes = await db.all(`
             SELECT c.id, c.section_id
@@ -377,12 +386,29 @@ const processPromotion = async (req, res) => {
 
                 if (targetId === 'graduate') {
                     const enrolledStudents = await db.all(`
-                        SELECT s.id 
+                        SELECT s.id
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
                         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
                           AND s.school_id = ?
                     `, [classId, sourceSession, schoolId]);
+
+                    // Student status is global in the current schema. Do not graduate
+                    // a student through one section while they remain enrolled in another.
+                    const sourceSectionId = classSectionIdMap[classId];
+                    for (const student of enrolledStudents) {
+                        const otherSectionEnrollment = await db.get(`
+                            SELECT se.id
+                            FROM student_enrollments se
+                            JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+                            WHERE se.student_id = ? AND se.session = ?
+                              AND c.section_id <> ?
+                            LIMIT 1
+                        `, [schoolId, student.id, sourceSession, sourceSectionId]);
+                        if (otherSectionEnrollment) {
+                            throw new Error('Graduation stopped: at least one student is enrolled in another section for this session. Review these students individually before graduating them.');
+                        }
+                    }
 
                     if (enrolledStudents.length > 0) {
                         const ids = enrolledStudents.map(s => s.id);
@@ -410,25 +436,44 @@ const processPromotion = async (req, res) => {
                             [targetClassId, student.id, schoolId]
                         );
                         
-                        // Strict section preservation: only clear existing enrollment in the SAME section for targetSession
-                        if (targetSectionId) {
+                        if (targetSession === sourceSession) {
+                            // Same-session class change: replace the student's class assignment
+                            // only within this section/session. Other sections remain untouched.
                             await db.run(`
-                                DELETE FROM student_enrollments 
-                                WHERE student_id = ? 
-                                  AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?) 
+                                DELETE FROM student_enrollments
+                                WHERE student_id = ?
+                                  AND class_id IN (
+                                      SELECT id FROM classes WHERE section_id = ? AND school_id = ?
+                                  )
                                   AND session = ?
                             `, [student.id, targetSectionId, schoolId, targetSession]);
-                        } else {
-                            await db.run(`
-                                DELETE FROM student_enrollments 
-                                WHERE student_id = ? AND class_id = ? AND session = ?
-                            `, [student.id, targetClassId, targetSession]);
-                        }
 
-                        await db.run(`
-                            INSERT INTO student_enrollments (student_id, class_id, session)
-                            VALUES (?, ?, ?)
-                        `, [student.id, targetClassId, targetSession]);
+                            await db.run(`
+                                INSERT INTO student_enrollments (student_id, class_id, session)
+                                VALUES (?, ?, ?)
+                            `, [student.id, targetClassId, targetSession]);
+                        } else {
+                            // End-of-session promotion must preserve existing target-session
+                            // placement. Same target = idempotent; a different target is a conflict.
+                            const existingTargetEnrollment = await db.get(`
+                                SELECT se.class_id, c.name AS class_name
+                                FROM student_enrollments se
+                                JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+                                WHERE se.student_id = ? AND se.session = ? AND c.section_id = ?
+                                LIMIT 1
+                            `, [schoolId, student.id, targetSession, targetSectionId]);
+
+                            if (existingTargetEnrollment && Number(existingTargetEnrollment.class_id) !== Number(targetClassId)) {
+                                throw new Error(`Promotion stopped: a student already has a different enrollment in ${targetSession} (${existingTargetEnrollment.class_name}). No existing target enrollment was overwritten.`);
+                            }
+
+                            if (!existingTargetEnrollment) {
+                                await db.run(`
+                                    INSERT INTO student_enrollments (student_id, class_id, session)
+                                    VALUES (?, ?, ?)
+                                `, [student.id, targetClassId, targetSession]);
+                            }
+                        }
                     }
                 }
             }

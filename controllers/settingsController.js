@@ -346,6 +346,14 @@ const processPromotion = async (req, res) => {
                     if (isAjax) return res.status(400).json({ success: false, message });
                     return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
                 }
+                
+                // Promotion must stay within a section. Cross-section enrollment
+                // is managed through enrollment workflows, not class promotion.
+                if (classSectionIdMap[classId] !== classSectionIdMap[targetClassId]) {
+                    const message = 'Promotion source and target classes must belong to the same section.';
+                    if (isAjax) return res.status(400).json({ success: false, message });
+                    return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+                }
             }
         }
 

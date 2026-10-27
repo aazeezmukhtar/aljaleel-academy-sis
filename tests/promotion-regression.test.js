@@ -135,9 +135,9 @@ async function run() {
     const sameSessionSections = await db.all('SELECT current_session, current_term FROM sections WHERE school_id = ?', [schoolId]);
     assert.ok(sameSessionSections.every(row => row.current_session === '2025/2026' && row.current_term === '2nd Term'), 'Same-session promotion must not change section calendars');
 
-    // Cross-section promotion must be available to the controller while preserving
-    // the source-section enrollment record for the same session. Use a dedicated
-    // source class so this test cannot affect the shared promotion fixtures.
+    // Cross-section promotion must be rejected before any writes. A student may have
+    // legitimate enrollments in both sections, but promotion mappings must not
+    // create an Academy enrollment from a Tahfeez source (or vice versa).
     await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Cross Section Source ' + token]);
     const crossSectionSourceClass = (await db.get('SELECT id FROM classes WHERE school_id = ? AND name = ?', [schoolId, 'Cross Section Source ' + token])).id;
     await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'CrossSection', 'Promotion', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-CROSS-SECTION-' + token, crossSectionSourceClass]);
@@ -146,16 +146,17 @@ async function run() {
     const crossSection = response();
     await controller.processPromotion({
       schoolId, xhr: true,
-      body: { source_session: '2025/2026', target_session: '2025/2026', mapping: { [crossSectionSourceClass]: String(otherSectionClass) } }
+      body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [crossSectionSourceClass]: String(otherSectionClass) } }
     }, crossSection);
-    assert.strictEqual(crossSection.statusCode, 200);
-    assert.strictEqual(crossSection.data.success, true, 'Cross-section progression must be accepted');
+    assert.strictEqual(crossSection.statusCode, 400);
+    assert.strictEqual(crossSection.data.success, false);
+    assert.match(crossSection.data.message, /same section/i);
     const crossSectionCurrentClass = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [crossSectionStudent, schoolId]);
-    assert.strictEqual(Number(crossSectionCurrentClass.current_class_id), Number(otherSectionClass));
-    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [crossSectionStudent, crossSectionSourceClass, '2025/2026']), 'Source-section enrollment history must remain');
-    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [crossSectionStudent, otherSectionClass, '2025/2026']), 'Cross-section target enrollment must be recorded');
+    assert.strictEqual(Number(crossSectionCurrentClass.current_class_id), Number(crossSectionSourceClass), 'Rejected cross-section mapping must not change current class');
+    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [crossSectionStudent, crossSectionSourceClass, '2025/2026']), 'Source enrollment must remain');
+    assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND session = ?', [crossSectionStudent, '2026/2027']), null, 'Rejected mapping must not create a target enrollment');
     const crossSectionCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
-    assert.strictEqual(crossSectionCalendar.current_session, '2025/2026', 'Same-session cross-section movement must not advance the calendar');
+    assert.strictEqual(crossSectionCalendar.current_session, '2025/2026');
     assert.strictEqual(crossSectionCalendar.current_term, '2nd Term');
 
     // Invalid source class IDs must be rejected before any student or calendar writes.

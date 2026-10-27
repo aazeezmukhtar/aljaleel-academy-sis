@@ -246,24 +246,25 @@ async function run() {
     const term = await db.get("SELECT value FROM settings WHERE school_id = ? AND key = 'current_term'", [schoolId]);
     assert.strictEqual(term.value, '1st Term');
 
-    // Re-running the same promotion must not create duplicate target-session enrollments.
-    // A stale enrollment in the source section is replaced, while another section's
-    // target-session enrollment remains untouched.
+    // A stale extra target-session enrollment is ambiguous and must not be silently
+    // deleted or replaced by a repeated promotion.
     await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [currentStudent, sourceClass, '2026/2027']);
     const repeated = response();
     await controller.processPromotion({
       schoolId, xhr: true,
       body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) } }
     }, repeated);
-    assert.strictEqual(repeated.statusCode, 200);
-    assert.strictEqual(repeated.data.success, true, 'Repeated promotion should complete safely');
+    assert.strictEqual(repeated.statusCode, 500);
+    assert.strictEqual(repeated.data.success, false, 'Ambiguous target placements must stop promotion');
+    assert.match(repeated.data.message, /multiple class enrollments/i);
     const targetSectionEnrollments = await db.all(
       'SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ? AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?)',
       [currentStudent, '2026/2027', sectionIds[0], schoolId]
     );
-    assert.strictEqual(targetSectionEnrollments.length, 1, 'Repeated promotion must leave exactly one enrollment in the target section');
-    assert.strictEqual(Number(targetSectionEnrollments[0].class_id), Number(targetClass));
-    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [currentStudent, otherSectionClass, '2026/2027']), 'Repeated promotion must preserve the other-section enrollment');
+    assert.strictEqual(targetSectionEnrollments.length, 2, 'Both conflicting target-section enrollments must remain for manual reconciliation');
+    assert.ok(targetSectionEnrollments.some(row => Number(row.class_id) === Number(sourceClass)));
+    assert.ok(targetSectionEnrollments.some(row => Number(row.class_id) === Number(targetClass)));
+    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [currentStudent, otherSectionClass, '2026/2027']), 'Failed repeated promotion must preserve the other-section enrollment');
 
     // Graduation changes student status and must not create a normal target-class enrollment.
     await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Graduation Source ' + token]);

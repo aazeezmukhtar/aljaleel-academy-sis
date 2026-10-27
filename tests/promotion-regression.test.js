@@ -183,6 +183,20 @@ async function run() {
     assert.strictEqual(sourceCalendar.current_session, '2025/2026');
     assert.strictEqual(sourceCalendar.current_term, '2nd Term');
 
+    // Reject skipped-session transitions before any student or calendar writes.
+    const skippedSession = response();
+    await controller.processPromotion({
+      schoolId, xhr: true,
+      body: { source_session: '2025/2026', target_session: '2027/2028', mapping: { [sourceClass]: String(targetClass) } }
+    }, skippedSession);
+    assert.strictEqual(skippedSession.statusCode, 400, 'Promotion must not skip an academic session');
+    assert.match(skippedSession.data.message, /immediately following/i);
+    const skippedSessionStudent = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [currentStudent, schoolId]);
+    assert.strictEqual(Number(skippedSessionStudent.current_class_id), Number(sourceClass));
+    const skippedSessionCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
+    assert.strictEqual(skippedSessionCalendar.current_session, '2025/2026');
+    assert.strictEqual(skippedSessionCalendar.current_term, '2nd Term');
+
     // Empty and explicit "none" mappings are no-ops: they must not advance the calendar.
     for (const noOpMapping of [{}, { [sourceClass]: 'none' }]) {
       const noOp = response();

@@ -158,12 +158,37 @@
                 </h3>
                 <span id="previewSummaryBadge" class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.9rem; padding: 6px 14px;"></span>
             </div>
+            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px;">
+                <strong style="font-size:0.9rem;">Select students who should advance:</strong>
+                <button type="button" class="btn btn-outline btn-sm" onclick="setPromotionSelection(true)">Select all</button>
+                <button type="button" class="btn btn-outline btn-sm" onclick="setPromotionSelection(false)">Clear all (repeat / do not graduate)</button>
+                <span class="text-muted" style="font-size:0.82rem;">Checked students advance to the mapped class. Unchecked students repeat their current class in the destination session.</span>
+            </div>
             <div id="previewContent" style="max-height: 480px; overflow-y: auto;"></div>
         </section>
     </main>
 </div>
 
 <script>
+    let currentPromotionPreviewSignature = null;
+    function getPromotionMapping() {
+        const mapping = {};
+        document.querySelectorAll('.mapping-select').forEach(sel => {
+            const classId = sel.getAttribute('data-source-id');
+            if (sel.value && sel.value !== 'none') mapping[classId] = sel.value;
+        });
+        return mapping;
+    }
+    function getPromotionSignature() {
+        return JSON.stringify({
+            source_session: document.getElementById('sourceSessionSelect').value,
+            target_session: document.getElementById('targetSessionSelect').value,
+            mapping: Object.fromEntries(Object.entries(getPromotionMapping()).sort(([a], [b]) => Number(a) - Number(b)))
+        });
+    }
+    function setPromotionSelection(checked) {
+        document.querySelectorAll('.promotion-student-checkbox').forEach(input => { input.checked = checked; });
+    }
     function changeSourceSession(newSession) {
         window.location.href = `/settings/promotion?source_session=${encodeURIComponent(newSession)}`;
     }
@@ -203,7 +228,7 @@
             const res = await fetch('/settings/promotion/preview', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ source_session, target_session, mapping })
+                body: JSON.stringify({ source_session, target_session, mapping, promote_student_ids })
             });
             const data = await res.json();
 
@@ -226,6 +251,7 @@
             const previewContent = document.getElementById('previewContent');
             const summaryBadge = document.getElementById('previewSummaryBadge');
 
+            currentPromotionPreviewSignature = getPromotionSignature();
             summaryBadge.textContent = `${data.totalStudents} Students across ${data.totalClasses} Classes (${source_session} → ${target_session})`;
 
             let html = '';
@@ -248,12 +274,15 @@
                     html += `<p class="text-muted" style="margin: 0; font-style: italic;">No active students currently enrolled in this class for ${escapePromotionPreviewHtml(source_session)}.</p>`;
                 } else {
                     html += `
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px;">
                             ${group.students.map(st => `
-                                <div style="background: #fff; border: 1px solid #e2e8f0; padding: 6px 10px; border-radius: 6px; font-size: 0.85rem; display: flex; justify-content: space-between;">
-                                    <strong>${escapePromotionPreviewHtml(st.name)}</strong>
-                                    <span style="color: #64748b; font-family: monospace;">${escapePromotionPreviewHtml(st.admissionNumber || '#' + st.id)}</span>
-                                </div>
+                                <label style="background: #fff; border: 1px solid #e2e8f0; padding: 9px 10px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: flex-start; gap: 9px; cursor: pointer;">
+                                    <input type="checkbox" class="promotion-student-checkbox" data-source-class-id="${escapePromotionPreviewHtml(group.sourceClassId)}" value="${escapePromotionPreviewHtml(st.id)}" checked style="margin-top:3px; flex-shrink:0;">
+                                    <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
+                                        <strong>${escapePromotionPreviewHtml(st.name)}</strong>
+                                        <span style="color: #64748b; font-family: monospace;">${escapePromotionPreviewHtml(st.admissionNumber || '#' + st.id)}</span>
+                                    </span>
+                                </label>
                             `).join('')}
                         </div>
                     `;
@@ -271,15 +300,7 @@
     }
 
     async function confirmPromotion() {
-        const selects = Array.from(document.querySelectorAll('.mapping-select'));
-        const mapping = {};
-        
-        selects.forEach(sel => {
-            const classId = sel.getAttribute('data-source-id');
-            if (sel.value && sel.value !== 'none') {
-                mapping[classId] = sel.value;
-            }
-        });
+        const mapping = getPromotionMapping();
 
         if (Object.keys(mapping).length === 0) {
             alert('Please select at least one class to promote.');
@@ -289,13 +310,21 @@
         const source_session = document.getElementById('sourceSessionSelect').value;
         const target_session = document.getElementById('targetSessionSelect').value;
 
-        if (source_session === target_session) {
-            alert('Source session and Destination session cannot be identical. Please select different sessions.');
+        if (!currentPromotionPreviewSignature || currentPromotionPreviewSignature !== getPromotionSignature()) {
+            alert('Please run the preview again after changing the sessions or class mappings. Review the student checkboxes before committing.');
             return;
         }
-
+        const promote_student_ids = {};
+        document.querySelectorAll('.promotion-student-checkbox').forEach(input => {
+            const classId = input.getAttribute('data-source-class-id');
+            if (!promote_student_ids[classId]) promote_student_ids[classId] = [];
+            if (input.checked) promote_student_ids[classId].push(Number(input.value));
+        });
+        const selectedCount = Object.values(promote_student_ids).reduce((sum, ids) => sum + ids.length, 0);
+        const totalCount = document.querySelectorAll('.promotion-student-checkbox').length;
+        const repeaterCount = totalCount - selectedCount;
         const commitBtn = document.getElementById('commitBtn');
-        if (confirm(`CRITICAL CONFIRMATION:\nYou are about to advance enrolled students from ${source_session} into ${target_session}.\n\nDual section assignments (e.g. Tahfeez) will be safely preserved.\n\nAre you sure you want to commit this promotion?`)) {
+        if (confirm(`CRITICAL CONFIRMATION:\\nSource: ${source_session} → Destination: ${target_session}.\\n\\nStudents advancing/graduating: ${selectedCount}. Students repeating: ${repeaterCount}.\\n\\nUnchecked students will receive the same class assignment in the destination session. Previous-session records and other-section enrollments will be preserved.\\n\\nAre you sure you want to commit?`)) {
             commitBtn.disabled = true;
             commitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing Promotion...';
 

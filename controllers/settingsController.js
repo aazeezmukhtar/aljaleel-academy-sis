@@ -311,6 +311,13 @@ const processPromotion = async (req, res) => {
         ? Number(req.session.staff.school_id)
         : (req.schoolId || (req.school ? req.school.id : 1));
     const { source_session, target_session, mapping } = req.body;
+    const requestedPromoteIds = req.body.promote_student_ids;
+    const hasExplicitStudentSelection = Array.isArray(requestedPromoteIds);
+    const promoteStudentIds = new Set(
+        (Array.isArray(requestedPromoteIds) ? requestedPromoteIds : [])
+            .map(id => Number(id))
+            .filter(id => Number.isSafeInteger(id) && id > 0)
+    );
     const isAjax = req.xhr || (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) || (req.headers.accept && req.headers.accept.includes('application/json'));
 
     try {
@@ -318,15 +325,18 @@ const processPromotion = async (req, res) => {
         const sourceSession = source_session || '2025/2026';
 
         const classes = await db.all(`
-            SELECT c.id, c.section_id
+            SELECT c.id, c.section_id, sec.name AS section_name
             FROM classes c
+            LEFT JOIN sections sec ON sec.id = c.section_id AND sec.school_id = c.school_id
             WHERE c.school_id = ?
         `, [schoolId]);
-        
+
         const classSectionIdMap = {};
+        const classSectionNameMap = {};
         const validClassIds = new Set();
         classes.forEach(c => {
             classSectionIdMap[c.id] = c.section_id;
+            classSectionNameMap[c.id] = c.section_name || '';
             validClassIds.add(Number(c.id));
         });
 
@@ -395,40 +405,69 @@ const processPromotion = async (req, res) => {
                 } else if (targetId && targetId !== 'none') {
                     const targetClassId = parseInt(targetId, 10);
                     const enrolledStudents = await db.all(`
-                        SELECT s.id 
+                        SELECT s.id
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
                         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
                           AND s.school_id = ?
+                        ORDER BY s.id
                     `, [classId, sourceSession, schoolId]);
 
                     const targetSectionId = classSectionIdMap[targetClassId];
+                    const sourceSectionId = classSectionIdMap[classId];
+                    const sourceSectionName = String(classSectionNameMap[classId] || '').toLowerCase();
+                    const isAcademySection = sourceSectionName.includes('academy');
+
+                    // If the UI sent an explicit selection, validate every selected ID
+                    // against the active source cohort before writing anything.
+                    const sourceStudentIds = new Set(enrolledStudents.map(student => Number(student.id)));
+                    if (hasExplicitStudentSelection) {
+                        for (const selectedId of promoteStudentIds) {
+                            const selectedIsInMappedSource = sourceStudentIds.has(selectedId) &&
+                                Object.prototype.hasOwnProperty.call(mapping || {}, String(classId));
+                            if (!selectedIsInMappedSource) {
+                                throw new Error('Promotion selection contains a student outside the mapped source class/session. Nothing was changed.');
+                            }
+                        }
+                    }
 
                     for (const student of enrolledStudents) {
-                        await db.run(
-                            'UPDATE students SET current_class_id = ? WHERE id = ? AND school_id = ?',
-                            [targetClassId, student.id, schoolId]
-                        );
-                        
-                        // Strict section preservation: only clear existing enrollment in the SAME section for targetSession
-                        if (targetSectionId) {
-                            await db.run(`
-                                DELETE FROM student_enrollments 
-                                WHERE student_id = ? 
-                                  AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?) 
-                                  AND session = ?
-                            `, [student.id, targetSectionId, schoolId, targetSession]);
-                        } else {
-                            await db.run(`
-                                DELETE FROM student_enrollments 
-                                WHERE student_id = ? AND class_id = ? AND session = ?
-                            `, [student.id, targetClassId, targetSession]);
+                        const selectedForPromotion = !hasExplicitStudentSelection || promoteStudentIds.has(Number(student.id));
+                        const desiredClassId = selectedForPromotion ? targetClassId : classId;
+                        const desiredSectionId = classSectionIdMap[desiredClassId];
+
+                        if (desiredSectionId !== sourceSectionId) {
+                            throw new Error('Promotion stopped because the destination class is outside the source section.');
                         }
 
-                        await db.run(`
-                            INSERT INTO student_enrollments (student_id, class_id, session)
-                            VALUES (?, ?, ?)
-                        `, [student.id, targetClassId, targetSession]);
+                        const existingTargetEnrollment = await db.get(`
+                            SELECT se.class_id
+                            FROM student_enrollments se
+                            JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+                            WHERE se.student_id = ? AND se.session = ? AND c.section_id = ?
+                            LIMIT 1
+                        `, [schoolId, student.id, targetSession, desiredSectionId]);
+
+                        if (existingTargetEnrollment && Number(existingTargetEnrollment.class_id) !== Number(desiredClassId)) {
+                            throw new Error('Promotion stopped: a student already has a different enrollment in the target session. Existing placements were not overwritten.');
+                        }
+
+                        if (!existingTargetEnrollment) {
+                            await db.run(`
+                                INSERT INTO student_enrollments (student_id, class_id, session)
+                                VALUES (?, ?, ?)
+                            `, [student.id, desiredClassId, targetSession]);
+                        }
+
+                        // current_class_id is a legacy single-class field. Update it for
+                        // Academy placements only; Tahfeez must not overwrite the Academy
+                        // class pointer for dual-section students.
+                        if (isAcademySection) {
+                            await db.run(
+                                'UPDATE students SET current_class_id = ? WHERE id = ? AND school_id = ?',
+                                [desiredClassId, student.id, schoolId]
+                            );
+                        }
                     }
                 }
             }

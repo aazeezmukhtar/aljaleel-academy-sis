@@ -516,14 +516,19 @@ const processPromotion = async (req, res) => {
                             throw new Error('Promotion stopped because the destination class is outside the source section.');
                         }
 
-                        const existingTargetEnrollment = await db.get(`
+                        const existingTargetEnrollments = await db.all(`
                             SELECT se.class_id
                             FROM student_enrollments se
                             JOIN classes c ON c.id = se.class_id AND c.school_id = ?
                             WHERE se.student_id = ? AND se.session = ? AND c.section_id = ?
-                            LIMIT 1
+                            ORDER BY se.id
                         `, [schoolId, student.id, targetSession, desiredSectionId]);
 
+                        if (existingTargetEnrollments.length > 1) {
+                            throw new Error('Promotion stopped: a student has multiple class enrollments in the target section/session. Resolve the conflicting placements before continuing.');
+                        }
+
+                        const existingTargetEnrollment = existingTargetEnrollments[0];
                         if (existingTargetEnrollment && Number(existingTargetEnrollment.class_id) !== Number(desiredClassId)) {
                             // Same-session class change may replace only the exact source
                             // enrollment it is moving from. Other placements remain conflicts.

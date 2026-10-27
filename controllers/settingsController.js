@@ -394,20 +394,63 @@ const processPromotion = async (req, res) => {
 
                 if (targetId === 'graduate') {
                     const enrolledStudents = await db.all(`
-                        SELECT s.id 
+                        SELECT s.id
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
                         WHERE se.class_id = ? AND se.session = ? AND s.status = 'active'
                           AND s.school_id = ?
+                        ORDER BY s.id
                     `, [classId, sourceSession, schoolId]);
+                    const sourceIds = new Set(enrolledStudents.map(student => Number(student.id)));
+                    const classSelection = promoteStudentIdsByClass[String(classId)] || new Set();
 
-                    if (enrolledStudents.length > 0) {
-                        const ids = enrolledStudents.map(s => s.id);
-                        const placeholders = ids.map(() => '?').join(',');
-                        await db.run(
-                            `UPDATE students SET status = 'graduated' WHERE id IN (${placeholders}) AND school_id = ?`,
-                            [...ids, schoolId]
-                        );
+                    if (hasExplicitStudentSelection) {
+                        for (const selectedId of classSelection) {
+                            if (!sourceIds.has(selectedId)) {
+                                throw new Error('Graduation selection contains a student outside its source class/session. Nothing was changed.');
+                            }
+                        }
+                    }
+
+                    for (const student of enrolledStudents) {
+                        const selectedForGraduation = !hasExplicitStudentSelection || classSelection.has(Number(student.id));
+                        if (selectedForGraduation) {
+                            // Student status is global. Do not graduate a student who
+                            // remains enrolled in another section in either session.
+                            const otherSectionEnrollment = await db.get(`
+                                SELECT se.id
+                                FROM student_enrollments se
+                                JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+                                WHERE se.student_id = ? AND se.session IN (?, ?)
+                                  AND c.section_id <> ?
+                                LIMIT 1
+                            `, [schoolId, student.id, sourceSession, targetSession, classSectionIdMap[classId]]);
+                            if (otherSectionEnrollment) {
+                                throw new Error('Graduation stopped: a selected student remains enrolled in another section. Review that student individually before graduating.');
+                            }
+                            await db.run(
+                                "UPDATE students SET status = 'graduated' WHERE id = ? AND school_id = ?",
+                                [student.id, schoolId]
+                            );
+                        } else {
+                            // Unselected students repeat the same class in the target session.
+                            const existingTarget = await db.get(`
+                                SELECT se.class_id
+                                FROM student_enrollments se
+                                JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+                                WHERE se.student_id = ? AND se.session = ? AND c.section_id = ?
+                                LIMIT 1
+                            `, [schoolId, student.id, targetSession, classSectionIdMap[classId]]);
+                            if (existingTarget && Number(existingTarget.class_id) !== Number(classId)) {
+                                throw new Error('Promotion stopped: a repeater already has a different class placement in the target session. Existing placements were not overwritten.');
+                            }
+                            if (!existingTarget) {
+                                await db.run(`
+                                    INSERT INTO student_enrollments (student_id, class_id, session)
+                                    VALUES (?, ?, ?)
+                                `, [student.id, classId, targetSession]);
+                            }
+                        }
                     }
                 } else if (targetId && targetId !== 'none') {
                     const targetClassId = parseInt(targetId, 10);

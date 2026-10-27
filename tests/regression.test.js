@@ -9,6 +9,7 @@ const tests = [
   ['session-secret.test.js', 'Session secret configuration unit tests'],
   ['database-fixture.test.js', 'Isolated SQLite schema smoke test'],
   ['result-helper.test.js', 'Result scoring unit tests'],
+  ['result-context-integrity.test.js', 'Result class, subject, and enrollment context tests'],
   ['attendance-streak.test.js', 'Attendance streak and history unit tests'],
   ['attendance-student-helper.test.js', 'Attendance missing-student rows regression tests'],
   ['enrollment-session.test.js', 'Enrollment session isolation unit tests'],

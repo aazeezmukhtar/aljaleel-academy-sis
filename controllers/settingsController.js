@@ -258,7 +258,11 @@ const previewPromotion = async (req, res) => {
             const targetClassId = Number(targetId);
             const targetClass = isGraduate ? null : (Number.isInteger(targetClassId) ? classMap[targetClassId] : null);
             if (!isGraduate && !targetClass) {
-                warnings.push(`Destination for "${sourceClass.name}" is not a valid academy class. No preview was generated for this mapping.`);
+                warnings.push(`Destination for "${sourceClass.name}" is not a valid class. No preview was generated for this mapping.`);
+                continue;
+            }
+            if (!isGraduate && Number(sourceClass.section_id) !== Number(targetClass.section_id)) {
+                warnings.push(`Mapping from "${sourceClass.section_name || 'General'} / ${sourceClass.name}" to "${targetClass.section_name || 'General'} / ${targetClass.name}" crosses sections and was excluded. Promotion must stay within the same section.`);
                 continue;
             }
 
@@ -343,6 +347,14 @@ const processPromotion = async (req, res) => {
                 const targetClassId = Number(targetId);
                 if (!/^\d+$/.test(String(targetId)) || !Number.isInteger(targetClassId) || !validClassIds.has(targetClassId)) {
                     const message = 'Promotion mapping contains an invalid target class.';
+                    if (isAjax) return res.status(400).json({ success: false, message });
+                    return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+                }
+                
+                // Promotion must stay within a section. Cross-section enrollment
+                // is managed through enrollment workflows, not class promotion.
+                if (classSectionIdMap[classId] !== classSectionIdMap[targetClassId]) {
+                    const message = 'Promotion source and target classes must belong to the same section.';
                     if (isAjax) return res.status(400).json({ success: false, message });
                     return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
                 }

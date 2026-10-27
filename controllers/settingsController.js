@@ -328,8 +328,23 @@ const processPromotion = async (req, res) => {
     const isAjax = req.xhr || (req.headers['content-type'] && req.headers['content-type'].includes('application/json')) || (req.headers.accept && req.headers.accept.includes('application/json'));
 
     try {
-        const targetSession = target_session || '2026/2027';
-        const sourceSession = source_session || '2025/2026';
+        const targetSession = String(target_session || '2026/2027').trim();
+        const sourceSession = String(source_session || '2025/2026').trim();
+        const validSession = value => {
+            const match = /^(\\d{4})\\/(\\d{4})$/.exec(value);
+            return !!match && Number(match[2]) === Number(match[1]) + 1;
+        };
+        if (!validSession(sourceSession) || !validSession(targetSession)) {
+            const message = 'Source and target must be valid academic sessions in YYYY/YYYY format.';
+            if (isAjax) return res.status(400).json({ success: false, message });
+            return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+        }
+        if (sourceSession !== targetSession &&
+            Number(targetSession.slice(0, 4)) !== Number(sourceSession.slice(0, 4)) + 1) {
+            const message = 'End-of-session promotion must target the immediately following academic session.';
+            if (isAjax) return res.status(400).json({ success: false, message });
+            return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+        }
 
         const classes = await db.all(`
             SELECT c.id, c.section_id, sec.name AS section_name
@@ -346,6 +361,9 @@ const processPromotion = async (req, res) => {
             classSectionNameMap[c.id] = c.section_name || '';
             validClassIds.add(Number(c.id));
         });
+        const hasAcademySection = Object.values(classSectionNameMap).some(name => String(name).toLowerCase().includes('academy'));
+        const fallbackCurrentClassSectionId = hasAcademySection ? null :
+            classes.reduce((min, cls) => min === null || Number(cls.section_id) < min ? Number(cls.section_id) : min, null);
 
         // Validate the entire requested mapping before making any writes.
         // Invalid or foreign-school class IDs must not partially promote
@@ -507,20 +525,37 @@ const processPromotion = async (req, res) => {
                         `, [schoolId, student.id, targetSession, desiredSectionId]);
 
                         if (existingTargetEnrollment && Number(existingTargetEnrollment.class_id) !== Number(desiredClassId)) {
-                            throw new Error('Promotion stopped: a student already has a different enrollment in the target session. Existing placements were not overwritten.');
+                            // Same-session class change may replace only the exact source
+                            // enrollment it is moving from. Other placements remain conflicts.
+                            if (targetSession === sourceSession &&
+                                Number(existingTargetEnrollment.class_id) === Number(classId) &&
+                                Number(desiredClassId) !== Number(classId)) {
+                                await db.run(
+                                    'DELETE FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
+                                    [student.id, classId, targetSession]
+                                );
+                            } else {
+                                throw new Error('Promotion stopped: a student already has a different enrollment in the target session. Existing placements were not overwritten.');
+                            }
                         }
 
-                        if (!existingTargetEnrollment) {
+                        const enrollmentNowExists = await db.get(
+                            'SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
+                            [student.id, desiredClassId, targetSession]
+                        );
+                        if (!enrollmentNowExists) {
                             await db.run(`
                                 INSERT INTO student_enrollments (student_id, class_id, session)
                                 VALUES (?, ?, ?)
                             `, [student.id, desiredClassId, targetSession]);
                         }
 
-                        // current_class_id is a legacy single-class field. Update it for
-                        // Academy placements only; Tahfeez must not overwrite the Academy
-                        // class pointer for dual-section students.
-                        if (isAcademySection) {
+                        // current_class_id is a legacy single-class field. Prefer Academy;
+                        // fall back to the first configured section only where no Academy
+                        // section exists (for legacy/test installations).
+                        const isCurrentClassSection = isAcademySection ||
+                            (!hasAcademySection && Number(sourceSectionId) === Number(fallbackCurrentClassSectionId));
+                        if (isCurrentClassSection) {
                             await db.run(
                                 'UPDATE students SET current_class_id = ? WHERE id = ? AND school_id = ?',
                                 [desiredClassId, student.id, schoolId]

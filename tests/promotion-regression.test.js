@@ -349,6 +349,68 @@ async function run() {
     assert.strictEqual((await db.get('SELECT status FROM students WHERE id = ?', [graduationRepeater])).status, 'active');
     assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [graduationRepeater, selectiveGraduationClass, '2028/2029']), 'Unchecked graduation student must repeat in the target session');
 
+
+    // Invalid checkbox selections must fail closed before any partial writes.
+    await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Invalid Selection Source ' + token]);
+    const invalidSelectionClass = (await db.get('SELECT id FROM classes WHERE school_id = ? AND name = ?', [schoolId, 'Invalid Selection Source ' + token])).id;
+    await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'Invalid', 'Selection', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-INVALID-SELECTION-' + token, invalidSelectionClass]);
+    const invalidSelectionStudent = (await db.get('SELECT id FROM students WHERE school_id = ? AND admission_number = ?', [schoolId, 'PROMO-INVALID-SELECTION-' + token])).id;
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [invalidSelectionStudent, invalidSelectionClass, '2028/2029']);
+    const invalidSelection = response();
+    await controller.processPromotion({
+      schoolId, xhr: true,
+      body: {
+        source_session: '2028/2029',
+        target_session: '2029/2030',
+        mapping: { [invalidSelectionClass]: String(targetClass) },
+        promote_student_ids: { [invalidSelectionClass]: [currentStudent] }
+      }
+    }, invalidSelection);
+    assert.strictEqual(invalidSelection.statusCode, 500, 'Selection IDs outside the mapped source cohort must be rejected');
+    assert.strictEqual(invalidSelection.data.success, false);
+    assert.match(invalidSelection.data.message, /outside its mapped source class\/session/i);
+    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [invalidSelectionStudent, invalidSelectionClass, '2028/2029']), 'Rejected selection must preserve source enrollment');
+    assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND session = ?', [invalidSelectionStudent, '2029/2030']), undefined, 'Rejected selection must not create a target enrollment');
+
+    // Graduation must stop when the selected student remains enrolled in another section.
+    await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'Dual', 'Section', 'Other', '2010-01-01', ?, ?, 'active')", [schoolId, 'PROMO-GRAD-DUAL-SECTION-' + token, selectiveGraduationClass]);
+    const dualSectionGraduate = (await db.get('SELECT id FROM students WHERE school_id = ? AND admission_number = ?', [schoolId, 'PROMO-GRAD-DUAL-SECTION-' + token])).id;
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [dualSectionGraduate, selectiveGraduationClass, '2028/2029']);
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [dualSectionGraduate, otherSectionClass, '2029/2030']);
+    const blockedGraduation = response();
+    await controller.processPromotion({
+      schoolId, xhr: true,
+      body: { source_session: '2028/2029', target_session: '2029/2030', mapping: { [selectiveGraduationClass]: 'graduate' } }
+    }, blockedGraduation);
+    assert.strictEqual(blockedGraduation.statusCode, 500, 'Graduation must be blocked for cross-section students');
+    assert.match(blockedGraduation.data.message, /another section/i);
+    assert.strictEqual((await db.get('SELECT status FROM students WHERE id = ? AND school_id = ?', [dualSectionGraduate, schoolId])).status, 'active', 'Blocked graduation must not change global student status');
+    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [dualSectionGraduate, otherSectionClass, '2029/2030']), 'Blocked graduation must preserve other-section enrollment');
+
+    // An unchecked repeater must not overwrite a different pre-existing target-session placement.
+    await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Repeater Conflict Source ' + token]);
+    const repeaterConflictSource = (await db.get('SELECT id FROM classes WHERE school_id = ? AND name = ?', [schoolId, 'Repeater Conflict Source ' + token])).id;
+    await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Repeater Conflict Existing ' + token]);
+    const repeaterConflictExisting = (await db.get('SELECT id FROM classes WHERE school_id = ? AND name = ?', [schoolId, 'Repeater Conflict Existing ' + token])).id;
+    await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'Repeater', 'Conflict', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-REPEATER-CONFLICT-' + token, repeaterConflictSource]);
+    const repeaterConflictStudent = (await db.get('SELECT id FROM students WHERE school_id = ? AND admission_number = ?', [schoolId, 'PROMO-REPEATER-CONFLICT-' + token])).id;
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [repeaterConflictStudent, repeaterConflictSource, '2028/2029']);
+    await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [repeaterConflictStudent, repeaterConflictExisting, '2029/2030']);
+    const repeaterConflict = response();
+    await controller.processPromotion({
+      schoolId, xhr: true,
+      body: {
+        source_session: '2028/2029',
+        target_session: '2029/2030',
+        mapping: { [repeaterConflictSource]: String(targetClass) },
+        promote_student_ids: { [repeaterConflictSource]: [] }
+      }
+    }, repeaterConflict);
+    assert.strictEqual(repeaterConflict.statusCode, 500, 'A conflicting repeater placement must stop the whole operation');
+    assert.match(repeaterConflict.data.message, /repeater already has a different class placement/i);
+    assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [repeaterConflictStudent, repeaterConflictExisting, '2029/2030']), 'Existing target placement must remain untouched');
+    assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [repeaterConflictStudent, repeaterConflictSource, '2029/2030']), undefined, 'Conflicting repeater must not receive a second target enrollment');
+
     console.log('[promotion-regression] Session filtering, selective promotion/repeaters, enrollment history, cross-section preservation, rollback, and calendar tests passed.');
   } finally {
     await db.run('DROP TRIGGER IF EXISTS promotion_test_force_failure');

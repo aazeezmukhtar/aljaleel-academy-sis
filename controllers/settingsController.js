@@ -331,7 +331,7 @@ const processPromotion = async (req, res) => {
         const targetSession = String(target_session || '2026/2027').trim();
         const sourceSession = String(source_session || '2025/2026').trim();
         const validSession = value => {
-            const match = /^(\\d{4})\\/(\\d{4})$/.exec(value);
+            const match = /^(\d{4})\/(\d{4})$/.exec(value);
             return !!match && Number(match[2]) === Number(match[1]) + 1;
         };
         if (!validSession(sourceSession) || !validSession(targetSession)) {

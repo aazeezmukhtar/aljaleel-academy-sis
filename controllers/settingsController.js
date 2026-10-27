@@ -279,6 +279,7 @@ const previewPromotion = async (req, res) => {
             totalClasses += 1;
 
             preview.push({
+                sourceClassId: classId,
                 sourceClassName: sourceClass.name,
                 sectionName: sourceClass.section_name || 'General',
                 targetClassName: isGraduate ? 'Graduating / Alumni' : (targetClass ? targetClass.name : 'Unknown Class'),

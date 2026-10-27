@@ -217,6 +217,9 @@ async function run() {
     const conflictCurrentClass = await db.get('SELECT current_class_id FROM students WHERE id = ?', [conflictStudent]);
     assert.strictEqual(Number(conflictCurrentClass.current_class_id), Number(sourceClass), 'Failed promotion must roll back current class');
 
+    await db.run('DELETE FROM student_enrollments WHERE student_id = ?', [conflictStudent]);
+    await db.run('DELETE FROM students WHERE id = ? AND school_id = ?', [conflictStudent, schoolId]);
+
     // Global student status must not be changed by graduation in one section when
     // the same student still has an enrollment in another section in that session.
     await db.run('INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)', [crossSectionStudent, otherSectionClass, '2025/2026']);

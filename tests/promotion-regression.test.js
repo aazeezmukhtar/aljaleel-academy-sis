@@ -407,7 +407,7 @@ async function run() {
       }
     }, repeaterConflict);
     assert.strictEqual(repeaterConflict.statusCode, 500, 'A conflicting repeater placement must stop the whole operation');
-    assert.match(repeaterConflict.data.message, /repeater already has a different class placement/i);
+    assert.match(repeaterConflict.data.message, /different enrollment in the target session/i);
     assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [repeaterConflictStudent, repeaterConflictExisting, '2029/2030']), 'Existing target placement must remain untouched');
     assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [repeaterConflictStudent, repeaterConflictSource, '2029/2030']), undefined, 'Conflicting repeater must not receive a second target enrollment');
 

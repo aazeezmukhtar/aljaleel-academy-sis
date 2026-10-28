@@ -99,9 +99,12 @@ const processImport = async (req, res) => {
     const file = req.file;
 
     // Validate required import parameters
-    if (!term || !session) {
-        return res.status(400).json({ success: false, message: 'Term and session are required for import.' });
+    if (!class_id || !subject_id || !term || !session) {
+        return res.status(400).json({ success: false, message: 'Class, subject, term, and session are required for import.' });
     }
+
+    const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+    if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class context.' });
 
     if (!file) {
         return res.status(400).json({ success: false, message: 'No file uploaded.' });
@@ -114,6 +117,11 @@ const processImport = async (req, res) => {
 
         const errors = [];
         const resultsToSave = [];
+        const baseSubject = await db.get('SELECT id FROM subjects WHERE id = ? AND school_id = ?', [subject_id, schoolId]);
+        if (!baseSubject) {
+            if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
+            return res.status(403).json({ success: false, message: 'Unauthorized subject context.' });
+        }
 
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
@@ -150,6 +158,31 @@ const processImport = async (req, res) => {
                 }
             }
 
+            const assignment = await db.get(
+                'SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1',
+                [class_id, activeSubjectId, session]
+            );
+            if (!assignment) {
+                errors.push(`Row ${i + 2}: Subject is not assigned to the selected class for this session.`);
+                continue;
+            }
+            const enrollment = await db.get(
+                'SELECT student_id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ? LIMIT 1',
+                [student.id, class_id, session]
+            );
+            if (!enrollment) {
+                errors.push(`Row ${i + 2}: Student is not enrolled in the selected class for this session.`);
+                continue;
+            }
+            const existing = await db.get(
+                "SELECT status FROM results WHERE student_id = ? AND class_id = ? AND subject_id = ? AND term = ? AND session = ?",
+                [student.id, class_id, activeSubjectId, term, session]
+            );
+            if (existing && ['approved', 'locked', 'published'].includes(String(existing.status || '').toLowerCase())) {
+                errors.push(`Row ${i + 2}: Existing result is approved, locked, or published and cannot be overwritten by import.`);
+                continue;
+            }
+
             const { total, grade } = computeResult(ca1, ca2, exam);
             resultsToSave.push({
                 student_id: student.id,
@@ -164,9 +197,9 @@ const processImport = async (req, res) => {
         }
 
         const insertSql = `
-            INSERT INTO results (student_id, subject_id, term, session, ca1, ca2, exam, total, grade)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(student_id, subject_id, term, session) DO UPDATE SET
+            INSERT INTO results (student_id, class_id, subject_id, term, session, ca1, ca2, exam, total, grade)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(student_id, class_id, subject_id, term, session) DO UPDATE SET
             ca1=excluded.ca1, ca2=excluded.ca2, exam=excluded.exam, 
             total=excluded.total, grade=excluded.grade
         `;
@@ -175,6 +208,7 @@ const processImport = async (req, res) => {
             for (const item of resultsToSave) {
                 await db.run(insertSql, [
                     Number(item.student_id),
+                    Number(class_id),
                     Number(item.subject_id),
                     String(term),
                     String(session),

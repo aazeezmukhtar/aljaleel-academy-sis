@@ -523,13 +523,13 @@ const getReportCard = async (req, res) => {
             SELECT r.*, s.name as subject_name,
             (SELECT COUNT(*) + 1 FROM results r2 
              WHERE r2.subject_id = r.subject_id AND r2.term = r.term 
-             AND r2.session = r.session AND r2.total > r.total
+             AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ?
              AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
               AND r.class_id = ?
-        `, [target_class_id, session, student_id, term, session, target_class_id]);
+        `, [target_class_id, session, target_class_id, student_id, term, session, target_class_id]);
 
         const classPerformance = await db.all(`
             SELECT r.student_id, SUM(r.total) as student_total
@@ -777,21 +777,21 @@ const getBulkReport = async (req, res) => {
                 SELECT r.*, s.name as subject_name,
                 (SELECT COUNT(*) + 1 FROM results r2
                  WHERE r2.subject_id = r.subject_id AND r2.term = r.term
-                 AND r2.session = r.session AND r2.total > r.total
+                 AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ?
                  AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.term = ? AND r.session = ?
                   AND r.class_id = ?
-            `, [class_id, session, student.id, term, session, class_id]);
+            `, [class_id, session, class_id, student.id, term, session, class_id]);
 
             const studentPerf = classPerformance.find(p => p.student_id == student.id);
             const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
 
             const traitRows = await db.all(`
                 SELECT trait_name, score FROM affective_psychomotor
-                WHERE student_id = ? AND term = ? AND session = ?
-            `, [student.id, term, session]);
+                WHERE student_id = ? AND class_id = ? AND term = ? AND session = ?
+            `, [student.id, class_id, term, session]);
             const traits = {};
             traitRows.forEach(t => traits[t.trait_name] = t.score);
 

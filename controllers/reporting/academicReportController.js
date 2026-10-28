@@ -50,8 +50,9 @@ const getBroadsheet = async (req, res) => {
                 JOIN results r ON s.id = r.subject_id
                 JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
                 WHERE se.class_id = ? AND r.term = ? AND r.session = ?
+                  AND r.class_id = ?
                 ORDER BY s.name
-            `, [class_id, term, session]);
+            `, [class_id, term, session, class_id]);
 
             // All active students in the class
             const students = await db.all(`
@@ -69,7 +70,8 @@ const getBroadsheet = async (req, res) => {
                 FROM results r
                 JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
                 WHERE se.class_id = ? AND r.term = ? AND r.session = ?
-            `, [class_id, term, session]);
+                  AND r.class_id = ?
+            `, [class_id, term, session, class_id]);
 
             // Build result lookup map: resultMap[student_id][subject_id]
             const resultMap = {};
@@ -150,10 +152,10 @@ const getSubjectAnalysis = async (req, res) => {
             JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
             JOIN classes c ON se.class_id = c.id
             WHERE se.class_id = ? AND r.term = ? AND r.session = ?
-              AND c.school_id = ?
+              AND r.class_id = ? AND c.school_id = ?
             GROUP BY s.id, s.name, c.name
             ORDER BY s.name;
-        `, [class_id, term, session, schoolId]);
+        `, [class_id, term, session, class_id, schoolId]);
     }
 
     const totalStudentsResult = await db.get(`
@@ -162,8 +164,8 @@ const getSubjectAnalysis = async (req, res) => {
         JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
         JOIN classes c ON se.class_id = c.id
         WHERE se.class_id = ? AND r.term = ? AND r.session = ?
-          AND c.school_id = ?
-    `, [class_id, term, session, schoolId]);
+          AND r.class_id = ? AND c.school_id = ?
+    `, [class_id, term, session, class_id, schoolId]);
     const totalStudents = totalStudentsResult ? totalStudentsResult.total_students : 0;
 
     res.render('reports/academic/analysis', {
@@ -211,11 +213,11 @@ const getTopPerformers = async (req, res) => {
             JOIN student_enrollments se ON s.id = se.student_id AND se.session = r.session
             JOIN classes c ON se.class_id = c.id
             WHERE se.class_id = ? AND r.term = ? AND r.session = ?
-              AND s.school_id = ?
+              AND r.class_id = ? AND s.school_id = ?
             GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
             ORDER BY average_score DESC
             LIMIT ?
-        `, [class_id, term, session, schoolId, limit || 10]);
+        `, [class_id, term, session, class_id, schoolId, limit || 10]);
     }
 
     const availableSessions = await sessionHelper.getAvailableSessions(schoolId);

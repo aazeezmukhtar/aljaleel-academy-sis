@@ -87,17 +87,25 @@ ORDER BY ownership_status, ap.session, ap.term, ap.id;
 WITH candidates AS (
   SELECT r.id AS row_id, COUNT(DISTINCT se.class_id) AS n
   FROM results r
-  LEFT JOIN student_enrollments se
+  JOIN student_enrollments se
     ON se.student_id = r.student_id AND se.session = r.session
-  LEFT JOIN subject_assignments sa
-    ON sa.class_id = se.class_id AND sa.subject_id = r.subject_id AND sa.session = r.session
+  JOIN subject_assignments sa
+    ON sa.class_id = se.class_id
+   AND sa.subject_id = r.subject_id
+   AND sa.session = r.session
   WHERE r.class_id IS NULL
   GROUP BY r.id
+),
+classified AS (
+  SELECT r.id AS row_id, COALESCE(c.n, 0) AS n
+  FROM results r
+  LEFT JOIN candidates c ON c.row_id = r.id
+  WHERE r.class_id IS NULL
 )
 SELECT CASE WHEN n = 1 THEN 'unambiguous'
             WHEN n > 1 THEN 'ambiguous'
             ELSE 'unmatched' END AS ownership_status,
        COUNT(*) AS row_count
-FROM candidates
+FROM classified
 GROUP BY ownership_status
 ORDER BY ownership_status;

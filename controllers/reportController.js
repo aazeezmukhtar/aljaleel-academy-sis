@@ -26,7 +26,7 @@ const getAcademicReports = async (req, res) => {
                 FROM classes c
                 JOIN sections sec ON c.section_id = sec.id
                 JOIN student_enrollments se ON c.id = se.class_id AND se.session = sec.current_session
-                JOIN results r ON se.student_id = r.student_id AND se.session = r.session
+                JOIN results r ON se.student_id = r.student_id AND se.session = r.session AND r.class_id = c.id
                 WHERE c.school_id = ?
                 GROUP BY c.id, c.name
             `, [schoolId]);
@@ -38,7 +38,7 @@ const getAcademicReports = async (req, res) => {
                 LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
                 LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
                 JOIN student_enrollments se ON c.id = se.class_id AND se.session = sec.current_session
-                JOIN results r ON se.student_id = r.student_id AND se.session = r.session
+                JOIN results r ON se.student_id = r.student_id AND se.session = r.session AND r.class_id = c.id
                 WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
                   AND c.school_id = ?
                 GROUP BY c.id, c.name

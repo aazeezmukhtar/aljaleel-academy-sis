@@ -8,12 +8,11 @@ This document is a design and rollout plan only. It does not change the database
 
 ## Confirmed current constraints
 
-- `results` identifies a mark by student, subject, term, and session. It has no class/section ownership column.
+- The section-owned academic-record migration adds nullable `class_id` to `results` and `affective_psychomotor`. Existing legacy rows remain unresolved with `class_id = NULL` until a reviewed backfill proves ownership.
 - `subject_assignments` connects subject, class, teacher, and session. A subject can potentially be assigned to more than one class.
-- `saveResults` receives `class_id`, but its result INSERT/UPSERT currently does not store it. The assignment validation also does not currently constrain the assignment to the selected session.
-- `importController.processImport` accepts `class_id` but currently writes result rows without class ownership or equivalent class/enrollment validation.
-- Individual and bulk report controllers infer a result's class from enrollments and assigned subjects; this is ambiguous when a subject is shared between the student's classes.
-- Academic overview aggregation in `reportController` joins results to enrollments by student/session, so one result can be counted against multiple class enrollments.
+- Current direct result entry and import code write `class_id` and validate class/session/subject/enrollment context. Keep these checks aligned as the code evolves.
+- Result-entry reads and report queries must constrain results to the explicitly selected `class_id`; a legacy row with NULL ownership must not be silently treated as belonging to the currently selected class.
+- Some academic overview code already joins results by explicit class ownership; continue auditing each query rather than assuming all reporting paths are consistent.
 - `affective_psychomotor` has no class context and is unique by student, trait, term, and session.
 - `attendance` stores `class_id`, but its uniqueness constraint is student/date/session/term without class_id. Filtering reports by class does not by itself solve same-day attendance for students in two sections.
 

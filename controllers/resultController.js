@@ -813,9 +813,9 @@ const getBulkReport = async (req, res) => {
             traitRows.forEach(t => traits[t.trait_name] = t.score);
 
             const attendance = await db.get(`
-                SELECT COUNT(*) as present_count FROM attendance 
-                WHERE student_id = ? AND status = 'Present' AND term = ? AND session = ?
-            `, [student.id, term, session]) || { present_count: 0 };
+                SELECT COUNT(*) as present_count FROM attendance
+                WHERE student_id = ? AND class_id = ? AND status = 'Present' AND term = ? AND session = ?
+            `, [student.id, class_id, term, session]) || { present_count: 0 };
 
             const myIndex = classPerformance.indexOf(studentPerf);
             const marksAnalysis = [];

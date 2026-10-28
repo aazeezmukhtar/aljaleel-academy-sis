@@ -529,7 +529,7 @@ const getReportCard = async (req, res) => {
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
               AND r.class_id = ?
-        `, [target_class_id, session, target_class_id, student_id, term, session, target_class_id]);
+        `, [target_class_id, target_class_id, session, student_id, term, session, target_class_id]);
 
         const classPerformance = await db.all(`
             SELECT r.student_id, SUM(r.total) as student_total
@@ -783,7 +783,7 @@ const getBulkReport = async (req, res) => {
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.term = ? AND r.session = ?
                   AND r.class_id = ?
-            `, [class_id, session, class_id, student.id, term, session, class_id]);
+            `, [class_id, class_id, session, student.id, term, session, class_id]);
 
             const studentPerf = classPerformance.find(p => p.student_id == student.id);
             const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;

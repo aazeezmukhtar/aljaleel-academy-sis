@@ -328,10 +328,11 @@ const getResultManager = async (req, res) => {
                     FROM students s
                     LEFT JOIN results r ON s.id = r.student_id
                         AND r.subject_id = ? AND r.term = ? AND r.session = ?
+                        AND r.class_id = ?
                     WHERE s.id IN (${studentIds.map(() => '?').join(',')})
                       AND s.school_id = ?
                     ORDER BY s.first_name, s.last_name
-                `, [subject_id, activeTerm, activeSession, ...studentIds, schoolId]);
+                `, [subject_id, activeTerm, activeSession, class_id, ...studentIds, schoolId]);
             }
         }
 
@@ -425,9 +426,19 @@ const saveResults = async (req, res) => {
             `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id, class_id, user.id, class_id, subject_id]);
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
-            const checkLock = await db.get("SELECT status FROM results WHERE student_id = ? AND class_id = ? AND subject_id = ? AND term = ? AND session = ?", [results[0]?.student_id, class_id, subject_id, term, session]);
-            if (checkLock && (checkLock.status === 'locked' || checkLock.status === 'published' || checkLock.status === 'approved')) {
-                return res.status(403).json({ success: false, message: 'Results are LOCKED or PUBLISHED and cannot be edited.' });
+            // Check every submitted student's existing row before any write. A batch
+            // must not overwrite a protected row just because the first row is editable.
+            for (const studentId of submittedStudentIds) {
+                const existing = await db.get(
+                    'SELECT status FROM results WHERE student_id = ? AND class_id = ? AND subject_id = ? AND term = ? AND session = ?',
+                    [studentId, class_id, subject_id, term, session]
+                );
+                if (existing && ['locked', 'published', 'approved'].includes(String(existing.status || '').toLowerCase())) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'At least one submitted result is approved, locked, or published and cannot be edited. No results were saved.'
+                    });
+                }
             }
         }
 
@@ -442,10 +453,8 @@ const saveResults = async (req, res) => {
 
         await db.transaction(async () => {
             for (const item of results) {
-                // Verify student belongs to this tenant
-                const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [item.student_id, schoolId]);
-                if (!studentCheck) continue; // Skip unauthorized student IDs
-
+                // Tenant ownership and class enrollment were validated for every
+                // submitted student before opening this transaction.
                 const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
                 await db.run(sql, [
                     item.student_id,

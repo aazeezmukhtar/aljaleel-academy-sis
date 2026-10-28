@@ -29,12 +29,17 @@ for (const [name, body] of [
   ['bulk report cards', bulk],
   ['bulk cumulative reports', bulkCumulative]
 ]) {
-  assert.match(body, /subject_assignments sa/, `${name} must scope results to assigned subjects`);
-  assert.match(body, /sa\.class_id = \?/,
-    `${name} must bind the selected class when filtering subject assignments`);
-  assert.match(body, /sa\.session = \?/,
-    `${name} must bind the selected session when filtering subject assignments`);
+  assert.match(body, /class_id = \?/, `${name} must filter result rows by explicit class ownership`);
 }
+
+assert.match(report, /r2\.class_id = \?/,
+  'Individual subject rankings must compare marks from the same class only');
+assert.match(bulk, /r2\.class_id = \?/,
+  'Bulk subject rankings must compare marks from the same class only');
+assert.match(report, /affective_psychomotor[\s\S]*?class_id = \?/,
+  'Individual report traits must be scoped to the selected class');
+assert.match(bulk, /affective_psychomotor[\s\S]*?class_id = \?/,
+  'Bulk report traits must be scoped to the selected class');
 
 assert.match(report, /multiple class enrollments for this session/i,
   'Individual report cards must not silently choose an arbitrary enrollment');

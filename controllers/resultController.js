@@ -377,8 +377,8 @@ const saveResults = async (req, res) => {
         if (!subjectCheck) return res.status(403).json({ success: false, message: 'Unauthorized subject context.' });
 
         const assignmentCheck = await db.get(
-            'SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? LIMIT 1',
-            [class_id, subject_id]
+            'SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1',
+            [class_id, subject_id, session]
         );
         if (!assignmentCheck) {
             return res.status(400).json({ success: false, message: 'This subject is not assigned to the selected class. No results were saved.' });
@@ -425,16 +425,16 @@ const saveResults = async (req, res) => {
             `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id, class_id, user.id, class_id, subject_id]);
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
-            const checkLock = await db.get("SELECT status FROM results WHERE student_id = ? AND subject_id = ? AND term = ? AND session = ?", [results[0]?.student_id, subject_id, term, session]);
+            const checkLock = await db.get("SELECT status FROM results WHERE student_id = ? AND class_id = ? AND subject_id = ? AND term = ? AND session = ?", [results[0]?.student_id, class_id, subject_id, term, session]);
             if (checkLock && (checkLock.status === 'locked' || checkLock.status === 'published' || checkLock.status === 'approved')) {
                 return res.status(403).json({ success: false, message: 'Results are LOCKED or PUBLISHED and cannot be edited.' });
             }
         }
 
         const sql = `
-            INSERT INTO results (student_id, subject_id, term, session, ca1, ca2, exam, total, grade, teacher_remark, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(student_id, subject_id, term, session) DO UPDATE SET
+            INSERT INTO results (student_id, class_id, subject_id, term, session, ca1, ca2, exam, total, grade, teacher_remark, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(student_id, class_id, subject_id, term, session) DO UPDATE SET
             ca1=excluded.ca1, ca2=excluded.ca2, exam=excluded.exam, 
             total=excluded.total, grade=excluded.grade, 
             teacher_remark=excluded.teacher_remark, status=excluded.status
@@ -449,6 +449,7 @@ const saveResults = async (req, res) => {
                 const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
                 await db.run(sql, [
                     item.student_id,
+                    class_id,
                     subject_id,
                     term,
                     session,
@@ -522,29 +523,23 @@ const getReportCard = async (req, res) => {
             SELECT r.*, s.name as subject_name,
             (SELECT COUNT(*) + 1 FROM results r2 
              WHERE r2.subject_id = r.subject_id AND r2.term = r.term 
-             AND r2.session = r.session AND r2.total > r.total
+             AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ?
              AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-              AND EXISTS (
-                  SELECT 1 FROM subject_assignments sa
-                  WHERE sa.class_id = ? AND sa.session = ? AND sa.subject_id = r.subject_id
-              )
-        `, [target_class_id, session, student_id, term, session, target_class_id, session]);
+              AND r.class_id = ?
+        `, [target_class_id, target_class_id, session, student_id, term, session, target_class_id]);
 
         const classPerformance = await db.all(`
             SELECT r.student_id, SUM(r.total) as student_total
             FROM results r
             WHERE r.term = ? AND r.session = ?
               AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-              AND EXISTS (
-                  SELECT 1 FROM subject_assignments sa
-                  WHERE sa.class_id = ? AND sa.session = ? AND sa.subject_id = r.subject_id
-              )
+              AND r.class_id = ?
             GROUP BY r.student_id
             ORDER BY student_total DESC
-        `, [term, session, target_class_id, session, target_class_id, session]);
+        `, [term, session, target_class_id, session, target_class_id]);
 
         const studentPerf = classPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -559,8 +554,8 @@ const getReportCard = async (req, res) => {
         // Traits
         const traitRows = await db.all(`
             SELECT trait_name, score FROM affective_psychomotor
-            WHERE student_id = ? AND term = ? AND session = ?
-        `, [student_id, term, session]) || [];
+            WHERE student_id = ? AND class_id = ? AND term = ? AND session = ?
+        `, [student_id, target_class_id, term, session]) || [];
         const traits = {};
         traitRows.forEach(t => traits[t.trait_name] = t.score);
 
@@ -661,11 +656,8 @@ const getCumulativeReport = async (req, res) => {
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.session = ?
-              AND EXISTS (
-                  SELECT 1 FROM subject_assignments sa
-                  WHERE sa.class_id = ? AND sa.session = ? AND sa.subject_id = r.subject_id
-              )
-        `, [student_id, session, target_class_id, session]);
+              AND r.class_id = ?
+        `, [student_id, session, target_class_id]);
 
         const subjectMap = {};
         rawResults.forEach(r => {
@@ -681,13 +673,10 @@ const getCumulativeReport = async (req, res) => {
             SELECT r.student_id, AVG(r.total) as session_avg
             FROM results r
             WHERE r.session = ? AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-              AND EXISTS (
-                  SELECT 1 FROM subject_assignments sa
-                  WHERE sa.class_id = ? AND sa.session = ? AND sa.subject_id = r.subject_id
-              )
+              AND r.class_id = ?
             GROUP BY r.student_id
             ORDER BY session_avg DESC
-        `, [session, target_class_id, session, target_class_id, session]);
+        `, [session, target_class_id, session, target_class_id]);
 
         const studentPerf = sessionPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? sessionPerformance.indexOf(studentPerf) + 1 : 0;
@@ -777,13 +766,10 @@ const getBulkReport = async (req, res) => {
             FROM results
             WHERE term = ? AND session = ?
               AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-              AND EXISTS (
-                  SELECT 1 FROM subject_assignments sa
-                  WHERE sa.class_id = ? AND sa.session = ? AND sa.subject_id = results.subject_id
-              )
+              AND results.class_id = ?
             GROUP BY student_id
             ORDER BY student_total DESC
-        `, [term, session, class_id, session, class_id, session]);
+        `, [term, session, class_id, session, class_id]);
 
         const studentsData = [];
         for (const student of students) {
@@ -791,24 +777,21 @@ const getBulkReport = async (req, res) => {
                 SELECT r.*, s.name as subject_name,
                 (SELECT COUNT(*) + 1 FROM results r2
                  WHERE r2.subject_id = r.subject_id AND r2.term = r.term
-                 AND r2.session = r.session AND r2.total > r.total
+                 AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ?
                  AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-                  AND EXISTS (
-                      SELECT 1 FROM subject_assignments sa
-                      WHERE sa.class_id = ? AND sa.session = ? AND sa.subject_id = r.subject_id
-                  )
-            `, [class_id, session, student.id, term, session, class_id, session]);
+                  AND r.class_id = ?
+            `, [class_id, class_id, session, student.id, term, session, class_id]);
 
             const studentPerf = classPerformance.find(p => p.student_id == student.id);
             const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
 
             const traitRows = await db.all(`
                 SELECT trait_name, score FROM affective_psychomotor
-                WHERE student_id = ? AND term = ? AND session = ?
-            `, [student.id, term, session]);
+                WHERE student_id = ? AND class_id = ? AND term = ? AND session = ?
+            `, [student.id, class_id, term, session]);
             const traits = {};
             traitRows.forEach(t => traits[t.trait_name] = t.score);
 
@@ -880,13 +863,10 @@ const getBulkCumulative = async (req, res) => {
             SELECT student_id, AVG(total) as session_avg
             FROM results
             WHERE session = ? AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-              AND EXISTS (
-                  SELECT 1 FROM subject_assignments sa
-                  WHERE sa.class_id = ? AND sa.session = ? AND sa.subject_id = results.subject_id
-              )
+              AND results.class_id = ?
             GROUP BY student_id
             ORDER BY session_avg DESC
-        `, [session, class_id, session, class_id, session]);
+        `, [session, class_id, session, class_id]);
 
         const studentsData = [];
         for (const student of students) {
@@ -895,11 +875,8 @@ const getBulkCumulative = async (req, res) => {
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.session = ?
-                  AND EXISTS (
-                      SELECT 1 FROM subject_assignments sa
-                      WHERE sa.class_id = ? AND sa.session = ? AND sa.subject_id = r.subject_id
-                  )
-            `, [student.id, session, class_id, session]);
+                  AND r.class_id = ?
+            `, [student.id, session, class_id]);
 
             const subjectMap = {};
             rawResults.forEach(r => {
@@ -1039,20 +1016,41 @@ const saveTraits = async (req, res) => {
             if (!isAssigned) return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
 
+        if (!class_id || !term || !session || !traits || typeof traits !== 'object' || Array.isArray(traits)) {
+            return res.status(400).json({ success: false, message: 'Class, term, session, and trait assessments are required.' });
+        }
+
+        // Validate the complete submitted cohort before writing any trait rows.
+        for (const [student_id, studentTraits] of Object.entries(traits)) {
+            const studentId = Number(student_id);
+            if (!Number.isInteger(studentId) || studentId <= 0 || !studentTraits || typeof studentTraits !== 'object') {
+                return res.status(400).json({ success: false, message: 'Invalid trait assessment payload. No assessments were saved.' });
+            }
+            const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [studentId, schoolId]);
+            const enrollment = await db.get(
+                'SELECT student_id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ? LIMIT 1',
+                [studentId, class_id, session]
+            );
+            if (!studentCheck || !enrollment) {
+                return res.status(400).json({ success: false, message: 'Every assessed student must be enrolled in the selected class for this session. No assessments were saved.' });
+            }
+            for (const score of Object.values(studentTraits)) {
+                if (!Number.isInteger(Number(score)) || Number(score) < 1 || Number(score) > 5) {
+                    return res.status(400).json({ success: false, message: 'Trait scores must be whole numbers from 1 to 5. No assessments were saved.' });
+                }
+            }
+        }
+
         const sql = `
-            INSERT INTO affective_psychomotor (student_id, trait_name, score, term, session)
-            VALUES (?, ?, ?, ?, ?)
-            ON CONFLICT(student_id, trait_name, term, session) DO UPDATE SET score = excluded.score
+            INSERT INTO affective_psychomotor (student_id, class_id, trait_name, score, term, session)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(student_id, class_id, trait_name, term, session) DO UPDATE SET score = excluded.score
         `;
 
         await db.transaction(async () => {
             for (const [student_id, studentTraits] of Object.entries(traits)) {
-                // Verify student belongs to this tenant
-                const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [parseInt(student_id), schoolId]);
-                if (!studentCheck) continue;
-
                 for (const [trait_name, score] of Object.entries(studentTraits)) {
-                    await db.run(sql, [parseInt(student_id), trait_name, parseInt(score), term, session]);
+                    await db.run(sql, [Number(student_id), class_id, trait_name, Number(score), term, session]);
                 }
             }
         });
@@ -1078,9 +1076,8 @@ const approveResults = async (req, res) => {
         const info = await db.run(`
             UPDATE results
             SET status = 'approved', approved_by = ?
-            WHERE subject_id = ? AND term = ? AND session = ?
-            AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-        `, [user.id, subject_id, term, session, class_id, session]);
+            WHERE class_id = ? AND subject_id = ? AND term = ? AND session = ?
+        `, [user.id, class_id, subject_id, term, session]);
         res.json({ success: true, message: `Approved ${info.changes} results.` });
     } catch (err) {
         console.error('Approve Error:', err);
@@ -1102,9 +1099,8 @@ const lockResults = async (req, res) => {
         const info = await db.run(`
             UPDATE results
             SET status = 'locked'
-            WHERE subject_id = ? AND term = ? AND session = ?
-            AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-        `, [subject_id, term, session, class_id, session]);
+            WHERE class_id = ? AND subject_id = ? AND term = ? AND session = ?
+        `, [class_id, subject_id, term, session]);
         res.json({ success: true, message: `Locked ${info.changes} results. Editing is now disabled.` });
     } catch (err) {
         console.error('Lock Error:', err);
@@ -1128,9 +1124,8 @@ const publishBulkResults = async (req, res) => {
             info = await db.run(`
                 UPDATE results
                 SET status = 'published', approved_by = ?
-                WHERE term = ? AND session = ?
-                AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-            `, [user.id, term, session, class_id, session]);
+                WHERE class_id = ? AND term = ? AND session = ?
+            `, [user.id, class_id, term, session]);
         } else {
             info = await db.run(`
                 UPDATE results 

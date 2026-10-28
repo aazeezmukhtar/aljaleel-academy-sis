@@ -32,6 +32,50 @@ async function withMockedDb(runTest) {
   }
 }
 
+async function testRejectsBatchWhenAnyExistingResultIsProtected() {
+  await withMockedDb(async () => {
+    const writes = [];
+    const statusLookups = [];
+    db.get = async (sql, params = []) => {
+      if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
+      if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
+      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
+      if (sql.includes('WHERE (') && sql.includes('EXISTS (SELECT id FROM subject_assignments')) return { ok: 1 };
+      if (sql.includes('SELECT status FROM results WHERE student_id = ? AND class_id = ?')) {
+        statusLookups.push(Number(params[0]));
+        return Number(params[0]) === 202 ? { status: 'approved' } : null;
+      }
+      throw new Error('Unexpected database lookup: ' + sql);
+    };
+    db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
+    db.transaction = async callback => callback();
+
+    const res = responseRecorder();
+    await resultController.saveResults({
+      schoolId: 1,
+      session: { staff: { id: 7, role: 'Teacher' } },
+      body: {
+        class_id: '10',
+        subject_id: '20',
+        term: '3rd Term',
+        session: '2025/2026',
+        status: 'draft',
+        results: [
+          { student_id: 101, ca1: 10, ca2: 10, exam: 50 },
+          { student_id: 202, ca1: 15, ca2: 15, exam: 55 }
+        ]
+      }
+    }, res);
+
+    assert.strictEqual(res.statusCode, 403, 'A protected row anywhere in the batch must reject the batch');
+    assert.strictEqual(res.body.success, false);
+    assert.match(res.body.message, /approved, locked, or published/i);
+    assert.deepStrictEqual(statusLookups, [101, 202], 'Every submitted row must be checked for protected status');
+    assert.strictEqual(writes.length, 0, 'No row may be written if any submitted result is protected');
+  });
+}
+
 async function testRejectsBatchIfAnyStudentIsNotEnrolled() {
   await withMockedDb(async () => {
     const writes = [];
@@ -110,6 +154,7 @@ async function testRejectsSubjectNotAssignedToClass() {
 (async () => {
   await testRejectsBatchIfAnyStudentIsNotEnrolled();
   await testRejectsSubjectNotAssignedToClass();
+  await testRejectsBatchWhenAnyExistingResultIsProtected();
   process.stdout.write('PASS: Result context integrity regression tests\\n');
 })().catch(error => {
   console.error(error);

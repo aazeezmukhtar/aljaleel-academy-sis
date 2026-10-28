@@ -11,6 +11,8 @@ const tests = [
   ['result-helper.test.js', 'Result scoring unit tests'],
   ['result-context-integrity.test.js', 'Result class, subject, and enrollment context tests'],
   ['result-report-section-isolation.test.js', 'Section-isolated report-card query guards'],
+  ['section-owned-academic-records-migration.test.js', 'Section-owned records SQLite migration tests'],
+  ['section-owned-academic-records-writes.test.js', 'Class-owned result and section-specific trait write tests'],
   ['attendance-streak.test.js', 'Attendance streak and history unit tests'],
   ['attendance-student-helper.test.js', 'Attendance missing-student rows regression tests'],
   ['enrollment-session.test.js', 'Enrollment session isolation unit tests'],

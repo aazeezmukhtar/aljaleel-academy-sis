@@ -5,11 +5,13 @@ BEGIN;
 ALTER TABLE results ADD COLUMN IF NOT EXISTS class_id INTEGER REFERENCES classes(id);
 ALTER TABLE affective_psychomotor ADD COLUMN IF NOT EXISTS class_id INTEGER REFERENCES classes(id);
 
--- Drop the legacy uniqueness rules, which prevent the same subject/trait being
--- recorded independently for two sections. Names match PostgreSQL's generated
--- names for the existing inline UNIQUE constraints in the supplied schema.
+-- Drop all legacy uniqueness rules, which prevent the same subject/trait being
+-- recorded independently for two sections. Production inspection found two
+-- equivalent UNIQUE constraints on results, so both names must be removed.
 ALTER TABLE results
   DROP CONSTRAINT IF EXISTS results_student_id_subject_id_term_session_key;
+ALTER TABLE results
+  DROP CONSTRAINT IF EXISTS results_student_subject_term_session_key;
 ALTER TABLE affective_psychomotor
   DROP CONSTRAINT IF EXISTS affective_psychomotor_student_id_trait_name_term_session_key;
 

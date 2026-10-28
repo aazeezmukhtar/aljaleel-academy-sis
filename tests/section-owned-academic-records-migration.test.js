@@ -66,7 +66,7 @@ try {
 
   db.prepare('INSERT INTO affective_psychomotor (student_id, class_id, trait_name, score, term, session) VALUES (?, ?, ?, ?, ?, ?)').run(1, 20, 'Responsibility', 2, 'First Term', '2026/2027');
   db.prepare('INSERT INTO affective_psychomotor (student_id, class_id, trait_name, score, term, session) VALUES (?, ?, ?, ?, ?, ?)').run(1, 30, 'Responsibility', 5, 'First Term', '2026/2027');
-  assert.strictEqual(db.prepare('SELECT COUNT(*) AS n FROM affective_psychomotor WHERE student_id=1 AND trait_name="Responsibility" AND class_id IS NOT NULL').get().n, 2,
+  assert.strictEqual(db.prepare('SELECT COUNT(*) AS n FROM affective_psychomotor WHERE student_id=1 AND trait_name='Responsibility' AND class_id IS NOT NULL').get().n, 2,
     'same trait must support independent class-owned assessments');
 
   migrate(db);

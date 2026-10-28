@@ -1016,6 +1016,31 @@ const saveTraits = async (req, res) => {
             if (!isAssigned) return res.status(403).json({ success: false, message: 'Unauthorized' });
         }
 
+        if (!class_id || !term || !session || !traits || typeof traits !== 'object' || Array.isArray(traits)) {
+            return res.status(400).json({ success: false, message: 'Class, term, session, and trait assessments are required.' });
+        }
+
+        // Validate the complete submitted cohort before writing any trait rows.
+        for (const [student_id, studentTraits] of Object.entries(traits)) {
+            const studentId = Number(student_id);
+            if (!Number.isInteger(studentId) || studentId <= 0 || !studentTraits || typeof studentTraits !== 'object') {
+                return res.status(400).json({ success: false, message: 'Invalid trait assessment payload. No assessments were saved.' });
+            }
+            const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [studentId, schoolId]);
+            const enrollment = await db.get(
+                'SELECT student_id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ? LIMIT 1',
+                [studentId, class_id, session]
+            );
+            if (!studentCheck || !enrollment) {
+                return res.status(400).json({ success: false, message: 'Every assessed student must be enrolled in the selected class for this session. No assessments were saved.' });
+            }
+            for (const score of Object.values(studentTraits)) {
+                if (!Number.isInteger(Number(score)) || Number(score) < 1 || Number(score) > 5) {
+                    return res.status(400).json({ success: false, message: 'Trait scores must be whole numbers from 1 to 5. No assessments were saved.' });
+                }
+            }
+        }
+
         const sql = `
             INSERT INTO affective_psychomotor (student_id, class_id, trait_name, score, term, session)
             VALUES (?, ?, ?, ?, ?, ?)
@@ -1024,17 +1049,8 @@ const saveTraits = async (req, res) => {
 
         await db.transaction(async () => {
             for (const [student_id, studentTraits] of Object.entries(traits)) {
-                // Verify student belongs to this tenant
-                const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [parseInt(student_id), schoolId]);
-                if (!studentCheck) continue;
-
                 for (const [trait_name, score] of Object.entries(studentTraits)) {
-                    const enrollment = await db.get(
-                        'SELECT student_id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ? LIMIT 1',
-                        [parseInt(student_id), class_id, session]
-                    );
-                    if (!enrollment) throw new Error('Every assessed student must be enrolled in the selected class for this session.');
-                    await db.run(sql, [parseInt(student_id), class_id, trait_name, parseInt(score), term, session]);
+                    await db.run(sql, [Number(student_id), class_id, trait_name, Number(score), term, session]);
                 }
             }
         });

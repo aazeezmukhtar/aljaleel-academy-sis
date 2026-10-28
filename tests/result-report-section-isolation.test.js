@@ -50,4 +50,19 @@ assert.match(report, /class_id = \? AND status = 'Present'/,
 assert.match(bulk, /class_id = \? AND status = 'Present'/,
   'Bulk report attendance must be scoped to the selected class');
 
-process.stdout.write('PASS: Report-card section isolation query guards\\n');
+
+const academicReportSource = fs.readFileSync(
+  path.join(__dirname, '..', 'controllers', 'reporting', 'academicReportController.js'),
+  'utf8'
+);
+
+for (const [name, body] of [
+  ['broadsheet', academicReportSource.slice(academicReportSource.indexOf('const getBroadsheet'), academicReportSource.indexOf('const getSubjectAnalysis'))],
+  ['subject analysis', academicReportSource.slice(academicReportSource.indexOf('const getSubjectAnalysis'), academicReportSource.indexOf('const getTopPerformers'))],
+  ['top performers', academicReportSource.slice(academicReportSource.indexOf('const getTopPerformers'))]
+]) {
+  assert.match(body, /r\.class_id = \?/,
+    `${name} must restrict result rows to the selected class`);
+}
+
+process.stdout.write('PASS: Report-card and academic-report section isolation query guards\\n');

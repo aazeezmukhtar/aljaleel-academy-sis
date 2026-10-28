@@ -39,7 +39,7 @@ async function testRejectsBatchIfAnyStudentIsNotEnrolled() {
     db.get = async (sql, params = []) => {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
-      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
       if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) {
         enrollmentLookups.push(params[0]);
         return Number(params[0]) === 101 ? { student_id: 101 } : null;
@@ -80,7 +80,7 @@ async function testRejectsSubjectNotAssignedToClass() {
     db.get = async sql => {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
-      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? LIMIT 1')) return null;
+      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return null;
       throw new Error('Validation should stop before this lookup: ' + sql);
     };
     db.run = async (...args) => { writes.push(args); return { changes: 1 }; };

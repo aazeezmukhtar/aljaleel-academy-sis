@@ -35,13 +35,16 @@ exports.getDashboard = async (req, res) => {
     const ctx = await getStudentContext(studentId, school, schoolId);
     const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount, sectionIds } = ctx;
 
-    // Fetch latest results (added AVG total for Phase 2)
+    // Keep the portal's result summaries separate for every class/section.
+    // A student may be enrolled in both Academy and Tahfeez in one session.
     const results = await db.all(`
-        SELECT session, term, COUNT(*) as subjects_taken, AVG(total) as average_score
-        FROM results
-        WHERE student_id = ? AND status IN ('approved', 'published')
-        GROUP BY session, term
-        ORDER BY session DESC, term DESC
+        SELECT r.class_id, c.name AS class_name, r.session, r.term,
+               COUNT(*) AS subjects_taken, AVG(r.total) AS average_score
+        FROM results r
+        LEFT JOIN classes c ON c.id = r.class_id
+        WHERE r.student_id = ? AND r.status IN ('approved', 'published')
+        GROUP BY r.class_id, c.name, r.session, r.term
+        ORDER BY r.session DESC, c.name, r.term DESC
     `, [studentId]);
 
     // Fetch fee payments
@@ -164,24 +167,55 @@ exports.getResults = (req, res) => {
 };
 
 exports.viewTermlyResult = async (req, res) => {
-    const term = req.query.term;
-    const session = req.query.session;
-    const approved = (await db.get(`SELECT COUNT(*) as c FROM results WHERE student_id = ? AND term = ? AND session = ? AND status IN ('approved', 'published')`, [req.session.student.id, term, session])).c;
-    if (approved === 0) {
-        return res.redirect('/portal?error=Results not yet published by the Administrator.');
+    const { term, session, class_id } = req.query;
+    const studentId = req.session.student.id;
+    if (!class_id || !term || !session) {
+        return res.redirect('/portal?error=Select the class, term, and session for the report.');
     }
-    req.params.student_id = req.session.student.id;
+
+    // A portal student may have Academy and Tahfeez enrollments in the same session.
+    // Require the requested class to be one of this student's actual enrollments.
+    const enrollment = await db.get(
+        'SELECT 1 FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ? LIMIT 1',
+        [studentId, class_id, session]
+    );
+    if (!enrollment) return res.status(403).send('This class is not one of your enrollments for the selected session.');
+
+    const approved = (await db.get(
+        `SELECT COUNT(*) as c FROM results WHERE student_id = ? AND class_id = ? AND term = ? AND session = ? AND status IN ('approved', 'published')`,
+        [studentId, class_id, term, session]
+    )).c;
+    if (approved === 0) {
+        return res.redirect('/portal?error=Results for the selected class have not been published.');
+    }
+
+    req.params.student_id = studentId;
     const resultController = require('./resultController');
     await resultController.getReportCard(req, res);
 };
 
 exports.viewCumulativeResult = async (req, res) => {
-    const session = req.query.session;
-    const approved = (await db.get(`SELECT COUNT(*) as c FROM results WHERE student_id = ? AND session = ? AND status IN ('approved', 'published')`, [req.session.student.id, session])).c;
-    if (approved === 0) {
-        return res.redirect('/portal?error=Results not yet published by the Administrator.');
+    const { session, class_id } = req.query;
+    const studentId = req.session.student.id;
+    if (!class_id || !session) {
+        return res.redirect('/portal?error=Select the class and session for the cumulative report.');
     }
-    req.params.student_id = req.session.student.id;
+
+    const enrollment = await db.get(
+        'SELECT 1 FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ? LIMIT 1',
+        [studentId, class_id, session]
+    );
+    if (!enrollment) return res.status(403).send('This class is not one of your enrollments for the selected session.');
+
+    const approved = (await db.get(
+        `SELECT COUNT(*) as c FROM results WHERE student_id = ? AND class_id = ? AND session = ? AND status IN ('approved', 'published')`,
+        [studentId, class_id, session]
+    )).c;
+    if (approved === 0) {
+        return res.redirect('/portal?error=Results for the selected class have not been published.');
+    }
+
+    req.params.student_id = studentId;
     const resultController = require('./resultController');
     await resultController.getCumulativeReport(req, res);
 };

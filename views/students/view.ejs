@@ -367,13 +367,17 @@
                                                     <h4 style="margin: 0 0 10px 0; color: var(--text-dark);"><%= sess %> Session</h4>
                                                     <div style="display: flex; flex-wrap: wrap; gap: 10px;">
                                                         <% academicTerms.filter(t => t.session === sess).forEach(term => { %>
-                                                            <a href="/results/report/<%= student.id %>?term=<%= term.term %>&session=<%= encodeURIComponent(sess) %>" class="btn btn-sm btn-outline" target="_blank">
-                                                                <i class="bi bi-file-earmark-text"></i> <%= term.term %>
-                                                            </a>
+                                                            <% if (term.class_id) { %>
+                                                                <a href="/results/report/<%= student.id %>?term=<%= encodeURIComponent(term.term) %>&session=<%= encodeURIComponent(sess) %>&class_id=<%= term.class_id %>" class="btn btn-sm btn-outline" target="_blank">
+                                                                    <i class="bi bi-file-earmark-text"></i> <%= term.class_name %> — <%= term.term %>
+                                                                </a>
+                                                                <a href="/results/cumulative/<%= student.id %>?session=<%= encodeURIComponent(sess) %>&class_id=<%= term.class_id %>" class="btn btn-sm" style="background: var(--primary); color: white;" target="_blank">
+                                                                    <i class="bi bi-file-earmark-bar-graph"></i> <%= term.class_name %> Cumulative
+                                                                </a>
+                                                            <% } else { %>
+                                                                <span class="text-muted"><%= term.term %> — Unassigned legacy record (class not verified)</span>
+                                                            <% } %>
                                                         <% }) %>
-                                                        <a href="/results/cumulative/<%= student.id %>?session=<%= encodeURIComponent(sess) %>" class="btn btn-sm" style="background: var(--primary); color: white;" target="_blank">
-                                                            <i class="bi bi-file-earmark-bar-graph"></i> Cumulative Report
-                                                        </a>
                                                     </div>
                                                 </div>
                                                 <% }) %>

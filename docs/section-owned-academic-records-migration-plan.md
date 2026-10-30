@@ -1,7 +1,6 @@
 # Section-Owned Academic Records: Safe Migration Plan
 
 ## Purpose
-
 Keep one student identity while storing and evaluating Academy and Tahfeez academic records independently. No improvement/decline comparison may combine scores from different sections.
 
 This document is a design and rollout plan only. It does not change the database or production data.
@@ -24,11 +23,11 @@ Add nullable `class_id` referencing `classes(id)` as a compatibility step. New w
 
 The long-term identity for a result should be `student_id + class_id + subject_id + term + session`. This permits the same student and subject to be assessed separately in two classes/sections while preventing duplicate marks for the same class and period.
 
-Do not remove the old uniqueness constraint until a reviewed migration has backfilled all unambiguous rows and the application is ready to write class-owned results. SQLite requires a safe table rebuild to replace a table-level UNIQUE constraint; PostgreSQL requires an explicit constraint/index migration. Preserve result IDs, scores, grades, remarks, approval/publication statuses, and approver references.
+The PostgreSQL migration replaces the legacy unique constraints with class-aware unique constraints. It also adds partial unique indexes for rows where `class_id IS NULL`, preserving the old one-row-per-student/subject/period rule for unresolved legacy records. This avoids losing legacy uniqueness while allowing independently owned records. SQLite uses a transactional table rebuild to preserve IDs and result fields.
 
 ### Affective and psychomotor traits
 
-If these traits are intended to appear independently on Academy and Tahfeez reports, add class ownership and make uniqueness class-aware. If the school intends traits to be student-wide, label them as student-wide and do not imply they measure a specific section. Confirm this policy before migration.
+Traits are section-owned because the school requires Academy and Tahfeez to record different assessments for the same student. The target identity is `student_id + class_id + trait_name + term + session`. Legacy trait rows remain unresolved until ownership is verified.
 
 ### Attendance
 

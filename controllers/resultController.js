@@ -264,8 +264,8 @@ const getResultManager = async (req, res) => {
                 SELECT DISTINCT sa.subject_id
                 FROM subject_assignments sa
                 JOIN subjects sub ON sub.id = sa.subject_id
-                WHERE sa.class_id = ? AND sub.school_id = ?
-            `, [class_id, schoolId]);
+                WHERE sa.class_id = ? AND sa.session = ? AND sub.school_id = ?
+            `, [class_id, activeSession, schoolId]);
             const subjectIds = subjectIdRows.map(r => r.subject_id);
             if (subjectIds.length > 0) {
                 const placeholders = subjectIds.map(() => '?').join(',');
@@ -981,10 +981,14 @@ const getTraitsForm = async (req, res) => {
                     SELECT s.id, s.first_name, s.last_name, s.admission_number,
                            ap.trait_name, ap.score
                     FROM students s
-                    LEFT JOIN affective_psychomotor ap ON s.id = ap.student_id AND ap.term = ? AND ap.session = ?
+                    LEFT JOIN affective_psychomotor ap
+                        ON s.id = ap.student_id
+                       AND ap.class_id = ?
+                       AND ap.term = ?
+                       AND ap.session = ?
                     WHERE s.id IN (${traitIds.map(() => '?').join(',')}) AND s.school_id = ?
                     ORDER BY s.first_name, s.last_name
-                `, [term, session, ...traitIds, schoolId]);
+                `, [class_id, term, session, ...traitIds, schoolId]);
             }
         }
 
@@ -1125,25 +1129,21 @@ const publishBulkResults = async (req, res) => {
     if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
 
     try {
-        let info;
-        if (class_id) {
-            const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
-            if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class' });
-
-            info = await db.run(`
-                UPDATE results
-                SET status = 'published', approved_by = ?
-                WHERE class_id = ? AND term = ? AND session = ?
-            `, [user.id, class_id, term, session]);
-        } else {
-            info = await db.run(`
-                UPDATE results 
-                SET status = 'published', approved_by = ?
-                WHERE term = ? AND session = ?
-                AND student_id IN (SELECT s.id FROM students s WHERE s.school_id = ?)
-            `, [user.id, term, session, schoolId]);
+        if (!class_id || !term || !session) {
+            return res.status(400).json({
+                success: false,
+                message: 'Select a class, term, and session. School-wide publication is disabled until it has a separate, explicit workflow.'
+            });
         }
-        res.json({ success: true, message: `Successfully published ${info.changes} result entries across the system.` });
+        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class' });
+
+        const info = await db.run(`
+            UPDATE results
+            SET status = 'published', approved_by = ?
+            WHERE class_id = ? AND term = ? AND session = ?
+        `, [user.id, class_id, term, session]);
+        res.json({ success: true, message: `Successfully published ${info.changes} result entries for the selected class.` });
     } catch (err) {
         console.error('Bulk Publish Error:', err);
         res.status(500).json({ success: false, message: 'Database Error' });

@@ -1,15 +1,24 @@
--- READ-ONLY legacy ownership audit. SELECT statements only; safe to run in Supabase.
--- Results: candidate class requires both a matching session enrollment and subject assignment.
+-- READ-ONLY legacy ownership audit. SELECT statements only; safe to run BEFORE migration 001.
+-- This audit intentionally does not reference class_id because that column is
+-- absent from the current production schema. It identifies candidates only;
+-- a candidate is NOT proof of ownership and must be checked against source records.
+--
+-- Results: candidate class requires a same-session enrollment (matching the
+-- result term, or a session-level enrollment with NULL term) and a subject
+-- assignment to that same class and session. Missing assignment history is
+-- reported as unmatched, never inferred from subject name alone.
+
 WITH result_candidates AS (
   SELECT r.id AS result_id, se.class_id
   FROM results r
   JOIN student_enrollments se
-    ON se.student_id = r.student_id AND se.session = r.session
+    ON se.student_id = r.student_id
+   AND se.session = r.session
+   AND (se.term = r.term OR se.term IS NULL)
   JOIN subject_assignments sa
     ON sa.class_id = se.class_id
    AND sa.subject_id = r.subject_id
    AND sa.session = r.session
-  WHERE r.class_id IS NULL
 ),
 result_audit AS (
   SELECT r.id, r.student_id, r.subject_id, r.term, r.session,
@@ -18,7 +27,6 @@ result_audit AS (
            FILTER (WHERE rc.class_id IS NOT NULL) AS candidate_class_ids
   FROM results r
   LEFT JOIN result_candidates rc ON rc.result_id = r.id
-  WHERE r.class_id IS NULL
   GROUP BY r.id, r.student_id, r.subject_id, r.term, r.session
 )
 SELECT id AS result_id, student_id, subject_id, term, session,
@@ -29,14 +37,16 @@ SELECT id AS result_id, student_id, subject_id, term, session,
 FROM result_audit
 ORDER BY session, term, id;
 
--- Traits: enrollment-only candidates are deliberately not auto-approved.
--- Even one candidate must be checked against source records and section context.
+-- Traits: candidates are all same-session enrollments for the student,
+-- term-aware. Even one candidate must be checked against original assessment
+-- records and section context before any backfill.
 WITH trait_candidates AS (
   SELECT ap.id AS trait_id, se.class_id
   FROM affective_psychomotor ap
   JOIN student_enrollments se
-    ON se.student_id = ap.student_id AND se.session = ap.session
-  WHERE ap.class_id IS NULL
+    ON se.student_id = ap.student_id
+   AND se.session = ap.session
+   AND (se.term = ap.term OR se.term IS NULL)
 ),
 trait_audit AS (
   SELECT ap.id, ap.student_id, ap.trait_name, ap.term, ap.session,
@@ -45,7 +55,6 @@ trait_audit AS (
            FILTER (WHERE tc.class_id IS NOT NULL) AS candidate_class_ids
   FROM affective_psychomotor ap
   LEFT JOIN trait_candidates tc ON tc.trait_id = ap.id
-  WHERE ap.class_id IS NULL
   GROUP BY ap.id, ap.student_id, ap.trait_name, ap.term, ap.session
 )
 SELECT id AS trait_id, student_id, trait_name, term, session,
@@ -56,9 +65,9 @@ SELECT id AS trait_id, student_id, trait_name, term, session,
 FROM trait_audit
 ORDER BY session, term, id;
 
--- Summary counts; no identifying details.
+-- Summary counts only; no identifying details.
 SELECT 'results' AS record_type, COUNT(*) AS unresolved_rows
-FROM results WHERE class_id IS NULL
+FROM results
 UNION ALL
 SELECT 'affective_psychomotor', COUNT(*)
-FROM affective_psychomotor WHERE class_id IS NULL;
+FROM affective_psychomotor;

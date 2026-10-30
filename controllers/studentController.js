@@ -387,7 +387,11 @@ const getStudentProfile = async (req, res) => {
         const health = await db.get('SELECT * FROM student_health WHERE student_id = ?', [id]) || {};
 
         const academicTerms = await db.all(`
-            SELECT DISTINCT term, session FROM results WHERE student_id = ? ORDER BY session DESC, term ASC
+            SELECT DISTINCT r.class_id, c.name AS class_name, r.term, r.session
+            FROM results r
+            LEFT JOIN classes c ON c.id = r.class_id
+            WHERE r.student_id = ?
+            ORDER BY r.session DESC, c.name, r.term ASC
         `, [id]);
 
         const success = req.query.success || null;

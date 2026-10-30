@@ -35,13 +35,16 @@ exports.getDashboard = async (req, res) => {
     const ctx = await getStudentContext(studentId, school, schoolId);
     const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount, sectionIds } = ctx;
 
-    // Fetch latest results (added AVG total for Phase 2)
+    // Keep the portal's result summaries separate for every class/section.
+    // A student may be enrolled in both Academy and Tahfeez in one session.
     const results = await db.all(`
-        SELECT session, term, COUNT(*) as subjects_taken, AVG(total) as average_score
-        FROM results
-        WHERE student_id = ? AND status IN ('approved', 'published')
-        GROUP BY session, term
-        ORDER BY session DESC, term DESC
+        SELECT r.class_id, c.name AS class_name, r.session, r.term,
+               COUNT(*) AS subjects_taken, AVG(r.total) AS average_score
+        FROM results r
+        LEFT JOIN classes c ON c.id = r.class_id
+        WHERE r.student_id = ? AND r.status IN ('approved', 'published')
+        GROUP BY r.class_id, c.name, r.session, r.term
+        ORDER BY r.session DESC, c.name, r.term DESC
     `, [studentId]);
 
     // Fetch fee payments

@@ -139,14 +139,12 @@
                         <div class="acm-attention-card">
                             <i class="bi bi-file-earmark-check acm-attention-icon" aria-hidden="true"></i>
                             <div class="acm-attention-content">
-                                <p class="acm-attention-text">Your <%= latestResult.term %> report <%= (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 1) ? 'cards are' : 'card is' %> available.</p>
+                                <p class="acm-attention-text">Your <%= latestResult.class_name || 'unassigned legacy' %> — <%= latestResult.term %> report is available.</p>
                                 <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap; margin-top: var(--acm-sp-4);">
-                                    <% if (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 0) { %>
-                                        <% enrolledClasses.forEach(ec => { %>
-                                            <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>&class_name=<%= encodeURIComponent(ec.class_name) %>" target="_blank" class="acm-attention-action"><%= ec.class_name %> &rarr;</a>
-                                        <% }) %>
+                                    <% if (latestResult.class_id) { %>
+                                        <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>&class_id=<%= latestResult.class_id %>" target="_blank" class="acm-attention-action">View Class Report &rarr;</a>
                                     <% } else { %>
-                                        <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>" target="_blank" class="acm-attention-action">View Report Card &rarr;</a>
+                                        <span class="text-muted">Class ownership has not been verified for this legacy record.</span>
                                     <% } %>
                                 </div>
                             </div>

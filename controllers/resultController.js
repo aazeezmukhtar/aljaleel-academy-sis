@@ -264,8 +264,8 @@ const getResultManager = async (req, res) => {
                 SELECT DISTINCT sa.subject_id
                 FROM subject_assignments sa
                 JOIN subjects sub ON sub.id = sa.subject_id
-                WHERE sa.class_id = ? AND sub.school_id = ?
-            `, [class_id, schoolId]);
+                WHERE sa.class_id = ? AND sa.session = ? AND sub.school_id = ?
+            `, [class_id, activeSession, schoolId]);
             const subjectIds = subjectIdRows.map(r => r.subject_id);
             if (subjectIds.length > 0) {
                 const placeholders = subjectIds.map(() => '?').join(',');

@@ -981,10 +981,14 @@ const getTraitsForm = async (req, res) => {
                     SELECT s.id, s.first_name, s.last_name, s.admission_number,
                            ap.trait_name, ap.score
                     FROM students s
-                    LEFT JOIN affective_psychomotor ap ON s.id = ap.student_id AND ap.term = ? AND ap.session = ?
+                    LEFT JOIN affective_psychomotor ap
+                        ON s.id = ap.student_id
+                       AND ap.class_id = ?
+                       AND ap.term = ?
+                       AND ap.session = ?
                     WHERE s.id IN (${traitIds.map(() => '?').join(',')}) AND s.school_id = ?
                     ORDER BY s.first_name, s.last_name
-                `, [term, session, ...traitIds, schoolId]);
+                `, [class_id, term, session, ...traitIds, schoolId]);
             }
         }
 

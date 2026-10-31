@@ -51,12 +51,25 @@
 
         <% if (allPublished && allPublished.length > 0) { %>
 
+        <% if (classContexts && classContexts.length > 1) { %>
+        <form method="get" action="/portal/academics/results" class="acm-term-bar" aria-label="Choose academic section and class">
+            <label for="class_id">Class / section</label>
+            <select id="class_id" name="class_id" onchange="this.form.submit()">
+                <% classContexts.forEach(context => { %>
+                <option value="<%= context.class_id === null ? 'legacy' : context.class_id %>" <%= selectedClassId !== null && String(selectedClassId) === String(context.class_id) ? 'selected' : (selectedClassId === null && context.class_id === null ? 'selected' : '') %>>
+                    <%= context.class_id === null ? 'Unassigned legacy records' : ((context.section_name ? context.section_name + ' · ' : '') + context.class_name) %>
+                </option>
+                <% }) %>
+            </select>
+        </form>
+        <% } %>
+
         <!-- Term Filter Bar -->
         <div class="acm-term-bar" role="tablist" aria-label="Academic terms">
-            <% allPublished.forEach(p => { 
+            <% (selectedClassPeriods || []).forEach(p => {
                 const isActive = p.session === selectedSession && p.term === selectedTerm;
             %>
-            <a href="/portal/academics/results?session=<%= encodeURIComponent(p.session) %>&term=<%= encodeURIComponent(p.term) %>"
+            <a href="/portal/academics/results?class_id=<%= selectedClassId === null ? 'legacy' : encodeURIComponent(selectedClassId) %>&session=<%= encodeURIComponent(p.session) %>&term=<%= encodeURIComponent(p.term) %>"
                class="acm-term-btn <%= isActive ? 'is-active' : '' %>"
                aria-current="<%= isActive ? 'true' : 'false' %>">
                 <%= p.term %> · <%= p.session %>
@@ -163,39 +176,27 @@
             <h2 class="acm-section-title">Report Cards</h2>
             <% if (allPublished && allPublished.length > 0) { %>
             <div class="acm-report-list">
-                <% allPublished.forEach(p => { %>
+                <% (selectedClassPeriods || []).forEach(p => { %>
                 <div class="acm-report-item">
                     <div class="acm-report-info">
                         <p class="acm-report-term"><%= p.term %></p>
                         <p class="acm-report-session"><%= p.session %></p>
                     </div>
                     <div class="acm-report-actions">
-                        <% if (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 0) { %>
-                            <% enrolledClasses.forEach(ec => { %>
-                            <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>&class_name=<%= encodeURIComponent(ec.class_name) %>"
-                               target="_blank" class="acm-report-btn acm-report-btn--primary" aria-label="View termly report card for <%= p.term %> (<%= ec.class_name %>)">
-                                <i class="bi bi-file-earmark-text"></i> <%= ec.section_name ? ec.section_name + ' (' + ec.class_name + ')' : ec.class_name %> Termly
+                        <% if (selectedClassId !== null) { %>
+                            <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>&class_id=<%= encodeURIComponent(selectedClassId) %>"
+                               target="_blank" class="acm-report-btn acm-report-btn--primary">
+                                <i class="bi bi-file-earmark-text"></i> <%= selectedClass.section_name ? selectedClass.section_name + ' (' + selectedClass.class_name + ')' : selectedClass.class_name %> Termly
                             </a>
-                            <% }) %>
-                        <% } else if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
-                            <% student.class_name.split(', ').forEach(cls => { %>
-                            <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>&class_name=<%= encodeURIComponent(cls) %>"
-                               target="_blank" class="acm-report-btn acm-report-btn--primary" aria-label="View termly report card for <%= p.term %> (<%= cls %>)">
-                                <i class="bi bi-file-earmark-text"></i> <%= cls %> Termly
-                            </a>
-                            <% }) %>
                         <% } else { %>
-                        <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>"
-                           target="_blank" class="acm-report-btn acm-report-btn--primary">
-                            <i class="bi bi-file-earmark-text"></i> Termly
-                        </a>
+                            <span class="acm-report-btn" aria-disabled="true">Legacy record — printable report unavailable until class ownership is verified</span>
                         <% } %>
                     </div>
                 </div>
                 <% }) %>
 
                 <!-- Cumulative -->
-                <% const sessions = [...new Set(allPublished.map(p => p.session))]; %>
+                <% const sessions = [...new Set((selectedClassPeriods || []).map(p => p.session))]; %>
                 <% sessions.forEach(sess => { %>
                 <div class="acm-report-item">
                     <div class="acm-report-info">
@@ -203,25 +204,13 @@
                         <p class="acm-report-session"><%= sess %> · All Terms</p>
                     </div>
                     <div class="acm-report-actions">
-                        <% if (typeof enrolledClasses !== 'undefined' && enrolledClasses && enrolledClasses.length > 0) { %>
-                            <% enrolledClasses.forEach(ec => { %>
-                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>&class_name=<%= encodeURIComponent(ec.class_name) %>"
+                        <% if (selectedClassId !== null) { %>
+                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>&class_id=<%= encodeURIComponent(selectedClassId) %>"
                                target="_blank" class="acm-report-btn acm-report-btn--secondary">
-                                <i class="bi bi-bar-chart-fill"></i> <%= ec.section_name ? ec.section_name + ' (' + ec.class_name + ')' : ec.class_name %> Cumulative
+                                <i class="bi bi-bar-chart-fill"></i> <%= selectedClass.section_name ? selectedClass.section_name + ' (' + selectedClass.class_name + ')' : selectedClass.class_name %> Cumulative
                             </a>
-                            <% }) %>
-                        <% } else if (student.class_name && student.class_name !== 'Not Enrolled' && student.class_name !== 'Unassigned') { %>
-                            <% student.class_name.split(', ').forEach(cls => { %>
-                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>&class_name=<%= encodeURIComponent(cls) %>"
-                               target="_blank" class="acm-report-btn acm-report-btn--secondary">
-                                <i class="bi bi-bar-chart-fill"></i> <%= cls %> Cumulative
-                            </a>
-                            <% }) %>
                         <% } else { %>
-                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>"
-                           target="_blank" class="acm-report-btn acm-report-btn--secondary">
-                            <i class="bi bi-bar-chart-fill"></i> Cumulative
-                        </a>
+                            <span class="acm-report-btn" aria-disabled="true">Legacy record — cumulative report unavailable until class ownership is verified</span>
                         <% } %>
                     </div>
                 </div>

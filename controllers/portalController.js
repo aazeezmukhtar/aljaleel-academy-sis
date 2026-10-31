@@ -687,95 +687,127 @@ exports.getAcademicsResults = async (req, res) => {
         if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
         const school = await getSettings(schoolId);
         const ctx = await getStudentContext(studentId, school, schoolId);
-        const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount } = ctx;
+        const { studentObj, enrolledClasses, activeSession, activeTerm, individualMessagesCount } = ctx;
 
-        // Selected term/session from query or default to latest published
+        // Build the available historical result contexts from result ownership,
+        // not current enrolments: same-session class changes must not rewrite history.
         const allPublished = await db.all(`
-            SELECT DISTINCT session, term FROM results
-            WHERE student_id = ? AND status IN ('approved','published')
-            ORDER BY session DESC, term DESC
+            SELECT DISTINCT r.session, r.term, r.class_id,
+                   c.name AS class_name, sec.name AS section_name
+            FROM results r
+            LEFT JOIN classes c ON c.id = r.class_id
+            LEFT JOIN sections sec ON sec.id = c.section_id
+            WHERE r.student_id = ? AND r.status IN ('approved','published')
+            ORDER BY r.session DESC, r.term DESC, sec.name ASC, c.name ASC
         `, [studentId]);
 
-        const selectedSession = req.query.session || (allPublished[0] ? allPublished[0].session : activeSession);
-        const selectedTerm = req.query.term || (allPublished[0] ? allPublished[0].term : activeTerm);
+        const requestedClassId = req.query.class_id;
+        const selectedContext = requestedClassId !== undefined
+            ? allPublished.find(p => p.class_id !== null && String(p.class_id) === String(requestedClassId))
+            : allPublished[0];
+        const selectedClassId = selectedContext ? selectedContext.class_id : null;
+        const classContexts = [];
+        const seenContexts = new Set();
+        for (const row of allPublished) {
+            const key = row.class_id === null ? 'legacy-null' : String(row.class_id);
+            if (!seenContexts.has(key)) {
+                seenContexts.add(key);
+                classContexts.push(row);
+            }
+        }
 
-        // Detailed results for selected term
-        let detailedResults = [];
-        let position = null, classCount = null;
-        const classForCalc = enrolledClasses.length > 0 ? enrolledClasses[0] : null;
+        const contextPublished = allPublished.filter(p =>
+            selectedClassId === null ? p.class_id === null : String(p.class_id) === String(selectedClassId)
+        );
+        const requestedSession = req.query.session;
+        const requestedTerm = req.query.term;
+        const defaultPeriod = contextPublished.find(p =>
+            (!requestedSession || p.session === requestedSession) &&
+            (!requestedTerm || p.term === requestedTerm)
+        ) || contextPublished[0];
+        const selectedSession = requestedSession || (defaultPeriod ? defaultPeriod.session : activeSession);
+        const selectedTerm = requestedTerm || (defaultPeriod ? defaultPeriod.term : activeTerm);
 
-        detailedResults = await db.all(`
+        const ownershipFilter = selectedClassId === null ? 'r.class_id IS NULL' : 'r.class_id = ?';
+        const ownershipParams = selectedClassId === null ? [] : [selectedClassId];
+
+        const detailedResults = await db.all(`
             SELECT r.*, sub.name as subject_name, sub.code as subject_code
             FROM results r
             JOIN subjects sub ON r.subject_id = sub.id
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-            AND r.status IN ('approved','published')
+              AND ${ownershipFilter}
+              AND r.status IN ('approved','published')
             ORDER BY sub.name
-        `, [studentId, selectedTerm, selectedSession]);
+        `, [studentId, selectedTerm, selectedSession, ...ownershipParams]);
 
-        // Position across enrolled classes
-        if (enrolledClasses.length > 0) {
-            for (const ec of enrolledClasses) {
-                const classPerf = await db.all(`
-                    SELECT r.student_id, SUM(r.total) as student_total
-                    FROM results r
-                    WHERE r.term = ? AND r.session = ?
-                    AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-                    GROUP BY r.student_id ORDER BY student_total DESC
-                `, [selectedTerm, selectedSession, ec.class_id, selectedSession]);
-                if (classPerf.length > 0) {
-                    const myPerf = classPerf.find(p => p.student_id == studentId);
-                    if (myPerf && position === null) {
-                        position = classPerf.indexOf(myPerf) + 1;
-                        classCount = classPerf.length;
-                    }
-                }
+        // Class rank is meaningful only for explicitly class-owned records.
+        let position = null, classCount = null;
+        if (selectedClassId !== null && detailedResults.length > 0) {
+            const classPerf = await db.all(`
+                SELECT r.student_id, SUM(r.total) AS student_total
+                FROM results r
+                WHERE r.term = ? AND r.session = ? AND r.class_id = ?
+                  AND r.status IN ('approved','published')
+                GROUP BY r.student_id
+                ORDER BY student_total DESC, r.student_id ASC
+            `, [selectedTerm, selectedSession, selectedClassId]);
+            const myPerf = classPerf.find(p => String(p.student_id) === String(studentId));
+            if (myPerf) {
+                position = classPerf.findIndex(p => String(p.student_id) === String(studentId)) + 1;
+                classCount = classPerf.length;
             }
         }
 
-        // Average
         const avgRow = detailedResults.length > 0
-            ? { avg: detailedResults.reduce((s, r) => s + (r.total || 0), 0) / detailedResults.length }
+            ? { avg: detailedResults.reduce((sum, row) => sum + (Number(row.total) || 0), 0) / detailedResults.length }
             : null;
 
-        // Previous term for comparison
-        const prevTermData = allPublished.find(p => !(p.session === selectedSession && p.term === selectedTerm));
+        // Compare only with the immediately preceding published period in this same class.
+        const currentIndex = contextPublished.findIndex(p =>
+            p.session === selectedSession && p.term === selectedTerm
+        );
+        const prevTermData = currentIndex >= 0 ? contextPublished[currentIndex + 1] || null : null;
         let prevAvg = null;
         if (prevTermData) {
             const prevRows = await db.all(`
-                SELECT AVG(total) as avg FROM results
-                WHERE student_id = ? AND term = ? AND session = ? AND status IN ('approved','published')
-            `, [studentId, prevTermData.term, prevTermData.session]);
+                SELECT AVG(total) AS avg
+                FROM results
+                WHERE student_id = ? AND term = ? AND session = ?
+                  AND ${ownershipFilter}
+                  AND status IN ('approved','published')
+            `, [studentId, prevTermData.term, prevTermData.session, ...ownershipParams]);
             prevAvg = prevRows[0] ? prevRows[0].avg : null;
         }
 
-        // Result config for section (to know ca_count)
         let resultConfig = { ca_count: '2' };
-        if (classForCalc) {
-            const configRows = await db.all('SELECT key, value FROM section_result_config WHERE section_id = (SELECT section_id FROM classes WHERE id = ?)', [classForCalc.class_id]);
-            configRows.forEach(r => { resultConfig[r.key] = r.value; });
+        if (selectedClassId !== null) {
+            const configRows = await db.all(
+                'SELECT key, value FROM section_result_config WHERE section_id = (SELECT section_id FROM classes WHERE id = ?)',
+                [selectedClassId]
+            );
+            configRows.forEach(row => { resultConfig[row.key] = row.value; });
         }
 
-        // Grading system
+        const selectedClass = selectedContext && selectedContext.class_id !== null
+            ? selectedContext : null;
+        const selectedClassPeriods = contextPublished;
         const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
 
         res.render('portal/academics/results', {
             title: 'Results', path: '/portal/academics/results',
             school, student: studentObj || req.session.student,
-            allPublished, selectedSession, selectedTerm,
-            detailedResults, position, classCount,
-            avgRow, prevTermData, prevAvg,
-            resultConfig, grading,
+            allPublished, classContexts, selectedClassPeriods, selectedClassId, selectedClass,
+            selectedSession, selectedTerm, detailedResults, position, classCount,
+            avgRow, prevTermData, prevAvg, resultConfig, grading,
             currentTerm: activeTerm, currentSession: activeSession,
-            individualMessagesCount, sectionInfo: enrolledClasses,
-            enrolledClasses
+            individualMessagesCount, sectionInfo: enrolledClasses, enrolledClasses
         });
     } catch (err) {
         console.error('Academics Results Error:', err);
         res.status(500).send('Error loading Results');
     }
 };
-
 exports.getAcademicsClassBoard = async (req, res) => {
     try {
         const studentId = req.session.student.id;

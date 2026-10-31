@@ -16,12 +16,12 @@ const profileView = read('views/students/view.ejs');
 
 const termly = portal.slice(portal.indexOf('exports.viewTermlyResult'), portal.indexOf('exports.viewCumulativeResult'));
 assert.match(termly, /class_id/);
-assert.match(termly, /student_enrollments[\s\S]*?student_id = \?[\s\S]*?class_id = \?[\s\S]*?session = \?/);
+assert.match(termly, /results[\s\S]*?student_id = \?[\s\S]*?class_id = \?[\s\S]*?session = \?[\s\S]*?status IN \('approved', 'published'\)/);
 assert.match(termly, /class_id = \?[\s\S]*?status IN \('approved', 'published'\)/);
 
 const cumulative = portal.slice(portal.indexOf('exports.viewCumulativeResult'), portal.indexOf('exports.getProfile'));
 assert.match(cumulative, /class_id/);
-assert.match(cumulative, /student_enrollments[\s\S]*?student_id = \?[\s\S]*?class_id = \?[\s\S]*?session = \?/);
+assert.match(cumulative, /results[\s\S]*?student_id = \?[\s\S]*?class_id = \?[\s\S]*?session = \?[\s\S]*?status IN \('approved', 'published'\)/);
 assert.match(cumulative, /class_id = \?[\s\S]*?status IN \('approved', 'published'\)/);
 
 const dashboardQuery = portal.slice(portal.indexOf('const results = await db.all'), portal.indexOf('// Fetch fee payments'));

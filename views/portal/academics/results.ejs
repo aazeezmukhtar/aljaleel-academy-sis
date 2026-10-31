@@ -189,17 +189,14 @@
                                 <i class="bi bi-file-earmark-text"></i> <%= selectedClass.section_name ? selectedClass.section_name + ' (' + selectedClass.class_name + ')' : selectedClass.class_name %> Termly
                             </a>
                         <% } else { %>
-                        <a href="/portal/results/termly?term=<%= encodeURIComponent(p.term) %>&session=<%= encodeURIComponent(p.session) %>"
-                           target="_blank" class="acm-report-btn acm-report-btn--primary">
-                            <i class="bi bi-file-earmark-text"></i> Termly
-                        </a>
+                            <span class="acm-report-btn" aria-disabled="true">Legacy record — printable report unavailable until class ownership is verified</span>
                         <% } %>
                     </div>
                 </div>
                 <% }) %>
 
                 <!-- Cumulative -->
-                <% const sessions = [...new Set(allPublished.map(p => p.session))]; %>
+                <% const sessions = [...new Set((selectedClassPeriods || []).map(p => p.session))]; %>
                 <% sessions.forEach(sess => { %>
                 <div class="acm-report-item">
                     <div class="acm-report-info">
@@ -213,10 +210,7 @@
                                 <i class="bi bi-bar-chart-fill"></i> <%= selectedClass.section_name ? selectedClass.section_name + ' (' + selectedClass.class_name + ')' : selectedClass.class_name %> Cumulative
                             </a>
                         <% } else { %>
-                        <a href="/portal/results/cumulative?session=<%= encodeURIComponent(sess) %>"
-                           target="_blank" class="acm-report-btn acm-report-btn--secondary">
-                            <i class="bi bi-bar-chart-fill"></i> Cumulative
-                        </a>
+                            <span class="acm-report-btn" aria-disabled="true">Legacy record — cumulative report unavailable until class ownership is verified</span>
                         <% } %>
                     </div>
                 </div>

@@ -771,9 +771,9 @@ exports.getAcademicsResults = async (req, res) => {
         let prevAvg = null;
         if (prevTermData) {
             const prevRows = await db.all(`
-                SELECT AVG(total) AS avg
-                FROM results
-                WHERE student_id = ? AND term = ? AND session = ?
+                SELECT AVG(r.total) AS avg
+                FROM results r
+                WHERE r.student_id = ? AND r.term = ? AND r.session = ?
                   AND ${ownershipFilter}
                   AND status IN ('approved','published')
             `, [studentId, prevTermData.term, prevTermData.session, ...ownershipParams]);

@@ -1,3 +1,485 @@
+const db = require('../utils/db');
+const path = require('path');
+const { computeResult, getGrade } = require('../utils/resultHelper');
+const { logAction } = require('../utils/logger');
+const { getEnrolledStudents } = require('../utils/enrollmentHelper');
+const { getAvailableSessions, getCurrentSession, getCurrentTerm } = require('../utils/sessionHelper');
+
+const getOrdinal = (n) => {
+    const s = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
+
+const getResultsDashboard = (req, res) => {
+    res.render('results/index', {
+        title: 'Result Management'
+    });
+};
+
+const getSchoolSettings = async (schoolId) => {
+    const sId = schoolId ? Number(schoolId) : null;
+    const settings = {};
+    if (sId) {
+        const settingsArr = await db.all('SELECT key, value FROM settings WHERE school_id = ?', [sId]);
+        settingsArr.forEach(s => settings[s.key] = s.value);
+    }
+
+    // Load legacy global config as compatibility fallback
+    const configArr = await db.all('SELECT key, value FROM result_config').catch(() => []);
+    const legacy = {};
+    configArr.forEach(c => { legacy[c.key] = c.value; });
+
+    const safeDefaults = { ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
+    ['ca_count', 'ca1_max', 'ca2_max', 'exam_max'].forEach(k => {
+        const val = settings[`result.${k}`] || settings[k] || legacy[k] || safeDefaults[k];
+        settings[k] = val;
+        settings[`result.${k}`] = val;
+    });
+
+    return settings;
+};
+
+// Get result config for a specific class (section-aware, falls back to tenant settings then legacy global)
+const getSectionResultConfig = async (class_id, schoolId) => {
+    const sId = schoolId ? Number(schoolId) : null;
+    const defaults = { ca_count: '2', ca1_max: '20', ca2_max: '20', exam_max: '60' };
+
+    // 1. Check legacy result_config
+    const legacyRows = await db.all('SELECT key, value FROM result_config').catch(() => []);
+    legacyRows.forEach(r => { if (r.value !== undefined) defaults[r.key] = String(r.value); });
+
+    // 2. Overlay tenant-specific settings[result.*] if schoolId provided
+    if (sId) {
+        const tenantSettings = await db.all(
+            "SELECT key, value FROM settings WHERE school_id = ? AND (key LIKE 'result.%' OR key IN ('ca_count', 'ca1_max', 'ca2_max', 'exam_max'))",
+            [sId]
+        );
+        tenantSettings.forEach(r => {
+            const cleanKey = r.key.startsWith('result.') ? r.key.replace('result.', '') : r.key;
+            if (r.value !== undefined && r.value !== null) {
+                defaults[cleanKey] = String(r.value);
+            }
+        });
+    }
+
+    // 3. Overlay section-specific overrides if class has a section
+    if (class_id) {
+        const classRow = sId
+            ? await db.get('SELECT section_id FROM classes WHERE id = ? AND school_id = ?', [class_id, sId])
+            : await db.get('SELECT section_id FROM classes WHERE id = ?', [class_id]);
+
+        if (classRow && classRow.section_id) {
+            const sectionRows = await db.all(
+                'SELECT key, value FROM section_result_config WHERE section_id = ?',
+                [classRow.section_id]
+            );
+            sectionRows.forEach(r => {
+                if (r.value !== undefined && r.value !== null) {
+                    defaults[r.key] = String(r.value);
+                }
+            });
+        }
+    }
+
+    return defaults;
+};
+
+// Get active session/term for a specific class (section-aware, scoped to tenant)
+const getSectionAcademicContext = async (class_id, schoolId) => {
+    const sId = schoolId ? Number(schoolId) : null;
+    if (class_id && sId) {
+        const sec = await db.get(`
+            SELECT s.current_session, s.current_term 
+            FROM sections s 
+            JOIN classes c ON c.section_id = s.id 
+            WHERE c.id = ? AND c.school_id = ?
+        `, [class_id, sId]);
+        if (sec && sec.current_session && sec.current_term) {
+            return { session: sec.current_session, term: sec.current_term };
+        }
+    }
+    const session = sId ? await getCurrentSession(sId) : null;
+    const term = sId ? await getCurrentTerm(sId) : null;
+    return {
+        session: session || '2024/2025',
+        term: term || '1st Term'
+    };
+};
+
+const getGradingSystem = async (req, res) => {
+    const schoolId = req ? (req.schoolId || (req.school ? req.school.id : 1)) : 1;
+    try {
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
+        const config = await getSchoolSettings(schoolId);
+        const sections = await db.all('SELECT * FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
+
+        // Load per-section configs
+        const sectionConfigs = [];
+        for (const sec of sections) {
+            const rows = await db.all('SELECT key, value FROM section_result_config WHERE section_id = ?', [sec.id]);
+            const cfg = { section_id: sec.id, ca_count: config.ca_count || '2', ca1_max: config.ca1_max || '20', ca2_max: config.ca2_max || '20', exam_max: config.exam_max || '60' };
+            rows.forEach(r => { cfg[r.key] = r.value; });
+            sectionConfigs.push(cfg);
+        }
+
+        if (req && res) {
+            res.render('results/setup', {
+                title: 'Result Configuration',
+                grading,
+                config,
+                sections,
+                sectionConfigs
+            });
+        }
+        return { grading, config };
+    } catch (err) {
+        console.error('Get Grading Error:', err);
+        if (res) res.status(500).send('Database Error');
+    }
+};
+
+// POST /results/setup/section-config  — save per-section CA weights
+const saveResultConfigForSection = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const { section_id, ca_count, ca1_max, ca2_max, exam_max } = req.body;
+    if (!section_id) return res.status(400).json({ success: false, message: 'section_id required.' });
+
+    try {
+        const section = await db.get('SELECT id FROM sections WHERE id = ? AND school_id = ?', [section_id, schoolId]);
+        if (!section) return res.status(403).json({ success: false, message: 'Section not found or access denied.' });
+
+        const upsert = db.DB_TYPE === 'postgres'
+            ? 'INSERT INTO section_result_config (section_id, key, value) VALUES ($1, $2, $3) ON CONFLICT (section_id, key) DO UPDATE SET value = EXCLUDED.value'
+            : 'INSERT INTO section_result_config (section_id, key, value) VALUES (?, ?, ?) ON CONFLICT(section_id, key) DO UPDATE SET value = excluded.value';
+
+        await db.transaction(async () => {
+            for (const [key, value] of Object.entries({ ca_count: ca_count || '2', ca1_max, ca2_max, exam_max })) {
+                await db.run(upsert, [section_id, key, value]);
+            }
+        });
+        res.json({ success: true, message: 'Section config saved.' });
+    } catch (err) {
+        console.error('saveResultConfigForSection Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to save section config.' });
+    }
+};
+
+const saveResultConfig = async (req, res) => {
+    const schoolId = (req.session && req.session.staff && req.session.staff.school_id)
+        ? Number(req.session.staff.school_id)
+        : (req.schoolId || (req.school ? req.school.id : 1));
+    const { ca1_max, ca2_max, exam_max } = req.body;
+    const ca_count = req.body.ca_count || '2';
+
+    try {
+        const updates = [
+            { key: 'result.ca_count', value: String(ca_count) },
+            { key: 'result.ca1_max', value: String(ca1_max) },
+            { key: 'result.ca2_max', value: String(ca2_max) },
+            { key: 'result.exam_max', value: String(exam_max) }
+        ];
+
+        await db.transaction(async () => {
+            for (const item of updates) {
+                const existing = await db.get(
+                    'SELECT key FROM settings WHERE school_id = ? AND key = ?',
+                    [schoolId, item.key]
+                );
+                if (existing) {
+                    await db.run(
+                        'UPDATE settings SET value = ? WHERE school_id = ? AND key = ?',
+                        [item.value, schoolId, item.key]
+                    );
+                } else {
+                    await db.run(
+                        'INSERT INTO settings (school_id, key, value) VALUES (?, ?, ?)',
+                        [schoolId, item.key, item.value]
+                    );
+                }
+            }
+        });
+        res.json({ success: true, message: 'Assessment limits updated.' });
+    } catch (err) {
+        console.error('Save Config Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to save config.' });
+    }
+};
+
+const saveGradingSystem = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const { grades } = req.body;
+    try {
+        const insertSql = `
+            INSERT INTO grading_systems (id, school_id, min_score, max_score, grade, remark)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO UPDATE SET
+            min_score=excluded.min_score, max_score=excluded.max_score,
+            grade=excluded.grade, remark=excluded.remark, school_id=excluded.school_id
+        `;
+        const deleteSql = 'DELETE FROM grading_systems WHERE id = ? AND school_id = ?';
+
+        await db.transaction(async () => {
+            for (const g of grades) {
+                if (g.deleted) {
+                    await db.run(deleteSql, [g.id, schoolId]);
+                } else {
+                    await db.run(insertSql, [g.id || null, schoolId, g.min, g.max, g.grade, g.remark]);
+                }
+            }
+        });
+
+        res.json({ success: true, message: 'Grading system updated.' });
+    } catch (err) {
+        console.error('Save Grading Error:', err);
+        res.status(500).json({ success: false, message: 'Failed to save grading.' });
+    }
+};
+
+
+
+const getResultManager = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const { class_id, subject_id } = req.query;
+
+    // Derive session/term from the selected class's section (falls back to global)
+    const sectionCtx = await getSectionAcademicContext(class_id || null, schoolId);
+    const settings = await getSchoolSettings(schoolId);
+    const activeSession = req.query.session || sectionCtx.session || settings.current_session || '2024/2025';
+    const activeTerm = req.query.term || sectionCtx.term || settings.current_term || '1st Term';
+
+    // Section-specific result config (ca weights, exam max)
+    const resultConfig = await getSectionResultConfig(class_id || null, schoolId);
+
+    try {
+        // Determine subjects to display
+        let subjects = [];
+        if (class_id) {
+            // Verify class belongs to tenant
+            const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+            if (!classCheck) return res.redirect('/results?error=Class not found');
+
+            const subjectIdRows = await db.all(`
+                SELECT DISTINCT sa.subject_id
+                FROM subject_assignments sa
+                JOIN subjects sub ON sub.id = sa.subject_id
+                WHERE sa.class_id = ? AND sa.session = ? AND sub.school_id = ?
+            `, [class_id, activeSession, schoolId]);
+            const subjectIds = subjectIdRows.map(r => r.subject_id);
+            if (subjectIds.length > 0) {
+                const placeholders = subjectIds.map(() => '?').join(',');
+                subjects = await db.all(`SELECT * FROM subjects WHERE id IN (${placeholders}) AND school_id = ?`, [...subjectIds, schoolId]);
+            } else {
+                // Fail closed: an unassigned subject must not be offered for this class.
+                subjects = [];
+            }
+        } else {
+            subjects = await db.all('SELECT * FROM subjects WHERE school_id = ?', [schoolId]);
+        }
+
+        let classes;
+        if (user.role === 'Admin' || user.role === 'Examination Officer') {
+            classes = await db.all(`
+                SELECT c.*, s.current_session as sec_session, s.current_term as sec_term 
+                FROM classes c 
+                LEFT JOIN sections s ON c.section_id = s.id
+                WHERE c.school_id = ?
+            `, [schoolId]);
+        } else {
+            classes = await db.all(`
+                SELECT DISTINCT c.*, s.current_session as sec_session, s.current_term as sec_term 
+                FROM classes c
+                LEFT JOIN sections s ON c.section_id = s.id
+                LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
+                LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
+                WHERE (c.form_teacher_id = ? OR sa.id IS NOT NULL OR ca.id IS NOT NULL)
+                  AND c.school_id = ?
+            `, [user.id, user.id, user.id, schoolId]);
+        }
+
+        let students = [];
+        let contextError = null;
+
+        if (class_id && subject_id) {
+            if (!subjects.some(subject => String(subject.id) === String(subject_id))) {
+                contextError = 'The selected subject is not assigned to this class. Choose a valid class and subject before entering results.';
+            }
+            if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
+                const hasAccess = await db.get(`
+                    SELECT 1
+                    WHERE EXISTS (
+                        SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?
+                    ) OR EXISTS (
+                        SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?
+                    ) OR EXISTS (
+                        SELECT id FROM classes WHERE id = ? AND form_teacher_id = ?
+                    )
+                `, [user.id, class_id, subject_id, user.id, class_id, class_id, user.id]);
+                if (!hasAccess) return res.redirect('/results?error=Access Denied to this Subject/Class combination');
+            }
+
+            const enrolledStudents = contextError ? [] : await getEnrolledStudents(class_id, activeSession);
+            if (enrolledStudents.length > 0) {
+                const studentIds = enrolledStudents.map(s => Number(s.id));
+                students = await db.all(`
+                    SELECT s.id, s.first_name, s.last_name, s.admission_number, s.passport_photo_path,
+                           r.ca1, r.ca2, r.exam, r.total, r.grade, r.status, r.teacher_remark
+                    FROM students s
+                    LEFT JOIN results r ON s.id = r.student_id
+                        AND r.subject_id = ? AND r.term = ? AND r.session = ?
+                        AND r.class_id = ?
+                    WHERE s.id IN (${studentIds.map(() => '?').join(',')})
+                      AND s.school_id = ?
+                    ORDER BY s.first_name, s.last_name
+                `, [subject_id, activeTerm, activeSession, class_id, ...studentIds, schoolId]);
+            }
+        }
+
+        const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
+        const availableSessions = await getAvailableSessions(schoolId);
+
+        res.render('results/manager', {
+            title: 'Result Management',
+            classes,
+            subjects,
+            students,
+            contextError,
+            sessions: availableSessions,
+            filters: { class_id, subject_id, term: activeTerm, session: activeSession },
+            school: settings,
+            resultConfig,
+            grading
+        });
+    } catch (err) {
+        console.error('Result Manager Error:', err);
+        res.status(500).send('Database Error');
+    }
+};
+
+const saveResults = async (req, res) => {
+    const { results, term, session, subject_id, class_id, status } = req.body; 
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+
+    if (!results || results.length === 0) {
+        return res.json({ success: false, message: 'No results to save.' });
+    }
+
+    try {
+        // Validate the complete academic context before any writes.
+        if (!class_id || !subject_id || !term || !session || !Array.isArray(results)) {
+            return res.status(400).json({ success: false, message: 'Class, subject, term, session, and a results list are required.' });
+        }
+        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class context.' });
+
+        const subjectCheck = await db.get('SELECT id FROM subjects WHERE id = ? AND school_id = ?', [subject_id, schoolId]);
+        if (!subjectCheck) return res.status(403).json({ success: false, message: 'Unauthorized subject context.' });
+
+        const assignmentCheck = await db.get(
+            'SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1',
+            [class_id, subject_id, session]
+        );
+        if (!assignmentCheck) {
+            return res.status(400).json({ success: false, message: 'This subject is not assigned to the selected class. No results were saved.' });
+        }
+
+        const submittedStudentIds = results.map(item => Number(item && item.student_id));
+        if (submittedStudentIds.some(id => !Number.isInteger(id) || id <= 0) ||
+            new Set(submittedStudentIds).size !== submittedStudentIds.length) {
+            return res.status(400).json({ success: false, message: 'The submitted student list is invalid or contains duplicates. No results were saved.' });
+        }
+
+        // Reject the whole batch if any student is not enrolled in this class/session.
+        // Never silently skip a student and partially save the remaining marks.
+        for (const studentId of submittedStudentIds) {
+            const enrollmentCheck = await db.get(`
+                SELECT se.student_id
+                FROM student_enrollments se
+                JOIN students s ON s.id = se.student_id
+                WHERE se.student_id = ? AND se.class_id = ? AND se.session = ? AND s.school_id = ?
+                LIMIT 1
+            `, [studentId, class_id, session, schoolId]);
+            if (!enrollmentCheck) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'At least one submitted student is not enrolled in the selected class for this session. No results were saved.'
+                });
+            }
+        }
+
+        if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
+            const hasAccess = await db.get(`
+                SELECT 1
+                WHERE (
+                    EXISTS (SELECT id FROM subject_assignments WHERE teacher_id = ? AND class_id = ? AND subject_id = ?)
+                    OR (
+                        EXISTS (SELECT id FROM class_assignments WHERE staff_id = ? AND class_id = ?)
+                        AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
+                    )
+                    OR (
+                        EXISTS (SELECT id FROM classes WHERE id = ? AND form_teacher_id = ?)
+                        AND EXISTS (SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ?)
+                    )
+                )
+            `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id, class_id, user.id, class_id, subject_id]);
+            if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
+
+            // Check every submitted student's existing row before any write. A batch
+            // must not overwrite a protected row just because the first row is editable.
+            for (const studentId of submittedStudentIds) {
+                const existing = await db.get(
+                    'SELECT status FROM results WHERE student_id = ? AND class_id = ? AND subject_id = ? AND term = ? AND session = ?',
+                    [studentId, class_id, subject_id, term, session]
+                );
+                if (existing && ['locked', 'published', 'approved'].includes(String(existing.status || '').toLowerCase())) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'At least one submitted result is approved, locked, or published and cannot be edited. No results were saved.'
+                    });
+                }
+            }
+        }
+
+        const sql = `
+            INSERT INTO results (student_id, class_id, subject_id, term, session, ca1, ca2, exam, total, grade, teacher_remark, status)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(student_id, class_id, subject_id, term, session) DO UPDATE SET
+            ca1=excluded.ca1, ca2=excluded.ca2, exam=excluded.exam, 
+            total=excluded.total, grade=excluded.grade, 
+            teacher_remark=excluded.teacher_remark, status=excluded.status
+        `;
+
+        await db.transaction(async () => {
+            for (const item of results) {
+                // Tenant ownership and class enrollment were validated for every
+                // submitted student before opening this transaction.
+                const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
+                await db.run(sql, [
+                    item.student_id,
+                    class_id,
+                    subject_id,
+                    term,
+                    session,
+                    item.ca1 || 0,
+                    item.ca2 || 0,
+                    item.exam || 0,
+                    total,
+                    grade,
+                    (item.remark || '').trim(),
+                    status || 'draft'
+                ]);
+            }
+        });
+
+        res.json({ success: true, message: `Results ${status === 'submitted' ? 'submitted' : 'saved'} successfully.` });
+    } catch (err) {
+        console.error('Save Results Error:', err.message);
+        res.status(500).json({ success: false, message: 'Failed to save results.' });
+    }
+};
+
 const getReportCard = async (req, res) => {
     const { student_id } = req.params;
     const { term, session } = req.query;
@@ -9,26 +491,37 @@ const getReportCard = async (req, res) => {
         if (!student) return res.status(404).send('Student not found');
 
         const { class_id, class_name } = req.query;
-        if (!session || !term) return res.status(400).send('Term and session are required to generate a section-specific report');
+        if (!session) return res.status(400).send('Session is required to generate a section-specific report');
 
-        // Resolve historical ownership from published result rows, not mutable enrollment rows.
-        const ownership = `EXISTS (SELECT 1 FROM results r
-            WHERE r.student_id = ? AND r.class_id = c.id AND r.session = ? AND r.term = ?
-              AND r.status IN ('approved', 'published'))`;
+        // A student may be enrolled in Academy and Tahfeez in the same session.
+        // Resolve only an explicitly selected enrollment, or infer a class when exactly one exists.
         let classObj = null;
         if (class_id) {
-            classObj = await db.get(`SELECT c.* FROM classes c
-                WHERE c.id = ? AND c.school_id = ? AND ${ownership}`,
-                [class_id, schoolId, student_id, session, term]);
+            classObj = await db.get(`
+                SELECT c.* FROM classes c
+                JOIN student_enrollments se ON c.id = se.class_id
+                WHERE c.id = ? AND se.student_id = ? AND se.session = ? AND c.school_id = ?
+            `, [class_id, student_id, session, schoolId]);
+        } else if (class_name) {
+            classObj = await db.get(`
+                SELECT c.* FROM classes c
+                JOIN student_enrollments se ON c.id = se.class_id
+                WHERE c.name = ? AND se.student_id = ? AND se.session = ? AND c.school_id = ?
+            `, [class_name, student_id, session, schoolId]);
         } else {
-            const matches = await db.all(`SELECT c.* FROM classes c
-                WHERE c.school_id = ? ${class_name ? 'AND c.name = ?' : ''} AND ${ownership}
-                ORDER BY c.id`,
-                class_name ? [schoolId, class_name, student_id, session, term] : [schoolId, student_id, session, term]);
-            if (matches.length > 1) return res.status(400).send('This student has multiple published class reports for this session. Select the intended class.');
-            classObj = matches[0] || null;
+            const enrollments = await db.all(`
+                SELECT c.* FROM classes c
+                JOIN student_enrollments se ON c.id = se.class_id
+                WHERE se.student_id = ? AND se.session = ? AND c.school_id = ?
+                ORDER BY c.id
+            `, [student_id, session, schoolId]);
+            if (enrollments.length > 1) {
+                return res.status(400).send('This student has multiple class enrollments for this session. Select the intended class to generate the report.');
+            }
+            classObj = enrollments[0] || null;
         }
-        if (!classObj) return res.status(404).send('No published results found for the selected class and session');
+
+        if (!classObj) return res.status(404).send('No matching class enrollment found for this session');
         
         student.class_name = classObj.name;
         const target_class_id = classObj.id;
@@ -39,22 +532,23 @@ const getReportCard = async (req, res) => {
             SELECT r.*, s.name as subject_name,
             (SELECT COUNT(*) + 1 FROM results r2 
              WHERE r2.subject_id = r.subject_id AND r2.term = r.term 
-             AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ? AND r2.status IN ('approved', 'published')
-              ) as subject_rank
+             AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ?
+             AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-              AND r.class_id = ? AND r.status IN ('approved', 'published')
-        `, [target_class_id, student_id, term, session, target_class_id]);
+              AND r.class_id = ?
+        `, [target_class_id, target_class_id, session, student_id, term, session, target_class_id]);
 
         const classPerformance = await db.all(`
             SELECT r.student_id, SUM(r.total) as student_total
             FROM results r
-            WHERE r.term = ? AND r.session = ? AND r.class_id = ?
-              AND r.status IN ('approved', 'published')
+            WHERE r.term = ? AND r.session = ?
+              AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+              AND r.class_id = ?
             GROUP BY r.student_id
             ORDER BY student_total DESC
-        `, [term, session, target_class_id]);
+        `, [term, session, target_class_id, session, target_class_id]);
 
         const studentPerf = classPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -133,24 +627,35 @@ const getCumulativeReport = async (req, res) => {
         const { class_id, class_name } = req.query;
         if (!session) return res.status(400).send('Session is required to generate a section-specific report');
 
-        // Resolve historical ownership from published result rows, not mutable enrollment rows.
-        const ownership = `EXISTS (SELECT 1 FROM results r
-            WHERE r.student_id = ? AND r.class_id = c.id AND r.session = ?
-              AND r.status IN ('approved', 'published'))`;
+        // A student may be enrolled in Academy and Tahfeez in the same session.
+        // Resolve only an explicitly selected enrollment, or infer a class when exactly one exists.
         let classObj = null;
         if (class_id) {
-            classObj = await db.get(`SELECT c.* FROM classes c
-                WHERE c.id = ? AND c.school_id = ? AND ${ownership}`,
-                [class_id, schoolId, student_id, session]);
+            classObj = await db.get(`
+                SELECT c.* FROM classes c
+                JOIN student_enrollments se ON c.id = se.class_id
+                WHERE c.id = ? AND se.student_id = ? AND se.session = ? AND c.school_id = ?
+            `, [class_id, student_id, session, schoolId]);
+        } else if (class_name) {
+            classObj = await db.get(`
+                SELECT c.* FROM classes c
+                JOIN student_enrollments se ON c.id = se.class_id
+                WHERE c.name = ? AND se.student_id = ? AND se.session = ? AND c.school_id = ?
+            `, [class_name, student_id, session, schoolId]);
         } else {
-            const matches = await db.all(`SELECT c.* FROM classes c
-                WHERE c.school_id = ? ${class_name ? 'AND c.name = ?' : ''} AND ${ownership}
-                ORDER BY c.id`,
-                class_name ? [schoolId, class_name, student_id, session] : [schoolId, student_id, session]);
-            if (matches.length > 1) return res.status(400).send('This student has multiple published class reports for this session. Select the intended class.');
-            classObj = matches[0] || null;
+            const enrollments = await db.all(`
+                SELECT c.* FROM classes c
+                JOIN student_enrollments se ON c.id = se.class_id
+                WHERE se.student_id = ? AND se.session = ? AND c.school_id = ?
+                ORDER BY c.id
+            `, [student_id, session, schoolId]);
+            if (enrollments.length > 1) {
+                return res.status(400).send('This student has multiple class enrollments for this session. Select the intended class to generate the report.');
+            }
+            classObj = enrollments[0] || null;
         }
-        if (!classObj) return res.status(404).send('No published results found for the selected class and session');
+
+        if (!classObj) return res.status(404).send('No matching class enrollment found for this session');
         
         student.class_name = classObj.name;
         const target_class_id = classObj.id;
@@ -160,7 +665,7 @@ const getCumulativeReport = async (req, res) => {
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.session = ?
-              AND r.class_id = ? AND r.status IN ('approved', 'published')
+              AND r.class_id = ?
         `, [student_id, session, target_class_id]);
 
         const subjectMap = {};
@@ -176,11 +681,11 @@ const getCumulativeReport = async (req, res) => {
         const sessionPerformance = await db.all(`
             SELECT r.student_id, AVG(r.total) as session_avg
             FROM results r
-            WHERE r.session = ? AND r.class_id = ?
-              AND r.status IN ('approved', 'published')
+            WHERE r.session = ? AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+              AND r.class_id = ?
             GROUP BY r.student_id
             ORDER BY session_avg DESC
-        `, [session, target_class_id]);
+        `, [session, target_class_id, session, target_class_id]);
 
         const studentPerf = sessionPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? sessionPerformance.indexOf(studentPerf) + 1 : 0;
@@ -268,11 +773,12 @@ const getBulkReport = async (req, res) => {
         const classPerformance = await db.all(`
             SELECT student_id, SUM(total) as student_total
             FROM results
-            WHERE term = ? AND session = ? AND class_id = ?
-              AND status IN ('approved', 'published')
+            WHERE term = ? AND session = ?
+              AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+              AND results.class_id = ?
             GROUP BY student_id
             ORDER BY student_total DESC
-        `, [term, session, class_id]);
+        `, [term, session, class_id, session, class_id]);
 
         const studentsData = [];
         for (const student of students) {
@@ -280,13 +786,13 @@ const getBulkReport = async (req, res) => {
                 SELECT r.*, s.name as subject_name,
                 (SELECT COUNT(*) + 1 FROM results r2
                  WHERE r2.subject_id = r.subject_id AND r2.term = r.term
-                 AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ? AND r2.status IN ('approved', 'published')
-                 ) as subject_rank
+                 AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ?
+                 AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-                  AND r.class_id = ? AND r.status IN ('approved', 'published')
-            `, [class_id, student.id, term, session, class_id]);
+                  AND r.class_id = ?
+            `, [class_id, class_id, session, student.id, term, session, class_id]);
 
             const studentPerf = classPerformance.find(p => p.student_id == student.id);
             const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -365,11 +871,11 @@ const getBulkCumulative = async (req, res) => {
         const sessionPerformance = await db.all(`
             SELECT student_id, AVG(total) as session_avg
             FROM results
-            WHERE session = ? AND class_id = ?
-              AND status IN ('approved', 'published')
+            WHERE session = ? AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
+              AND results.class_id = ?
             GROUP BY student_id
             ORDER BY session_avg DESC
-        `, [session, class_id]);
+        `, [session, class_id, session, class_id]);
 
         const studentsData = [];
         for (const student of students) {
@@ -378,7 +884,7 @@ const getBulkCumulative = async (req, res) => {
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.session = ?
-                  AND r.class_id = ? AND r.status IN ('approved', 'published')
+                  AND r.class_id = ?
             `, [student.id, session, class_id]);
 
             const subjectMap = {};

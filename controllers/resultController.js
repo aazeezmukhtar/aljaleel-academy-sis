@@ -630,9 +630,9 @@ const getCumulativeReport = async (req, res) => {
         const ownershipSql = `EXISTS (
             SELECT 1 FROM results owned
             WHERE owned.student_id = ? AND owned.class_id = c.id
-              AND owned.session = ? AND owned.status IN ('approved', 'published')${term ? ' AND owned.term = ?' : ''}
+              AND owned.session = ? AND owned.status IN ('approved', 'published')${req.query.term ? ' AND owned.term = ?' : ''}
         )`;
-        const ownershipParams = term ? [student_id, session, term] : [student_id, session];
+        const ownershipParams = req.query.term ? [student_id, session, req.query.term] : [student_id, session];
         if (class_id) {
             classObj = await db.get(`
                 SELECT c.* FROM classes c

@@ -29,8 +29,8 @@ for (const [name, body] of [
   ['bulk report cards', bulk],
   ['bulk cumulative reports', bulkCumulative]
 ]) {
-  assert.match(body, /class_id = \\?/, `${name} must filter result rows by explicit class ownership`);
-  assert.match(body, /status IN \\('approved', 'published'\\)/,
+  assert.match(body, /class_id = \?/, `${name} must filter result rows by explicit class ownership`);
+  assert.match(body, /status IN \('approved', 'published'\)/,
     `${name} must expose only approved or published result rows`);
 }
 

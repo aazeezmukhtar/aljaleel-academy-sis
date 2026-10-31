@@ -173,14 +173,7 @@ exports.viewTermlyResult = async (req, res) => {
         return res.redirect('/portal?error=Select the class, term, and session for the report.');
     }
 
-    // A portal student may have Academy and Tahfeez enrollments in the same session.
-    // Require the requested class to be one of this student's actual enrollments.
-    const enrollment = await db.get(
-        'SELECT 1 FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ? LIMIT 1',
-        [studentId, class_id, session]
-    );
-    if (!enrollment) return res.status(403).send('This class is not one of your enrollments for the selected session.');
-
+    // Published result ownership remains valid after same-session enrollment changes.
     const approved = (await db.get(
         `SELECT COUNT(*) as c FROM results WHERE student_id = ? AND class_id = ? AND term = ? AND session = ? AND status IN ('approved', 'published')`,
         [studentId, class_id, term, session]
@@ -200,12 +193,6 @@ exports.viewCumulativeResult = async (req, res) => {
     if (!class_id || !session) {
         return res.redirect('/portal?error=Select the class and session for the cumulative report.');
     }
-
-    const enrollment = await db.get(
-        'SELECT 1 FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ? LIMIT 1',
-        [studentId, class_id, session]
-    );
-    if (!enrollment) return res.status(403).send('This class is not one of your enrollments for the selected session.');
 
     const approved = (await db.get(
         `SELECT COUNT(*) as c FROM results WHERE student_id = ? AND class_id = ? AND session = ? AND status IN ('approved', 'published')`,

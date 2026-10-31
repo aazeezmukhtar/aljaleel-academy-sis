@@ -791,12 +791,13 @@ exports.getAcademicsResults = async (req, res) => {
 
         const selectedClass = selectedContext && selectedContext.class_id !== null
             ? selectedContext : null;
+        const selectedClassPeriods = contextPublished;
         const grading = await db.all('SELECT * FROM grading_systems WHERE school_id = ? ORDER BY min_score DESC', [schoolId]);
 
         res.render('portal/academics/results', {
             title: 'Results', path: '/portal/academics/results',
             school, student: studentObj || req.session.student,
-            allPublished, classContexts, selectedClassId, selectedClass,
+            allPublished, classContexts, selectedClassPeriods, selectedClassId, selectedClass,
             selectedSession, selectedTerm, detailedResults, position, classCount,
             avgRow, prevTermData, prevAvg, resultConfig, grading,
             currentTerm: activeTerm, currentSession: activeSession,

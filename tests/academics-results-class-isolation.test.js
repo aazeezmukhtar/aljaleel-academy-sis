@@ -22,7 +22,7 @@ assert.match(body, /r\.class_id IS NULL/);
 assert.match(body, /AND \$\{ownershipFilter\}/);
 assert.match(body, /r\.class_id = \?[\s\S]*?GROUP BY r\.student_id/);
 assert.match(body, /Compare only with the immediately preceding published period in this same class/);
-assert.match(body, /class_id,.*class_name/);
+assert.match(body, /c\.name AS class_name/);
 assert.match(view, /name="class_id"/);
 assert.match(view, /selectedClassPeriods/);
 assert.match(view, /class_id=<%= encodeURIComponent\(selectedClassId\) %>/);

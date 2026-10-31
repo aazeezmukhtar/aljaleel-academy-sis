@@ -763,7 +763,7 @@ const getBulkReport = async (req, res) => {
                 (SELECT COUNT(*) + 1 FROM results r2
                  WHERE r2.subject_id = r.subject_id AND r2.term = r.term
                  AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ? AND r2.status IN ('approved', 'published')
-                 )) as subject_rank
+                 ) as subject_rank
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.term = ? AND r.session = ?

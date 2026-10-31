@@ -490,38 +490,37 @@ const getReportCard = async (req, res) => {
         const student = await db.get('SELECT * FROM students WHERE id = ? AND school_id = ?', [student_id, schoolId]);
         if (!student) return res.status(404).send('Student not found');
 
+        // Resolve the report class from saved result ownership. Enrollment rows can
+        // change after a same-session class move and are not reliable history.
         const { class_id, class_name } = req.query;
         if (!session) return res.status(400).send('Session is required to generate a section-specific report');
-
-        // A student may be enrolled in Academy and Tahfeez in the same session.
-        // Resolve only an explicitly selected enrollment, or infer a class when exactly one exists.
         let classObj = null;
+        const ownershipSql = `EXISTS (
+            SELECT 1 FROM results owned
+            WHERE owned.student_id = ? AND owned.class_id = c.id
+              AND owned.session = ? AND owned.status IN ('approved', 'published')${req.query.term ? ' AND owned.term = ?' : ''}
+        )`;
+        const ownershipParams = req.query.term ? [student_id, session, req.query.term] : [student_id, session];
         if (class_id) {
             classObj = await db.get(`
                 SELECT c.* FROM classes c
-                JOIN student_enrollments se ON c.id = se.class_id
-                WHERE c.id = ? AND se.student_id = ? AND se.session = ? AND c.school_id = ?
-            `, [class_id, student_id, session, schoolId]);
-        } else if (class_name) {
-            classObj = await db.get(`
-                SELECT c.* FROM classes c
-                JOIN student_enrollments se ON c.id = se.class_id
-                WHERE c.name = ? AND se.student_id = ? AND se.session = ? AND c.school_id = ?
-            `, [class_name, student_id, session, schoolId]);
+                WHERE c.id = ? AND c.school_id = ? AND ${ownershipSql}
+            `, [class_id, schoolId, ...ownershipParams]);
         } else {
-            const enrollments = await db.all(`
+            const nameFilter = class_name ? ' AND c.name = ?' : '';
+            const matches = await db.all(`
                 SELECT c.* FROM classes c
-                JOIN student_enrollments se ON c.id = se.class_id
-                WHERE se.student_id = ? AND se.session = ? AND c.school_id = ?
+                WHERE c.school_id = ?${nameFilter} AND ${ownershipSql}
                 ORDER BY c.id
-            `, [student_id, session, schoolId]);
-            if (enrollments.length > 1) {
-                return res.status(400).send('This student has multiple class enrollments for this session. Select the intended class to generate the report.');
+            `, class_name
+                ? [schoolId, class_name, ...ownershipParams]
+                : [schoolId, ...ownershipParams]);
+            if (matches.length > 1) {
+                return res.status(400).send('This student has multiple published class reports for this session. Select the intended class.');
             }
-            classObj = enrollments[0] || null;
+            classObj = matches[0] || null;
         }
-
-        if (!classObj) return res.status(404).send('No matching class enrollment found for this session');
+        if (!classObj) return res.status(404).send('No published results found for the selected class and session');
         
         student.class_name = classObj.name;
         const target_class_id = classObj.id;
@@ -533,22 +532,21 @@ const getReportCard = async (req, res) => {
             (SELECT COUNT(*) + 1 FROM results r2 
              WHERE r2.subject_id = r.subject_id AND r2.term = r.term 
              AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ?
-             AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
+             AND r2.status IN ('approved', 'published')) as subject_rank
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-              AND r.class_id = ?
-        `, [target_class_id, target_class_id, session, student_id, term, session, target_class_id]);
+              AND r.class_id = ? AND r.status IN ('approved', 'published')
+        `, [target_class_id, student_id, term, session, target_class_id]);
 
         const classPerformance = await db.all(`
             SELECT r.student_id, SUM(r.total) as student_total
             FROM results r
-            WHERE r.term = ? AND r.session = ?
-              AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-              AND r.class_id = ?
+            WHERE r.term = ? AND r.session = ? AND r.class_id = ?
+              AND r.status IN ('approved', 'published')
             GROUP BY r.student_id
             ORDER BY student_total DESC
-        `, [term, session, target_class_id, session, target_class_id]);
+        `, [term, session, target_class_id]);
 
         const studentPerf = classPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -624,38 +622,37 @@ const getCumulativeReport = async (req, res) => {
         const student = await db.get('SELECT * FROM students WHERE id = ? AND school_id = ?', [student_id, schoolId]);
         if (!student) return res.status(404).send('Student not found');
 
+        // Resolve the report class from saved result ownership. Enrollment rows can
+        // change after a same-session class move and are not reliable history.
         const { class_id, class_name } = req.query;
         if (!session) return res.status(400).send('Session is required to generate a section-specific report');
-
-        // A student may be enrolled in Academy and Tahfeez in the same session.
-        // Resolve only an explicitly selected enrollment, or infer a class when exactly one exists.
         let classObj = null;
+        const ownershipSql = `EXISTS (
+            SELECT 1 FROM results owned
+            WHERE owned.student_id = ? AND owned.class_id = c.id
+              AND owned.session = ? AND owned.status IN ('approved', 'published')${req.query.term ? ' AND owned.term = ?' : ''}
+        )`;
+        const ownershipParams = req.query.term ? [student_id, session, req.query.term] : [student_id, session];
         if (class_id) {
             classObj = await db.get(`
                 SELECT c.* FROM classes c
-                JOIN student_enrollments se ON c.id = se.class_id
-                WHERE c.id = ? AND se.student_id = ? AND se.session = ? AND c.school_id = ?
-            `, [class_id, student_id, session, schoolId]);
-        } else if (class_name) {
-            classObj = await db.get(`
-                SELECT c.* FROM classes c
-                JOIN student_enrollments se ON c.id = se.class_id
-                WHERE c.name = ? AND se.student_id = ? AND se.session = ? AND c.school_id = ?
-            `, [class_name, student_id, session, schoolId]);
+                WHERE c.id = ? AND c.school_id = ? AND ${ownershipSql}
+            `, [class_id, schoolId, ...ownershipParams]);
         } else {
-            const enrollments = await db.all(`
+            const nameFilter = class_name ? ' AND c.name = ?' : '';
+            const matches = await db.all(`
                 SELECT c.* FROM classes c
-                JOIN student_enrollments se ON c.id = se.class_id
-                WHERE se.student_id = ? AND se.session = ? AND c.school_id = ?
+                WHERE c.school_id = ?${nameFilter} AND ${ownershipSql}
                 ORDER BY c.id
-            `, [student_id, session, schoolId]);
-            if (enrollments.length > 1) {
-                return res.status(400).send('This student has multiple class enrollments for this session. Select the intended class to generate the report.');
+            `, class_name
+                ? [schoolId, class_name, ...ownershipParams]
+                : [schoolId, ...ownershipParams]);
+            if (matches.length > 1) {
+                return res.status(400).send('This student has multiple published class reports for this session. Select the intended class.');
             }
-            classObj = enrollments[0] || null;
+            classObj = matches[0] || null;
         }
-
-        if (!classObj) return res.status(404).send('No matching class enrollment found for this session');
+        if (!classObj) return res.status(404).send('No published results found for the selected class and session');
         
         student.class_name = classObj.name;
         const target_class_id = classObj.id;
@@ -665,7 +662,7 @@ const getCumulativeReport = async (req, res) => {
             FROM results r
             JOIN subjects s ON r.subject_id = s.id
             WHERE r.student_id = ? AND r.session = ?
-              AND r.class_id = ?
+              AND r.class_id = ? AND r.status IN ('approved', 'published')
         `, [student_id, session, target_class_id]);
 
         const subjectMap = {};
@@ -681,11 +678,11 @@ const getCumulativeReport = async (req, res) => {
         const sessionPerformance = await db.all(`
             SELECT r.student_id, AVG(r.total) as session_avg
             FROM results r
-            WHERE r.session = ? AND r.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-              AND r.class_id = ?
+            WHERE r.session = ? AND r.class_id = ?
+              AND r.status IN ('approved', 'published')
             GROUP BY r.student_id
             ORDER BY session_avg DESC
-        `, [session, target_class_id, session, target_class_id]);
+        `, [session, target_class_id]);
 
         const studentPerf = sessionPerformance.find(p => p.student_id == student_id);
         const position = studentPerf ? sessionPerformance.indexOf(studentPerf) + 1 : 0;
@@ -773,12 +770,11 @@ const getBulkReport = async (req, res) => {
         const classPerformance = await db.all(`
             SELECT student_id, SUM(total) as student_total
             FROM results
-            WHERE term = ? AND session = ?
-              AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-              AND results.class_id = ?
+            WHERE term = ? AND session = ? AND class_id = ?
+              AND status IN ('approved', 'published')
             GROUP BY student_id
             ORDER BY student_total DESC
-        `, [term, session, class_id, session, class_id]);
+        `, [term, session, class_id]);
 
         const studentsData = [];
         for (const student of students) {
@@ -787,12 +783,12 @@ const getBulkReport = async (req, res) => {
                 (SELECT COUNT(*) + 1 FROM results r2
                  WHERE r2.subject_id = r.subject_id AND r2.term = r.term
                  AND r2.session = r.session AND r2.total > r.total AND r2.class_id = ?
-                 AND r2.student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)) as subject_rank
+                 AND r2.status IN ('approved', 'published')) as subject_rank
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.term = ? AND r.session = ?
-                  AND r.class_id = ?
-            `, [class_id, class_id, session, student.id, term, session, class_id]);
+                  AND r.class_id = ? AND r.status IN ('approved', 'published')
+            `, [class_id, student.id, term, session, class_id]);
 
             const studentPerf = classPerformance.find(p => p.student_id == student.id);
             const position = studentPerf ? classPerformance.indexOf(studentPerf) + 1 : 0;
@@ -871,11 +867,11 @@ const getBulkCumulative = async (req, res) => {
         const sessionPerformance = await db.all(`
             SELECT student_id, AVG(total) as session_avg
             FROM results
-            WHERE session = ? AND student_id IN (SELECT student_id FROM student_enrollments WHERE class_id = ? AND session = ?)
-              AND results.class_id = ?
+            WHERE session = ? AND class_id = ?
+              AND status IN ('approved', 'published')
             GROUP BY student_id
             ORDER BY session_avg DESC
-        `, [session, class_id, session, class_id]);
+        `, [session, class_id]);
 
         const studentsData = [];
         for (const student of students) {
@@ -884,7 +880,7 @@ const getBulkCumulative = async (req, res) => {
                 FROM results r
                 JOIN subjects s ON r.subject_id = s.id
                 WHERE r.student_id = ? AND r.session = ?
-                  AND r.class_id = ?
+                  AND r.class_id = ? AND r.status IN ('approved', 'published')
             `, [student.id, session, class_id]);
 
             const subjectMap = {};

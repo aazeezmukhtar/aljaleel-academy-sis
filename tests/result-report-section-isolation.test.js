@@ -30,6 +30,8 @@ for (const [name, body] of [
   ['bulk cumulative reports', bulkCumulative]
 ]) {
   assert.match(body, /class_id = \?/, `${name} must filter result rows by explicit class ownership`);
+  assert.match(body, /status IN \('approved', 'published'\)/,
+    `${name} must expose only approved or published result rows`);
 }
 
 assert.match(report, /r2\.class_id = \?/,
@@ -41,9 +43,9 @@ assert.match(report, /affective_psychomotor[\s\S]*?class_id = \?/,
 assert.match(bulk, /affective_psychomotor[\s\S]*?class_id = \?/,
   'Bulk report traits must be scoped to the selected class');
 
-assert.match(report, /multiple class enrollments for this session/i,
+assert.match(report, /multiple published class reports for this session/i,
   'Individual report cards must not silently choose an arbitrary enrollment');
-assert.match(cumulative, /multiple class enrollments for this session/i,
+assert.match(cumulative, /multiple published class reports for this session/i,
   'Individual cumulative reports must not silently choose an arbitrary enrollment');
 assert.match(report, /class_id = \? AND status = 'Present'/,
   'Individual report attendance must be scoped to the selected class');
@@ -65,4 +67,10 @@ for (const [name, body] of [
     `${name} must restrict result rows to the selected class`);
 }
 
-process.stdout.write('PASS: Report-card and academic-report section isolation query guards\\n');
+const cumulativeTemplate = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'cumulative_content.ejs'), 'utf8');
+assert.match(cumulativeTemplate, /s\.terms\[termName\] !== null && s\.terms\[termName\] !== undefined/,
+  'Cumulative calculations must count an explicit zero score as a present result');
+assert.match(cumulativeTemplate, /row\.terms\['1st Term'\] !== undefined && row\.terms\['1st Term'\] !== null/,
+  'Cumulative term cells must display a zero score instead of a dash');
+
+process.stdout.write('PASS: Report-card publication, historical ownership, section isolation, and zero-score guards\\n');

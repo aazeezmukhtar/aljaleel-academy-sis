@@ -10,14 +10,19 @@
     var termAverages = {'1st Term': 0, '2nd Term': 0, '3rd Term': 0};
     var termCounts = {'1st Term': 0, '2nd Term': 0, '3rd Term': 0};
 
-    subjects.forEach(function(s) { 
+    subjects.forEach(function(s) {
         var subjTotal = 0;
         var termsPresent = 0;
-        if(s.terms['1st Term']) { subjTotal += s.terms['1st Term']; termAverages['1st Term'] += s.terms['1st Term']; termCounts['1st Term']++; }
-        if(s.terms['2nd Term']) { subjTotal += s.terms['2nd Term']; termAverages['2nd Term'] += s.terms['2nd Term']; termCounts['2nd Term']++; }
-        if(s.terms['3rd Term']) { subjTotal += s.terms['3rd Term']; termAverages['3rd Term'] += s.terms['3rd Term']; termCounts['3rd Term']++; }
-        
-        var subjAvg = (termsPresent = (s.terms['1st Term'] ? 1 : 0) + (s.terms['2nd Term'] ? 1 : 0) + (s.terms['3rd Term'] ? 1 : 0)) > 0 ? subjTotal / termsPresent : 0;
+        ['1st Term', '2nd Term', '3rd Term'].forEach(function(termName) {
+            if (Object.prototype.hasOwnProperty.call(s.terms, termName) &&
+                s.terms[termName] !== null && s.terms[termName] !== undefined) {
+                subjTotal += Number(s.terms[termName]);
+                termAverages[termName] += Number(s.terms[termName]);
+                termCounts[termName]++;
+                termsPresent++;
+            }
+        });
+        var subjAvg = termsPresent > 0 ? subjTotal / termsPresent : 0;
         s.avg = subjAvg;
         grandTotal += subjAvg; 
     });
@@ -117,9 +122,9 @@
                     <% subjects.forEach(function(row, idx) { %>
                         <tr class="<%= idx % 2 === 0 ? 'rc-row-even' : '' %>">
                             <td class="rc-td-subject"><%= row.name %></td>
-                            <td class="rc-td-center"><%= row.terms['1st Term'] || '-' %></td>
-                            <td class="rc-td-center"><%= row.terms['2nd Term'] || '-' %></td>
-                            <td class="rc-td-center"><%= row.terms['3rd Term'] || '-' %></td>
+                            <td class="rc-td-center"><%= row.terms['1st Term'] !== undefined && row.terms['1st Term'] !== null ? row.terms['1st Term'] : '-' %></td>
+                            <td class="rc-td-center"><%= row.terms['2nd Term'] !== undefined && row.terms['2nd Term'] !== null ? row.terms['2nd Term'] : '-' %></td>
+                            <td class="rc-td-center"><%= row.terms['3rd Term'] !== undefined && row.terms['3rd Term'] !== null ? row.terms['3rd Term'] : '-' %></td>
                             <td class="rc-td-center rc-td-bold"><%= row.avg.toFixed(1) %></td>
                             <td class="rc-td-remark"><%= getGradeRemark(row.avg) %></td>
                         </tr>

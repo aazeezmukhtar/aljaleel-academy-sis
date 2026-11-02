@@ -23,4 +23,15 @@ assert(adminStaffShell.includes('/js/image-optimizer.js'),
 assert(studentShell.includes('/js/image-optimizer.js'),
   'Student portal shell must load the shared optimizer');
 
+
+assert(optimizer.includes('function cropImage(file)'), 'The shared crop editor should be available');
+assert(optimizer.includes("input.dataset.crop === 'square'"), 'Square crop should run before optimization');
+assert(optimizer.includes('CROP_OUTPUT_SIZE = 1200'), 'Cropped profile photos should be normalized to 1200px square');
+assert(optimizer.includes('Use this photo'), 'The crop editor should require explicit confirmation');
+assert(optimizer.includes("input.value = '';"), 'Cancelling crop must cancel the upload');
+for (const file of ['views/students/enroll.ejs', 'views/students/edit.ejs', 'views/staff/add.ejs', 'views/portal/profile.ejs']) {
+  const view = fs.readFileSync(path.join(root, file), 'utf8');
+  assert(view.includes('data-crop="square"'), file + ' should use the square crop editor');
+}
+
 console.log('PASS: browser image optimizer policy and portal shell integration checks');

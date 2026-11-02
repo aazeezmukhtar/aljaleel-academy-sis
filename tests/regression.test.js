@@ -4,6 +4,7 @@ const { spawnSync } = require('child_process');
 const path = require('path');
 
 const tests = [
+  ['image-optimizer.test.js', 'Browser image optimizer policy and portal integration'],
   ['role-access-control.test.js', 'Static recovery baseline'],
   ['auth-middleware.test.js', 'Authentication middleware unit tests'],
   ['session-secret.test.js', 'Session secret configuration unit tests'],

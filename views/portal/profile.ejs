@@ -51,7 +51,7 @@
                     <img id="avatarPreview" src="" alt="Profile Preview" class="acm-profile-avatar" style="display:none;">
                 <% } %>
                 <form id="avatarForm" action="/portal/profile" method="POST" enctype="multipart/form-data" style="display:none;">
-                    <input type="file" id="passportInput" name="passport" accept="image/jpeg,image/png,image/webp">
+                    <input type="file" id="passportInput" name="passport" accept="image/jpeg,image/png,image/webp" data-crop="square">
                 </form>
                 <label for="passportInput" class="acm-avatar-upload-btn" title="Change photo" aria-label="Change photo">
                     <i class="bi bi-camera-fill" aria-hidden="true"></i>

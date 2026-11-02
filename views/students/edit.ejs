@@ -183,7 +183,8 @@
 
                         <div class="form-group" style="margin-top: 20px;">
                             <label>Update Passport Photo</label>
-                            <input type="file" name="passport" class="form-control" accept="image/*">
+                            <input type="file" name="passport" class="form-control" accept="image/*" data-crop="square">
+                            <small class="text-muted">You will be able to crop the photo before it is uploaded.</small>
                             <% if (student.passport_photo_path) { %>
                                 <div style="margin-top: 10px;">
                                     <img src="<%= student.passport_photo_path %>"

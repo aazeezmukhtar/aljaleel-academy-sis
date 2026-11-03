@@ -595,21 +595,13 @@
     </script>
 
     <style>
-        /* Keep comma-separated multi-class assignments on one horizontal line.
-           Narrow screens can scroll within the badge instead of wrapping labels. */
+        /* Keep comma-separated class assignments on one line beside the student ID. */
         .student-class-inline {
             display: inline-block !important;
             white-space: nowrap !important;
-            max-width: 100% !important;
-            min-width: 0;
-            overflow-x: auto;
-            overflow-y: hidden;
+            max-width: none !important;
+            overflow: visible !important;
             vertical-align: middle;
-            scrollbar-width: thin;
-        }
-
-        .student-mobile-cards td[data-label="Class"] {
-            min-width: 0;
         }
 
         .icon-filters {
@@ -1000,7 +992,7 @@
                 margin-bottom: 12px !important;
                 background: white !important;
                 display: grid !important;
-                grid-template-columns: 1fr auto !important;
+                grid-template-columns: minmax(0, 1fr) max-content !important;
                 grid-template-rows: auto auto auto !important;
                 gap: 10px 8px !important;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.04) !important;
@@ -1039,6 +1031,8 @@
                 display: flex !important;
                 justify-content: flex-end;
                 align-items: center;
+                white-space: nowrap !important;
+                min-width: max-content !important;
             }
             
             /* 3. Status and Action inline */

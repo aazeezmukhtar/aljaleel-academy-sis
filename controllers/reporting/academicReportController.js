@@ -50,9 +50,10 @@ const getBroadsheet = async (req, res) => {
                 SELECT DISTINCT s.id, s.name
                 FROM subjects s
                 JOIN subject_assignments sa ON sa.subject_id = s.id
-                WHERE sa.class_id = ? AND sa.session = ?
+                JOIN classes assigned_class ON assigned_class.id = sa.class_id AND assigned_class.school_id = ?
+                WHERE sa.class_id = ? AND sa.session = ? AND s.school_id = ?
                 ORDER BY s.name
-            `, [class_id, session]);
+            `, [schoolId, class_id, session, schoolId]);
 
             // All active students in the class
             const students = await db.all(`
@@ -231,6 +232,8 @@ const getTopPerformers = async (req, res) => {
                     AVG(r.total) as average_score
                 FROM students s
                 JOIN results r ON s.id = r.student_id
+                JOIN subject_assignments sa ON sa.class_id = r.class_id
+                    AND sa.session = r.session AND sa.subject_id = r.subject_id
                 JOIN classes c ON c.id = r.class_id
                 WHERE r.class_id = ? AND r.term = ? AND r.session = ?
                   AND r.status IN ('approved', 'published')

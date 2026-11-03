@@ -346,7 +346,7 @@ check('service worker preserves prior prepared pages when upgrading its cache ve
   assert.match(source, /name\.startsWith\('aljaleel-sis-v'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
   assert.match(source, /previousCacheNames\.map\(\(name\) => caches\.delete\(name\)\)/);
-  assert.match(source, /Timestamp legacy prepared attendance\/results/);
+  assert.match(source, /Older releases did not timestamp prepared attendance\/results/);
 });
 
 check('offline IndexedDB migration adds a manifest without deleting attendance or results queues', () => {

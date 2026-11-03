@@ -85,3 +85,11 @@ check('result score validation rejects negative values and rechecks before savin
   assert.match(results, /val < 0 \|\| val > max/);
   assert.match(results, /\[ca1, ca2, exam\]\.forEach\(input => validateInput\(input\)\)/);
 });
+
+check('result score inputs identify the student and score component to assistive technology', () => {
+  assert.match(results, /aria-label="CA 1 score for/);
+  assert.match(results, /aria-label="CA 2 score for/);
+  assert.match(results, /aria-label="Exam score for/);
+  assert.match(results, /aria-invalid="false"/);
+  assert.match(results, /input\.setAttribute\('aria-invalid'/);
+});

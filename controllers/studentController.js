@@ -479,7 +479,8 @@ const getOfflineStudentProfile = async (req, res) => {
         res.set('Cache-Control', 'private, no-store');
         return res.render('students/offline-profile', {
             title: 'Student Offline Profile',
-            student: { ...student, class_name: classNames.join(', ') || 'Not Enrolled' }
+            student: { ...student, class_name: classNames.join(', ') || 'Not Enrolled' },
+            user
         });
     } catch (err) {
         console.error('Fetch Offline Student Profile Error:', err);

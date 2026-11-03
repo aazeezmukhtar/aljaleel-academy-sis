@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v12'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v13'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -231,6 +231,26 @@ check('staff directory and numeric staff profiles are approved read-only offline
   assert.doesNotMatch(source, /'\/staff\/add'|'\/staff\/edit'|'\/staff\/board'/);
 });
 
+check('student directory offline access uses only the canonical unfiltered directory snapshot', () => {
+  assert.match(source, /function isStudentDirectoryPath\(pathname\)/);
+  assert.match(source, /async function buildStudentDirectoryResponse\(cache, requestedUrl\)/);
+  assert.match(source, /requestedUrl\.searchParams\.size > 0/);
+  assert.match(source, /savedResponse = await cache\.match\(baseUrl\.href\)/);
+  assert.match(source, /Student profiles are not available offline/);
+  assert.match(source, /This directory is read-only offline/);
+  assert.match(source, /Filters require an internet connection/);
+  assert.match(source, /X-AcadMe-Cached-At/);
+  assert.match(source, /Date\.now\(\) - cachedAt > maxAgeMs/);
+  assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(source, /url\.searchParams\.size === 0/);
+  assert.match(source, /isStudentDirectoryPath\(url\.pathname\) && url\.search/);
+});
+
+check('student profile, edit, enrollment and bulk-import pages are not approved offline routes', () => {
+  assert.doesNotMatch(source, /'\/students\/view'|'\/students\/edit'|'\/students\/enroll'|'\/students\/bulk-import'/);
+  assert.match(source, /Student profiles are not available offline/);
+});
+
 check('versioned same-origin assets share an unversioned cache key', () => {
   assert.match(source, /function staticCacheKey\(url\)/);
   assert.match(source, /url\.origin \+ url\.pathname/);
@@ -250,7 +270,7 @@ check('manifest and Home links use protected dashboard route', () => {
 
 
 check('service worker preserves prior prepared pages when upgrading its cache version', () => {
-  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v11'\)/);
+  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v12'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
   assert.match(source, /keys\s+\.filter\(key => key !== CACHE_NAME\)/);
 });

@@ -299,6 +299,13 @@
                         status.textContent = 'Already ready offline. The saved sheet was verified; no download was needed.';
                         return;
                     }
+                    if (saved.status === 'stale' && !navigator.onLine) {
+                        status.textContent = 'This exact sheet is older than 24 hours but remains available offline within the 7-day retention period. Reconnect and use Prepare for Offline Use to refresh it.';
+                        return;
+                    }
+                    if (saved.status === 'stale') {
+                        status.textContent = 'The saved sheet is still available but older than 24 hours. Refreshing this exact sheet now…';
+                    }
                 }
                 status.textContent = 'Preparing this exact results sheet for offline use…';
                 const response = await fetch(target.pathname + target.search, {

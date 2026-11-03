@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v16'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v17'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -61,9 +61,19 @@ check('unprepared results selections fall back only to the cached unfiltered sel
   assert.match(source, /prepare this exact sheet while connected/);
 });
 
+check('prepared dataset registry distinguishes fresh, stale, expired and missing cached sheets', () => {
+  const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
+  assert.match(handler, /status: 'expired', available: false/);
+  assert.match(handler, /status: age <= freshnessMs \? 'fresh' : 'stale'/);
+  assert.match(handler, /age > retentionMs/);
+  assert.match(handler, /status: 'missing', available: false/);
+});
+
 check('attendance refresh reports saved-sheet checks separately from actual downloads', () => {
   const attendance = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'index.ejs'), 'utf8');
   assert.match(attendance, /Checking saved offline attendance for/);
+  assert.match(attendance, /hasUsablePreparedSheet/);
+  assert.match(attendance, /older than 24 hours but remain available/);
   assert.match(attendance, /Preparing \' \+ batch\.length \+ \' missing class\/date sheets/);
   assert.doesNotMatch(attendance, /setStatus\('Preparing offline attendance for ' \+ dates\.length/);
 });
@@ -74,6 +84,10 @@ check('result entry page offers explicit offline preparation for the exact acade
   assert.match(manager, /function prepareResultsOffline\(\)/);
   assert.match(manager, /X-AcadMe-Offline-Prepare/);
   assert.match(manager, /X-AcadMe-Offline-Cached/);
+  assert.match(manager, /older than 24 hours/);
+  assert.match(manager, /7-day retention period/);
+  assert.match(manager, /saved.status === 'stale' && !navigator.onLine/);
+  assert.match(manager, /Refreshing this exact sheet now/);
   for (const key of ['class_id', 'subject_id', 'session', 'term']) {
     assert.ok(manager.includes("'" + key + "'"), 'missing result context key: ' + key);
   }
@@ -192,10 +206,23 @@ check('login and logout routes are not served from offline page cache', () => {
   assert.match(source, /Sign-in and sign-out require an internet connection/);
 });
 
-check('private page cache is cleared when login/logout or auth redirect is detected', () => {
+check('expired-session redirects preserve prepared sheets only for the same authenticated account', () => {
   assert.match(source, /async function clearPrivatePageCache\(cache\)/);
-  assert.match(source, /await clearPrivatePageCache\(cache\)/);
-  assert.match(source, /const redirectedToAuth/);
+  assert.match(source, /if \(AUTH_PATHS\.has\(url\.pathname\) \|\| LOGOUT_PATHS\.has\(url\.pathname\)\)/);
+  assert.match(source, /request\.method === 'POST'/);
+  assert.match(source, /redirectedToAuthenticatedPage/);
+  assert.doesNotMatch(source, /const redirectedToAuth\s*=/);
+});
+
+check('prepared sheets survive migration from any previous AcadMe cache version and keep seven-day freshness metadata', () => {
+  assert.match(source, /keys\.filter\(\(name\) =>/);
+  assert.match(source, /name\.startsWith\('aljaleel-sis-v'\)/);
+  assert.match(source, /isOfflinePrivatePath\(url\.pathname\)/);
+  assert.match(source, /function buildPreparedEntryResponse\(response\)/);
+  assert.match(source, /retentionMs = 7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(source, /freshnessMs = 24 \* 60 \* 60 \* 1000/);
+  assert.match(source, /X-AcadMe-Cached-At/);
+  assert.match(source, /X-AcadMe-Offline-Freshness/);
 });
 
 check('cross-origin requests are not broadly intercepted or cached', () => {
@@ -317,9 +344,11 @@ check('manifest and Home links use protected dashboard route', () => {
 
 
 check('service worker preserves prior prepared pages when upgrading its cache version', () => {
-  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v15'\)/);
+  assert.match(source, /previousCacheNames = keys\.filter/);
+  assert.match(source, /name\.startsWith\('aljaleel-sis-v'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
-  assert.match(source, /keys\s+\.filter\(key => key !== CACHE_NAME\)/);
+  assert.match(source, /previousCacheNames\.map\(\(name\) => caches\.delete\(name\)\)/);
+  assert.match(source, /Older releases did not timestamp prepared attendance\/results/);
 });
 
 check('offline IndexedDB migration adds a manifest without deleting attendance or results queues', () => {
@@ -349,9 +378,9 @@ check('new offline queue records are owned by the authenticated principal and sy
   assert.match(handler, /tx\.oncomplete = \(\) =>/);
 });
 
-check('attendance preparation checks persistent records before downloading again', () => {
+check('attendance preparation checks persistent records before downloading again, including stale retained sheets', () => {
   const attendance = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'index.ejs'), 'utf8');
-  assert.match(attendance, /hasFreshPreparedSheet/);
+  assert.match(attendance, /hasUsablePreparedSheet/);
   assert.match(attendance, /getPreparedDatasetStatus/);
   assert.match(attendance, /recordPreparedDataset/);
 });

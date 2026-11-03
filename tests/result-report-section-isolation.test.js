@@ -64,11 +64,20 @@ const academicTop = academicReportSource.slice(academicReportSource.indexOf('con
 
 for (const [name, body] of [
   ['broadsheet', academicBroadsheet],
-  ['subject analysis', academicAnalysis],
   ['top performers', academicTop]
 ]) {
   assert.match(body, /r\.class_id = \?/,
     `${name} must restrict result rows to the selected class`);
+}
+assert.match(academicAnalysis, /r\.class_id = sa\.class_id/,
+  'Subject analysis must join results to the class captured at result entry');
+assert.match(academicAnalysis, /sa\.class_id = \?/,
+  'Subject analysis must restrict assigned subjects to the selected class');
+for (const [name, body] of [
+  ['broadsheet', academicBroadsheet],
+  ['subject analysis', academicAnalysis],
+  ['top performers', academicTop]
+]) {
   assert.match(body, /status IN \('approved', 'published'\)/,
     `${name} must exclude draft and submitted result rows`);
   assert.match(body, /canAccessClass\(class_id\)/,

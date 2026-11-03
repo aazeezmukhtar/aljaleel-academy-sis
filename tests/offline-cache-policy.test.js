@@ -57,7 +57,7 @@ check('unprepared results selections fall back only to the cached unfiltered sel
   assert.match(source, /X-AcadMe-Offline-Selection/);
   assert.match(source, /This selected class, subject, session and term sheet is not prepared for offline use/);
   assert.match(source, /prepare this exact sheet while connected/);
-  assert.match(source, /Never substitute another class\/subject grade sheet/);
+  assert.match(source, /Never substitute another\s+class\/subject grade sheet/);
 });
 
 check('attendance refresh reports saved-sheet checks separately from actual downloads', () => {

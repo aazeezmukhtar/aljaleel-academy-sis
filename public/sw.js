@@ -102,7 +102,7 @@ async function buildStaffOfflineResponse(response) {
         '</div>';
     const html = await response.text();
     const responseHtml = /<body[^>]*>/i.test(html)
-        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag + noticeHtml)
+        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag.replace(/>$/, ' data-acadme-offline="true">') + noticeHtml)
         : html.replace(/<[/]body>/i, noticeHtml + '</body>');
     const headers = new Headers(response.headers);
     headers.delete('Content-Length');
@@ -135,7 +135,7 @@ async function buildStudentOfflineProfileResponse(response) {
         '</div>';
     const html = await response.text();
     const responseHtml = /<body[^>]*>/i.test(html)
-        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag + noticeHtml)
+        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag.replace(/>$/, ' data-acadme-offline="true">') + noticeHtml)
         : html.replace(/<[/]body>/i, noticeHtml + '</body>');
     const headers = new Headers(response.headers);
     headers.delete('Content-Length');
@@ -177,7 +177,7 @@ async function buildStudentDirectoryResponse(cache, requestedUrl) {
         '</div>';
     const html = await savedResponse.text();
     const responseHtml = /<body[^>]*>/i.test(html)
-        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag + noticeHtml)
+        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag.replace(/>$/, ' data-acadme-offline="true">') + noticeHtml)
         : html.replace(/<[/]body>/i, noticeHtml + '</body>');
     const headers = new Headers(savedResponse.headers);
     headers.delete('Content-Length');

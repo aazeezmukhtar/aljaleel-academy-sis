@@ -206,11 +206,12 @@ async function saveResultOffline(data) {
             return;
         }
         const req = store.add({ ...data, _ownerKey: ownerKey, _savedAt: new Date().toISOString() });
-        req.onsuccess = () => {
+        tx.oncomplete = () => {
             updateSyncUI();
             resolve();
         };
-        req.onerror = () => reject(req.error);
+        tx.onerror = () => reject(tx.error || req.error || new Error('Offline results could not be stored.'));
+        tx.onabort = () => reject(tx.error || new Error('Offline results storage was aborted.'));
     });
 }
 

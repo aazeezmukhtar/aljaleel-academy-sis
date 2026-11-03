@@ -173,6 +173,21 @@ async function requestPersistentStorage() {
 
 // ─── Queue Writers ─────────────────────────────────────────────────────────
 
+async function requestBackgroundSync() {
+    if (!('serviceWorker' in navigator)) return false;
+    try {
+        const registration = await navigator.serviceWorker.ready;
+        if (registration.sync && typeof registration.sync.register === 'function') {
+            await registration.sync.register('sync-nexus');
+            return true;
+        }
+    } catch (error) {
+        // Background Sync is an enhancement only; foreground retries remain active.
+        console.info('[NexusOffline] Background Sync unavailable; foreground retry will handle queued work.', error);
+    }
+    return false;
+}
+
 async function saveAttendanceOffline(data) {
     const db = await openDB();
     return new Promise((resolve, reject) => {
@@ -187,6 +202,7 @@ async function saveAttendanceOffline(data) {
         const req = store.add({ ...data, _ownerKey: ownerKey, _savedAt: new Date().toISOString() });
         tx.oncomplete = () => {
             updateSyncUI();
+            requestBackgroundSync();
             resolve();
         };
         tx.onerror = () => reject(tx.error || req.error || new Error('Offline attendance could not be stored.'));
@@ -430,6 +446,14 @@ window.addEventListener('offline', () => {
     updateSyncUI();
 });
 
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (event) => {
+        if (event.data && event.data.type === 'TRIGGER_SYNC') {
+            syncData();
+        }
+    });
+}
+
 // Init on page load
 document.addEventListener('DOMContentLoaded', () => {
     openDB().then(() => {
@@ -456,5 +480,6 @@ window.NexusOffline = {
     recordPreparedDataset,
     getOfflineStorageStatus,
     requestPersistentStorage,
+    requestBackgroundSync,
     retentionDays: OFFLINE_RETENTION_DAYS
 };

@@ -85,24 +85,39 @@ function getManifestRecord(id) {
 
 async function getPreparedDatasetStatus(datasetKey, url) {
     const id = getManifestId(datasetKey);
-    if (!id || !url || !('caches' in window)) return { status: 'missing' };
+    if (!id || !url || !('caches' in window)) return { status: 'missing', available: false };
 
     const record = await getManifestRecord(id);
-    if (!record) return { status: 'missing' };
+    if (!record) return { status: 'missing', available: false };
 
     // A manifest entry is never proof that the actual HTML response still exists.
     const cached = await caches.match(url, { ignoreSearch: false });
-    if (!cached) return { status: 'missing' };
+    if (!cached) return { status: 'missing', available: false };
 
-    const preparedAt = Date.parse(record.preparedAt || '');
-    if (!Number.isFinite(preparedAt)) return { status: 'stale', record };
-    const age = Math.max(0, Date.now() - preparedAt);
+    const recordedAt = Date.parse(record.preparedAt || '');
+    const cachedAt = Date.parse(cached.headers.get('X-AcadMe-Cached-At') || '');
+    const referenceTime = Number.isFinite(cachedAt) ? cachedAt : recordedAt;
+    if (!Number.isFinite(referenceTime)) {
+        return { status: 'stale', available: true, record, ageMs: null, retainedUntil: record.retainedUntil || null };
+    }
+
+    const age = Math.max(0, Date.now() - referenceTime);
     const freshnessMs = OFFLINE_FRESHNESS_HOURS * 60 * 60 * 1000;
+    const retentionMs = OFFLINE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const retainedUntil = Number.isFinite(Date.parse(record.retainedUntil || ''))
+        ? record.retainedUntil
+        : new Date(referenceTime + retentionMs).toISOString();
+
+    if (age > retentionMs) {
+        return { status: 'expired', available: false, record, ageMs: age, retainedUntil };
+    }
+
     return {
         status: age <= freshnessMs ? 'fresh' : 'stale',
+        available: true,
         record,
         ageMs: age,
-        retainedUntil: record.retainedUntil || null
+        retainedUntil
     };
 }
 
@@ -468,6 +483,7 @@ document.addEventListener('DOMContentLoaded', () => {
     openDB().then(() => {
         requestPersistentStorage().then(result => {
             if (result.supported && !result.granted) console.info('[NexusOffline] Browser did not grant persistent storage.');
+            updateSyncUI();
         });
         if (!navigator.onLine) {
             document.body.classList.add('is-offline');

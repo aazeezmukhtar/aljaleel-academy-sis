@@ -136,14 +136,21 @@ const getStudents = async (req, res) => {
                 studentMap.set(row.id, {
                     ...row,
                     class_names: row.class_name ? [row.class_name] : [],
-                    class_ids: row.enrolled_class_id ? [row.enrolled_class_id] : []
+                    class_ids: [row.enrolled_class_id, row.current_class_id].filter(Boolean).map(String),
+                    section_ids: row.class_section_id ? [String(row.class_section_id)] : []
                 });
             } else {
                 if (row.class_name && !studentMap.get(row.id).class_names.includes(row.class_name)) {
                     studentMap.get(row.id).class_names.push(row.class_name);
                 }
-                if (row.enrolled_class_id && !studentMap.get(row.id).class_ids.includes(row.enrolled_class_id)) {
-                    studentMap.get(row.id).class_ids.push(row.enrolled_class_id);
+                if (row.enrolled_class_id && !studentMap.get(row.id).class_ids.includes(String(row.enrolled_class_id))) {
+                    studentMap.get(row.id).class_ids.push(String(row.enrolled_class_id));
+                }
+                if (row.current_class_id && !studentMap.get(row.id).class_ids.includes(String(row.current_class_id))) {
+                    studentMap.get(row.id).class_ids.push(String(row.current_class_id));
+                }
+                if (row.class_section_id && !studentMap.get(row.id).section_ids.includes(String(row.class_section_id))) {
+                    studentMap.get(row.id).section_ids.push(String(row.class_section_id));
                 }
             }
         }
@@ -151,6 +158,7 @@ const getStudents = async (req, res) => {
         const students = Array.from(studentMap.values()).map(s => {
             s.class_name = s.class_names.length > 0 ? s.class_names.join(', ') : (s.class_name || 'Not Enrolled');
             s.enrolled_class_ids = s.class_ids.join(',');
+            s.enrolled_section_ids = s.section_ids.join(',');
             return s;
         });
 
@@ -410,6 +418,72 @@ const getStudentProfile = async (req, res) => {
     } catch (err) {
         console.error('Fetch Profile Error:', err);
         res.status(500).send('Database Error');
+    }
+};
+
+const getOfflineStudentProfile = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const studentId = Number(req.params.id);
+    if (!Number.isInteger(studentId) || studentId <= 0) return res.status(404).send('Student not found');
+
+    try {
+        const student = await db.get(
+            'SELECT id, first_name, last_name, admission_number, gender, status, current_class_id FROM students WHERE id = ? AND school_id = ?',
+            [studentId, schoolId]
+        );
+        if (!student) return res.status(404).send('Student not found');
+
+        const sessionSettingRow = await db.get("SELECT value FROM settings WHERE key = 'current_session'").catch(() => null);
+        const activeCurrentSession = (sessionSettingRow && sessionSettingRow.value) || '2025/2026';
+        const enrollments = await db.all(`
+            SELECT DISTINCT c.id AS class_id, c.name AS class_name
+            FROM student_enrollments se
+            JOIN classes c ON se.class_id = c.id
+            LEFT JOIN sections sec ON c.section_id = sec.id
+            WHERE se.student_id = ? AND c.school_id = ?
+              AND (se.session = sec.current_session OR se.session = ?)
+            ORDER BY c.name ASC
+        `, [studentId, schoolId, activeCurrentSession]);
+
+        let permittedClassIds = null;
+        if (user.role !== 'Admin' && user.role !== 'Registrar') {
+            const assignedClasses = await db.all(`
+                SELECT DISTINCT c.id
+                FROM classes c
+                LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
+                LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
+                WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
+                  AND c.school_id = ?
+            `, [user.id, user.id, user.id, schoolId]);
+            permittedClassIds = new Set(assignedClasses.map(row => String(row.id)));
+            const permitted = enrollments.some(row => permittedClassIds.has(String(row.class_id))) ||
+                (student.current_class_id && permittedClassIds.has(String(student.current_class_id)));
+            if (!permitted) return res.status(404).send('Student not found');
+        }
+
+        const visibleEnrollments = permittedClassIds
+            ? enrollments.filter(row => permittedClassIds.has(String(row.class_id)))
+            : enrollments;
+        let classNames = visibleEnrollments.map(row => row.class_name);
+        if (classNames.length === 0 && student.current_class_id) {
+            const currentClass = await db.get(
+                'SELECT id, name FROM classes WHERE id = ? AND school_id = ?',
+                [student.current_class_id, schoolId]
+            );
+            if (currentClass && (!permittedClassIds || permittedClassIds.has(String(currentClass.id)))) {
+                classNames = [currentClass.name];
+            }
+        }
+
+        res.set('Cache-Control', 'private, no-store');
+        return res.render('students/offline-profile', {
+            title: 'Student Offline Profile',
+            student: { ...student, class_name: classNames.join(', ') || 'Not Enrolled' }
+        });
+    } catch (err) {
+        console.error('Fetch Offline Student Profile Error:', err);
+        return res.status(500).send('Database Error');
     }
 };
 
@@ -771,6 +845,6 @@ const resetStudentPassword = async (req, res) => {
 
 module.exports = {
     enrollStudent, getStudents, getEnrollmentForm,
-    getStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
+    getStudentProfile, getOfflineStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
 };
 

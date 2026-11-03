@@ -132,6 +132,7 @@
                                 <th>Student Name</th>
                                 <th>Student ID</th>
                                 <th>Gender</th>
+                                <th>Contact Numbers</th>
                                 <th>Class</th>
                                 <th>Status</th>
                                 <th>Action</th>
@@ -141,7 +142,7 @@
                             <% if (students.length > 0) { %>
                                 <% students.forEach(student => { %>
                                     <tr data-student-id="<%= student.id %>"
-                                        data-search="<%= [student.first_name, student.last_name, student.admission_number, student.id].filter(Boolean).join(' ').toLowerCase() %>"
+                                        data-search="<%= [student.first_name, student.last_name, student.admission_number, student.id, student.phone, student.parent_phone, student.parent_phone_alt].filter(Boolean).join(' ').toLowerCase() %>"
                                         data-class-ids="<%= student.enrolled_class_ids || student.current_class_id || '' %>"
                                         data-section-ids="<%= student.enrolled_section_ids || student.class_section_id || '' %>"
                                         data-gender="<%= student.gender || '' %>"
@@ -173,6 +174,29 @@
                                         </td>
                                         <td data-label="Gender">
                                             <%= student.gender %>
+                                        </td>
+                                        <td data-label="Contact Numbers">
+                                            <div style="display:flex;flex-direction:column;gap:5px;min-width:140px;">
+                                                <div>
+                                                    <small style="display:block;color:var(--text-muted);font-size:.7rem;">Student</small>
+                                                    <% if (student.phone) { %>
+                                                        <a href="tel:<%= student.phone %>" style="font-weight:600;white-space:nowrap;"><%= student.phone %></a>
+                                                    <% } else { %>
+                                                        <span class="text-muted">Not provided</span>
+                                                    <% } %>
+                                                </div>
+                                                <div>
+                                                    <small style="display:block;color:var(--text-muted);font-size:.7rem;">Parent / Guardian</small>
+                                                    <% if (student.parent_phone) { %>
+                                                        <a href="tel:<%= student.parent_phone %>" style="font-weight:600;white-space:nowrap;"><%= student.parent_phone %></a>
+                                                    <% } else { %>
+                                                        <span class="text-muted">Not provided</span>
+                                                    <% } %>
+                                                    <% if (student.parent_phone_alt) { %>
+                                                        <div><small style="color:var(--text-muted);">Alternate: </small><a href="tel:<%= student.parent_phone_alt %>" style="white-space:nowrap;"><%= student.parent_phone_alt %></a></div>
+                                                    <% } %>
+                                                </div>
+                                            </div>
                                         </td>
                                         <td data-label="Class">
                                             <% if (student.class_name) { %>
@@ -209,7 +233,7 @@
                                 <% }); %>
                             <% } else { %>
                                 <tr id="noResultsRow">
-                                    <td colspan="6" style="text-align: center; padding: 60px;">
+                                    <td colspan="7" style="text-align: center; padding: 60px;">
                                         <div style="color: var(--text-muted); margin-bottom: 15px;">
                                             <i class="bi bi-search" style="font-size: 2rem; opacity: 0.5;"></i>
                                         </div>
@@ -480,7 +504,7 @@
                 if (!students || students.length === 0) {
                     studentTableBody.innerHTML = `
                         <tr id="noResultsRow">
-                            <td colspan="6" style="text-align: center; padding: 60px;">
+                            <td colspan="7" style="text-align: center; padding: 60px;">
                                 <div style="color: var(--text-muted); margin-bottom: 15px;">
                                     <i class="bi bi-search" style="font-size: 2rem; opacity: 0.5;"></i>
                                 </div>

@@ -14,7 +14,7 @@ assert.match(template, /student-class-inline[^\n]*\$\{escapeHtml\(s\.class_name\
 assert.match(template, /\.student-class-inline\s*\{[^}]*white-space:\s*nowrap\s*!important/s,
     'Class assignments must never wrap onto a second line.');
 assert.match(template, /\.student-class-inline\s*\{[^}]*overflow-x:\s*auto/s,
-    'Long class lists should remain accessible through horizontal scrolling.');
+    'Class assignments must not be scrollable.');
 assert.match(template, /\.student-class-inline\s*\{[^}]*max-width:\s*100%/s,
     'The class list should stay within the available cell width.');
 

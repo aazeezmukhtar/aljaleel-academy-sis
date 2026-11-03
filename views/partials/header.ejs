@@ -15,6 +15,16 @@
     <link rel="apple-touch-icon" href="/img/logo-512.png">
     <link rel="stylesheet" href="/css/pwa-prompt.css">
     <script src="/js/pwa-installer.js" defer></script>
+    <% if (typeof user !== 'undefined' && user) { %>
+    <script>
+        // Values are derived from the authenticated server session, not user input.
+        window.ACADME_OFFLINE_CONTEXT = Object.freeze({
+            schoolId: <%- JSON.stringify(Number(user.school_id || 1)) %>,
+            principalType: 'staff',
+            principalId: <%- JSON.stringify(String(user.id)) %>
+        });
+    </script>
+    <% } %>
     <script src="/js/offline-handler.js" defer></script>
     <script src="/js/image-optimizer.js" defer></script>
     <style>

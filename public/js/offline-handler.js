@@ -1,11 +1,11 @@
 /**
- * Nexus SIS Offline Handler v2
+ * AcadMe Offline Handler v3
  * IndexedDB queue for offline attendance + result entry.
  * Syncs automatically when connection is restored.
  */
 
 const DB_NAME = 'NexusSIS_OfflineDB';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 let _idb = null;
 
@@ -25,10 +25,18 @@ function openDB() {
             if (!db.objectStoreNames.contains('results_sync')) {
                 db.createObjectStore('results_sync', { keyPath: 'id', autoIncrement: true });
             }
+            // Additive migration only: never delete or recreate existing queues.
+            if (!db.objectStoreNames.contains('offline_manifest')) {
+                db.createObjectStore('offline_manifest', { keyPath: 'id' });
+            }
         };
 
         req.onsuccess = (e) => {
             _idb = e.target.result;
+            _idb.onversionchange = () => {
+                _idb.close();
+                _idb = null;
+            };
             resolve(_idb);
         };
 
@@ -39,6 +47,130 @@ function openDB() {
     });
 }
 
+// ─── Offline identity and preparation registry ─────────────────────────────
+
+const OFFLINE_RETENTION_DAYS = 7;
+const OFFLINE_FRESHNESS_HOURS = 24;
+
+function getOfflinePrincipal() {
+    const context = window.ACADME_OFFLINE_CONTEXT;
+    if (!context || !context.schoolId || !context.principalType || !context.principalId) return null;
+    return {
+        schoolId: String(context.schoolId),
+        principalType: String(context.principalType),
+        principalId: String(context.principalId)
+    };
+}
+
+function getOfflineOwnerKey() {
+    const principal = getOfflinePrincipal();
+    return principal
+        ? [principal.schoolId, principal.principalType, principal.principalId].join(':')
+        : null;
+}
+
+function getManifestId(datasetKey) {
+    const ownerKey = getOfflineOwnerKey();
+    return ownerKey && datasetKey ? ownerKey + '::' + String(datasetKey) : null;
+}
+
+function getManifestRecord(id) {
+    return openDB().then(db => new Promise((resolve, reject) => {
+        const request = db.transaction(['offline_manifest'], 'readonly')
+            .objectStore('offline_manifest').get(id);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+    }));
+}
+
+async function getPreparedDatasetStatus(datasetKey, url) {
+    const id = getManifestId(datasetKey);
+    if (!id || !url || !('caches' in window)) return { status: 'missing' };
+
+    const record = await getManifestRecord(id);
+    if (!record) return { status: 'missing' };
+
+    // A manifest entry is never proof that the actual HTML response still exists.
+    const cached = await caches.match(url, { ignoreSearch: false });
+    if (!cached) return { status: 'missing' };
+
+    const preparedAt = Date.parse(record.preparedAt || '');
+    if (!Number.isFinite(preparedAt)) return { status: 'stale', record };
+    const age = Math.max(0, Date.now() - preparedAt);
+    const freshnessMs = OFFLINE_FRESHNESS_HOURS * 60 * 60 * 1000;
+    return {
+        status: age <= freshnessMs ? 'fresh' : 'stale',
+        record,
+        ageMs: age,
+        retainedUntil: record.retainedUntil || null
+    };
+}
+
+async function recordPreparedDataset(datasetKey, datasetType, url) {
+    const id = getManifestId(datasetKey);
+    const principal = getOfflinePrincipal();
+    if (!id || !principal) throw new Error('Authenticated offline identity is unavailable; preparation metadata was not saved.');
+    if (!('caches' in window) || !(await caches.match(url, { ignoreSearch: false }))) {
+        throw new Error('The prepared response is not present in browser cache.');
+    }
+
+    const now = new Date();
+    const retentionUntil = new Date(now.getTime() + OFFLINE_RETENTION_DAYS * 86400000);
+    const record = {
+        id,
+        datasetKey: String(datasetKey),
+        datasetType: String(datasetType),
+        schoolId: principal.schoolId,
+        principalType: principal.principalType,
+        principalId: principal.principalId,
+        preparedAt: now.toISOString(),
+        lastSuccessfulRefreshAt: now.toISOString(),
+        retentionUntil: retentionUntil.toISOString(),
+        url: String(url)
+    };
+
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(['offline_manifest'], 'readwrite');
+        tx.objectStore('offline_manifest').put(record);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('Could not save offline preparation metadata.'));
+        tx.onabort = () => reject(tx.error || new Error('Offline preparation metadata write was aborted.'));
+    });
+    return record;
+}
+
+async function getOfflineStorageStatus() {
+    const status = { persistent: null, usage: null, quota: null, supported: !!navigator.storage };
+    if (!navigator.storage) return status;
+    try {
+        if (typeof navigator.storage.persisted === 'function') {
+            status.persistent = await navigator.storage.persisted();
+        }
+        if (typeof navigator.storage.estimate === 'function') {
+            const estimate = await navigator.storage.estimate();
+            status.usage = Number.isFinite(estimate.usage) ? estimate.usage : null;
+            status.quota = Number.isFinite(estimate.quota) ? estimate.quota : null;
+        }
+    } catch (error) {
+        console.warn('[NexusOffline] Storage status check failed:', error);
+        status.error = error.message;
+    }
+    return status;
+}
+
+async function requestPersistentStorage() {
+    if (!navigator.storage || typeof navigator.storage.persist !== 'function') {
+        return { supported: false, granted: false };
+    }
+    try {
+        const granted = await navigator.storage.persist();
+        return { supported: true, granted: !!granted };
+    } catch (error) {
+        return { supported: true, granted: false, error: error.message };
+    }
+}
+
 // ─── Queue Writers ─────────────────────────────────────────────────────────
 
 async function saveAttendanceOffline(data) {
@@ -46,7 +178,13 @@ async function saveAttendanceOffline(data) {
     return new Promise((resolve, reject) => {
         const tx = db.transaction(['attendance_sync'], 'readwrite');
         const store = tx.objectStore('attendance_sync');
-        const req = store.add({ ...data, _savedAt: new Date().toISOString() });
+        const ownerKey = getOfflineOwnerKey();
+        if (!ownerKey) {
+            tx.abort();
+            reject(new Error('Offline account identity is unavailable. Reconnect before saving work on this device.'));
+            return;
+        }
+        const req = store.add({ ...data, _ownerKey: ownerKey, _savedAt: new Date().toISOString() });
         req.onsuccess = () => {
             updateSyncUI();
             resolve();
@@ -60,7 +198,13 @@ async function saveResultOffline(data) {
     return new Promise((resolve, reject) => {
         const tx = db.transaction(['results_sync'], 'readwrite');
         const store = tx.objectStore('results_sync');
-        const req = store.add({ ...data, _savedAt: new Date().toISOString() });
+        const ownerKey = getOfflineOwnerKey();
+        if (!ownerKey) {
+            tx.abort();
+            reject(new Error('Offline account identity is unavailable. Reconnect before saving work on this device.'));
+            return;
+        }
+        const req = store.add({ ...data, _ownerKey: ownerKey, _savedAt: new Date().toISOString() });
         req.onsuccess = () => {
             updateSyncUI();
             resolve();
@@ -105,6 +249,11 @@ let _isSyncing = false;
 
 async function syncData() {
     if (!navigator.onLine || _isSyncing) return;
+    const ownerKey = getOfflineOwnerKey();
+    if (!ownerKey) {
+        updateSyncUI('blocked');
+        return;
+    }
     _isSyncing = true;
 
     let successCount = 0;
@@ -123,7 +272,7 @@ async function syncData() {
         // prevent the other queue from being processed.
         let attendanceItems = [];
         try {
-            attendanceItems = await getAllQueued('attendance_sync');
+            attendanceItems = (await getAllQueued('attendance_sync')).filter(item => item._ownerKey === ownerKey);
         } catch (err) {
             console.error('[NexusOffline] Could not read attendance queue:', err);
             failCount++;
@@ -131,7 +280,7 @@ async function syncData() {
 
         for (const item of attendanceItems) {
             try {
-                const { id, _savedAt, ...payload } = item;
+                const { id, _savedAt, _ownerKey, ...payload } = item;
                 const res = await fetch('/attendance/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -162,7 +311,7 @@ async function syncData() {
 
         let resultItems = [];
         try {
-            resultItems = await getAllQueued('results_sync');
+            resultItems = (await getAllQueued('results_sync')).filter(item => item._ownerKey === ownerKey);
         } catch (err) {
             console.error('[NexusOffline] Could not read results queue:', err);
             failCount++;
@@ -222,13 +371,16 @@ async function updateSyncUI(state, successCount, failCount) {
     if (!navigator.onLine) {
         cls += ' offline';
         html = `<span class="sync-dot"></span> Offline Mode${pending > 0 ? ` &bull; ${pending} pending` : ''}`;
+    } else if (state === 'blocked') {
+        cls += ' warning';
+        html = '<span class="sync-dot"></span> Offline account identity unavailable; queued records were not sent';
     } else if (state === 'syncing') {
         cls += ' syncing';
         html = `<span class="sync-dot"></span> Syncing ${pending} record(s)...`;
     } else if (state === 'partial') {
         cls += ' warning';
         html = `<span class="sync-dot"></span> ${successCount} synced, ${failCount} failed`;
-    } else if (state === 'done') {
+    } else if (state === 'done' && pending === 0) {
         cls += ' synced';
         html = `<span class="sync-dot"></span> Synced ✓`;
         setTimeout(() => updateSyncUI(), 4000);
@@ -263,6 +415,9 @@ window.addEventListener('offline', () => {
 // Init on page load
 document.addEventListener('DOMContentLoaded', () => {
     openDB().then(() => {
+        requestPersistentStorage().then(result => {
+            if (result.supported && !result.granted) console.info('[NexusOffline] Browser did not grant persistent storage.');
+        });
         if (!navigator.onLine) {
             document.body.classList.add('is-offline');
         }
@@ -277,5 +432,10 @@ window.NexusOffline = {
     saveAttendanceOffline,
     saveResultOffline,
     syncData,
-    getPendingCount
+    getPendingCount,
+    getPreparedDatasetStatus,
+    recordPreparedDataset,
+    getOfflineStorageStatus,
+    requestPersistentStorage,
+    retentionDays: OFFLINE_RETENTION_DAYS
 };

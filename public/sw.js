@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v10';
+const CACHE_NAME = 'aljaleel-sis-v11';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -112,6 +112,73 @@ function isOfflinePreparationRequest(request, url) {
     return false;
 }
 
+
+async function buildUnpreparedResultsSelectionResponse(cache, requestedUrl) {
+    // Use only the cached, unfiltered selector page. Never substitute another
+    // class/subject grade sheet for the context requested by the user.
+    const selectionUrl = new URL('/results/manage', self.location.origin);
+    const selectionRequest = new Request(selectionUrl.href, {
+        method: 'GET',
+        credentials: 'same-origin'
+    });
+    const selectionPage = await cache.match(selectionRequest);
+    if (!selectionPage) return null;
+
+    const contentType = selectionPage.headers.get('Content-Type') || 'text/html; charset=utf-8';
+    if (!contentType.toLowerCase().includes('text/html')) return null;
+
+    const html = await selectionPage.text();
+    const noticeScript = `<script>
+(function () {
+    try {
+        var params = new URLSearchParams(window.location.search);
+        var keys = ['session', 'term', 'class_id', 'subject_id'];
+        var hasSelection = keys.every(function (key) {
+            return (params.get(key) || '').trim() !== '';
+        });
+        var form = document.querySelector('form[action="/results/manage"]');
+        if (!form) return;
+
+        keys.forEach(function (key) {
+            var field = form.querySelector('[name="' + key + '"]');
+            var value = params.get(key);
+            if (field && value !== null && Array.prototype.some.call(field.options || [], function (option) {
+                return option.value === value;
+            })) {
+                field.value = value;
+            }
+        });
+
+        var notice = document.createElement('div');
+        notice.className = 'alert alert-warning';
+        notice.setAttribute('role', 'status');
+        notice.setAttribute('aria-live', 'polite');
+        notice.style.marginBottom = '14px';
+        notice.textContent = hasSelection
+            ? 'This results selection is not prepared for offline use. The selection form is available, but this exact class, subject, session and term sheet must be prepared while connected before results can be entered offline.'
+            : 'The results selection form is available offline. Choose a class, subject, session and term. Only an exact sheet prepared while connected can be opened for offline entry.';
+        form.parentNode.insertBefore(notice, form);
+    } catch (error) {
+        console.warn('[AcadMe SW] Could not annotate offline results selection:', error);
+    }
+})();
+</script>`;
+    const marker = /<\\/body>/i;
+    const responseHtml = marker.test(html)
+        ? html.replace(marker, noticeScript + '</body>')
+        : html + noticeScript;
+
+    const headers = new Headers(selectionPage.headers);
+    headers.set('Content-Type', contentType);
+    headers.set('Cache-Control', 'no-store');
+    headers.set('X-AcadMe-Offline-Selection', 'available');
+    return new Response(responseHtml, {
+        status: 200,
+        statusText: 'Offline results selection available',
+        headers
+    });
+}
+
 async function clearPrivatePageCache(cache) {
     const keys = await cache.keys();
     await Promise.all(keys.map(async (key) => {
@@ -145,7 +212,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const keys = await caches.keys();
-        const previousCache = await caches.open('aljaleel-sis-v9');
+        const previousCache = await caches.open('aljaleel-sis-v10');
         const nextCache = await caches.open(CACHE_NAME);
 
         // Preserve previously prepared authenticated sheets across this cache
@@ -284,6 +351,14 @@ self.addEventListener('fetch', (event) => {
                             const matched = await cache.match(key);
                             if (matched) return matched;
                         }
+                    }
+
+                    // Results are different from attendance: keep the selection
+                    // form usable offline even when this exact grade sheet is absent.
+                    // The form clearly reports that the selected context is unprepared.
+                    if (url.pathname === '/results/manage') {
+                        const selectionResponse = await buildUnpreparedResultsSelectionResponse(cache, url);
+                        if (selectionResponse) return selectionResponse;
                     }
 
                     const fallback = await cache.match('/offline-unavailable.html');

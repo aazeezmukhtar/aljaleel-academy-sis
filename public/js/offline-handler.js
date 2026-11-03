@@ -237,9 +237,23 @@ async function deleteQueued(storeName, id) {
 
 async function getPendingCount() {
     try {
+        const ownerKey = getOfflineOwnerKey();
+        if (!ownerKey) return 0;
         const att = await getAllQueued('attendance_sync');
         const res = await getAllQueued('results_sync');
-        return att.length + res.length;
+        return att.filter(item => item._ownerKey === ownerKey).length +
+            res.filter(item => item._ownerKey === ownerKey).length;
+    } catch {
+        return 0;
+    }
+}
+
+async function getQuarantinedQueueCount() {
+    try {
+        const att = await getAllQueued('attendance_sync');
+        const res = await getAllQueued('results_sync');
+        return att.filter(item => !item._ownerKey).length +
+            res.filter(item => !item._ownerKey).length;
     } catch {
         return 0;
     }
@@ -366,6 +380,8 @@ async function updateSyncUI(state, successCount, failCount) {
     if (!indicators.length) return;
 
     const pending = await getPendingCount().catch(() => 0);
+    const quarantined = await getQuarantinedQueueCount().catch(() => 0);
+    const quarantineNote = quarantined > 0 ? ' • ' + quarantined + ' older unassigned record(s) held safely' : '';
 
     let cls = 'sync-indicator';
     let html = '';
@@ -396,7 +412,7 @@ async function updateSyncUI(state, successCount, failCount) {
 
     indicators.forEach(el => {
         el.className = cls;
-        el.innerHTML = html;
+        el.innerHTML = html + quarantineNote;
     });
 }
 
@@ -435,6 +451,7 @@ window.NexusOffline = {
     saveResultOffline,
     syncData,
     getPendingCount,
+    getQuarantinedQueueCount,
     getPreparedDatasetStatus,
     recordPreparedDataset,
     getOfflineStorageStatus,

@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v12'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v14'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -46,7 +46,7 @@ check('explicit attendance and results preparation requests require complete con
   assert.match(source, /url\.pathname === '\/results\/manage'/);
   assert.match(source, /\['class_id', 'date'\]\.every/);
   assert.match(source, /\['class_id', 'subject_id', 'session', 'term'\]\.every/);
-  assert.match(source, /isOfflinePage\(request, url\) \|\| isPreparation/);
+  assert.match(source, /shouldCacheOfflinePage \|\| isPreparation/);
   assert.match(source, /headers\.set\('X-AcadMe-Offline-Cached', '1'\)/);
   assert.match(source, /cachedSuccessfully/);
 });
@@ -231,6 +231,70 @@ check('staff directory and numeric staff profiles are approved read-only offline
   assert.doesNotMatch(source, /'\/staff\/add'|'\/staff\/edit'|'\/staff\/board'/);
 });
 
+check('student directory offline access uses only the canonical unfiltered directory snapshot', () => {
+  assert.match(source, /function isStudentDirectoryPath\(pathname\)/);
+  assert.match(source, /async function buildStudentDirectoryResponse\(cache, requestedUrl\)/);
+  assert.match(source, /requestedUrl\.searchParams\.size > 0/);
+  assert.match(source, /savedResponse = await cache\.match\(baseUrl\.href\)/);
+  assert.match(source, /Open each student's read-only profile while connected/);
+  assert.match(source, /This directory is read-only offline/);
+  assert.match(source, /Filters require an internet connection/);
+  assert.match(source, /X-AcadMe-Cached-At/);
+  assert.match(source, /Date\.now\(\) - cachedAt > maxAgeMs/);
+  assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(source, /url\.searchParams\.size === 0/);
+  assert.match(source, /isStudentDirectoryPath\(url\.pathname\) && url\.search/);
+});
+
+check('only the dedicated minimal student profile route is approved for offline caching', () => {
+  assert.match(source, /function isStudentOfflineProfilePath\(pathname\)/);
+  assert.match(source, /buildStudentOfflineProfileResponse\(exactProfile\)/);
+  assert.match(source, /This is a read-only offline copy containing basic identity and class details only/);
+  assert.match(source, /Health, financial, contact and academic-history information is not stored/);
+  assert.match(source, /isStudentProfileRequest/);
+  assert.doesNotMatch(source, /\/students\/view\\\/\\d/);
+});
+
+check('student directory supports local offline search and filters using non-sensitive fields', () => {
+  const directory = fs.readFileSync(path.join(__dirname, '..', 'views', 'students', 'index.ejs'), 'utf8');
+  const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'studentController.js'), 'utf8');
+  assert.match(directory, /function applyLocalOfflineFilters\(\)/);
+  assert.match(directory, /!navigator\.onLine/);
+  assert.match(directory, /data-search=/);
+  assert.match(directory, /data-class-ids=/);
+  assert.match(directory, /data-section-ids=/);
+  assert.match(directory, /data-admission-year=/);
+  assert.match(directory, /students\/offline-view/);
+  assert.match(controller, /s\.enrolled_section_ids = s\.section_ids\.join\(','\)/);
+  assert.doesNotMatch(directory, /guardian info/i);
+});
+
+check('offline student profile controller returns a minimal field projection and respects teacher class scope', () => {
+  const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'studentController.js'), 'utf8');
+  const routes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'studentRoutes.js'), 'utf8');
+  assert.match(controller, /const getOfflineStudentProfile = async/);
+  assert.match(controller, /SELECT id, first_name, last_name, admission_number, gender, status, current_class_id FROM students/);
+  assert.match(controller, /permittedClassIds/);
+  assert.match(routes, /router\.get\('\/offline-view\/:id', studentController\.getOfflineStudentProfile\)/);
+});
+
+check('offline student profile template excludes sensitive fields and mutation controls', () => {
+  const profile = fs.readFileSync(path.join(__dirname, '..', 'views', 'students', 'offline-profile.ejs'), 'utf8');
+  assert.match(profile, /student\.first_name/);
+  assert.match(profile, /student\.admission_number/);
+  assert.match(profile, /student\.class_name/);
+  assert.doesNotMatch(profile, /student\.(?:dob|phone|email|address|parent_phone|parent_email|parent_address|passport_photo_path)/);
+  assert.doesNotMatch(profile, /student_health|student_fees|academicTerms|<form|<button/i);
+});
+
+check('offline student directory and profile responses carry a local offline marker', () => {
+  assert.match(source, /data-acadme-offline="true"/);
+  assert.match(source, /async function buildStudentOfflineProfileResponse\(response\)/);
+  assert.match(source, /X-AcadMe-Cached-At/);
+  assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(source, /\(!isStudentProfileRequest \|\| url\.searchParams\.size === 0\)/);
+});
+
 check('versioned same-origin assets share an unversioned cache key', () => {
   assert.match(source, /function staticCacheKey\(url\)/);
   assert.match(source, /url\.origin \+ url\.pathname/);
@@ -250,7 +314,7 @@ check('manifest and Home links use protected dashboard route', () => {
 
 
 check('service worker preserves prior prepared pages when upgrading its cache version', () => {
-  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v11'\)/);
+  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v13'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
   assert.match(source, /keys\s+\.filter\(key => key !== CACHE_NAME\)/);
 });

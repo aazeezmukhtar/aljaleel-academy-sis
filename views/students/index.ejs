@@ -31,7 +31,7 @@
                             <!-- Search Input -->
                             <div class="search-input-wrapper">
                                 <i class="bi bi-search search-icon"></i>
-                                <input type="text" id="searchInput" name="search" placeholder="Search by name, ID, admission #, guardian info..."
+                                <input type="text" id="searchInput" name="search" placeholder="Search by student name, ID or admission number..."
                                     value="<%= filters.search || '' %>" class="form-control search-input" autocomplete="off">
                                 <button type="button" id="clearSearchBtn" class="clear-search-btn" style="<%= filters.search ? 'display:flex;' : 'display:none;' %>">
                                     <i class="bi bi-x-circle-fill"></i>
@@ -140,7 +140,13 @@
                         <tbody id="studentTableBody">
                             <% if (students.length > 0) { %>
                                 <% students.forEach(student => { %>
-                                    <tr data-student-id="<%= student.id %>">
+                                    <tr data-student-id="<%= student.id %>"
+                                        data-search="<%= [student.first_name, student.last_name, student.admission_number, student.id].filter(Boolean).join(' ').toLowerCase() %>"
+                                        data-class-ids="<%= student.enrolled_class_ids || student.current_class_id || '' %>"
+                                        data-section-ids="<%= student.enrolled_section_ids || student.class_section_id || '' %>"
+                                        data-gender="<%= student.gender || '' %>"
+                                        data-status="<%= student.status || '' %>"
+                                        data-admission-year="<%= student.admission_date ? String(student.admission_date).slice(0, 4) : '' %>">
                                         <td data-label="Name">
                                             <div style="display: flex; align-items: center; gap: 15px;">
                                                 <div
@@ -197,6 +203,10 @@
                                             <a href="/students/view/<%= student.id %>" class="btn btn-outline"
                                                 style="padding: 4px 12px; font-size: 0.85rem;">
                                                 View
+                                            </a>
+                                            <a href="/students/offline-view/<%= student.id %>" class="btn btn-outline"
+                                                style="padding: 4px 8px; font-size: 0.8rem;" title="Open the limited read-only profile and prepare it for offline use">
+                                                Offline profile
                                             </a>
                                         </td>
                                     </tr>
@@ -288,7 +298,56 @@
             // Initial render of chips
             renderChips();
 
+            function applyLocalOfflineFilters() {
+                const rows = Array.from(studentTableBody.querySelectorAll('tr[data-student-id]'));
+                const search = searchInput.value.trim().toLowerCase();
+                const selectedClass = classFilter.value;
+                const selectedGender = genderFilter.value.toLowerCase();
+                const selectedStatus = statusFilter.value.toLowerCase();
+                const selectedSection = sectionFilter.value;
+                const selectedYear = yearFilter.value;
+                let visibleCount = 0;
+
+                rows.forEach(row => {
+                    const classIds = (row.dataset.classIds || '').split(',').filter(Boolean);
+                    const sectionIds = (row.dataset.sectionIds || '').split(',').filter(Boolean);
+                    const matches = (!search || (row.dataset.search || '').includes(search)) &&
+                        (!selectedClass || classIds.includes(selectedClass)) &&
+                        (!selectedGender || (row.dataset.gender || '').toLowerCase() === selectedGender) &&
+                        (!selectedStatus || (row.dataset.status || '').toLowerCase() === selectedStatus) &&
+                        (!selectedSection || sectionIds.includes(selectedSection)) &&
+                        (!selectedYear || row.dataset.admissionYear === selectedYear);
+                    row.hidden = !matches;
+                    if (matches) visibleCount++;
+                });
+
+                let emptyRow = document.getElementById('offlineNoResultsRow');
+                if (visibleCount === 0) {
+                    if (!emptyRow) {
+                        emptyRow = document.createElement('tr');
+                        emptyRow.id = 'offlineNoResultsRow';
+                        const cell = document.createElement('td');
+                        cell.colSpan = 6;
+                        cell.style.textAlign = 'center';
+                        cell.style.padding = '40px';
+                        cell.textContent = 'No students match your search or filters in this saved directory.';
+                        emptyRow.appendChild(cell);
+                        studentTableBody.appendChild(emptyRow);
+                    }
+                } else if (emptyRow) {
+                    emptyRow.remove();
+                }
+
+                studentCountBadge.innerHTML = '<strong>' + visibleCount + '</strong> ' +
+                    (visibleCount === 1 ? 'student found' : 'students found') + ' (saved offline list)';
+            }
+
             async function fetchFilteredStudents() {
+                if (document.body.dataset.acadmeOffline === 'true' || !navigator.onLine) {
+                    applyLocalOfflineFilters();
+                    renderChips();
+                    return;
+                }
                 const params = new URLSearchParams();
                 if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
                 if (classFilter.value) params.set('class_id', classFilter.value);
@@ -445,7 +504,13 @@
                         : `<span style="color: var(--danger); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-x-circle-fill" style="font-size: 0.8rem;"></i> ${escapeHtml(s.status)}</span>`;
 
                     return `
-                        <tr data-student-id="${s.id}">
+                        <tr data-student-id="${s.id}"
+                            data-search="${escapeHtml([s.first_name, s.last_name, s.admission_number, s.id].filter(Boolean).join(' ').toLowerCase())}"
+                            data-class-ids="${escapeHtml(s.enrolled_class_ids || s.current_class_id || '')}"
+                            data-section-ids="${escapeHtml(s.enrolled_section_ids || s.class_section_id || '')}"
+                            data-gender="${escapeHtml(s.gender || '')}"
+                            data-status="${escapeHtml(s.status || '')}"
+                            data-admission-year="${escapeHtml(s.admission_date ? String(s.admission_date).slice(0, 4) : '')}">
                             <td data-label="Name">
                                 <div style="display: flex; align-items: center; gap: 15px;">
                                     <div style="width: 44px; height: 44px; background: #f3f4f6; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow-sm); flex-shrink: 0;">
@@ -467,6 +532,9 @@
                             <td data-label="Action">
                                 <a href="/students/view/${s.id}" class="btn btn-outline" style="padding: 4px 12px; font-size: 0.85rem;">
                                     View
+                                </a>
+                                <a href="/students/offline-view/${s.id}" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;">
+                                    Offline profile
                                 </a>
                             </td>
                         </tr>

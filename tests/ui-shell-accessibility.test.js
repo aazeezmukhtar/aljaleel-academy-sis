@@ -8,6 +8,8 @@ const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')
 const header = read('views/partials/header.ejs');
 const sidebar = read('views/partials/sidebar.ejs');
 const css = read('public/css/main.css');
+const attendance = read('views/attendance/take.ejs');
+const results = read('views/results/manager.ejs');
 
 function check(name, fn) {
   try {
@@ -52,4 +54,34 @@ check('interactive navigation has visible keyboard focus and reduced motion is r
   assert.match(css, /\.mobile-hamburger:focus-visible/);
   assert.match(css, /\.sidebar a:focus-visible/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+check('attendance provides a live summary of all four attendance statuses', () => {
+  assert.match(attendance, /id="attendance-status-summary"[^>]*aria-live="polite"/);
+  assert.match(attendance, /function updateAttendanceSummary\(\)/);
+  assert.match(attendance, /Object\.entries\(counts\)/);
+  assert.match(attendance, /updateAttendanceSummary\(\);/);
+});
+
+check('attendance status controls announce the selected student and status', () => {
+  assert.match(attendance, /aria-label="Attendance status for/);
+  assert.match(attendance, /Activate to change status/);
+  assert.match(attendance, /btn\.setAttribute\('aria-label'/);
+});
+
+check('mark-all-present warns before replacing existing attendance statuses', () => {
+  assert.match(attendance, /window\.confirm\('Mark all '/);
+  assert.match(attendance, /This will replace their current statuses/);
+});
+
+check('result save button state is available to both success and error handlers', () => {
+  const saveFunction = results.slice(results.indexOf('async function saveResults'), results.indexOf('async function updateStatus'));
+  assert.match(saveFunction, /const oldText = btn \? btn\.innerHTML : ''/);
+  assert.doesNotMatch(saveFunction, /const oldText = btn\.innerHTML/);
+  assert.match(saveFunction, /finally \{/);
+});
+
+check('result score validation rejects negative values and rechecks before saving', () => {
+  assert.match(results, /val < 0 \|\| val > max/);
+  assert.match(results, /\[ca1, ca2, exam\]\.forEach\(input => validateInput\(input\)\)/);
 });

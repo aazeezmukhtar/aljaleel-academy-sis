@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v16';
+const CACHE_NAME = 'aljaleel-sis-v17';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -66,6 +66,10 @@ function isOfflinePrivatePath(pathname) {
 function isStaffOfflinePath(pathname) {
     return pathname === '/staff' || pathname === '/staff/' ||
         /^\/staff\/view\/\d+\/?$/.test(pathname);
+}
+
+function isOfflineEntryPath(pathname) {
+    return pathname === '/attendance/take' || pathname === '/results/manage';
 }
 
 function isOfflinePage(request, url) {
@@ -216,6 +220,47 @@ function isOfflinePreparationRequest(request, url) {
 }
 
 
+async function buildPreparedEntryResponse(response) {
+    const cachedAt = Date.parse(response.headers.get('X-AcadMe-Cached-At') || '');
+    const now = Date.now();
+    const retentionMs = 7 * 24 * 60 * 60 * 1000;
+    const freshnessMs = 24 * 60 * 60 * 1000;
+
+    if (Number.isFinite(cachedAt) && now - cachedAt > retentionMs) {
+        return new Response(
+            'This prepared sheet is older than 7 days and has expired. Reconnect and prepare this exact class/date or class/subject/session/term sheet again.',
+            {
+                status: 503,
+                statusText: 'Prepared offline sheet expired',
+                headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+            }
+        );
+    }
+
+    const isStale = !Number.isFinite(cachedAt) || now - cachedAt > freshnessMs;
+    if (!isStale) return response;
+
+    const contentType = response.headers.get('Content-Type') || 'text/html; charset=utf-8';
+    if (!contentType.toLowerCase().includes('text/html')) return response;
+
+    const notice = '<div class="alert alert-warning" role="status" aria-live="polite">' +
+        'This saved sheet is older than 24 hours or its original save time is unknown. It remains available offline for up to 7 days. Reconnect and prepare it again when practical to refresh the information.' +
+        '</div>';
+    const html = await response.text();
+    const updatedHtml = /<body[^>]*>/i.test(html)
+        ? html.replace(/<body[^>]*>/i, (tag) => tag + notice)
+        : html.replace(/<\/body>/i, notice + '</body>');
+    const headers = new Headers(response.headers);
+    headers.delete('Content-Length');
+    headers.set('Cache-Control', 'no-store');
+    headers.set('X-AcadMe-Offline-Freshness', 'stale');
+    return new Response(updatedHtml, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+    });
+}
+
 async function buildUnpreparedResultsSelectionResponse(cache, requestedUrl) {
     // Use only the cached, unfiltered selector page. Never substitute another
     // class/subject grade sheet for the context requested by the user.
@@ -292,40 +337,67 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const keys = await caches.keys();
-        const previousCache = await caches.open('aljaleel-sis-v15');
+        const previousCacheNames = keys.filter((name) =>
+            name.startsWith('aljaleel-sis-v') && name !== CACHE_NAME
+        );
         const nextCache = await caches.open(CACHE_NAME);
 
-        // Preserve previously prepared authenticated sheets across this cache
-        // version change. New install-time static assets win over old assets.
-        const previousKeys = await previousCache.keys();
-        for (const request of previousKeys) {
-            const url = new URL(request.url);
-            // Rebuild the student directory so contact numbers are included.
-            // Discard individually cached student profiles from earlier releases.
-            if (isStudentDirectoryPath(url.pathname) ||
-                /^\/students\/view\/\d+\/?$/.test(url.pathname) ||
-                /^\/students\/offline-view\/\d+\/?$/.test(url.pathname)) continue;
-            const isStatic = isStaticAsset(url);
-            if (isStatic && await nextCache.match(request)) continue;
-            const response = await previousCache.match(request);
-            if (response) await nextCache.put(request, response);
+        // Migrate every prior AcadMe cache version, not just the immediately
+        // preceding release. Keep approved offline pages and explicit static
+        // assets only; never revive old student-profile snapshots or directories.
+        for (const cacheName of previousCacheNames) {
+            const previousCache = await caches.open(cacheName);
+            const previousKeys = await previousCache.keys();
+            for (const request of previousKeys) {
+                const url = new URL(request.url);
+                if (isStudentDirectoryPath(url.pathname) ||
+                    /^\/students\/view\/\d+\/?$/.test(url.pathname) ||
+                    /^\/students\/offline-view\/\d+\/?$/.test(url.pathname)) continue;
+                if (!isStaticAsset(url) && !isOfflinePrivatePath(url.pathname)) continue;
+                if (isStaticAsset(url) && await nextCache.match(request)) continue;
+
+                const response = await previousCache.match(request);
+                if (response) {
+                    try {
+                        await nextCache.put(request, response);
+                    } catch (error) {
+                        console.warn('[SW] Could not migrate cached offline item:', request.url, error);
+                    }
+                }
+            }
         }
 
-        await Promise.all(keys
-            .filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key)));
+        await Promise.all(previousCacheNames.map((name) => caches.delete(name)));
         await self.clients.claim();
     })());
 });
 
 // ─── Fetch ────────────────────────────────────────────────────────────────
 
+────────────────────────────────────────────────
+
 self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // Do not intercept writes. Offline form saves are handled by the application
-    // queue, not by the service worker's HTTP cache.
+    // Observe successful authentication POSTs so a newly authenticated account
+    // cannot inherit the previous account's private offline snapshots. Failed
+    // login attempts retain the cache for the same user.
+    if (request.method === 'POST' &&
+        (url.pathname === '/auth/login' || url.pathname === '/auth/student-login')) {
+        event.respondWith(fetch(request).then(async (response) => {
+            const redirectedToAuthenticatedPage = response.redirected &&
+                ![...AUTH_PATHS].some((path) => new URL(response.url).pathname === path);
+            if (redirectedToAuthenticatedPage && response.ok) {
+                const cache = await caches.open(CACHE_NAME);
+                await clearPrivatePageCache(cache);
+            }
+            return response;
+        }));
+        return;
+    }
+
+    // Other writes are handled by the application and are never cached.
     if (request.method !== 'GET') return;
 
     // Only the explicitly listed static assets may use the asset cache.
@@ -358,12 +430,11 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(request)
             .then(async (res) => {
-                const redirectedToAuth = res.redirected &&
-                    [...AUTH_PATHS].some((path) => new URL(res.url).pathname === path);
-
-                // A login screen or a redirect to login means the prior local
-                // private-page snapshot must not remain available to the next user.
-                if (AUTH_PATHS.has(url.pathname) || LOGOUT_PATHS.has(url.pathname) || redirectedToAuth) {
+                // A protected-page redirect to login can simply mean the current
+                // session expired. Preserve prepared sheets until a successful
+                // login POST confirms an account boundary. Direct login visits and
+                // explicit logout requests still clear private cached pages.
+                if (AUTH_PATHS.has(url.pathname) || LOGOUT_PATHS.has(url.pathname)) {
                     const cache = await caches.open(CACHE_NAME);
                     await clearPrivatePageCache(cache);
                 }
@@ -383,13 +454,13 @@ self.addEventListener('fetch', (event) => {
                             credentials: 'same-origin'
                         });
                         let responseToCache = res.clone();
-                        if (isStaffOfflinePath(url.pathname) || isStudentDirectoryRequest) {
-                            const staffHeaders = new Headers(responseToCache.headers);
-                            staffHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());
+                        if (isStaffOfflinePath(url.pathname) || isStudentDirectoryRequest || isOfflineEntryPath(url.pathname)) {
+                            const cacheHeaders = new Headers(responseToCache.headers);
+                            cacheHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());
                             responseToCache = new Response(responseToCache.body, {
                                 status: responseToCache.status,
                                 statusText: responseToCache.statusText,
-                                headers: staffHeaders
+                                headers: cacheHeaders
                             });
                         }
                         await cache.put(cacheKey, responseToCache);
@@ -446,6 +517,7 @@ self.addEventListener('fetch', (event) => {
                         if (isStaffOfflinePath(url.pathname)) {
                             return buildStaffOfflineResponse(exact);
                         }
+                        if (isOfflineEntryPath(url.pathname)) return buildPreparedEntryResponse(exact);
                         return exact;
                     }
 
@@ -457,7 +529,7 @@ self.addEventListener('fetch', (event) => {
                             const cachedUrl = new URL(key.url);
                             if (!matchesOfflineEntryContext(url, cachedUrl)) continue;
                             const matched = await cache.match(key);
-                            if (matched) return matched;
+                            if (matched) return buildPreparedEntryResponse(matched);
                         }
                     }
 

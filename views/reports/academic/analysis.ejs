@@ -75,6 +75,7 @@
                             <tr>
                                 <th>Subject</th>
 
+                                <th>Submitted</th>
                                 <th>Average</th>
                                 <th>Highest</th>
                                 <th>Lowest</th>
@@ -90,16 +91,19 @@
 
 
                                     <td>
-                                        <%= Number(record.average_score).toFixed(1) %>
+                                        <%= record.students_count %> / <%= record.eligible_students_count %>
+                                    </td>
+                                    <td>
+                                        <%= record.average_score === null ? '—' : Number(record.average_score).toFixed(1) %>
                                     </td>
                                     <td class="text-success">
-                                        <%= record.highest_score %>
+                                        <%= record.highest_score === null ? '—' : record.highest_score %>
                                     </td>
                                     <td class="text-danger">
-                                        <%= record.lowest_score %>
+                                        <%= record.lowest_score === null ? '—' : record.lowest_score %>
                                     </td>
                                     <td style="width: 150px;">
-                                        <% const passRate=(record.pass_count / record.students_count) * 100; const
+                                        <% const passRate=(record.eligible_students_count > 0 ? (record.pass_count / record.eligible_students_count) * 100 : 0); const
                                             color=passRate>= 70 ? '#16a34a' : (passRate >= 50 ? '#ca8a04' : '#dc2626');
                                             %>
                                             <div style="display: flex; align-items: center; gap: 10px;">

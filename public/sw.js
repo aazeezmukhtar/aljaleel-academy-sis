@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v15';
+const CACHE_NAME = 'aljaleel-sis-v16';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -57,18 +57,9 @@ function isStudentDirectoryPath(pathname) {
     return pathname === '/students' || pathname === '/students/';
 }
 
-function isStudentOfflineProfilePath(pathname) {
-    return /^\/students\/offline-view\/\d+\/?$/.test(pathname);
-}
-
-function isStudentProfileViewPath(pathname) {
-    return /^\/students\/view\/\d+\/?$/.test(pathname);
-}
-
 function isOfflinePrivatePath(pathname) {
     return OFFLINE_PAGE_PATHS.has(pathname) ||
         isStudentDirectoryPath(pathname) ||
-        isStudentProfileViewPath(pathname) ||
         /^\/staff\/view\/\d+\/?$/.test(pathname);
 }
 
@@ -121,33 +112,6 @@ async function buildStaffOfflineResponse(response) {
     });
 }
 
-async function buildStudentOfflineProfileResponse(response) {
-    const cachedAt = Date.parse(response.headers.get('X-AcadMe-Cached-At') || '');
-    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
-    if (!Number.isFinite(cachedAt) || Date.now() - cachedAt > maxAgeMs) {
-        return new Response('This saved student profile is older than 7 days. Reconnect and open the profile again to refresh its offline copy.', {
-            status: 503, statusText: 'Offline student profile expired',
-            headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
-        });
-    }
-    const contentType = response.headers.get('Content-Type') || 'text/html; charset=utf-8';
-    if (!contentType.toLowerCase().includes('text/html')) return response;
-    const savedAt = new Date(cachedAt).toLocaleString();
-    const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
-        'Saved student profile from ' + savedAt +
-        '. This is a read-only offline copy. It includes date of birth and student/parent contact information. Keep this device secure and sign out when finished. Health records, financial information and academic history are not stored in this offline copy.' +
-        '</div>';
-    const html = await response.text();
-    const responseHtml = /<body[^>]*>/i.test(html)
-        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag.replace(/>$/, ' data-acadme-offline="true">') + noticeHtml)
-        : html.replace(/<[/]body>/i, noticeHtml + '</body>');
-    const headers = new Headers(response.headers);
-    headers.delete('Content-Length');
-    headers.set('Content-Type', contentType);
-    headers.set('Cache-Control', 'no-store');
-    headers.set('X-AcadMe-Offline-Page', 'read-only');
-    return new Response(responseHtml, { status: response.status, statusText: response.statusText, headers });
-}
 async function buildStudentDirectoryResponse(cache, requestedUrl) {
     const baseUrl = new URL('/students', self.location.origin);
     const savedResponse = await cache.match(baseUrl.href);
@@ -176,7 +140,7 @@ async function buildStudentDirectoryResponse(cache, requestedUrl) {
         : '';
     const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
         'Saved student directory from ' + savedAt +
-        ". This directory is read-only offline. Search and filters work on this saved directory. Open each student's read-only profile while connected to prepare it for offline use. Offline profiles contain basic identity and class details only." +
+        ". This directory is read-only offline. Student and parent/guardian phone numbers are available here, and search and filters work on this saved directory. Individual student profiles are not stored for offline use." +
         detail +
         '</div>';
     const html = await savedResponse.text();
@@ -328,7 +292,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const keys = await caches.keys();
-        const previousCache = await caches.open('aljaleel-sis-v14');
+        const previousCache = await caches.open('aljaleel-sis-v15');
         const nextCache = await caches.open(CACHE_NAME);
 
         // Preserve previously prepared authenticated sheets across this cache
@@ -336,9 +300,11 @@ self.addEventListener('activate', (event) => {
         const previousKeys = await previousCache.keys();
         for (const request of previousKeys) {
             const url = new URL(request.url);
-            // Older releases could cache filtered student-directory snapshots.
-            // Keep only the canonical unfiltered directory in the new cache.
-            if (isStudentDirectoryPath(url.pathname) && url.search) continue;
+            // Rebuild the student directory so contact numbers are included.
+            // Discard individually cached student profiles from earlier releases.
+            if (isStudentDirectoryPath(url.pathname) ||
+                /^\/students\/view\/\d+\/?$/.test(url.pathname) ||
+                /^\/students\/offline-view\/\d+\/?$/.test(url.pathname)) continue;
             const isStatic = isStaticAsset(url);
             if (isStatic && await nextCache.match(request)) continue;
             const response = await previousCache.match(request);
@@ -404,48 +370,8 @@ self.addEventListener('fetch', (event) => {
 
                 const isPreparation = isOfflinePreparationRequest(request, url);
                 const isStudentDirectoryRequest = isStudentDirectoryPath(url.pathname);
-                const isStudentViewRequest = isStudentProfileViewPath(url.pathname);
                 const shouldCacheOfflinePage = isOfflinePage(request, url) &&
-                    (!isStudentDirectoryRequest || url.searchParams.size === 0) &&
-                    !isStudentViewRequest;
-                if (isStudentViewRequest && request.mode === 'navigate' &&
-                    res && res.status === 200 && !res.redirected &&
-                    (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
-                    // Keep the normal online profile untouched. Fetch the dedicated
-                    // minimal profile projection and store it under the normal View URL,
-                    // so the existing View button works both online and offline.
-                    try {
-                        const studentId = url.pathname.match(/^\/students\/view\/(\d+)\/?$/)?.[1];
-                        if (studentId) {
-                            const snapshotUrl = new URL('/students/offline-view/' + studentId, self.location.origin);
-                            const snapshotResponse = await fetch(new Request(snapshotUrl.href, {
-                                method: 'GET',
-                                credentials: 'same-origin',
-                                headers: { 'Accept': 'text/html' }
-                            }));
-                            if (snapshotResponse && snapshotResponse.status === 200 && !snapshotResponse.redirected &&
-                                (snapshotResponse.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
-                                const cache = await caches.open(CACHE_NAME);
-                                const snapshotHeaders = new Headers(snapshotResponse.headers);
-                                snapshotHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());
-                                snapshotHeaders.set('X-AcadMe-Offline-Profile', '1');
-                                const snapshot = new Response(snapshotResponse.body, {
-                                    status: snapshotResponse.status,
-                                    statusText: snapshotResponse.statusText,
-                                    headers: snapshotHeaders
-                                });
-                                const canonicalProfileUrl = new URL('/students/view/' + studentId, self.location.origin);
-                                await cache.put(new Request(canonicalProfileUrl.href, {
-                                    method: 'GET',
-                                    credentials: 'same-origin'
-                                }), snapshot);
-                            }
-                        }
-                    } catch (snapshotError) {
-                        console.warn('[SW] Could not prepare student profile snapshot:', snapshotError);
-                    }
-                }
-
+                    (!isStudentDirectoryRequest || url.searchParams.size === 0);
                 if ((shouldCacheOfflinePage || isPreparation) &&
                     res && res.status === 200 && !res.redirected &&
                     (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
@@ -502,15 +428,6 @@ self.addEventListener('fetch', (event) => {
                     if (isStudentDirectoryPath(url.pathname)) {
                         const studentDirectoryResponse = await buildStudentDirectoryResponse(cache, url);
                         if (studentDirectoryResponse) return studentDirectoryResponse;
-                    }
-
-                    if (isStudentProfileViewPath(url.pathname)) {
-                        const studentId = url.pathname.match(/^\/students\/view\/(\d+)\/?$/)?.[1];
-                        if (studentId) {
-                            const canonicalProfileUrl = new URL('/students/view/' + studentId, self.location.origin);
-                            const exactProfile = await cache.match(canonicalProfileUrl.href);
-                            if (exactProfile) return buildStudentOfflineProfileResponse(exactProfile);
-                        }
                     }
 
                     const exact = await cache.match(request);

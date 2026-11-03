@@ -2,26 +2,26 @@
 
 <!-- Mobile Bottom Navigation -->
 <nav class="acm-bottom-nav" aria-label="Bottom navigation">
-    <a href="/portal" class="acm-nav-item <%= currentPath === '/portal' ? 'is-active' : '' %>">
+    <a href="/portal" class="acm-nav-item <%= currentPath === '/portal' ? 'is-active' : '' %>" <%= currentPath === '/portal' ? 'aria-current="page"' : '' %>>
         <i class="bi <%= currentPath === '/portal' ? 'bi-house-door-fill' : 'bi-house-door' %>" aria-hidden="true"></i>
         <span>Home</span>
     </a>
-    <a href="/portal/academics" class="acm-nav-item <%= currentPath.startsWith('/portal/academics') ? 'is-active' : '' %>">
+    <a href="/portal/academics" class="acm-nav-item <%= currentPath.startsWith('/portal/academics') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/academics') ? 'aria-current="page"' : '' %>>
         <i class="bi <%= currentPath.startsWith('/portal/academics') ? 'bi-journal-bookmark-fill' : 'bi-journal-bookmark' %>" aria-hidden="true"></i>
         <span>Academics</span>
     </a>
-    <a href="/portal/attendance" class="acm-nav-item <%= currentPath.startsWith('/portal/attendance') ? 'is-active' : '' %>">
+    <a href="/portal/attendance" class="acm-nav-item <%= currentPath.startsWith('/portal/attendance') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/attendance') ? 'aria-current="page"' : '' %>>
         <i class="bi <%= currentPath.startsWith('/portal/attendance') ? 'bi-calendar-check-fill' : 'bi-calendar-check' %>" aria-hidden="true"></i>
         <span>Attendance</span>
     </a>
-    <a href="/portal/notifications" class="acm-nav-item <%= currentPath.startsWith('/portal/notifications') ? 'is-active' : '' %>">
+    <a href="/portal/notifications" class="acm-nav-item <%= currentPath.startsWith('/portal/notifications') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/notifications') ? 'aria-current="page"' : '' %>>
         <i class="bi <%= currentPath.startsWith('/portal/notifications') ? 'bi-bell-fill' : 'bi-bell' %>" aria-hidden="true"></i>
         <span>Notices</span>
         <% if (typeof individualMessagesCount !== 'undefined' && individualMessagesCount > 0) { %>
             <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
         <% } %>
     </a>
-    <a href="/portal/profile" class="acm-nav-item <%= currentPath.startsWith('/portal/profile') ? 'is-active' : '' %>">
+    <a href="/portal/profile" class="acm-nav-item <%= currentPath.startsWith('/portal/profile') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/profile') ? 'aria-current="page"' : '' %>>
         <i class="bi <%= currentPath.startsWith('/portal/profile') ? 'bi-person-fill' : 'bi-person' %>" aria-hidden="true"></i>
         <span>Profile</span>
     </a>
@@ -41,19 +41,19 @@
     </div>
 
     <nav class="acm-sidebar-nav">
-        <a href="/portal" class="acm-sidebar-item <%= currentPath === '/portal' ? 'is-active' : '' %>">
+        <a href="/portal" class="acm-sidebar-item <%= currentPath === '/portal' ? 'is-active' : '' %>" <%= currentPath === '/portal' ? 'aria-current="page"' : '' %>>
             <i class="bi <%= currentPath === '/portal' ? 'bi-house-door-fill' : 'bi-house-door' %>" aria-hidden="true"></i>
             <span>Home</span>
         </a>
-        <a href="/portal/academics" class="acm-sidebar-item <%= currentPath.startsWith('/portal/academics') ? 'is-active' : '' %>">
+        <a href="/portal/academics" class="acm-sidebar-item <%= currentPath.startsWith('/portal/academics') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/academics') ? 'aria-current="page"' : '' %>>
             <i class="bi <%= currentPath.startsWith('/portal/academics') ? 'bi-journal-bookmark-fill' : 'bi-journal-bookmark' %>" aria-hidden="true"></i>
             <span>Academics</span>
         </a>
-        <a href="/portal/attendance" class="acm-sidebar-item <%= currentPath.startsWith('/portal/attendance') ? 'is-active' : '' %>">
+        <a href="/portal/attendance" class="acm-sidebar-item <%= currentPath.startsWith('/portal/attendance') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/attendance') ? 'aria-current="page"' : '' %>>
             <i class="bi <%= currentPath.startsWith('/portal/attendance') ? 'bi-calendar-check-fill' : 'bi-calendar-check' %>" aria-hidden="true"></i>
             <span>Attendance</span>
         </a>
-        <a href="/portal/notifications" class="acm-sidebar-item <%= currentPath.startsWith('/portal/notifications') ? 'is-active' : '' %>">
+        <a href="/portal/notifications" class="acm-sidebar-item <%= currentPath.startsWith('/portal/notifications') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/notifications') ? 'aria-current="page"' : '' %>>
             <i class="bi <%= currentPath.startsWith('/portal/notifications') ? 'bi-bell-fill' : 'bi-bell' %>" aria-hidden="true"></i>
             <span>Notifications</span>
             <% if (typeof individualMessagesCount !== 'undefined' && individualMessagesCount > 0) { %>
@@ -63,7 +63,7 @@
     </nav>
 
     <div class="acm-sidebar-footer">
-        <a href="/portal/profile" class="acm-sidebar-item <%= currentPath.startsWith('/portal/profile') ? 'is-active' : '' %>">
+        <a href="/portal/profile" class="acm-sidebar-item <%= currentPath.startsWith('/portal/profile') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/profile') ? 'aria-current="page"' : '' %>>
             <i class="bi <%= currentPath.startsWith('/portal/profile') ? 'bi-person-fill' : 'bi-person' %>" aria-hidden="true"></i>
             <span>Profile</span>
         </a>

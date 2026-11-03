@@ -12,6 +12,8 @@ const attendance = read('views/attendance/take.ejs');
 const results = read('views/results/manager.ejs');
 const students = read('views/students/index.ejs');
 const fees = read('views/fees/manager.ejs');
+const portalNav = read('views/partials/student_shell_nav.ejs');
+const portalCss = read('public/css/student-portal.css');
 
 function check(name, fn) {
   try {
@@ -115,4 +117,17 @@ check('fee management class selection and empty state are clear', () => {
   assert.match(fees, /No students found for the selected criteria/);
   assert.match(fees, /Choose a class above to view student fee balances/);
   assert.match(fees, /alt="Student photo for/);
+});
+
+check('student portal navigation identifies the current page', () => {
+  assert.match(portalNav, /aria-current="page"/);
+  assert.match(portalNav, /acm-nav-item/);
+  assert.match(portalNav, /acm-sidebar-item/);
+});
+
+check('student portal navigation has 44px touch targets and visible keyboard focus', () => {
+  assert.match(portalCss, /\.acm-icon-btn\s*\{[\s\S]*min-width: 44px/);
+  assert.match(portalCss, /\.acm-nav-item:focus-visible/);
+  assert.match(portalCss, /\.acm-sidebar-item:focus-visible/);
+  assert.match(portalCss, /prefers-reduced-motion: reduce/);
 });

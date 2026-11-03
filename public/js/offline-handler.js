@@ -399,6 +399,14 @@ async function updateSyncUI(state, successCount, failCount) {
     const pending = await getPendingCount().catch(() => 0);
     const quarantined = await getQuarantinedQueueCount().catch(() => 0);
     const quarantineNote = quarantined > 0 ? ' • ' + quarantined + ' older unassigned record(s) held safely' : '';
+    const storage = await getOfflineStorageStatus().catch(() => ({ supported: false }));
+    const storageNote = !storage.supported
+        ? ' • persistent-storage protection unavailable'
+        : storage.persistent === true
+            ? ' • offline storage protection granted'
+            : storage.persistent === false
+                ? ' • browser may clear offline data'
+                : '';
 
     let cls = 'sync-indicator';
     let html = '';
@@ -429,7 +437,7 @@ async function updateSyncUI(state, successCount, failCount) {
 
     indicators.forEach(el => {
         el.className = cls;
-        el.innerHTML = html + quarantineNote;
+        el.innerHTML = html + quarantineNote + storageNote;
     });
 }
 

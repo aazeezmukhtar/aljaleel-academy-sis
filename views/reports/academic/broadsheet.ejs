@@ -82,8 +82,9 @@
                                                 </span></div>
                                         </th>
                                         <% }) %>
-                                            <th class="summary-col">Total</th>
-                                            <th class="summary-col">Avg</th>
+                                            <th class="summary-col">Subjects Sat</th>
+                                            <th class="summary-col">Total (Published)</th>
+                                            <th class="summary-col">Avg (Published)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -101,6 +102,9 @@
                                                     <%= result ? result.total : '-' %>
                                                 </td>
                                                 <% }) %>
+                                                    <td class="summary-col"><strong>
+                                                            <%= Object.keys(student.results).length %> / <%= subjects.length %>
+                                                        </strong></td>
                                                     <td class="summary-col"><strong>
                                                             <%= student.total_score %>
                                                         </strong></td>

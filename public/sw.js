@@ -356,9 +356,22 @@ self.addEventListener('activate', (event) => {
                 if (!isStaticAsset(url) && !isOfflinePrivatePath(url.pathname)) continue;
                 if (isStaticAsset(url) && await nextCache.match(request)) continue;
 
-                const response = await previousCache.match(request);
+                let response = await previousCache.match(request);
                 if (response) {
                     try {
+                        // Older releases did not timestamp prepared attendance/results
+                        // responses. Start their seven-day retention window at migration
+                        // rather than allowing an undated entry to live indefinitely.
+                        if (isOfflineEntryPath(url.pathname) &&
+                            !response.headers.get('X-AcadMe-Cached-At')) {
+                            const headers = new Headers(response.headers);
+                            headers.set('X-AcadMe-Cached-At', new Date().toISOString());
+                            response = new Response(response.body, {
+                                status: response.status,
+                                statusText: response.statusText,
+                                headers
+                            });
+                        }
                         await nextCache.put(request, response);
                     } catch (error) {
                         console.warn('[SW] Could not migrate cached offline item:', request.url, error);

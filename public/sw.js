@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v13';
+const CACHE_NAME = 'aljaleel-sis-v14';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -57,9 +57,14 @@ function isStudentDirectoryPath(pathname) {
     return pathname === '/students' || pathname === '/students/';
 }
 
+function isStudentOfflineProfilePath(pathname) {
+    return /^\/students\/offline-view\/\d+\/?$/.test(pathname);
+}
+
 function isOfflinePrivatePath(pathname) {
     return OFFLINE_PAGE_PATHS.has(pathname) ||
         isStudentDirectoryPath(pathname) ||
+        isStudentOfflineProfilePath(pathname) ||
         /^\/staff\/view\/\d+\/?$/.test(pathname);
 }
 
@@ -112,6 +117,33 @@ async function buildStaffOfflineResponse(response) {
     });
 }
 
+async function buildStudentOfflineProfileResponse(response) {
+    const cachedAt = Date.parse(response.headers.get('X-AcadMe-Cached-At') || '');
+    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+    if (!Number.isFinite(cachedAt) || Date.now() - cachedAt > maxAgeMs) {
+        return new Response('This saved student profile is older than 7 days. Reconnect and open the profile again to refresh its offline copy.', {
+            status: 503, statusText: 'Offline student profile expired',
+            headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+        });
+    }
+    const contentType = response.headers.get('Content-Type') || 'text/html; charset=utf-8';
+    if (!contentType.toLowerCase().includes('text/html')) return response;
+    const savedAt = new Date(cachedAt).toLocaleString();
+    const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
+        'Saved student profile from ' + savedAt +
+        '. This is a read-only offline copy containing basic identity and class details only. Health, financial, contact and academic-history information is not stored in this offline profile.' +
+        '</div>';
+    const html = await response.text();
+    const responseHtml = /<body[^>]*>/i.test(html)
+        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag + noticeHtml)
+        : html.replace(/<[/]body>/i, noticeHtml + '</body>');
+    const headers = new Headers(response.headers);
+    headers.delete('Content-Length');
+    headers.set('Content-Type', contentType);
+    headers.set('Cache-Control', 'no-store');
+    headers.set('X-AcadMe-Offline-Page', 'read-only');
+    return new Response(responseHtml, { status: response.status, statusText: response.statusText, headers });
+}
 async function buildStudentDirectoryResponse(cache, requestedUrl) {
     const baseUrl = new URL('/students', self.location.origin);
     const savedResponse = await cache.match(baseUrl.href);
@@ -140,7 +172,7 @@ async function buildStudentDirectoryResponse(cache, requestedUrl) {
         : '';
     const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
         'Saved student directory from ' + savedAt +
-        '. This directory is read-only offline. Student profiles are not available offline. Reconnect to refresh information or use filters.' +
+        '. Search and filters work on this saved directory. Open each student's read-only profile while connected to prepare it for offline use. Offline profiles contain basic identity and class details only.' +
         detail +
         '</div>';
     const html = await savedResponse.text();
@@ -292,7 +324,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const keys = await caches.keys();
-        const previousCache = await caches.open('aljaleel-sis-v12');
+        const previousCache = await caches.open('aljaleel-sis-v13');
         const nextCache = await caches.open(CACHE_NAME);
 
         // Preserve previously prepared authenticated sheets across this cache
@@ -368,6 +400,7 @@ self.addEventListener('fetch', (event) => {
 
                 const isPreparation = isOfflinePreparationRequest(request, url);
                 const isStudentDirectoryRequest = isStudentDirectoryPath(url.pathname);
+                const isStudentProfileRequest = isStudentOfflineProfilePath(url.pathname);
                 const shouldCacheOfflinePage = isOfflinePage(request, url) &&
                     (!isStudentDirectoryRequest || url.searchParams.size === 0);
                 if ((shouldCacheOfflinePage || isPreparation) &&
@@ -381,7 +414,7 @@ self.addEventListener('fetch', (event) => {
                             credentials: 'same-origin'
                         });
                         let responseToCache = res.clone();
-                        if (isStaffOfflinePath(url.pathname) || isStudentDirectoryRequest) {
+                        if (isStaffOfflinePath(url.pathname) || isStudentDirectoryRequest || isStudentProfileRequest) {
                             const staffHeaders = new Headers(responseToCache.headers);
                             staffHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());
                             responseToCache = new Response(responseToCache.body, {
@@ -426,6 +459,11 @@ self.addEventListener('fetch', (event) => {
                     if (isStudentDirectoryPath(url.pathname)) {
                         const studentDirectoryResponse = await buildStudentDirectoryResponse(cache, url);
                         if (studentDirectoryResponse) return studentDirectoryResponse;
+                    }
+
+                    if (isStudentOfflineProfilePath(url.pathname)) {
+                        const exactProfile = await cache.match(request);
+                        if (exactProfile) return buildStudentOfflineProfileResponse(exactProfile);
                     }
 
                     const exact = await cache.match(request);

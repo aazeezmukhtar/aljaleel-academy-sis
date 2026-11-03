@@ -68,7 +68,6 @@ function isStudentProfileViewPath(pathname) {
 function isOfflinePrivatePath(pathname) {
     return OFFLINE_PAGE_PATHS.has(pathname) ||
         isStudentDirectoryPath(pathname) ||
-        isStudentOfflineProfilePath(pathname) ||
         isStudentProfileViewPath(pathname) ||
         /^\/staff\/view\/\d+\/?$/.test(pathname);
 }
@@ -405,11 +404,9 @@ self.addEventListener('fetch', (event) => {
 
                 const isPreparation = isOfflinePreparationRequest(request, url);
                 const isStudentDirectoryRequest = isStudentDirectoryPath(url.pathname);
-                const isStudentProfileRequest = isStudentOfflineProfilePath(url.pathname);
                 const isStudentViewRequest = isStudentProfileViewPath(url.pathname);
                 const shouldCacheOfflinePage = isOfflinePage(request, url) &&
                     (!isStudentDirectoryRequest || url.searchParams.size === 0) &&
-                    (!isStudentProfileRequest || url.searchParams.size === 0) &&
                     !isStudentViewRequest;
                 if (isStudentViewRequest && request.mode === 'navigate' &&
                     res && res.status === 200 && !res.redirected &&

@@ -113,4 +113,6 @@ check('student directory filter controls have accessible names and expanded stat
 check('fee management class selection and empty state are clear', () => {
   assert.match(fees, /<label>Class<\/label>/);
   assert.match(fees, /No students found for the selected criteria/);
+  assert.match(fees, /Choose a class above to view student fee balances/);
+  assert.match(fees, /alt="Student photo for/);
 });

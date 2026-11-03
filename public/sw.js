@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v14';
+const CACHE_NAME = 'aljaleel-sis-v15';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -61,10 +61,14 @@ function isStudentOfflineProfilePath(pathname) {
     return /^\/students\/offline-view\/\d+\/?$/.test(pathname);
 }
 
+function isStudentProfileViewPath(pathname) {
+    return /^\/students\/view\/\d+\/?$/.test(pathname);
+}
+
 function isOfflinePrivatePath(pathname) {
     return OFFLINE_PAGE_PATHS.has(pathname) ||
         isStudentDirectoryPath(pathname) ||
-        isStudentOfflineProfilePath(pathname) ||
+        isStudentProfileViewPath(pathname) ||
         /^\/staff\/view\/\d+\/?$/.test(pathname);
 }
 
@@ -131,7 +135,7 @@ async function buildStudentOfflineProfileResponse(response) {
     const savedAt = new Date(cachedAt).toLocaleString();
     const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
         'Saved student profile from ' + savedAt +
-        '. This is a read-only offline copy containing basic identity and class details only. Health, financial, contact and academic-history information is not stored in this offline profile.' +
+        '. This is a read-only offline copy. It includes date of birth and student/parent contact information. Keep this device secure and sign out when finished. Health records, financial information and academic history are not stored in this offline copy.' +
         '</div>';
     const html = await response.text();
     const responseHtml = /<body[^>]*>/i.test(html)
@@ -324,7 +328,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const keys = await caches.keys();
-        const previousCache = await caches.open('aljaleel-sis-v13');
+        const previousCache = await caches.open('aljaleel-sis-v14');
         const nextCache = await caches.open(CACHE_NAME);
 
         // Preserve previously prepared authenticated sheets across this cache
@@ -400,10 +404,48 @@ self.addEventListener('fetch', (event) => {
 
                 const isPreparation = isOfflinePreparationRequest(request, url);
                 const isStudentDirectoryRequest = isStudentDirectoryPath(url.pathname);
-                const isStudentProfileRequest = isStudentOfflineProfilePath(url.pathname);
+                const isStudentViewRequest = isStudentProfileViewPath(url.pathname);
                 const shouldCacheOfflinePage = isOfflinePage(request, url) &&
                     (!isStudentDirectoryRequest || url.searchParams.size === 0) &&
-                    (!isStudentProfileRequest || url.searchParams.size === 0);
+                    !isStudentViewRequest;
+                if (isStudentViewRequest && request.mode === 'navigate' &&
+                    res && res.status === 200 && !res.redirected &&
+                    (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+                    // Keep the normal online profile untouched. Fetch the dedicated
+                    // minimal profile projection and store it under the normal View URL,
+                    // so the existing View button works both online and offline.
+                    try {
+                        const studentId = url.pathname.match(/^\/students\/view\/(\d+)\/?$/)?.[1];
+                        if (studentId) {
+                            const snapshotUrl = new URL('/students/offline-view/' + studentId, self.location.origin);
+                            const snapshotResponse = await fetch(new Request(snapshotUrl.href, {
+                                method: 'GET',
+                                credentials: 'same-origin',
+                                headers: { 'Accept': 'text/html' }
+                            }));
+                            if (snapshotResponse && snapshotResponse.status === 200 && !snapshotResponse.redirected &&
+                                (snapshotResponse.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
+                                const cache = await caches.open(CACHE_NAME);
+                                const snapshotHeaders = new Headers(snapshotResponse.headers);
+                                snapshotHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());
+                                snapshotHeaders.set('X-AcadMe-Offline-Profile', '1');
+                                const snapshot = new Response(snapshotResponse.body, {
+                                    status: snapshotResponse.status,
+                                    statusText: snapshotResponse.statusText,
+                                    headers: snapshotHeaders
+                                });
+                                const canonicalProfileUrl = new URL('/students/view/' + studentId, self.location.origin);
+                                await cache.put(new Request(canonicalProfileUrl.href, {
+                                    method: 'GET',
+                                    credentials: 'same-origin'
+                                }), snapshot);
+                            }
+                        }
+                    } catch (snapshotError) {
+                        console.warn('[SW] Could not prepare student profile snapshot:', snapshotError);
+                    }
+                }
+
                 if ((shouldCacheOfflinePage || isPreparation) &&
                     res && res.status === 200 && !res.redirected &&
                     (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
@@ -415,7 +457,7 @@ self.addEventListener('fetch', (event) => {
                             credentials: 'same-origin'
                         });
                         let responseToCache = res.clone();
-                        if (isStaffOfflinePath(url.pathname) || isStudentDirectoryRequest || isStudentProfileRequest) {
+                        if (isStaffOfflinePath(url.pathname) || isStudentDirectoryRequest) {
                             const staffHeaders = new Headers(responseToCache.headers);
                             staffHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());
                             responseToCache = new Response(responseToCache.body, {
@@ -462,9 +504,13 @@ self.addEventListener('fetch', (event) => {
                         if (studentDirectoryResponse) return studentDirectoryResponse;
                     }
 
-                    if (isStudentOfflineProfilePath(url.pathname)) {
-                        const exactProfile = await cache.match(request);
-                        if (exactProfile) return buildStudentOfflineProfileResponse(exactProfile);
+                    if (isStudentProfileViewPath(url.pathname)) {
+                        const studentId = url.pathname.match(/^\/students\/view\/(\d+)\/?$/)?.[1];
+                        if (studentId) {
+                            const canonicalProfileUrl = new URL('/students/view/' + studentId, self.location.origin);
+                            const exactProfile = await cache.match(canonicalProfileUrl.href);
+                            if (exactProfile) return buildStudentOfflineProfileResponse(exactProfile);
+                        }
                     }
 
                     const exact = await cache.match(request);

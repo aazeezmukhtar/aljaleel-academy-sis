@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v11'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v12'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -208,10 +208,22 @@ check('safe offline fallback page is included among static assets', () => {
 });
 
 check('approved read-only routes include dashboard, students, academics, results, calendar, and announcements', () => {
-  for (const route of ['/dashboard', '/students', '/academics', '/results', '/calendar', '/announcements']) {
+  for (const route of ['/dashboard', '/students', '/staff', '/academics', '/results', '/calendar', '/announcements']) {
     assert.ok(source.includes("'" + route + "'"), 'missing approved route: ' + route);
   }
   assert.doesNotMatch(source, /'\/fees(?:\/manager)?'|'\/reports'|'\/settings'/);
+});
+
+check('staff directory and numeric staff profiles are approved read-only offline pages', () => {
+  assert.match(source, /function isOfflinePrivatePath\(pathname\)/);
+  assert.match(source, /function isStaffOfflinePath\(pathname\)/);
+  assert.match(source, /isOfflinePrivatePath\(keyUrl\.pathname\)/);
+  assert.match(source, /Saved offline copy from/);
+  assert.match(source, /This staff page is read-only while offline/);
+  assert.match(source, /X-AcadMe-Cached-At/);
+  assert.match(source, /Date\.now\(\) - cachedAt > maxAgeMs/);
+  assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.doesNotMatch(source, /'\/staff\/add'|'\/staff\/edit'|'\/staff\/board'/);
 });
 
 check('versioned same-origin assets share an unversioned cache key', () => {
@@ -233,7 +245,7 @@ check('manifest and Home links use protected dashboard route', () => {
 
 
 check('service worker preserves prior prepared pages when upgrading its cache version', () => {
-  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v10'\)/);
+  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v11'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
   assert.match(source, /keys\s+\.filter\(key => key !== CACHE_NAME\)/);
 });

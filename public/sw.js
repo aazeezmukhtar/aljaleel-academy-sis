@@ -402,7 +402,8 @@ self.addEventListener('fetch', (event) => {
                 const isStudentDirectoryRequest = isStudentDirectoryPath(url.pathname);
                 const isStudentProfileRequest = isStudentOfflineProfilePath(url.pathname);
                 const shouldCacheOfflinePage = isOfflinePage(request, url) &&
-                    (!isStudentDirectoryRequest || url.searchParams.size === 0);
+                    (!isStudentDirectoryRequest || url.searchParams.size === 0) &&
+                    (!isStudentProfileRequest || url.searchParams.size === 0);
                 if ((shouldCacheOfflinePage || isPreparation) &&
                     res && res.status === 200 && !res.redirected &&
                     (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {

@@ -207,14 +207,19 @@
 
         let runId = 0;
         const preparedSheets = new Set(); // UI progress for this run only; IndexedDB is the durable registry.
+        const stalePreparedSheets = new Set();
         const sheetKey = (classId, date) => 'attendance:' + String(classId) + ':' + date;
         const sheetUrl = (classId, date) => '/attendance/take?class_id=' + encodeURIComponent(classId) + '&date=' + encodeURIComponent(date);
 
-        async function hasFreshPreparedSheet(classId, date) {
+        async function hasUsablePreparedSheet(classId, date) {
             if (!window.NexusOffline || typeof window.NexusOffline.getPreparedDatasetStatus !== 'function') return false;
             try {
                 const status = await window.NexusOffline.getPreparedDatasetStatus(sheetKey(classId, date), sheetUrl(classId, date));
-                return status.status === 'fresh';
+                if (status.status === 'fresh' || status.status === 'stale') {
+                    if (status.status === 'stale') stalePreparedSheets.add(sheetKey(classId, date));
+                    return true;
+                }
+                return false;
             } catch (error) {
                 console.warn('[AcadMe] Could not verify saved attendance preparation:', error);
                 return false;
@@ -256,7 +261,7 @@
                     const candidates = classes.slice(i, i + 3).filter(c => !preparedSheets.has(sheetKey(c.id, date)));
                     const batch = [];
                     for (const candidate of candidates) {
-                        if (await hasFreshPreparedSheet(candidate.id, date)) {
+                        if (await hasUsablePreparedSheet(candidate.id, date)) {
                             preparedSheets.add(sheetKey(candidate.id, date));
                         } else {
                             batch.push(candidate);
@@ -310,8 +315,10 @@
                     '. Failed sheets: ' + shownFailures + moreFailures +
                     '. Keep internet connected and retry before working offline.', true);
             } else {
+                const staleCount = stalePreparedSheets.size;
                 setStatus('Verified: offline attendance is ready for ' + ready.length + ' dates: ' + ready.join(', ') +
-                    '. The selected date is included even when outside the rolling 7-day window.', false);
+                    '. ' + (staleCount ? staleCount + ' saved sheet(s) are older than 24 hours but remain available within the 7-day retention period; refresh them online when practical. ' : '') +
+                    'The selected date is included even when outside the rolling 7-day window.', false);
             }
         };
 

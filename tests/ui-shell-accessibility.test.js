@@ -10,6 +10,8 @@ const sidebar = read('views/partials/sidebar.ejs');
 const css = read('public/css/main.css');
 const attendance = read('views/attendance/take.ejs');
 const results = read('views/results/manager.ejs');
+const students = read('views/students/index.ejs');
+const fees = read('views/fees/manager.ejs');
 
 function check(name, fn) {
   try {
@@ -92,4 +94,23 @@ check('result score inputs identify the student and score component to assistive
   assert.match(results, /aria-label="Exam score for/);
   assert.match(results, /aria-invalid="false"/);
   assert.match(results, /input\.setAttribute\('aria-invalid'/);
+});
+
+check('student directory mobile cards retain clickable student and parent contacts', () => {
+  assert.match(students, /td\[data-label="Contact Numbers"\][\s\S]*grid-row: 3/);
+  assert.match(students, /td\[data-label="Status"\][\s\S]*grid-row: 4/);
+  assert.match(students, /td\[data-label="Action"\][\s\S]*grid-row: 4/);
+});
+
+check('student directory filter controls have accessible names and expanded state', () => {
+  assert.match(students, /aria-label="Filter students by class"/);
+  assert.match(students, /aria-label="Filter students by gender"/);
+  assert.match(students, /aria-label="Filter students by status"/);
+  assert.match(students, /aria-controls="moreFiltersPopover" aria-expanded="false"/);
+  assert.match(students, /event\.key === 'Escape'/);
+});
+
+check('fee management class selection and empty state are clear', () => {
+  assert.match(fees, /<label>Class<\/label>/);
+  assert.match(fees, /No students found for the selected criteria/);
 });

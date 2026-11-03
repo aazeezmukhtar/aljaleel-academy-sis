@@ -33,13 +33,27 @@
                         <span class="badge badge-<%= student.status || 'active' %>" style="margin-top:10px;display:inline-block;"><%= (student.status || 'active').toUpperCase() %></span>
                     </div>
                 </div>
-                <h2 style="font-size:1.05rem;margin:28px 0 0;">Basic student information</h2>
+                <h2 style="font-size:1.05rem;margin:28px 0 0;">Personal and academic information</h2>
                 <div class="offline-profile-grid">
                     <div class="offline-profile-field"><small>Gender</small><strong><%= student.gender || 'Not recorded' %></strong></div>
+                    <div class="offline-profile-field"><small>Date of Birth</small><strong><%= student.dob ? (String(student.dob).slice(0, 10)) : 'Not provided' %></strong></div>
                     <div class="offline-profile-field"><small>Class</small><strong><%= student.class_name || 'Not enrolled' %></strong></div>
                     <div class="offline-profile-field"><small>Student ID</small><strong><%= student.id %></strong></div>
                 </div>
-                <p style="margin:24px 0 0;color:#64748b;font-size:.88rem;">This limited profile is read-only. It does not include date of birth, student or parent contact details, health records, financial information, photographs or academic history.</p>
+                <h2 style="font-size:1.05rem;margin:28px 0 0;">Student contact</h2>
+                <div class="offline-profile-grid">
+                    <div class="offline-profile-field"><small>Phone</small><strong><%= student.phone || 'Not provided' %></strong></div>
+                    <div class="offline-profile-field"><small>Email</small><strong><%= student.email || 'Not provided' %></strong></div>
+                    <div class="offline-profile-field"><small>Residential address</small><strong><%= student.address || 'Not provided' %></strong></div>
+                </div>
+                <h2 style="font-size:1.05rem;margin:28px 0 0;">Parent / guardian contact</h2>
+                <div class="offline-profile-grid">
+                    <div class="offline-profile-field"><small>Primary phone</small><strong><%= student.parent_phone || 'Not provided' %></strong></div>
+                    <div class="offline-profile-field"><small>Alternate phone</small><strong><%= student.parent_phone_alt || 'Not provided' %></strong></div>
+                    <div class="offline-profile-field"><small>Email</small><strong><%= student.parent_email || 'Not provided' %></strong></div>
+                    <div class="offline-profile-field"><small>Home address</small><strong><%= student.parent_address || 'Not provided' %></strong></div>
+                </div>
+                <p style="margin:24px 0 0;color:#64748b;font-size:.88rem;">This profile is read-only offline. It includes personal and family contact information. Keep this device's access restricted and sign out when finished. Health records, financial information and academic history are not included.</p>
             </section>
         </main>
     </div>

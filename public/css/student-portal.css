@@ -487,3 +487,30 @@ body {
     gap: var(--acm-sp-8);
     align-items: center;
 }
+
+/* UI/UX audit: student portal touch targets and keyboard access */
+.acm-icon-btn {
+    min-width: 44px;
+    min-height: 44px;
+}
+
+.acm-nav-item:focus-visible,
+.acm-sidebar-item:focus-visible,
+.acm-icon-btn:focus-visible {
+    outline: 3px solid var(--school-secondary, #FBBA00);
+    outline-offset: 3px;
+    box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .acm-card-link,
+    .acm-nav-item,
+    .acm-sidebar-item,
+    .acm-icon-btn {
+        transition: none !important;
+    }
+
+    .acm-card-link:hover {
+        transform: none;
+    }
+}

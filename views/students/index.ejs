@@ -176,26 +176,37 @@
                                             <%= student.gender %>
                                         </td>
                                         <td data-label="Contact Numbers">
-                                            <div style="display:flex;flex-direction:column;gap:5px;min-width:140px;">
-                                                <div>
-                                                    <small style="display:block;color:var(--text-muted);font-size:.7rem;">Student</small>
-                                                    <% if (student.phone) { %>
-                                                        <a href="tel:<%= student.phone %>" style="font-weight:600;white-space:nowrap;"><%= student.phone %></a>
-                                                    <% } else { %>
-                                                        <span class="text-muted">Not provided</span>
-                                                    <% } %>
-                                                </div>
-                                                <div>
-                                                    <small style="display:block;color:var(--text-muted);font-size:.7rem;">Parent / Guardian</small>
-                                                    <% if (student.parent_phone) { %>
-                                                        <a href="tel:<%= student.parent_phone %>" style="font-weight:600;white-space:nowrap;"><%= student.parent_phone %></a>
-                                                    <% } else { %>
-                                                        <span class="text-muted">Not provided</span>
-                                                    <% } %>
-                                                    <% if (student.parent_phone_alt) { %>
-                                                        <div><small style="color:var(--text-muted);">Alternate: </small><a href="tel:<%= student.parent_phone_alt %>" style="white-space:nowrap;"><%= student.parent_phone_alt %></a></div>
-                                                    <% } %>
-                                                </div>
+                                            <div style="display:flex;flex-direction:row;align-items:center;flex-wrap:wrap;gap:8px;min-width:220px;">
+                                                <% if (student.phone) { %>
+                                                    <a href="tel:<%= student.phone %>"
+                                                        aria-label="Call student <%= student.first_name %> <%= student.last_name %> at <%= student.phone %>"
+                                                        title="Call student"
+                                                        style="display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #b7d9c2;border-radius:8px;background:#edf8f0;color:#176534;font-weight:700;font-size:.82rem;text-decoration:none;white-space:nowrap;">
+                                                        <span aria-hidden="true" style="font-size:1rem;">☎</span>
+                                                        <span>Student: <%= student.phone %></span>
+                                                    </a>
+                                                <% } %>
+                                                <% if (student.parent_phone) { %>
+                                                    <a href="tel:<%= student.parent_phone %>"
+                                                        aria-label="Call parent or guardian of <%= student.first_name %> <%= student.last_name %> at <%= student.parent_phone %>"
+                                                        title="Call parent or guardian"
+                                                        style="display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #b7d9c2;border-radius:8px;background:#edf8f0;color:#176534;font-weight:700;font-size:.82rem;text-decoration:none;white-space:nowrap;">
+                                                        <span aria-hidden="true" style="font-size:1rem;">☎</span>
+                                                        <span>Parent: <%= student.parent_phone %></span>
+                                                    </a>
+                                                <% } %>
+                                                <% if (student.parent_phone_alt) { %>
+                                                    <a href="tel:<%= student.parent_phone_alt %>"
+                                                        aria-label="Call alternate parent or guardian contact at <%= student.parent_phone_alt %>"
+                                                        title="Call alternate parent or guardian"
+                                                        style="display:inline-flex;align-items:center;gap:6px;padding:7px 10px;border:1px solid #b7d9c2;border-radius:8px;background:#edf8f0;color:#176534;font-weight:700;font-size:.82rem;text-decoration:none;white-space:nowrap;">
+                                                        <span aria-hidden="true" style="font-size:1rem;">☎</span>
+                                                        <span>Alternate: <%= student.parent_phone_alt %></span>
+                                                    </a>
+                                                <% } %>
+                                                <% if (!student.phone && !student.parent_phone && !student.parent_phone_alt) { %>
+                                                    <span class="text-muted">No contact number</span>
+                                                <% } %>
                                             </div>
                                         </td>
                                         <td data-label="Class">

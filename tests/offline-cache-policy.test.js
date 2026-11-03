@@ -269,5 +269,20 @@ check('staff offline identity is derived from authenticated server-rendered sess
   assert.match(header, /JSON\.stringify\(String\(user\.id\)\)/);
 });
 
+check('offline status indicator is present and reports browser storage persistence', () => {
+  const header = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'header.ejs'), 'utf8');
+  const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
+  assert.match(header, /class="sync-indicator"/);
+  assert.match(handler, /getOfflineStorageStatus/);
+  assert.match(handler, /browser may clear offline data/);
+});
+
+check('optional Background Sync is registered and its service-worker message is handled', () => {
+  const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
+  assert.match(handler, /registration\.sync\.register\('sync-nexus'\)/);
+  assert.match(handler, /event\.data\.type === 'TRIGGER_SYNC'/);
+});
+
+
 if (process.exitCode) process.exit(process.exitCode);
 console.log('Offline cache policy checks complete.');

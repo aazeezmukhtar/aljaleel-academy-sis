@@ -57,10 +57,6 @@ function isStudentDirectoryPath(pathname) {
     return pathname === '/students' || pathname === '/students/';
 }
 
-function isStudentProfileViewPath(pathname) {
-    return /^\/students\/view\/\d+\/?$/.test(pathname);
-}
-
 function isOfflinePrivatePath(pathname) {
     return OFFLINE_PAGE_PATHS.has(pathname) ||
         isStudentDirectoryPath(pathname) ||

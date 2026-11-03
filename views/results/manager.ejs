@@ -208,12 +208,16 @@
                                             </td>
                                             <td data-label="CA 1">
                                                 <input type="number" class="form-control score-input ca1"
+                                                    aria-label="CA 1 score for <%= s.first_name %> <%= s.last_name %>"
+                                                    aria-invalid="false"
                                                     value="<%= s.ca1 %>" min="0" max="<%= resultConfig.ca1_max || 20 %>"
                                                     <%= isLocked ? 'disabled' : '' %>>
                                             </td>
                                             <% if (resultConfig.ca_count !=1) { %>
                                                 <td data-label="CA 2">
                                                     <input type="number" class="form-control score-input ca2"
+                                                        aria-label="CA 2 score for <%= s.first_name %> <%= s.last_name %>"
+                                                        aria-invalid="false"
                                                         value="<%= s.ca2 %>" min="0" max="<%= resultConfig.ca2_max || 20 %>"
                                                         <%= isLocked ? 'disabled' : '' %>>
                                                 </td>
@@ -222,6 +226,8 @@
                                                     <% } %>
                                                         <td data-label="Exam">
                                                             <input type="number" class="form-control score-input exam"
+                                                                aria-label="Exam score for <%= s.first_name %> <%= s.last_name %>"
+                                                                aria-invalid="false"
                                                                 value="<%= s.exam %>" min="0"
                                                                 max="<%= resultConfig.exam_max || 60 %>"
                                                                 <%= isLocked ? 'disabled' : '' %>>
@@ -543,15 +549,14 @@
 
             if (input.value.trim() === '') {
                 input.classList.remove('error');
+                input.setAttribute('aria-invalid', 'false');
                 return;
             }
 
             const val = Number(input.value);
-            if (!Number.isFinite(val) || val < 0 || val > max) {
-                input.classList.add('error');
-            } else {
-                input.classList.remove('error');
-            }
+            const isInvalid = !Number.isFinite(val) || val < 0 || val > max;
+            input.classList.toggle('error', isInvalid);
+            input.setAttribute('aria-invalid', String(isInvalid));
         }
 
         function calculateRow(row) {
@@ -616,7 +621,9 @@
             });
 
             if (hasError) {
-                alert('Please fix highlight errors (scores exceeding limits) before saving.');
+                const firstInvalid = document.querySelector('#resultGrid .score-input.error');
+                if (firstInvalid) firstInvalid.focus();
+                alert('Please correct the highlighted scores. Scores must be between 0 and their configured maximum.');
                 return;
             }
 

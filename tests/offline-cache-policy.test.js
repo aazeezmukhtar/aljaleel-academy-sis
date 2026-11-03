@@ -86,6 +86,8 @@ check('result entry page offers explicit offline preparation for the exact acade
   assert.match(manager, /X-AcadMe-Offline-Cached/);
   assert.match(manager, /older than 24 hours/);
   assert.match(manager, /7-day retention period/);
+  assert.match(manager, /saved.status === 'stale' && !navigator.onLine/);
+  assert.match(manager, /Refreshing this exact sheet now/);
   for (const key of ['class_id', 'subject_id', 'session', 'term']) {
     assert.ok(manager.includes("'" + key + "'"), 'missing result context key: ' + key);
   }
@@ -204,7 +206,7 @@ check('login and logout routes are not served from offline page cache', () => {
   assert.match(source, /Sign-in and sign-out require an internet connection/);
 });
 
-check('expired-session redirects preserve prepared sheets while explicit login/logout and successful account changes clear private cache', () => {
+check('expired-session redirects preserve prepared sheets only for the same authenticated account', () => {
   assert.match(source, /async function clearPrivatePageCache\(cache\)/);
   assert.match(source, /if \(AUTH_PATHS\.has\(url\.pathname\) \|\| LOGOUT_PATHS\.has\(url\.pathname\)\)/);
   assert.match(source, /request\.method === 'POST'/);

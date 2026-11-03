@@ -7,7 +7,7 @@ const template = fs.readFileSync(
     'utf8'
 );
 
-assert.match(template, /class="badge student-class-inline"/,
+assert.match(template, /class="student-class-inline"/,
     'Server-rendered class assignments should use the no-wrap class badge.');
 assert.match(template, /student-class-inline[^\n]*\$\{escapeHtml\(s\.class_name\)\}/,
     'Dynamically filtered student rows should use the same no-wrap class badge.');

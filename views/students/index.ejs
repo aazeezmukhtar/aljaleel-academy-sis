@@ -204,10 +204,6 @@
                                                 style="padding: 4px 12px; font-size: 0.85rem;">
                                                 View
                                             </a>
-                                            <a href="/students/offline-view/<%= student.id %>" class="btn btn-outline"
-                                                style="padding: 4px 8px; font-size: 0.8rem;" title="Open the limited read-only profile and prepare it for offline use">
-                                                Offline profile
-                                            </a>
                                         </td>
                                     </tr>
                                 <% }); %>
@@ -311,14 +307,21 @@
                 rows.forEach(row => {
                     const classIds = (row.dataset.classIds || '').split(',').filter(Boolean);
                     const sectionIds = (row.dataset.sectionIds || '').split(',').filter(Boolean);
-                    const matches = (!search || (row.dataset.search || '').includes(search)) &&
+                    const searchTerms = search.split(/\s+/).filter(Boolean);
+                    const searchableText = (row.dataset.search || '').toLowerCase();
+                    const matches = (!searchTerms.length || searchTerms.every(term => searchableText.includes(term))) &&
                         (!selectedClass || classIds.includes(selectedClass)) &&
                         (!selectedGender || (row.dataset.gender || '').toLowerCase() === selectedGender) &&
                         (!selectedStatus || (row.dataset.status || '').toLowerCase() === selectedStatus) &&
                         (!selectedSection || sectionIds.includes(selectedSection)) &&
                         (!selectedYear || row.dataset.admissionYear === selectedYear);
                     row.hidden = !matches;
-                    if (matches) visibleCount++;
+                    if (matches) {
+                        row.style.removeProperty('display');
+                        visibleCount++;
+                    } else {
+                        row.style.setProperty('display', 'none', 'important');
+                    }
                 });
 
                 let emptyRow = document.getElementById('offlineNoResultsRow');

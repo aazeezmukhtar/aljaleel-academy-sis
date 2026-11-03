@@ -429,7 +429,7 @@ const getOfflineStudentProfile = async (req, res) => {
 
     try {
         const student = await db.get(
-            'SELECT id, first_name, last_name, admission_number, gender, status, current_class_id FROM students WHERE id = ? AND school_id = ?',
+            'SELECT id, first_name, last_name, admission_number, gender, status, current_class_id, dob, phone, email, address, parent_phone, parent_phone_alt, parent_email, parent_address FROM students WHERE id = ? AND school_id = ?',
             [studentId, schoolId]
         );
         if (!student) return res.status(404).send('Student not found');

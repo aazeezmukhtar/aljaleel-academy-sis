@@ -304,6 +304,51 @@ async function buildUnpreparedResultsSelectionResponse(cache, requestedUrl) {
     });
 }
 
+function getOfflineOwnerFromHtml(html) {
+    const schoolMatch = html.match(/schoolId:\s*(\d+)/);
+    const typeMatch = html.match(/principalType:\s*['"]([^'"]+)['"]/);
+    const idMatch = html.match(/principalId:\s*("(?:\\.|[^"])*")/);
+    if (!schoolMatch || !typeMatch || !idMatch) return null;
+    try {
+        const principalId = JSON.parse(idMatch[1]);
+        return [schoolMatch[1], typeMatch[1], String(principalId)].join(':');
+    } catch {
+        return null;
+    }
+}
+
+async function getOfflineOwnerFromResponse(response) {
+    const contentType = response.headers.get('Content-Type') || '';
+    if (!contentType.toLowerCase().includes('text/html')) return null;
+    return getOfflineOwnerFromHtml(await response.clone().text());
+}
+
+async function addOfflineOwnerMetadata(response) {
+    const owner = await getOfflineOwnerFromResponse(response);
+    if (!owner) throw new Error('Authenticated offline owner metadata was not present in the page.');
+    const headers = new Headers(response.headers);
+    headers.set('X-AcadMe-Offline-Owner', owner);
+    return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+    });
+}
+
+async function privateCacheBelongsToOwner(cache, owner) {
+    if (!owner) return false;
+    const keys = await cache.keys();
+    const privateKeys = keys.filter((key) => {
+        const url = new URL(key.url);
+        return url.origin === self.location.origin && isOfflinePrivatePath(url.pathname);
+    });
+    for (const key of privateKeys) {
+        const response = await cache.match(key);
+        if (!response || response.headers.get('X-AcadMe-Offline-Owner') !== owner) return false;
+    }
+    return true;
+}
+
 async function clearPrivatePageCache(cache) {
     const keys = await cache.keys();
     await Promise.all(keys.map(async (key) => {
@@ -362,6 +407,9 @@ self.addEventListener('activate', (event) => {
                         // Older releases did not timestamp prepared attendance/results
                         // responses. Start their seven-day retention window at migration
                         // rather than allowing an undated entry to live indefinitely.
+                        if (isOfflinePrivatePath(url.pathname)) {
+                            response = await addOfflineOwnerMetadata(response);
+                        }
                         if (isOfflineEntryPath(url.pathname) &&
                             !response.headers.get('X-AcadMe-Cached-At')) {
                             const headers = new Headers(response.headers);
@@ -402,7 +450,13 @@ self.addEventListener('fetch', (event) => {
                 ![...AUTH_PATHS].some((path) => new URL(response.url).pathname === path);
             if (redirectedToAuthenticatedPage && response.ok) {
                 const cache = await caches.open(CACHE_NAME);
-                await clearPrivatePageCache(cache);
+                const authenticatedOwner = await getOfflineOwnerFromResponse(response);
+                // Preserve prepared sheets only when the authenticated identity
+                // matches every retained private page. Unknown or different
+                // identities trigger a privacy-safe cache clear.
+                if (!(await privateCacheBelongsToOwner(cache, authenticatedOwner))) {
+                    await clearPrivatePageCache(cache);
+                }
             }
             return response;
         }));
@@ -466,6 +520,9 @@ self.addEventListener('fetch', (event) => {
                             credentials: 'same-origin'
                         });
                         let responseToCache = res.clone();
+                        if (isOfflinePrivatePath(url.pathname)) {
+                            responseToCache = await addOfflineOwnerMetadata(responseToCache);
+                        }
                         if (isStaffOfflinePath(url.pathname) || isStudentDirectoryRequest || isOfflineEntryPath(url.pathname)) {
                             const cacheHeaders = new Headers(responseToCache.headers);
                             cacheHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());

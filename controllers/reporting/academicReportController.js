@@ -5,7 +5,7 @@ const getAcademicDashboard = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (user ? user.school_id : 1);
     const stats = {
-        total_results: (await db.get("SELECT COUNT(r.id) as count FROM results r JOIN students s ON r.student_id = s.id WHERE s.school_id = ?", [schoolId]))?.count || 0,
+        total_results: (await db.get("SELECT COUNT(r.id) as count FROM results r JOIN students s ON r.student_id = s.id WHERE s.school_id = ? AND r.class_id IS NOT NULL AND r.status IN ('approved', 'published')", [schoolId]))?.count || 0,
         subjects: (await db.get("SELECT COUNT(*) as count FROM subjects WHERE school_id = ?", [schoolId]))?.count || 0,
         classes: (await db.get("SELECT COUNT(*) as count FROM classes WHERE school_id = ?", [schoolId]))?.count || 0
     };
@@ -37,22 +37,22 @@ const getBroadsheet = async (req, res) => {
         `, [user.id, user.id, user.id, schoolId]);
     }
 
+    const canAccessClass = (selectedClassId) => classes.some(item => String(item.id) === String(selectedClassId));
+
     let reportData = null;
     let subjects = [];
 
-    if (class_id && term && session) {
+    if (class_id && term && session && canAccessClass(class_id)) {
         const clazz = await db.get('SELECT name FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
 
         if (clazz) {
             subjects = await db.all(`
                 SELECT DISTINCT s.id, s.name
                 FROM subjects s
-                JOIN results r ON s.id = r.subject_id
-                JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
-                WHERE se.class_id = ? AND r.term = ? AND r.session = ?
-                  AND r.class_id = ?
+                JOIN subject_assignments sa ON sa.subject_id = s.id
+                WHERE sa.class_id = ? AND sa.session = ?
                 ORDER BY s.name
-            `, [class_id, term, session, class_id]);
+            `, [class_id, session]);
 
             // All active students in the class
             const students = await db.all(`
@@ -68,10 +68,10 @@ const getBroadsheet = async (req, res) => {
             const allResults = await db.all(`
                 SELECT r.student_id, r.subject_id, r.total, r.grade
                 FROM results r
-                JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
-                WHERE se.class_id = ? AND r.term = ? AND r.session = ?
+                WHERE r.term = ? AND r.session = ?
                   AND r.class_id = ?
-            `, [class_id, term, session, class_id]);
+                  AND r.status IN ('approved', 'published')
+            `, [term, session, class_id]);
 
             // Build result lookup map: resultMap[student_id][subject_id]
             const resultMap = {};
@@ -134,38 +134,48 @@ const getSubjectAnalysis = async (req, res) => {
         `, [user.id, user.id, user.id, schoolId]);
     }
 
+    const canAccessClass = (selectedClassId) => classes.some(item => String(item.id) === String(selectedClassId));
+
     const availableSessions = await sessionHelper.getAvailableSessions(schoolId);
 
     // Fetch analysis data if filters are provided
     let analysis = [];
-    if (class_id && term && session) {
+    if (class_id && term && session && canAccessClass(class_id)) {
         analysis = await db.all(`
             SELECT s.name AS subject_name,
                    c.name AS class_name,
                    COUNT(DISTINCT r.student_id) AS students_count,
+                   (SELECT COUNT(DISTINCT se.student_id)
+                    FROM student_enrollments se
+                    JOIN students st ON st.id = se.student_id
+                    WHERE se.class_id = sa.class_id AND se.session = sa.session
+                      AND st.school_id = ? AND st.status = 'active') AS eligible_students_count,
                    AVG(r.total) AS average_score,
                    MAX(r.total) AS highest_score,
                    MIN(r.total) AS lowest_score,
                    SUM(CASE WHEN r.total >= 50 THEN 1 ELSE 0 END) AS pass_count
-            FROM results r
-            JOIN subjects s ON r.subject_id = s.id
-            JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
-            JOIN classes c ON se.class_id = c.id
-            WHERE se.class_id = ? AND r.term = ? AND r.session = ?
-              AND r.class_id = ? AND c.school_id = ?
-            GROUP BY s.id, s.name, c.name
+            FROM subject_assignments sa
+            JOIN subjects s ON s.id = sa.subject_id
+            JOIN classes c ON c.id = sa.class_id AND c.school_id = ?
+            LEFT JOIN results r ON r.subject_id = sa.subject_id
+                AND r.class_id = sa.class_id
+                AND r.term = ? AND r.session = sa.session
+                AND r.status IN ('approved', 'published')
+            WHERE sa.class_id = ? AND sa.session = ?
+            GROUP BY s.id, s.name, c.name, sa.class_id, sa.session
             ORDER BY s.name;
-        `, [class_id, term, session, class_id, schoolId]);
+        `, [schoolId, schoolId, term, class_id, session]);
     }
 
-    const totalStudentsResult = await db.get(`
-        SELECT COUNT(DISTINCT r.student_id) AS total_students
-        FROM results r
-        JOIN student_enrollments se ON r.student_id = se.student_id AND r.session = se.session
-        JOIN classes c ON se.class_id = c.id
-        WHERE se.class_id = ? AND r.term = ? AND r.session = ?
-          AND r.class_id = ? AND c.school_id = ?
-    `, [class_id, term, session, class_id, schoolId]);
+    const totalStudentsResult = (class_id && session && canAccessClass(class_id)) ? await db.get(`
+        SELECT COUNT(DISTINCT se.student_id) AS total_students
+        FROM student_enrollments se
+        JOIN students st ON st.id = se.student_id
+        JOIN classes c ON c.id = se.class_id
+        WHERE se.class_id = ? AND se.session = ?
+          AND st.school_id = ? AND st.status = 'active'
+          AND c.school_id = ?
+    `, [class_id, session, schoolId, schoolId]) : null;
     const totalStudents = totalStudentsResult ? totalStudentsResult.total_students : 0;
 
     res.render('reports/academic/analysis', {
@@ -199,25 +209,38 @@ const getTopPerformers = async (req, res) => {
         `, [user.id, user.id, user.id, schoolId]);
     }
 
+    const canAccessClass = (selectedClassId) => classes.some(item => String(item.id) === String(selectedClassId));
+
     let topStudents = [];
-    if (class_id && term && session) {
-        topStudents = await db.all(`
-            SELECT 
-                s.first_name, s.last_name, s.admission_number,
-                c.name as class_name,
-                COUNT(r.id) as subjects_sat,
-                SUM(r.total) as total_score,
-                AVG(r.total) as average_score
-            FROM students s
-            JOIN results r ON s.id = r.student_id
-            JOIN student_enrollments se ON s.id = se.student_id AND se.session = r.session
-            JOIN classes c ON se.class_id = c.id
-            WHERE se.class_id = ? AND r.term = ? AND r.session = ?
-              AND r.class_id = ? AND s.school_id = ?
-            GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
-            ORDER BY average_score DESC
-            LIMIT ?
-        `, [class_id, term, session, class_id, schoolId, limit || 10]);
+    if (class_id && term && session && canAccessClass(class_id)) {
+        const expectedSubjects = await db.get(
+            'SELECT COUNT(DISTINCT subject_id) AS count FROM subject_assignments WHERE class_id = ? AND session = ?',
+            [class_id, session]
+        );
+        const subjectCount = Number(expectedSubjects && expectedSubjects.count) || 0;
+        const requestedLimit = Number(limit);
+        const safeLimit = [3, 5, 10].includes(requestedLimit) ? requestedLimit : 10;
+
+        if (subjectCount > 0) {
+            topStudents = await db.all(`
+                SELECT
+                    s.first_name, s.last_name, s.admission_number,
+                    c.name as class_name,
+                    COUNT(DISTINCT r.subject_id) as subjects_sat,
+                    SUM(r.total) as total_score,
+                    AVG(r.total) as average_score
+                FROM students s
+                JOIN results r ON s.id = r.student_id
+                JOIN classes c ON c.id = r.class_id
+                WHERE r.class_id = ? AND r.term = ? AND r.session = ?
+                  AND r.status IN ('approved', 'published')
+                  AND s.school_id = ? AND c.school_id = ?
+                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+                HAVING COUNT(DISTINCT r.subject_id) = ?
+                ORDER BY average_score DESC, s.last_name ASC, s.first_name ASC
+                LIMIT ?
+            `, [class_id, term, session, schoolId, schoolId, subjectCount, safeLimit]);
+        }
     }
 
     const availableSessions = await sessionHelper.getAvailableSessions(schoolId);
@@ -228,7 +251,7 @@ const getTopPerformers = async (req, res) => {
         topStudents,
         availableSessions,
         user,
-        query: { class_id, term, session, limit: limit || 10 }
+        query: { class_id, term, session, limit: [3, 5, 10].includes(Number(limit)) ? Number(limit) : 10 }
     });
 };
 

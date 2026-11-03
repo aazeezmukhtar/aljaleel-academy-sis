@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v9'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v10'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -212,6 +212,61 @@ check('manifest and Home links use protected dashboard route', () => {
   const sidebar = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'sidebar.ejs'), 'utf8');
   assert.strictEqual(manifest.start_url, '/dashboard');
   assert.ok((sidebar.match(/href="\/dashboard" class=/g) || []).length >= 2);
+});
+
+
+check('service worker preserves prior prepared pages when upgrading its cache version', () => {
+  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v9'\)/);
+  assert.match(source, /await nextCache\.put\(request, response\)/);
+  assert.match(source, /keys\.filter\(key => key !== CACHE_NAME\)/);
+});
+
+check('offline IndexedDB migration adds a manifest without deleting attendance or results queues', () => {
+  const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
+  assert.match(handler, /const DB_VERSION = 3/);
+  assert.match(handler, /createObjectStore\('offline_manifest'/);
+  assert.match(handler, /createObjectStore\('attendance_sync'/);
+  assert.match(handler, /createObjectStore\('results_sync'/);
+  assert.doesNotMatch(handler, /deleteObjectStore/);
+});
+
+check('offline preparation registry is persistent and verifies the actual cached response', () => {
+  const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
+  assert.match(handler, /function getManifestId\(datasetKey\)/);
+  assert.match(handler, /async function getPreparedDatasetStatus/);
+  assert.match(handler, /await caches\.match\(url/);
+  assert.match(handler, /async function recordPreparedDataset/);
+  assert.match(handler, /OFFLINE_FRESHNESS_HOURS = 24/);
+  assert.match(handler, /OFFLINE_RETENTION_DAYS = 7/);
+});
+
+check('new offline queue records are owned by the authenticated principal and sync is scoped', () => {
+  const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
+  assert.match(handler, /window\.ACADME_OFFLINE_CONTEXT/);
+  assert.strictEqual((handler.match(/_ownerKey: ownerKey/g) || []).length, 2);
+  assert.strictEqual((handler.match(/item\._ownerKey === ownerKey/g) || []).length, 2);
+  assert.match(handler, /tx\.oncomplete = \(\) =>/);
+});
+
+check('attendance preparation checks persistent records before downloading again', () => {
+  const attendance = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'index.ejs'), 'utf8');
+  assert.match(attendance, /hasFreshPreparedSheet/);
+  assert.match(attendance, /getPreparedDatasetStatus/);
+  assert.match(attendance, /recordPreparedDataset/);
+});
+
+check('results preparation checks persistent records before downloading again', () => {
+  const manager = fs.readFileSync(path.join(__dirname, '..', 'views', 'results', 'manager.ejs'), 'utf8');
+  assert.match(manager, /getPreparedDatasetStatus/);
+  assert.match(manager, /Already ready offline/);
+  assert.match(manager, /recordPreparedDataset/);
+});
+
+check('staff offline identity is derived from authenticated server-rendered session context', () => {
+  const header = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'header.ejs'), 'utf8');
+  assert.match(header, /window\.ACADME_OFFLINE_CONTEXT/);
+  assert.match(header, /JSON\.stringify\(Number\(user\.school_id \|\| 1\)\)/);
+  assert.match(header, /JSON\.stringify\(String\(user\.id\)\)/);
 });
 
 if (process.exitCode) process.exit(process.exitCode);

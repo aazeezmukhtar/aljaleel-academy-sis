@@ -55,8 +55,8 @@ check('unprepared results selections fall back only to the cached unfiltered sel
   assert.match(source, /new URL\('\/results\/manage', self\.location\.origin\)/);
   assert.match(source, /buildUnpreparedResultsSelectionResponse\(cache, url\)/);
   assert.match(source, /X-AcadMe-Offline-Selection/);
-  assert.match(source, /This results selection is not prepared for offline use/);
-  assert.match(source, /this exact class, subject, session and term sheet must be prepared while connected/);
+  assert.match(source, /This selected class, subject, session and term sheet is not prepared for offline use/);
+  assert.match(source, /prepare this exact sheet while connected/);
   assert.match(source, /field\.value = value/);
   assert.match(source, /Never substitute another class\/subject grade sheet/);
 });

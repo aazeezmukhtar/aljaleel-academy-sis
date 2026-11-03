@@ -218,7 +218,7 @@ check('manifest and Home links use protected dashboard route', () => {
 check('service worker preserves prior prepared pages when upgrading its cache version', () => {
   assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v9'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
-  assert.match(source, /keys\.filter\(key => key !== CACHE_NAME\)/);
+  assert.match(source, /keys\s+\.filter\(key => key !== CACHE_NAME\)/);
 });
 
 check('offline IndexedDB migration adds a manifest without deleting attendance or results queues', () => {

@@ -36,7 +36,18 @@
                 <h2 style="font-size:1.05rem;margin:28px 0 0;">Personal and academic information</h2>
                 <div class="offline-profile-grid">
                     <div class="offline-profile-field"><small>Gender</small><strong><%= student.gender || 'Not recorded' %></strong></div>
-                    <div class="offline-profile-field"><small>Date of Birth</small><strong><%= student.dob ? (String(student.dob).slice(0, 10)) : 'Not provided' %></strong></div>
+                    <div class="offline-profile-field"><small>Date of Birth</small><strong><%
+                        let formattedDob = 'Not provided';
+                        if (student.dob) {
+                            const rawDob = String(student.dob).trim();
+                            const dobMatch = rawDob.match(/^(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
+                            if (dobMatch) formattedDob = dobMatch[3].padStart(2, '0') + '/' + dobMatch[2].padStart(2, '0') + '/' + dobMatch[1];
+                            else {
+                                const parsedDob = new Date(student.dob);
+                                if (!isNaN(parsedDob.getTime())) formattedDob = String(parsedDob.getUTCDate()).padStart(2, '0') + '/' + String(parsedDob.getUTCMonth() + 1).padStart(2, '0') + '/' + parsedDob.getUTCFullYear();
+                            }
+                        }
+                    %><%= formattedDob %></strong></div>
                     <div class="offline-profile-field"><small>Class</small><strong><%= student.class_name || 'Not enrolled' %></strong></div>
                     <div class="offline-profile-field"><small>Student ID</small><strong><%= student.id %></strong></div>
                 </div>

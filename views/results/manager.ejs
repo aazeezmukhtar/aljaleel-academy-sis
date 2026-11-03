@@ -288,9 +288,19 @@
             const target = new URL('/results/manage', window.location.origin);
             Object.entries(context).forEach(([key, value]) => target.searchParams.set(key, value));
 
+            const datasetKey = 'results:' + context.class_id + ':' + context.subject_id + ':' + context.session + ':' + context.term;
+            const datasetUrl = target.pathname + target.search;
             button.disabled = true;
-            status.textContent = 'Preparing this exact results sheet for offline use…';
+            status.textContent = 'Checking saved offline preparation…';
             try {
+                if (window.NexusOffline && typeof window.NexusOffline.getPreparedDatasetStatus === 'function') {
+                    const saved = await window.NexusOffline.getPreparedDatasetStatus(datasetKey, datasetUrl);
+                    if (saved.status === 'fresh') {
+                        status.textContent = 'Already ready offline. The saved sheet was verified; no download was needed.';
+                        return;
+                    }
+                }
+                status.textContent = 'Preparing this exact results sheet for offline use…';
                 const response = await fetch(target.pathname + target.search, {
                     method: 'GET',
                     credentials: 'same-origin',
@@ -301,7 +311,11 @@
                     response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
                     throw new Error('The active service worker did not confirm caching.');
                 }
-                status.textContent = 'Ready offline. This exact class, subject, session and term sheet has been cached.';
+                if (!window.NexusOffline || typeof window.NexusOffline.recordPreparedDataset !== 'function') {
+                    throw new Error('Offline preparation registry is unavailable.');
+                }
+                await window.NexusOffline.recordPreparedDataset(datasetKey, 'results', datasetUrl);
+                status.textContent = 'Verified and saved offline. This exact class, subject, session and term sheet is ready.';
             } catch (error) {
                 console.warn('[AcadMe] Results offline preparation failed:', error);
                 status.textContent = 'Could not confirm offline preparation. Stay online and try again before disconnecting.';

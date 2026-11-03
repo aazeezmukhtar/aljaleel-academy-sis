@@ -206,8 +206,20 @@
         if (dateInput.value === serverRenderedDefault) dateInput.value = localToday;
 
         let runId = 0;
-        const preparedSheets = new Set();
-        const sheetKey = (classId, date) => String(classId) + '|' + date;
+        const preparedSheets = new Set(); // UI progress for this run only; IndexedDB is the durable registry.
+        const sheetKey = (classId, date) => 'attendance:' + String(classId) + ':' + date;
+        const sheetUrl = (classId, date) => '/attendance/take?class_id=' + encodeURIComponent(classId) + '&date=' + encodeURIComponent(date);
+
+        async function hasFreshPreparedSheet(classId, date) {
+            if (!window.NexusOffline || typeof window.NexusOffline.getPreparedDatasetStatus !== 'function') return false;
+            try {
+                const status = await window.NexusOffline.getPreparedDatasetStatus(sheetKey(classId, date), sheetUrl(classId, date));
+                return status.status === 'fresh';
+            } catch (error) {
+                console.warn('[AcadMe] Could not verify saved attendance preparation:', error);
+                return false;
+            }
+        }
 
         const prepare = async () => {
             const thisRun = ++runId;
@@ -241,11 +253,19 @@
                 if (thisRun !== runId) return;
                 for (let i = 0; i < classes.length; i += 3) {
                     if (thisRun !== runId) return;
-                    const batch = classes.slice(i, i + 3).filter(c => !preparedSheets.has(sheetKey(c.id, date)));
+                    const candidates = classes.slice(i, i + 3).filter(c => !preparedSheets.has(sheetKey(c.id, date)));
+                    const batch = [];
+                    for (const candidate of candidates) {
+                        if (await hasFreshPreparedSheet(candidate.id, date)) {
+                            preparedSheets.add(sheetKey(candidate.id, date));
+                        } else {
+                            batch.push(candidate);
+                        }
+                    }
                     if (!batch.length) continue;
 
                     const results = await Promise.allSettled(batch.map(async c => {
-                        const url = '/attendance/take?class_id=' + encodeURIComponent(c.id) + '&date=' + encodeURIComponent(date);
+                        const url = sheetUrl(c.id, date);
                         const response = await fetch(url, {
                             credentials: 'same-origin',
                             headers: { 'X-AcadMe-Offline-Prepare': '1' },
@@ -257,6 +277,10 @@
                         if (response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
                             throw new Error('The active service worker did not confirm that this class sheet was cached.');
                         }
+                        if (!window.NexusOffline || typeof window.NexusOffline.recordPreparedDataset !== 'function') {
+                            throw new Error('Offline preparation registry is unavailable; the sheet cannot be marked ready.');
+                        }
+                        await window.NexusOffline.recordPreparedDataset(sheetKey(c.id, date), 'attendance', sheetUrl(c.id, date));
                         return c;
                     }));
 

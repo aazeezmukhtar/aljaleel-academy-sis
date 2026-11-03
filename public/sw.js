@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v9';
+const CACHE_NAME = 'aljaleel-sis-v10';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -143,14 +143,27 @@ self.addEventListener('install', (event) => {
 // ─── Activate ─────────────────────────────────────────────────────────────
 
 self.addEventListener('activate', (event) => {
-    event.waitUntil(
-        caches.keys().then((keys) =>
-            Promise.all(
-                keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
-            )
-        )
-    );
-    event.waitUntil(self.clients.claim());
+    event.waitUntil((async () => {
+        const keys = await caches.keys();
+        const previousCache = await caches.open('aljaleel-sis-v9');
+        const nextCache = await caches.open(CACHE_NAME);
+
+        // Preserve previously prepared authenticated sheets across this cache
+        // version change. New install-time static assets win over old assets.
+        const previousKeys = await previousCache.keys();
+        for (const request of previousKeys) {
+            const url = new URL(request.url);
+            const isStatic = isStaticAsset(url);
+            if (isStatic && await nextCache.match(request)) continue;
+            const response = await previousCache.match(request);
+            if (response) await nextCache.put(request, response);
+        }
+
+        await Promise.all(keys
+            .filter(key => key !== CACHE_NAME)
+            .map(key => caches.delete(key)));
+        await self.clients.claim();
+    })());
 });
 
 // ─── Fetch ────────────────────────────────────────────────────────────────

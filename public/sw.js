@@ -374,7 +374,6 @@ self.addEventListener('activate', (event) => {
 
 // ─── Fetch ────────────────────────────────────────────────────────────────
 
-────────────────────────────────────────────────
 
 self.addEventListener('fetch', (event) => {
     const { request } = event;

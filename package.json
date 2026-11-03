@@ -12,7 +12,8 @@
     "pm2": "pm2 start app.js --name nexus-sis",
     "test:results-context": "node tests/result-context-integrity.test.js",
     "test:section-owned": "node tests/result-report-section-isolation.test.js && node tests/section-owned-academic-records-writes.test.js && node tests/section-owned-academic-records-portal.test.js && node tests/academics-results-class-isolation.test.js",
-    "test:image-optimizer": "node tests/image-optimizer.test.js"
+    "test:image-optimizer": "node tests/image-optimizer.test.js",
+    "test:offline-foundation": "node tests/offline-cache-policy.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

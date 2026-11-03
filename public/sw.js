@@ -140,10 +140,10 @@ async function buildUnpreparedResultsSelectionResponse(cache, requestedUrl) {
     const html = await selectionPage.text();
     // Insert plain HTML rather than an inline script so the notice also works
     // when the application uses a restrictive Content-Security-Policy.
-    const formClose = /<\\/form>/i;
+    const formClose = /<[/]form>/i;
     const responseHtml = formClose.test(html)
         ? html.replace(formClose, noticeHtml + '</form>')
-        : html.replace(/<\\/body>/i, noticeHtml + '</body>');
+        : html.replace(/<[/]body>/i, noticeHtml + '</body>');
 
     const headers = new Headers(selectionPage.headers);
     headers.set('Content-Type', contentType);

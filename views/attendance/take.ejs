@@ -297,7 +297,6 @@
         if (needsChange && !window.confirm('Mark all ' + cards.length + ' students as Present? This will replace their current statuses.')) return;
 
         cards.forEach(card => {
-            const studentId = card.dataset.studentId;
             const btn = card.querySelector('.cycle-btn');
             const input = card.querySelector('.status-input');
             const nextState = 'Present';

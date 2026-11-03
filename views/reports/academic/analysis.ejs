@@ -103,8 +103,8 @@
                                         <%= record.lowest_score === null ? '—' : record.lowest_score %>
                                     </td>
                                     <td style="width: 150px;">
-                                        <% const passRate=(record.eligible_students_count > 0 ? (record.pass_count / record.eligible_students_count) * 100 : 0); const
-                                            color=passRate>= 70 ? '#16a34a' : (passRate >= 50 ? '#ca8a04' : '#dc2626');
+                                        <% const passRate=(record.students_count > 0 && record.eligible_students_count > 0 ? (record.pass_count / record.eligible_students_count) * 100 : null); const
+                                            color=passRate === null ? '#64748b' : (passRate >= 70 ? '#16a34a' : (passRate >= 50 ? '#ca8a04' : '#dc2626'));
                                             %>
                                             <div style="display: flex; align-items: center; gap: 10px;">
                                                 <div
@@ -115,7 +115,7 @@
                                                 </div>
                                                 <span
                                                     style="font-size: 0.8rem; font-weight: bold; color: <%= color %>;">
-                                                    <%= passRate.toFixed(0) %>%
+                                                    <%= passRate === null ? '—' : passRate.toFixed(0) + '%' %>
                                                 </span>
                                             </div>
                                     </td>

@@ -278,6 +278,15 @@ check('offline student profile controller returns a minimal field projection and
   assert.match(routes, /router\.get\('\/offline-view\/:id', studentController\.getOfflineStudentProfile\)/);
 });
 
+check('offline student profile template excludes sensitive fields and mutation controls', () => {
+  const profile = fs.readFileSync(path.join(__dirname, '..', 'views', 'students', 'offline-profile.ejs'), 'utf8');
+  assert.match(profile, /student\.first_name/);
+  assert.match(profile, /student\.admission_number/);
+  assert.match(profile, /student\.class_name/);
+  assert.doesNotMatch(profile, /student\.(?:dob|phone|email|address|parent_phone|parent_email|parent_address|passport_photo_path)/);
+  assert.doesNotMatch(profile, /student_health|student_fees|academicTerms|<form|<button/i);
+});
+
 check('offline student directory and profile responses carry a local offline marker', () => {
   assert.match(source, /data-acadme-offline="true"/);
   assert.match(source, /async function buildStudentOfflineProfileResponse\(response\)/);

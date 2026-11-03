@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v11';
+const CACHE_NAME = 'aljaleel-sis-v12';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -18,6 +18,7 @@ const OFFLINE_PAGE_PATHS = new Set([
     '/dashboard',
     '/attendance',
     '/students',
+    '/staff',
     '/attendance/take',
     '/results',
     '/results/manage',
@@ -52,9 +53,58 @@ function staticCacheKey(url) {
     });
 }
 
+function isOfflinePrivatePath(pathname) {
+    return OFFLINE_PAGE_PATHS.has(pathname) ||
+        /^\/staff\/view\/\d+\/?$/.test(pathname);
+}
+
+function isStaffOfflinePath(pathname) {
+    return pathname === '/staff' || pathname === '/staff/' ||
+        /^\/staff\/view\/\d+\/?$/.test(pathname);
+}
+
 function isOfflinePage(request, url) {
     return request.mode === 'navigate' && url.origin === self.location.origin &&
-        OFFLINE_PAGE_PATHS.has(url.pathname);
+        isOfflinePrivatePath(url.pathname);
+}
+
+async function buildStaffOfflineResponse(response) {
+    const cachedAt = Date.parse(response.headers.get('X-AcadMe-Cached-At') || '');
+    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+    if (!Number.isFinite(cachedAt) || Date.now() - cachedAt > maxAgeMs) {
+        return new Response(
+            'This saved staff page is older than 7 days. Reconnect and open it again to refresh the offline copy.',
+            {
+                status: 503,
+                statusText: 'Offline staff page expired',
+                headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+            }
+        );
+    }
+
+    const contentType = response.headers.get('Content-Type') || 'text/html; charset=utf-8';
+    if (!contentType.toLowerCase().includes('text/html')) return response;
+
+    const savedAt = new Date(cachedAt).toLocaleString();
+    const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
+        'Saved offline copy from ' + savedAt +
+        '. This staff page is read-only while offline. Reconnect to make changes or refresh its information.' +
+        '</div>';
+    const html = await response.text();
+    const responseHtml = /<body[^>]*>/i.test(html)
+        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag + noticeHtml)
+        : html.replace(/<[/]body>/i, noticeHtml + '</body>');
+    const headers = new Headers(response.headers);
+    headers.delete('Content-Length');
+    headers.set('Content-Type', contentType);
+    headers.set('Cache-Control', 'no-store');
+    headers.set('X-AcadMe-Offline-Page', 'read-only');
+
+    return new Response(responseHtml, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+    });
 }
 
 function matchesOfflineEntryContext(requestedUrl, cachedUrl) {
@@ -161,7 +211,7 @@ async function clearPrivatePageCache(cache) {
     await Promise.all(keys.map(async (key) => {
         const keyUrl = new URL(key.url);
         if (keyUrl.origin === self.location.origin &&
-            (OFFLINE_PAGE_PATHS.has(keyUrl.pathname) || AUTH_PATHS.has(keyUrl.pathname))) {
+            (isOfflinePrivatePath(keyUrl.pathname) || AUTH_PATHS.has(keyUrl.pathname))) {
             await cache.delete(key);
         }
     }));
@@ -189,7 +239,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const keys = await caches.keys();
-        const previousCache = await caches.open('aljaleel-sis-v10');
+        const previousCache = await caches.open('aljaleel-sis-v11');
         const nextCache = await caches.open(CACHE_NAME);
 
         // Preserve previously prepared authenticated sheets across this cache
@@ -271,7 +321,17 @@ self.addEventListener('fetch', (event) => {
                             method: 'GET',
                             credentials: 'same-origin'
                         });
-                        await cache.put(cacheKey, res.clone());
+                        let responseToCache = res.clone();
+                        if (isStaffOfflinePath(url.pathname)) {
+                            const staffHeaders = new Headers(responseToCache.headers);
+                            staffHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());
+                            responseToCache = new Response(responseToCache.body, {
+                                status: responseToCache.status,
+                                statusText: responseToCache.statusText,
+                                headers: staffHeaders
+                            });
+                        }
+                        await cache.put(cacheKey, responseToCache);
                         cachedSuccessfully = true;
                     } catch (cacheError) {
                         console.warn('[SW] Could not cache approved offline page:', url.pathname, cacheError);
@@ -316,7 +376,12 @@ self.addEventListener('fetch', (event) => {
                                 return value !== null && value.trim() !== '';
                             })
                             : true;
-                    if (exact && hasRequiredEntryContext) return exact;
+                    if (exact && hasRequiredEntryContext) {
+                        if (isStaffOfflinePath(url.pathname)) {
+                            return buildStaffOfflineResponse(exact);
+                        }
+                        return exact;
+                    }
 
                     // Match only the same entry context. Query parameter order may
                     // differ, but class/date or class/subject/session/term must not.

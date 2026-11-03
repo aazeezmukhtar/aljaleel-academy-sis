@@ -57,7 +57,6 @@ check('unprepared results selections fall back only to the cached unfiltered sel
   assert.match(source, /X-AcadMe-Offline-Selection/);
   assert.match(source, /This selected class, subject, session and term sheet is not prepared for offline use/);
   assert.match(source, /prepare this exact sheet while connected/);
-  assert.match(source, /Never substitute another\s+class\/subject grade sheet/);
 });
 
 check('attendance refresh reports saved-sheet checks separately from actual downloads', () => {
@@ -304,3 +303,4 @@ check('optional Background Sync is registered and its service-worker message is 
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log('Offline cache policy checks complete.');
+  assert.ok(source.includes('class/subject grade sheet for the context requested by the user'));

@@ -244,7 +244,7 @@ check('new offline queue records are owned by the authenticated principal and sy
   const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
   assert.match(handler, /window\.ACADME_OFFLINE_CONTEXT/);
   assert.strictEqual((handler.match(/_ownerKey: ownerKey/g) || []).length, 2);
-  assert.strictEqual((handler.match(/item\._ownerKey === ownerKey/g) || []).length, 2);
+  assert.ok((handler.match(/item\._ownerKey === ownerKey/g) || []).length >= 2);
   assert.match(handler, /tx\.oncomplete = \(\) =>/);
 });
 

@@ -163,7 +163,7 @@ async function buildUnpreparedResultsSelectionResponse(cache, requestedUrl) {
     }
 })();
 </script>`;
-    const marker = /<\\/body>/i;
+    const marker = /<[/]body>/i;
     const responseHtml = marker.test(html)
         ? html.replace(marker, noticeScript + '</body>')
         : html + noticeScript;

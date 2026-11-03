@@ -209,7 +209,7 @@ check('expired-session redirects preserve prepared sheets while explicit login/l
   assert.match(source, /if \(AUTH_PATHS\.has\(url\.pathname\) \|\| LOGOUT_PATHS\.has\(url\.pathname\)\)/);
   assert.match(source, /request\.method === 'POST'/);
   assert.match(source, /redirectedToAuthenticatedPage/);
-  assert.doesNotMatch(source, /const redirectedToAuth/);
+  assert.doesNotMatch(source, /const redirectedToAuth\s*=/);
 });
 
 check('prepared sheets survive migration from any previous AcadMe cache version and keep seven-day freshness metadata', () => {
@@ -342,9 +342,11 @@ check('manifest and Home links use protected dashboard route', () => {
 
 
 check('service worker preserves prior prepared pages when upgrading its cache version', () => {
-  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v15'\)/);
+  assert.match(source, /previousCacheNames = keys\.filter/);
+  assert.match(source, /name\.startsWith\('aljaleel-sis-v'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
-  assert.match(source, /keys\s+\.filter\(key => key !== CACHE_NAME\)/);
+  assert.match(source, /previousCacheNames\.map\(\(name\) => caches\.delete\(name\)\)/);
+  assert.match(source, /Timestamp legacy prepared attendance\/results/);
 });
 
 check('offline IndexedDB migration adds a manifest without deleting attendance or results queues', () => {
@@ -374,9 +376,9 @@ check('new offline queue records are owned by the authenticated principal and sy
   assert.match(handler, /tx\.oncomplete = \(\) =>/);
 });
 
-check('attendance preparation checks persistent records before downloading again', () => {
+check('attendance preparation checks persistent records before downloading again, including stale retained sheets', () => {
   const attendance = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'index.ejs'), 'utf8');
-  assert.match(attendance, /hasFreshPreparedSheet/);
+  assert.match(attendance, /hasUsablePreparedSheet/);
   assert.match(attendance, /getPreparedDatasetStatus/);
   assert.match(attendance, /recordPreparedDataset/);
 });

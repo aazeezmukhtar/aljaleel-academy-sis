@@ -46,7 +46,7 @@ check('explicit attendance and results preparation requests require complete con
   assert.match(source, /url\.pathname === '\/results\/manage'/);
   assert.match(source, /\['class_id', 'date'\]\.every/);
   assert.match(source, /\['class_id', 'subject_id', 'session', 'term'\]\.every/);
-  assert.match(source, /isOfflinePage\(request, url\) \|\| isPreparation/);
+  assert.match(source, /shouldCacheOfflinePage \|\| isPreparation/);
   assert.match(source, /headers\.set\('X-AcadMe-Offline-Cached', '1'\)/);
   assert.match(source, /cachedSuccessfully/);
 });
@@ -236,7 +236,7 @@ check('student directory offline access uses only the canonical unfiltered direc
   assert.match(source, /async function buildStudentDirectoryResponse\(cache, requestedUrl\)/);
   assert.match(source, /requestedUrl\.searchParams\.size > 0/);
   assert.match(source, /savedResponse = await cache\.match\(baseUrl\.href\)/);
-  assert.match(source, /Student profiles are not available offline/);
+  assert.match(source, /Open each student's read-only profile while connected/);
   assert.match(source, /This directory is read-only offline/);
   assert.match(source, /Filters require an internet connection/);
   assert.match(source, /X-AcadMe-Cached-At/);

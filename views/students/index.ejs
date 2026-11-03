@@ -307,7 +307,9 @@
                 rows.forEach(row => {
                     const classIds = (row.dataset.classIds || '').split(',').filter(Boolean);
                     const sectionIds = (row.dataset.sectionIds || '').split(',').filter(Boolean);
-                    const matches = (!search || (row.dataset.search || '').includes(search)) &&
+                    const searchTerms = search.split(/\s+/).filter(Boolean);
+                    const searchableText = (row.dataset.search || '').toLowerCase();
+                    const matches = (!searchTerms.length || searchTerms.every(term => searchableText.includes(term))) &&
                         (!selectedClass || classIds.includes(selectedClass)) &&
                         (!selectedGender || (row.dataset.gender || '').toLowerCase() === selectedGender) &&
                         (!selectedStatus || (row.dataset.status || '').toLowerCase() === selectedStatus) &&

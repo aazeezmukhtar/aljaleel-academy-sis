@@ -84,10 +84,11 @@ const getBroadsheet = async (req, res) => {
             // Augment students with results + totals
             const studentsWithResults = students.map(st => {
                 const results = resultMap[st.id] || {};
-                const scores = Object.values(results).map(r => r.total);
+                const visibleResults = subjects.map(subject => results[subject.id]).filter(Boolean);
+                const scores = visibleResults.map(r => r.total);
                 const total_score = scores.reduce((a, b) => a + b, 0);
                 const average = scores.length > 0 ? (total_score / scores.length).toFixed(1) : '-';
-                return { ...st, results, total_score, average };
+                return { ...st, results, subjects_sat: visibleResults.length, total_score, average };
             });
 
             // Sort by total score descending
@@ -155,7 +156,7 @@ const getSubjectAnalysis = async (req, res) => {
                    MAX(r.total) AS highest_score,
                    MIN(r.total) AS lowest_score,
                    SUM(CASE WHEN r.total >= 50 THEN 1 ELSE 0 END) AS pass_count
-            FROM subject_assignments sa
+            FROM (SELECT DISTINCT class_id, session, subject_id FROM subject_assignments) sa
             JOIN subjects s ON s.id = sa.subject_id
             JOIN classes c ON c.id = sa.class_id AND c.school_id = ?
             LEFT JOIN results r ON r.subject_id = sa.subject_id
@@ -232,7 +233,8 @@ const getTopPerformers = async (req, res) => {
                     AVG(r.total) as average_score
                 FROM students s
                 JOIN results r ON s.id = r.student_id
-                JOIN subject_assignments sa ON sa.class_id = r.class_id
+                JOIN (SELECT DISTINCT class_id, session, subject_id FROM subject_assignments) sa
+                    ON sa.class_id = r.class_id
                     AND sa.session = r.session AND sa.subject_id = r.subject_id
                 JOIN classes c ON c.id = r.class_id
                 WHERE r.class_id = ? AND r.term = ? AND r.session = ?

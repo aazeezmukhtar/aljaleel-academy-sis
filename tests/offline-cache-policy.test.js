@@ -236,20 +236,23 @@ check('student directory offline access uses only the canonical unfiltered direc
   assert.match(source, /async function buildStudentDirectoryResponse\(cache, requestedUrl\)/);
   assert.match(source, /requestedUrl\.searchParams\.size > 0/);
   assert.match(source, /savedResponse = await cache\.match\(baseUrl\.href\)/);
-  assert.match(source, /Open each student's read-only profile while connected/);
   assert.match(source, /This directory is read-only offline/);
-  assert.match(source, /Filters require an internet connection/);
+  assert.match(source, /Student and parent\/guardian phone numbers are available here/);
+  assert.match(source, /Individual student profiles are not stored for offline use/);
+  assert.match(source, /Search and filters work on this saved directory/);
   assert.match(source, /X-AcadMe-Cached-At/);
   assert.match(source, /Date\.now\(\) - cachedAt > maxAgeMs/);
   assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(source, /url\.searchParams\.size === 0/);
-  assert.match(source, /isStudentDirectoryPath\(url\.pathname\) && url\.search/);
+  assert.match(source, /isStudentDirectoryRequest/);
+  assert.match(source, /url\.searchParams\.size === 0/);
 });
 
 check('individual student profiles are excluded from offline caching', () => {
   assert.doesNotMatch(source, /isStudentProfileViewPath/);
   assert.doesNotMatch(source, /buildStudentOfflineProfileResponse/);
-  assert.doesNotMatch(source, /offline-view/);
+  assert.doesNotMatch(source, /new URL\('\/students\/offline-view/);
+  assert.match(source, /students\/offline-view/); // migration discards snapshots created by the previous release
   assert.doesNotMatch(source, /canonicalProfileUrl/);
   assert.match(source, /isOfflinePrivatePath/);
 });

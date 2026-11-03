@@ -127,46 +127,23 @@ async function buildUnpreparedResultsSelectionResponse(cache, requestedUrl) {
     const contentType = selectionPage.headers.get('Content-Type') || 'text/html; charset=utf-8';
     if (!contentType.toLowerCase().includes('text/html')) return null;
 
+    const hasSelection = ['session', 'term', 'class_id', 'subject_id'].every((key) => {
+        const value = requestedUrl.searchParams.get(key);
+        return value !== null && value.trim() !== '';
+    });
+    const noticeText = hasSelection
+        ? 'This selected class, subject, session and term sheet is not prepared for offline use. The selection form is available, but you must prepare this exact sheet while connected before entering results offline.'
+        : 'The results selection form is available offline. Choose a class, subject, session and term. Only an exact sheet prepared while connected can be opened for offline entry.';
+    const noticeHtml = '<div class="alert alert-warning" role="status" aria-live="polite" style="margin-bottom:14px;">' +
+        noticeText + '</div>';
+
     const html = await selectionPage.text();
-    const noticeScript = `<script>
-(function () {
-    try {
-        var params = new URLSearchParams(window.location.search);
-        var keys = ['session', 'term', 'class_id', 'subject_id'];
-        var hasSelection = keys.every(function (key) {
-            return (params.get(key) || '').trim() !== '';
-        });
-        var form = document.querySelector('form[action="/results/manage"]');
-        if (!form) return;
-
-        keys.forEach(function (key) {
-            var field = form.querySelector('[name="' + key + '"]');
-            var value = params.get(key);
-            if (field && value !== null && Array.prototype.some.call(field.options || [], function (option) {
-                return option.value === value;
-            })) {
-                field.value = value;
-            }
-        });
-
-        var notice = document.createElement('div');
-        notice.className = 'alert alert-warning';
-        notice.setAttribute('role', 'status');
-        notice.setAttribute('aria-live', 'polite');
-        notice.style.marginBottom = '14px';
-        notice.textContent = hasSelection
-            ? 'This results selection is not prepared for offline use. The selection form is available, but this exact class, subject, session and term sheet must be prepared while connected before results can be entered offline.'
-            : 'The results selection form is available offline. Choose a class, subject, session and term. Only an exact sheet prepared while connected can be opened for offline entry.';
-        form.parentNode.insertBefore(notice, form);
-    } catch (error) {
-        console.warn('[AcadMe SW] Could not annotate offline results selection:', error);
-    }
-})();
-</script>`;
-    const marker = /<[/]body>/i;
-    const responseHtml = marker.test(html)
-        ? html.replace(marker, noticeScript + '</body>')
-        : html + noticeScript;
+    // Insert plain HTML rather than an inline script so the notice also works
+    // when the application uses a restrictive Content-Security-Policy.
+    const formClose = /<\\/form>/i;
+    const responseHtml = formClose.test(html)
+        ? html.replace(formClose, noticeHtml + '</form>')
+        : html.replace(/<\\/body>/i, noticeHtml + '</body>');
 
     const headers = new Headers(selectionPage.headers);
     headers.set('Content-Type', contentType);

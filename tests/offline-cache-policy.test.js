@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v15'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v16'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -246,15 +246,12 @@ check('student directory offline access uses only the canonical unfiltered direc
   assert.match(source, /isStudentDirectoryPath\(url\.pathname\) && url\.search/);
 });
 
-check('standard View route is used for prepared offline student profiles without caching the full online page', () => {
-  assert.match(source, /function isStudentProfileViewPath\(pathname\)/);
-  assert.match(source, /const isStudentViewRequest = isStudentProfileViewPath\(url\.pathname\)/);
-  assert.match(source, /if \(isStudentViewRequest && request\.mode === 'navigate'/);
-  assert.match(source, /offline-view\/' \+ studentId/);
-  assert.match(source, /canonicalProfileUrl/);
-  assert.match(source, /buildStudentOfflineProfileResponse\(exactProfile\)/);
-  assert.match(source, /!isStudentViewRequest/);
-  assert.match(source, /date of birth and student\/parent contact information/);
+check('individual student profiles are excluded from offline caching', () => {
+  assert.doesNotMatch(source, /isStudentProfileViewPath/);
+  assert.doesNotMatch(source, /buildStudentOfflineProfileResponse/);
+  assert.doesNotMatch(source, /offline-view/);
+  assert.doesNotMatch(source, /canonicalProfileUrl/);
+  assert.match(source, /isOfflinePrivatePath/);
 });
 
 check('student directory offline search renders matching rows, not only a count', () => {
@@ -275,30 +272,27 @@ check('student directory offline search renders matching rows, not only a count'
   assert.match(directory, /href="\/students\/view\/<%= student\.id %>"/);
 });
 
-check('offline student profile controller includes DOB and contacts while respecting teacher class scope', () => {
+check('student directory includes student and guardian contact numbers in its cached HTML', () => {
+  const directory = fs.readFileSync(path.join(__dirname, '..', 'views', 'students', 'index.ejs'), 'utf8');
   const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'studentController.js'), 'utf8');
   const routes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'studentRoutes.js'), 'utf8');
-  assert.match(controller, /const getOfflineStudentProfile = async/);
-  assert.match(controller, /dob, phone, email, address, parent_phone, parent_phone_alt, parent_email, parent_address/);
-  assert.match(controller, /permittedClassIds/);
-  assert.match(routes, /router\.get\('\/offline-view\/:id', studentController\.getOfflineStudentProfile\)/);
+  assert.match(directory, /Contact Numbers/);
+  assert.match(directory, /student\.phone/);
+  assert.match(directory, /student\.parent_phone/);
+  assert.match(directory, /student\.parent_phone_alt/);
+  assert.match(directory, /href="tel:/);
+  assert.match(controller, /SELECT s\.\*, c\.name as class_name/);
+  assert.doesNotMatch(controller, /getOfflineStudentProfile/);
+  assert.doesNotMatch(routes, /offline-view/);
+  assert.match(source, /async function buildStudentDirectoryResponse/);
 });
 
-check('offline student profile template shows DOB and student/guardian contacts but no edit actions or sensitive modules', () => {
-  const profile = fs.readFileSync(path.join(__dirname, '..', 'views', 'students', 'offline-profile.ejs'), 'utf8');
-  for (const field of ['student.dob', 'student.phone', 'student.email', 'student.address', 'student.parent_phone', 'student.parent_phone_alt', 'student.parent_email', 'student.parent_address']) {
-    assert.ok(profile.includes(field), 'missing offline profile field: ' + field);
-  }
-  assert.match(profile, /read-only offline/);
-  assert.doesNotMatch(profile, /student_health|student_fees|academicTerms|<form|<button/i);
-});
-
-check('offline student directory and profile responses carry a local offline marker', () => {
+check('offline student directory response carries a local offline marker and seven-day expiry', () => {
   assert.match(source, /data-acadme-offline="true"/);
-  assert.match(source, /async function buildStudentOfflineProfileResponse\(response\)/);
+  assert.match(source, /async function buildStudentDirectoryResponse\(cache, requestedUrl\)/);
   assert.match(source, /X-AcadMe-Cached-At/);
   assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
-  assert.match(source, /!isStudentViewRequest/);
+  assert.doesNotMatch(source, /buildStudentOfflineProfileResponse/);
 });
 
 check('versioned same-origin assets share an unversioned cache key', () => {
@@ -320,7 +314,7 @@ check('manifest and Home links use protected dashboard route', () => {
 
 
 check('service worker preserves prior prepared pages when upgrading its cache version', () => {
-  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v14'\)/);
+  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v15'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
   assert.match(source, /keys\s+\.filter\(key => key !== CACHE_NAME\)/);
 });

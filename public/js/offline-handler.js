@@ -224,6 +224,7 @@ async function saveResultOffline(data) {
         const req = store.add({ ...data, _ownerKey: ownerKey, _savedAt: new Date().toISOString() });
         tx.oncomplete = () => {
             updateSyncUI();
+            requestBackgroundSync();
             resolve();
         };
         tx.onerror = () => reject(tx.error || req.error || new Error('Offline results could not be stored.'));

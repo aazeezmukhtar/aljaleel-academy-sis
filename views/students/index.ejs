@@ -211,7 +211,7 @@
                                         </td>
                                         <td data-label="Class">
                                             <% if (student.class_name) { %>
-                                                <span class="badge student-class-inline"
+                                                <span class="student-class-inline"
                                                     style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
                                                     <%= student.class_name %>
                                                 </span>
@@ -534,7 +534,7 @@
                         : `<i class="bi bi-person-fill" style="color: #9ca3af; font-size: 1.25rem;"></i>`;
 
                     const classBadgeHtml = s.class_name 
-                        ? `<span class="badge student-class-inline" style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.class_name)}</span>`
+                        ? `<span class="student-class-inline" style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.class_name)}</span>`
                         : `<span class="text-muted">Unassigned</span>`;
 
                     const statusHtml = s.status === 'active'
@@ -597,10 +597,13 @@
     <style>
         /* Keep comma-separated class assignments on one line beside the student ID. */
         .student-class-inline {
-            display: inline-block !important;
+            display: inline !important;
             white-space: nowrap !important;
+            width: auto !important;
             max-width: none !important;
             overflow: visible !important;
+            overflow-x: visible !important;
+            overflow-y: visible !important;
             vertical-align: middle;
         }
 

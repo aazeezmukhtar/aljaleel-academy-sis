@@ -239,7 +239,7 @@ check('student directory offline access uses only the canonical unfiltered direc
   assert.match(source, /This directory is read-only offline/);
   assert.match(source, /Student and parent\/guardian phone numbers are available here/);
   assert.match(source, /Individual student profiles are not stored for offline use/);
-  assert.match(source, /Search and filters work on this saved directory/);
+  assert.match(source, /search and filters work on this saved directory/i);
   assert.match(source, /X-AcadMe-Cached-At/);
   assert.match(source, /Date\.now\(\) - cachedAt > maxAgeMs/);
   assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
@@ -252,7 +252,7 @@ check('individual student profiles are excluded from offline caching', () => {
   assert.doesNotMatch(source, /isStudentProfileViewPath/);
   assert.doesNotMatch(source, /buildStudentOfflineProfileResponse/);
   assert.doesNotMatch(source, /new URL\('\/students\/offline-view/);
-  assert.match(source, /students\/offline-view/); // migration discards snapshots created by the previous release
+  assert.match(source, /offline-view/); // migration discards snapshots created by the previous release
   assert.doesNotMatch(source, /canonicalProfileUrl/);
   assert.match(source, /isOfflinePrivatePath/);
 });

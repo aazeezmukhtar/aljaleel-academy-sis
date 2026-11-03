@@ -292,6 +292,7 @@ check('offline student directory and profile responses carry a local offline mar
   assert.match(source, /async function buildStudentOfflineProfileResponse\(response\)/);
   assert.match(source, /X-AcadMe-Cached-At/);
   assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(source, /\(!isStudentProfileRequest \|\| url\.searchParams\.size === 0\)/);
 });
 
 check('versioned same-origin assets share an unversioned cache key', () => {

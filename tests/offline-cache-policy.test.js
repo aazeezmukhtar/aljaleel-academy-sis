@@ -28,7 +28,9 @@ check('cache version is bumped to retire previous broad-navigation cache', () =>
 check('only explicit approved paths qualify for offline page caching', () => {
   assert.match(source, /const OFFLINE_PAGE_PATHS = new Set\(/);
   assert.match(source, /function isOfflinePage\(request, url\)/);
-  assert.match(source, /OFFLINE_PAGE_PATHS\.has\(url\.pathname\)/);
+  assert.match(source, /function isOfflinePrivatePath\(pathname\)/);
+  assert.match(source, /OFFLINE_PAGE_PATHS\.has\(pathname\)/);
+  assert.match(source, /isOfflinePrivatePath\(url\.pathname\)/);
 });
 
 check('authenticated navigation caching requires successful, non-redirected HTML', () => {
@@ -179,7 +181,10 @@ check('entry cache context matcher behaves safely for actual URL combinations', 
 check('exact cached entry pages are not served when required context is missing', () => {
   assert.match(source, /const hasRequiredEntryContext = url\.pathname === '\/attendance\/take'/);
   assert.match(source, /\['class_id', 'subject_id', 'session', 'term'\]\.every/);
-  assert.match(source, /if \(exact && hasRequiredEntryContext\) return exact/);
+  assert.match(source, /if \(exact && hasRequiredEntryContext\) \{/);
+  assert.match(source, /if \(isStaffOfflinePath\(url\.pathname\)\) \{/);
+  assert.match(source, /return buildStaffOfflineResponse\(exact\)/);
+  assert.match(source, /return exact;/);
 });
 
 check('login and logout routes are not served from offline page cache', () => {

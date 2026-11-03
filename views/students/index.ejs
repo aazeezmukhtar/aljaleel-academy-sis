@@ -211,7 +211,7 @@
                                         </td>
                                         <td data-label="Class">
                                             <% if (student.class_name) { %>
-                                                <span class="badge"
+                                                <span class="badge student-class-inline"
                                                     style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">
                                                     <%= student.class_name %>
                                                 </span>
@@ -534,7 +534,7 @@
                         : `<i class="bi bi-person-fill" style="color: #9ca3af; font-size: 1.25rem;"></i>`;
 
                     const classBadgeHtml = s.class_name 
-                        ? `<span class="badge" style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.class_name)}</span>`
+                        ? `<span class="badge student-class-inline" style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.class_name)}</span>`
                         : `<span class="text-muted">Unassigned</span>`;
 
                     const statusHtml = s.status === 'active'
@@ -595,6 +595,23 @@
     </script>
 
     <style>
+        /* Keep comma-separated multi-class assignments on one horizontal line.
+           Narrow screens can scroll within the badge instead of wrapping labels. */
+        .student-class-inline {
+            display: inline-block !important;
+            white-space: nowrap !important;
+            max-width: 100% !important;
+            min-width: 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+            vertical-align: middle;
+            scrollbar-width: thin;
+        }
+
+        .student-mobile-cards td[data-label="Class"] {
+            min-width: 0;
+        }
+
         .icon-filters {
             display: flex;
             gap: 8px;

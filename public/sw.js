@@ -140,7 +140,7 @@ async function buildStudentDirectoryResponse(cache, requestedUrl) {
         : '';
     const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
         'Saved student directory from ' + savedAt +
-        ". This directory is read-only offline. Search and filters work on this saved directory. Open each student's read-only profile while connected to prepare it for offline use. Offline profiles contain basic identity and class details only." +
+        ". This directory is read-only offline. Student and parent/guardian phone numbers are available here, and search and filters work on this saved directory. Individual student profiles are not stored for offline use." +
         detail +
         '</div>';
     const html = await savedResponse.text();

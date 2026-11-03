@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v12';
+const CACHE_NAME = 'aljaleel-sis-v13';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -53,8 +53,13 @@ function staticCacheKey(url) {
     });
 }
 
+function isStudentDirectoryPath(pathname) {
+    return pathname === '/students' || pathname === '/students/';
+}
+
 function isOfflinePrivatePath(pathname) {
     return OFFLINE_PAGE_PATHS.has(pathname) ||
+        isStudentDirectoryPath(pathname) ||
         /^\/staff\/view\/\d+\/?$/.test(pathname);
 }
 
@@ -103,6 +108,54 @@ async function buildStaffOfflineResponse(response) {
     return new Response(responseHtml, {
         status: response.status,
         statusText: response.statusText,
+        headers
+    });
+}
+
+async function buildStudentDirectoryResponse(cache, requestedUrl) {
+    const baseUrl = new URL('/students', self.location.origin);
+    const savedResponse = await cache.match(baseUrl.href);
+    if (!savedResponse) return null;
+
+    const cachedAt = Date.parse(savedResponse.headers.get('X-AcadMe-Cached-At') || '');
+    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+    if (!Number.isFinite(cachedAt) || Date.now() - cachedAt > maxAgeMs) {
+        return new Response(
+            'This saved student directory is older than 7 days. Reconnect and open the directory again to refresh its offline copy.',
+            {
+                status: 503,
+                statusText: 'Offline student directory expired',
+                headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+            }
+        );
+    }
+
+    const contentType = savedResponse.headers.get('Content-Type') || 'text/html; charset=utf-8';
+    if (!contentType.toLowerCase().includes('text/html')) return savedResponse;
+
+    const savedAt = new Date(cachedAt).toLocaleString();
+    const filteredRequest = requestedUrl.searchParams.size > 0;
+    const detail = filteredRequest
+        ? ' Filters require an internet connection, so this is the saved unfiltered directory.'
+        : '';
+    const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
+        'Saved student directory from ' + savedAt +
+        '. This directory is read-only offline. Student profiles are not available offline. Reconnect to refresh information or use filters.' +
+        detail +
+        '</div>';
+    const html = await savedResponse.text();
+    const responseHtml = /<body[^>]*>/i.test(html)
+        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag + noticeHtml)
+        : html.replace(/<[/]body>/i, noticeHtml + '</body>');
+    const headers = new Headers(savedResponse.headers);
+    headers.delete('Content-Length');
+    headers.set('Content-Type', contentType);
+    headers.set('Cache-Control', 'no-store');
+    headers.set('X-AcadMe-Offline-Page', 'read-only');
+
+    return new Response(responseHtml, {
+        status: savedResponse.status,
+        statusText: savedResponse.statusText,
         headers
     });
 }
@@ -239,7 +292,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
     event.waitUntil((async () => {
         const keys = await caches.keys();
-        const previousCache = await caches.open('aljaleel-sis-v11');
+        const previousCache = await caches.open('aljaleel-sis-v12');
         const nextCache = await caches.open(CACHE_NAME);
 
         // Preserve previously prepared authenticated sheets across this cache
@@ -247,6 +300,9 @@ self.addEventListener('activate', (event) => {
         const previousKeys = await previousCache.keys();
         for (const request of previousKeys) {
             const url = new URL(request.url);
+            // Older releases could cache filtered student-directory snapshots.
+            // Keep only the canonical unfiltered directory in the new cache.
+            if (isStudentDirectoryPath(url.pathname) && url.search) continue;
             const isStatic = isStaticAsset(url);
             if (isStatic && await nextCache.match(request)) continue;
             const response = await previousCache.match(request);
@@ -311,7 +367,10 @@ self.addEventListener('fetch', (event) => {
                 }
 
                 const isPreparation = isOfflinePreparationRequest(request, url);
-                if ((isOfflinePage(request, url) || isPreparation) &&
+                const isStudentDirectoryRequest = isStudentDirectoryPath(url.pathname);
+                const shouldCacheOfflinePage = isOfflinePage(request, url) &&
+                    (!isStudentDirectoryRequest || url.searchParams.size === 0);
+                if ((shouldCacheOfflinePage || isPreparation) &&
                     res && res.status === 200 && !res.redirected &&
                     (res.headers.get('content-type') || '').toLowerCase().includes('text/html')) {
                     let cachedSuccessfully = false;
@@ -322,7 +381,7 @@ self.addEventListener('fetch', (event) => {
                             credentials: 'same-origin'
                         });
                         let responseToCache = res.clone();
-                        if (isStaffOfflinePath(url.pathname)) {
+                        if (isStaffOfflinePath(url.pathname) || isStudentDirectoryRequest) {
                             const staffHeaders = new Headers(responseToCache.headers);
                             staffHeaders.set('X-AcadMe-Cached-At', new Date().toISOString());
                             responseToCache = new Response(responseToCache.body, {
@@ -364,6 +423,11 @@ self.addEventListener('fetch', (event) => {
 
                 // Only approved pages can be served from the private offline cache.
                 if (isOfflinePage(request, url)) {
+                    if (isStudentDirectoryPath(url.pathname)) {
+                        const studentDirectoryResponse = await buildStudentDirectoryResponse(cache, url);
+                        if (studentDirectoryResponse) return studentDirectoryResponse;
+                    }
+
                     const exact = await cache.match(request);
                     const hasRequiredEntryContext = url.pathname === '/attendance/take'
                         ? ['class_id', 'date'].every((key) => {

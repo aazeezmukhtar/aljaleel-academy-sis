@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v10'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v11'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -47,6 +47,23 @@ check('explicit attendance and results preparation requests require complete con
   assert.match(source, /isOfflinePage\(request, url\) \|\| isPreparation/);
   assert.match(source, /headers\.set\('X-AcadMe-Offline-Cached', '1'\)/);
   assert.match(source, /cachedSuccessfully/);
+});
+
+
+check('unprepared results selections fall back only to the cached unfiltered selector page', () => {
+  assert.match(source, /async function buildUnpreparedResultsSelectionResponse\(cache, requestedUrl\)/);
+  assert.match(source, /new URL\('\/results\/manage', self\.location\.origin\)/);
+  assert.match(source, /buildUnpreparedResultsSelectionResponse\(cache, url\)/);
+  assert.match(source, /X-AcadMe-Offline-Selection/);
+  assert.match(source, /This selected class, subject, session and term sheet is not prepared for offline use/);
+  assert.match(source, /prepare this exact sheet while connected/);
+});
+
+check('attendance refresh reports saved-sheet checks separately from actual downloads', () => {
+  const attendance = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'index.ejs'), 'utf8');
+  assert.match(attendance, /Checking saved offline attendance for/);
+  assert.match(attendance, /Preparing \' \+ batch\.length \+ \' missing class\/date sheets/);
+  assert.doesNotMatch(attendance, /setStatus\('Preparing offline attendance for ' \+ dates\.length/);
 });
 
 check('result entry page offers explicit offline preparation for the exact academic context', () => {
@@ -216,7 +233,7 @@ check('manifest and Home links use protected dashboard route', () => {
 
 
 check('service worker preserves prior prepared pages when upgrading its cache version', () => {
-  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v9'\)/);
+  assert.match(source, /previousCache = await caches\.open\('aljaleel-sis-v10'\)/);
   assert.match(source, /await nextCache\.put\(request, response\)/);
   assert.match(source, /keys\s+\.filter\(key => key !== CACHE_NAME\)/);
 });
@@ -286,3 +303,4 @@ check('optional Background Sync is registered and its service-worker message is 
 
 if (process.exitCode) process.exit(process.exitCode);
 console.log('Offline cache policy checks complete.');
+  assert.ok(source.includes('class/subject grade sheet for the context requested by the user'));

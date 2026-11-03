@@ -248,7 +248,7 @@
                 count + classes.filter(c => preparedSheets.has(sheetKey(c.id, date))).length, 0
             );
 
-            setStatus('Preparing offline attendance for ' + dates.length + ' dates, including the next 7 calendar days…');
+            setStatus('Checking saved offline attendance for ' + totalSheets + ' class/date sheets…');
             for (const date of dates) {
                 if (thisRun !== runId) return;
                 for (let i = 0; i < classes.length; i += 3) {
@@ -264,6 +264,8 @@
                     }
                     if (!batch.length) continue;
 
+                    setStatus('Preparing offline attendance: ' + readySheetCount() + ' of ' + totalSheets +
+                        ' sheets already verified. Preparing ' + batch.length + ' missing class/date sheets…');
                     const results = await Promise.allSettled(batch.map(async c => {
                         const url = sheetUrl(c.id, date);
                         const response = await fetch(url, {
@@ -295,8 +297,8 @@
                 }
 
                 const ready = readyDates();
-                setStatus('Preparing offline attendance: ' + readySheetCount() + ' of ' + totalSheets +
-                    ' class/date sheets ready. Ready dates: ' + (ready.join(', ') || 'none') + '.');
+                setStatus('Checking saved offline attendance: ' + readySheetCount() + ' of ' + totalSheets +
+                    ' class/date sheets verified so far.');
             }
 
             if (thisRun !== runId) return;

@@ -84,7 +84,7 @@
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3>Academic Reach (Subjects)</h3>
                             <% if (user.role==='Admin' ) { %>
-                                <button class="btn btn-sm btn-outline" onclick="openSubjectAssignmentModal()">Assign Subjects</button>
+                                <button type="button" class="btn btn-sm btn-outline" aria-haspopup="dialog" aria-controls="subjectAssignmentModal" onclick="openSubjectAssignmentModal()">Assign Subjects</button>
                                 <% } %>
                         </div>
                         <div class="list-group">
@@ -110,8 +110,8 @@
                                                     action="/staff/delete-assignment/<%= a.id %>?type=subject&staff_id=<%= member.id %>"
                                                     method="POST"
                                                     onsubmit="return confirm('Remove this subject assignment?')">
-                                                    <button type="submit" class="btn-text text-danger" title="Remove"><i
-                                                            class="bi bi-trash"></i></button>
+                                                    <button type="submit" class="btn-text text-danger" title="Remove" aria-label="Remove subject assignment for <%= a.subject_name %>"><i
+                                                            class="bi bi-trash" aria-hidden="true"></i></button>
                                                 </form>
                                                 <% } %>
                                         </div>
@@ -131,7 +131,7 @@
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3>Administrative Scope (Classes)</h3>
                             <% if (user.role==='Admin' ) { %>
-                                <button class="btn btn-sm btn-outline" onclick="openClassAssignmentModal()">Assign
+                                <button type="button" class="btn btn-sm btn-outline" aria-haspopup="dialog" aria-controls="classAssignmentModal" onclick="openClassAssignmentModal()">Assign
                                     Class</button>
                                 <% } %>
                         </div>
@@ -157,8 +157,8 @@
                                                     action="/staff/delete-assignment/<%= a.id %>?type=class&staff_id=<%= member.id %>"
                                                     method="POST"
                                                     onsubmit="return confirm('Remove this class assignment?')">
-                                                    <button type="submit" class="btn-text text-danger" title="Remove"><i
-                                                            class="bi bi-trash"></i></button>
+                                                    <button type="submit" class="btn-text text-danger" title="Remove" aria-label="Remove class assignment for <%= a.class_name %>"><i
+                                                            class="bi bi-trash" aria-hidden="true"></i></button>
                                                 </form>
                                                 <% } %>
                                         </div>

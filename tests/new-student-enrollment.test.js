@@ -144,9 +144,9 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
     let transactionRolledBack = false;
     db.all = async (sql) => {
       if (sql.includes('FROM sections WHERE school_id = ?')) {
-        return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }];
+        return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }, { id: 4, name: 'Tahfeez', current_session: '2026/2027', current_term: '2nd Term' }];
       }
-      if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }];
+      if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }, { id: 20, section_id: 4 }];
       throw new Error('Unexpected list query: ' + sql);
     };
     db.get = async (sql, params, client) => {

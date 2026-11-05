@@ -351,11 +351,16 @@ const enrollStudent = async (req, res) => {
             if (!studentRow) throw new Error('Student record could not be verified after insertion.');
 
             for (const plan of assignmentPlans) {
-                await db.run(
-                    'INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)',
-                    [studentRow.id, plan.classId, plan.session, plan.term],
-                    client
-                );
+                await changeEnrollment({
+                    schoolId,
+                    studentId: studentRow.id,
+                    sectionId: plan.sectionId,
+                    destinationClassId: plan.classId,
+                    destinationSession: plan.session,
+                    destinationTerm: plan.term,
+                    eventType: 'admission',
+                    recordedBy: user.id
+                }, { inTransaction: true, client });
             }
         });
 

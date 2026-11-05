@@ -34,6 +34,8 @@ jobs:
         run: node tests/offline-cache-policy.test.js
       - name: Run section-owned academic-records regression tests
         run: npm run test:section-owned
+      - name: Run UI shell accessibility regression checks
+        run: npm run test:ui-shell
       - name: Remove disposable SQLite database
         if: always()
         run: rm -f .test-database.sqlite .test-database.sqlite-shm .test-database.sqlite-wal

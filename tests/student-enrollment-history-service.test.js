@@ -1,7 +1,6 @@
 'use strict';
 
 const assert = require('assert');
-const path = require('path');
 const Database = require('better-sqlite3');
 
 const sqlite = new Database(':memory:');
@@ -51,10 +50,10 @@ sqlite.exec(`
 `);
 
 const fakeDb = {
-  get: async (sql, params = []) => sqlite.prepare(sql).get(params),
-  all: async (sql, params = []) => sqlite.prepare(sql).all(params),
+  get: async (sql, params = []) => sqlite.prepare(sql).get(...params),
+  all: async (sql, params = []) => sqlite.prepare(sql).all(...params),
   run: async (sql, params = []) => {
-    const result = sqlite.prepare(sql).run(params);
+    const result = sqlite.prepare(sql).run(...params);
     return { changes: result.changes, lastInsertRowid: result.lastInsertRowid };
   },
   transaction: async callback => {
@@ -115,7 +114,7 @@ const base = {
     }), /between sections/, 'Cross-section movement must be rejected');
 
     await assert.rejects(() => changeEnrollment({
-      ...base, destinationClassId: 1001, effectiveDate: '2026-02-30'
+      ...base, effectiveDate: '2026-02-30'
     }), /valid calendar date/, 'Invalid effective dates must be rejected');
 
     const events = sqlite.prepare(

@@ -3,14 +3,8 @@
 const db = require('../utils/db');
 
 const EVENT_TYPES = new Set([
-    'admission',
-    'internal_transfer',
-    'promotion',
-    'repetition',
-    'correction',
-    'section_exit',
-    'external_transfer',
-    'graduation'
+    'admission', 'internal_transfer', 'promotion', 'repetition',
+    'correction', 'section_exit', 'external_transfer', 'graduation'
 ]);
 
 const REQUIRED_CLASS_SHAPES = {
@@ -41,18 +35,11 @@ function validateEffectiveDate(value) {
 
 async function applyEnrollmentChange(input, client) {
     const {
-        schoolId,
-        studentId,
-        sectionId: requestedSectionId,
-        sourceClassId = null,
-        destinationClassId = null,
-        sourceSession = null,
-        destinationSession = null,
-        eventType,
-        effectiveDate = null,
-        reason = null,
-        destinationSchool = null,
-        recordedBy = null
+        schoolId, studentId, sectionId: requestedSectionId,
+        sourceClassId = null, destinationClassId = null,
+        sourceSession = null, destinationSession = null,
+        eventType, effectiveDate = null, reason = null,
+        destinationSchool = null, recordedBy = null
     } = input || {};
 
     if (!positiveId(schoolId) || !positiveId(studentId)) {
@@ -60,9 +47,6 @@ async function applyEnrollmentChange(input, client) {
     }
     if (!EVENT_TYPES.has(eventType)) {
         throw new Error('Unsupported enrollment history event type.');
-    }
-    if (eventType === 'legacy_baseline') {
-        throw new Error('Legacy baselines are created only by the migration.');
     }
 
     const shape = REQUIRED_CLASS_SHAPES[eventType];
@@ -82,8 +66,7 @@ async function applyEnrollmentChange(input, client) {
     const normalizedDate = validateEffectiveDate(effectiveDate);
     const student = await db.get(
         'SELECT id FROM students WHERE id = ? AND school_id = ?',
-        [studentId, schoolId],
-        client
+        [studentId, schoolId], client
     );
     if (!student) throw new Error('Student was not found in this school.');
 
@@ -92,16 +75,14 @@ async function applyEnrollmentChange(input, client) {
     if (sourceClassId) {
         sourceClass = await db.get(
             'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
-            [sourceClassId, schoolId],
-            client
+            [sourceClassId, schoolId], client
         );
         if (!sourceClass) throw new Error('Source class was not found in this school.');
     }
     if (destinationClassId) {
         destinationClass = await db.get(
             'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
-            [destinationClassId, schoolId],
-            client
+            [destinationClassId, schoolId], client
         );
         if (!destinationClass) throw new Error('Destination class was not found in this school.');
     }
@@ -119,27 +100,29 @@ async function applyEnrollmentChange(input, client) {
     if (sourceClass) {
         const sourceEnrollment = await db.get(
             'SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
-            [studentId, sourceClassId, sourceSession],
-            client
+            [studentId, sourceClassId, sourceSession], client
         );
-        if (!sourceEnrollment) throw new Error('The expected source enrollment no longer exists. Refresh and review the student placement.');
+        if (!sourceEnrollment) {
+            throw new Error('The expected source enrollment no longer exists. Refresh and review the student placement.');
+        }
     }
 
     if (destinationClass) {
-        const conflictingTarget = await db.get(`
+        let conflictSql = `
             SELECT se.id, se.class_id
             FROM student_enrollments se
             JOIN classes c ON c.id = se.class_id AND c.school_id = ?
             WHERE se.student_id = ?
               AND se.session = ?
               AND c.section_id = ?
-              AND (? IS NULL OR se.class_id <> ?)
-            LIMIT 1
-        `, [
-            schoolId, studentId, destinationSession, resolvedSectionId,
-            sourceClass && String(sourceSession) === String(destinationSession) ? sourceClassId : null,
-            sourceClass && String(sourceSession) === String(destinationSession) ? sourceClassId : null
-        ], client);
+        `;
+        const conflictParams = [schoolId, studentId, destinationSession, resolvedSectionId];
+        if (sourceClass && String(sourceSession) === String(destinationSession)) {
+            conflictSql += ' AND se.class_id <> ?';
+            conflictParams.push(sourceClassId);
+        }
+        conflictSql += ' LIMIT 1';
+        const conflictingTarget = await db.get(conflictSql, conflictParams, client);
         if (conflictingTarget) {
             throw new Error('The student already has a different placement in the destination section and session. Resolve it before continuing.');
         }
@@ -151,16 +134,14 @@ async function applyEnrollmentChange(input, client) {
     if (sourceClass && (!destinationClass || String(sourceSession) === String(destinationSession))) {
         await db.run(
             'DELETE FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
-            [studentId, sourceClassId, sourceSession],
-            client
+            [studentId, sourceClassId, sourceSession], client
         );
     }
 
     if (destinationClass) {
         await db.run(
             'INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)',
-            [studentId, destinationClassId, destinationSession],
-            client
+            [studentId, destinationClassId, destinationSession], client
         );
     }
 
@@ -182,8 +163,7 @@ async function applyEnrollmentChange(input, client) {
     ], client);
 
     return {
-        changed: true,
-        sectionId: resolvedSectionId,
+        changed: true, sectionId: resolvedSectionId,
         sourceClassId: sourceClassId || null,
         destinationClassId: destinationClassId || null,
         eventType

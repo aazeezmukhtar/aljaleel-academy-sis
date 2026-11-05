@@ -233,7 +233,8 @@ const getEnrollmentForm = async (req, res) => {
             classes,
             sections,
             currentSession,
-            currentTerm
+            currentTerm,
+            error: req.query.error || ''
         });
     } catch (err) {
         console.error('Fetch Metadata Error:', err);

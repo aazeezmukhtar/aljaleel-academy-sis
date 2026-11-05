@@ -15,6 +15,7 @@
     "test:image-optimizer": "node tests/image-optimizer.test.js",
     "test:offline-foundation": "node tests/offline-cache-policy.test.js",
     "test:student-class-layout": "node tests/student-class-layout.test.js",
+    "test:student-enrollment-ui": "node tests/student-enrollment-ui.test.js",
     "test:ui-shell": "node tests/ui-shell-accessibility.test.js"
   },
   "dependencies": {

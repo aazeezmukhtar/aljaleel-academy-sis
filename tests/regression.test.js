@@ -9,6 +9,7 @@ const tests = [
   ['auth-middleware.test.js', 'Authentication middleware unit tests'],
   ['session-secret.test.js', 'Session secret configuration unit tests'],
   ['database-fixture.test.js', 'Isolated SQLite schema smoke test'],
+  ['student-enrollment-history-migration.test.js', 'Enrollment history migration, legacy baseline, and preservation tests'],
   ['result-helper.test.js', 'Result scoring unit tests'],
   ['result-context-integrity.test.js', 'Result class, subject, and enrollment context tests'],
   ['result-report-section-isolation.test.js', 'Section-isolated report-card query guards'],

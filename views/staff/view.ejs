@@ -187,7 +187,7 @@
 
                 <div class="form-group" style="margin-bottom: 20px;">
                     <label for="modal_class_id">Select Class</label>
-                    <select name="class_id" id="modal_class_id required class="form-control">
+                    <select name="class_id" id="modal_class_id" required class="form-control">
                         <option value="">-- Choose Class --</option>
                         <% allClasses.forEach(c=> { %>
                             <option value="<%= c.id %>">
@@ -199,8 +199,8 @@
 
 
                 <div class="form-group" style="margin-bottom: 25px;">
-                    <label>Academic Session</label>
-                    <input type="text" name="session" placeholder="e.g. 2025/2026" required class="form-control">
+                    <label for="class-assignment-session">Academic Session</label>
+                    <input id="class-assignment-session" type="text" name="session" placeholder="e.g. 2025/2026" required class="form-control">
                 </div>
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
@@ -246,8 +246,8 @@
                 </div>
 
                 <div class="form-group" style="margin-bottom: 25px;">
-                    <label>Academic Session</label>
-                    <input type="text" name="session" placeholder="e.g. 2025/2026" required class="form-control">
+                    <label for="subject-assignment-session">Academic Session</label>
+                    <input id="subject-assignment-session" type="text" name="session" placeholder="e.g. 2025/2026" required class="form-control">
                 </div>
 
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">

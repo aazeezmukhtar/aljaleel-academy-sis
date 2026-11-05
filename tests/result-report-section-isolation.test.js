@@ -58,14 +58,45 @@ const academicReportSource = fs.readFileSync(
   'utf8'
 );
 
+const academicBroadsheet = academicReportSource.slice(academicReportSource.indexOf('const getBroadsheet'), academicReportSource.indexOf('const getSubjectAnalysis'));
+const academicAnalysis = academicReportSource.slice(academicReportSource.indexOf('const getSubjectAnalysis'), academicReportSource.indexOf('const getTopPerformers'));
+const academicTop = academicReportSource.slice(academicReportSource.indexOf('const getTopPerformers'));
+
 for (const [name, body] of [
-  ['broadsheet', academicReportSource.slice(academicReportSource.indexOf('const getBroadsheet'), academicReportSource.indexOf('const getSubjectAnalysis'))],
-  ['subject analysis', academicReportSource.slice(academicReportSource.indexOf('const getSubjectAnalysis'), academicReportSource.indexOf('const getTopPerformers'))],
-  ['top performers', academicReportSource.slice(academicReportSource.indexOf('const getTopPerformers'))]
+  ['broadsheet', academicBroadsheet],
+  ['top performers', academicTop]
 ]) {
   assert.match(body, /r\.class_id = \?/,
     `${name} must restrict result rows to the selected class`);
 }
+assert.match(academicAnalysis, /r\.class_id = sa\.class_id/,
+  'Subject analysis must join results to the class captured at result entry');
+assert.match(academicAnalysis, /sa\.class_id = \?/,
+  'Subject analysis must restrict assigned subjects to the selected class');
+for (const [name, body] of [
+  ['broadsheet', academicBroadsheet],
+  ['subject analysis', academicAnalysis],
+  ['top performers', academicTop]
+]) {
+  assert.match(body, /status IN \('approved', 'published'\)/,
+    `${name} must exclude draft and submitted result rows`);
+  assert.match(body, /canAccessClass\(class_id\)/,
+    `${name} must authorize the requested class, not just the dropdown list`);
+}
+assert.doesNotMatch(academicBroadsheet, /JOIN student_enrollments se ON r\.student_id = se\.student_id/,
+  'Broadsheet result ownership must not depend on current enrollment');
+assert.doesNotMatch(academicAnalysis, /JOIN student_enrollments se ON r\.student_id = se\.student_id/,
+  'Subject analysis result ownership must not depend on current enrollment');
+assert.doesNotMatch(academicTop, /JOIN student_enrollments se ON s\.id = se\.student_id/,
+  'Top-performer result ownership must not depend on current enrollment');
+assert.match(academicAnalysis, /eligible_students_count/,
+  'Subject analysis must expose the eligible cohort denominator');
+assert.match(academicAnalysis, /subject_assignments/,
+  'Subject analysis must include the subjects assigned to the class, even when no marks are published');
+assert.match(academicTop, /HAVING COUNT\(DISTINCT r\.subject_id\) = \?/,
+  'Top-performer rankings must require a complete set of assigned subjects');
+assert.match(academicTop, /\[3, 5, 10\]\.includes\(requestedLimit\)/,
+  'Top-performer limit must be restricted to supported options');
 
 const cumulativeTemplate = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'cumulative_content.ejs'), 'utf8');
 assert.match(cumulativeTemplate, /s\.terms\[termName\] !== null && s\.terms\[termName\] !== undefined/,

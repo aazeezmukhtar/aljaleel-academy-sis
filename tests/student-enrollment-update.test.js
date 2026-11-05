@@ -55,7 +55,7 @@ const studentController = require('../controllers/studentController');
       if (sql.includes('FROM classes WHERE school_id = ?')) {
         return [{ id: 9, section_id: 3 }, { id: 10, section_id: 3 }];
       }
-      if (sql.includes('FROM student_enrollments se JOIN classes c')) {
+      if (sql.includes('student_enrollments se JOIN classes c')) {
         return [{ id: 77, class_id: currentClassId }];
       }
       throw new Error('Unexpected database list query: ' + sql);

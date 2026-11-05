@@ -393,3 +393,9 @@ check('staff dashboard and workload figures exclude assignments from previous se
   assert.match(staffWorkloadController, /sa\.session = COALESCE\(NULLIF\(subject_sec\.current_session, ''\), \?\)/);
   assert.match(workloadView, /Current session assignments/);
 });
+
+check('session-aware staff report and academic assignment templates compile', () => {
+  ejs.compile(academics, { filename: path.join(__dirname, '..', 'views/academics/index.ejs') });
+  ejs.compile(staffProfile, { filename: path.join(__dirname, '..', 'views/staff/view.ejs') });
+  ejs.compile(workloadView, { filename: path.join(__dirname, '..', 'views/reports/staff/workload.ejs') });
+});

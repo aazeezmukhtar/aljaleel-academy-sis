@@ -389,8 +389,8 @@ check('staff profile filters class and subject assignments by session without de
 check('staff dashboard and workload figures exclude assignments from previous sessions', () => {
   assert.match(dashboardController, /ca\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
   assert.match(dashboardController, /sa\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
-  assert.match(staffWorkloadController, /ca\.session = COALESCE\(NULLIF\(class_sec\.current_session, ''\), \?\)/);
-  assert.match(staffWorkloadController, /sa\.session = COALESCE\(NULLIF\(subject_sec\.current_session, ''\), \?\)/);
+  assert.match(staffWorkloadController, /ca\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
+  assert.match(staffWorkloadController, /sa\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
   assert.match(workloadView, /Current session assignments/);
 });
 

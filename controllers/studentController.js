@@ -119,10 +119,12 @@ const getStudents = async (req, res) => {
             OR LOWER(s.last_name || ', ' || s.first_name) LIKE ?
             OR LOWER(s.admission_number) LIKE ?
             OR CAST(s.id AS TEXT) LIKE ?
+            OR LOWER(s.phone) LIKE ?
             OR LOWER(s.parent_phone) LIKE ?
+            OR LOWER(s.parent_phone_alt) LIKE ?
             OR LOWER(s.parent_address) LIKE ?
         )`;
-        params.push(like, like, like, like, like, like, like, like, like);
+        params.push(like, like, like, like, like, like, like, like, like, like, like);
     }
 
     query += ` ORDER BY s.first_name ASC, s.last_name ASC`;

@@ -632,6 +632,7 @@ const updateStudent = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Invalid class assignment.' });
             }
             const ctx = await getSectionContext(classRow.section_id, schoolId);
+            sectionPlans.length = 0;
             sectionPlans.push({
                 sectionId: classRow.section_id,
                 chosenClassId: classRow.id,
@@ -691,7 +692,9 @@ const updateStudent = async (req, res) => {
                     );
 
                 if (current && !plan.chosenClassId) {
-                    throw new Error('This student already has a placement in this section. Clearing it here would erase the current assignment; use the dedicated transfer or departure workflow instead.');
+                    const error = new Error('This student already has a placement in this section. Clearing it here would erase the current assignment; use the dedicated transfer or departure workflow instead.');
+                    error.statusCode = 400;
+                    throw error;
                 }
 
                 if (current && Number(current.class_id) !== Number(plan.chosenClassId)) {

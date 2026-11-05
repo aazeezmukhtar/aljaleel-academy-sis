@@ -28,6 +28,7 @@ const studentController = require('../controllers/studentController');
   const originalRun = db.run;
   const originalTransaction = db.transaction;
   const writes = [];
+  let currentClassId = 9;
   let statusCode = 200;
   let responseBody = null;
 
@@ -53,6 +54,9 @@ const studentController = require('../controllers/studentController');
       }
       if (sql.includes('FROM classes WHERE school_id = ?')) {
         return [{ id: 9, section_id: 3 }, { id: 10, section_id: 3 }];
+      }
+      if (sql.includes('FROM student_enrollments se JOIN classes c')) {
+        return [{ id: 77, class_id: currentClassId }];
       }
       throw new Error('Unexpected database list query: ' + sql);
     };
@@ -83,10 +87,6 @@ const studentController = require('../controllers/studentController');
       if (sql.includes("key = 'current_session' AND school_id = ?")) return { value: '2026/2027' };
       if (sql.includes('SELECT current_session, current_term FROM sections')) {
         return { current_session: '2026/2027', current_term: '2nd Term' };
-      }
-      if (sql.includes('FROM student_enrollments se JOIN classes c')) {
-        assert.deepStrictEqual(params, ['55', '2026/2027', 3, 1]);
-        return { id: 77, class_id: 9 };
       }
       if (sql.includes('SELECT id FROM students WHERE id = ? AND school_id = ?')) return { id: 55 };
       throw new Error('Unexpected database lookup: ' + sql);
@@ -122,9 +122,27 @@ const studentController = require('../controllers/studentController');
     assert.strictEqual(statusCode, 500, 'Failed update should report an error');
     console.log('[student-enrollment-update] Profile corrections append history using the same rollback-capable transaction.');
 
+    // An unchanged placement still receives the current term, without a
+    // spurious correction event.
+    writes.length = 0;
+    historyCalls.length = 0;
+    currentClassId = 10;
+    statusCode = 200;
+    db.run = async (sql, params, client) => {
+      writes.push({ sql, params, client });
+      return { changes: 1 };
+    };
+    db.transaction = async callback => callback(fakeClient);
+    await studentController.updateStudent(req(10), res);
+    assert.strictEqual(historyCalls.length, 0, 'Unchanged placement must not create a correction event');
+    assert.ok(writes.some(write => write.sql.includes('UPDATE student_enrollments SET term = ?')),
+      'Unchanged placement must retain the current term');
+    console.log('[student-enrollment-update] Unchanged placements preserve their term without creating history noise.');
+
     // Clearing an existing placement in the profile form must not silently
     // delete it; the dedicated transfer/departure workflow owns that action.
     historyCalls.length = 0;
+    currentClassId = 9;
     statusCode = 200;
     responseBody = null;
     db.get = async sql => {

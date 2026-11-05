@@ -31,7 +31,7 @@
                             <!-- Search Input -->
                             <div class="search-input-wrapper">
                                 <i class="bi bi-search search-icon"></i>
-                                <input type="text" id="searchInput" name="search" aria-label="Search students by name, ID or admission number" placeholder="Search by student name, ID or admission number..."
+                                <input type="text" id="searchInput" name="search" aria-label="Search students by name, admission number or contact number" placeholder="Search by name, admission number or phone number..."
                                     value="<%= filters.search || '' %>" class="form-control search-input" autocomplete="off">
                                 <button type="button" id="clearSearchBtn" aria-label="Clear student search" class="clear-search-btn" style="<%= filters.search ? 'display:flex;' : 'display:none;' %>">
                                     <i class="bi bi-x-circle-fill"></i>
@@ -42,6 +42,7 @@
                             <div class="direct-filters-group">
                                 <div class="filter-pill-wrapper" title="Class">
                                     <i class="bi bi-door-open-fill filter-icon"></i>
+                                    <span class="filter-current-label" id="classFilterCurrentLabel" aria-hidden="true">All Classes</span>
                                     <select name="class_id" id="classFilter" aria-label="Filter students by class" class="filter-select">
                                         <option value="">All Classes</option>
                                         <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
@@ -52,6 +53,7 @@
 
                                 <div class="filter-pill-wrapper" title="Gender">
                                     <i class="bi bi-people-fill filter-icon"></i>
+                                    <span class="filter-current-label" id="genderFilterCurrentLabel" aria-hidden="true">All Genders</span>
                                     <select name="gender" id="genderFilter" aria-label="Filter students by gender" class="filter-select">
                                         <option value="">All Genders</option>
                                         <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
@@ -61,6 +63,7 @@
 
                                 <div class="filter-pill-wrapper" title="Status">
                                     <i class="bi bi-activity filter-icon"></i>
+                                    <span class="filter-current-label" id="statusFilterCurrentLabel" aria-hidden="true">All Statuses</span>
                                     <select name="status" id="statusFilter" aria-label="Filter students by status" class="filter-select">
                                         <option value="">All Statuses</option>
                                         <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
@@ -281,6 +284,20 @@
             const filterChipsContainer = document.getElementById('filterChipsContainer');
 
             let debounceTimer = null;
+
+            function syncMobileFilterLabels() {
+                const labels = [
+                    [classFilter, 'classFilterCurrentLabel'],
+                    [genderFilter, 'genderFilterCurrentLabel'],
+                    [statusFilter, 'statusFilterCurrentLabel']
+                ];
+                labels.forEach(([select, labelId]) => {
+                    const label = document.getElementById(labelId);
+                    if (label) label.textContent = select.options[select.selectedIndex]?.text || 'All';
+                });
+            }
+
+            syncMobileFilterLabels();
 
             // Toggle More Filters Popover
             moreFiltersBtn.addEventListener('click', (e) => {
@@ -518,6 +535,7 @@
                 statusFilter.value = '';
                 sectionFilter.value = '';
                 yearFilter.value = '';
+                syncMobileFilterLabels();
                 fetchFilteredStudents();
             };
 
@@ -926,6 +944,20 @@
             .filter-pill-wrapper.active {
                 background-color: #e0e7ff !important;
                 border-color: var(--primary) !important;
+            }
+
+.filter-pill-wrapper .filter-current-label {
+                display: inline-block !important;
+                min-width: 0;
+                max-width: calc(100% - 26px);
+                margin-left: 6px;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color: #334155;
+                font-size: 0.74rem;
+                font-weight: 700;
+                pointer-events: none;
             }
 
             .filter-pill-wrapper .filter-icon {

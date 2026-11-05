@@ -1,6 +1,7 @@
 'use strict';
 
 const assert = require('assert');
+const ejs = require('ejs');
 const fs = require('fs');
 const path = require('path');
 
@@ -159,4 +160,76 @@ const dashboardController = read('controllers/homeController.js');
 check('admin dashboard distinguishes missing attendance records from zero attendance', () => {
   assert.match(adminDashboard, /stats\.attendance === 'N\/A' \? '—' : stats\.attendance/);
   assert.match(dashboardController, /FROM staff WHERE status = 'active' AND school_id = \?/);
+});
+
+const staffDirectory = read('views/staff/index.ejs');
+const staffAdd = read('views/staff/add.ejs');
+const staffEdit = read('views/staff/edit.ejs');
+const staffProfile = read('views/staff/view.ejs');
+const staffDashboard = read('views/dashboard_staff.ejs');
+const notificationBar = read('views/partials/notification_bar.ejs');
+
+check('staff directory supports accessible live search and role/status filtering', () => {
+  assert.match(staffDirectory, /label for="staff-directory-search"/);
+  assert.match(staffDirectory, /label for="staff-role-filter"/);
+  assert.match(staffDirectory, /label for="staff-status-filter"/);
+  assert.match(staffDirectory, /aria-live="polite"/);
+  assert.match(staffDirectory, /function filterStaff\(\)/);
+  assert.match(staffDirectory, /staff-directory-no-results/);
+  assert.match(staffDirectory, /data-label="Staff ID"/);
+});
+
+check('staff registration has associated labels and consistent system roles', () => {
+  ['staff-first-name', 'staff-last-name', 'staff-login-id', 'staff-role', 'staff-designation', 'staff-avatar', 'staff-public-bio'].forEach(id => {
+    assert.ok(staffAdd.includes('for="' + id + '"'), 'Missing label for ' + id);
+  });
+  ['Admin', 'Teacher', 'Bursar', 'Principal', 'Staff'].forEach(role => {
+    assert.ok(staffAdd.includes('value="' + role + '"'), 'Registration role missing: ' + role);
+  });
+  assert.match(staffAdd, /data-crop="square"/);
+});
+
+check('staff editing preserves website bio, visibility and supports replacing the profile photo', () => {
+  ['edit-staff-first-name', 'edit-staff-last-name', 'edit-staff-login-id', 'edit-staff-designation', 'edit-staff-role', 'edit-staff-status', 'edit-staff-avatar', 'edit-staff-public-bio'].forEach(id => {
+    assert.ok(staffEdit.includes('for="' + id + '"'), 'Missing label for ' + id);
+  });
+  assert.match(staffEdit, /name="public_bio"/);
+  assert.match(staffEdit, /name="show_on_website"/);
+  assert.match(staffEdit, /member\.show_on_website \? 'checked'/);
+  assert.match(staffEdit, /data-crop="square"/);
+  ['Admin', 'Teacher', 'Bursar', 'Principal', 'Staff'].forEach(role => {
+    assert.ok(staffEdit.includes('value="' + role + '"'), 'Edit role missing: ' + role);
+  });
+});
+
+check('staff profile displays the saved photo and assignment dialogs support keyboard dismissal', () => {
+  assert.match(staffProfile, /member\.avatar_image/);
+  assert.match(staffProfile, /alt="Profile photo of/);
+  assert.match(staffProfile, /role="dialog" aria-modal="true"/);
+  assert.match(staffProfile, /event\.key === "Escape"/);
+  assert.match(staffProfile, /assignmentModalTrigger\.focus\(\)/);
+  assert.match(staffProfile, /min-width: 44px/);
+  assert.match(staffProfile, /event\.target !== modal/);
+});
+
+check('staff notification dropdowns are keyboard operable and expose expanded state', () => {
+  assert.match(staffDashboard, /role="button" tabindex="0"/);
+  assert.match(staffDashboard, /event\.key === 'Enter'/);
+  assert.match(staffDashboard, /aria-expanded="false"/);
+  assert.match(notificationBar, /setAttribute\('aria-expanded', String\(isOpen\)\)/);
+  assert.match(notificationBar, /trigger\.setAttribute\('aria-expanded', 'false'\)/);
+});
+
+check('changed staff EJS templates compile without syntax errors', () => {
+  [
+    'views/staff/index.ejs',
+    'views/staff/add.ejs',
+    'views/staff/edit.ejs',
+    'views/staff/view.ejs',
+    'views/dashboard_staff.ejs',
+    'views/partials/header.ejs',
+    'views/partials/notification_bar.ejs'
+  ].forEach(file => {
+    ejs.compile(read(file), { filename: path.join(__dirname, '..', file) });
+  });
 });

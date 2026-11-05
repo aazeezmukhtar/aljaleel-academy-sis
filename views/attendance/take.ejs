@@ -370,10 +370,11 @@
         } catch (err) {
             console.warn('[AcadMe Offline] Attendance save request failed; queueing locally.', err);
             try {
-                if (!window.NexusOffline || typeof window.NexusOffline.saveAttendanceOffline !== 'function') {
+                const offline = window.AcadMeOffline || window.NexusOffline;
+                if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
                     throw new Error('Offline storage is unavailable. Reconnect before leaving this page.');
                 }
-                await window.NexusOffline.saveAttendanceOffline(data);
+                await offline.saveAttendanceOffline(data);
                 alert('Attendance saved on this device. It is pending sync and has not yet been saved to the school database.');
             } catch (queueError) {
                 alert('Could not save attendance offline: ' + queueError.message + '. Keep this page open and reconnect before leaving.');

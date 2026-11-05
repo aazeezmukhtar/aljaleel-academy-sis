@@ -638,7 +638,7 @@ self.addEventListener('fetch', (event) => {
 // ─── Background Sync ──────────────────────────────────────────────────────
 
 self.addEventListener('sync', (event) => {
-    if (event.tag === 'sync-nexus') {
+    if (event.tag === 'sync-acadme' || event.tag === 'sync-nexus') {
         event.waitUntil(
             self.clients.matchAll().then((clients) => {
                 clients.forEach((client) => client.postMessage({ type: 'TRIGGER_SYNC' }));

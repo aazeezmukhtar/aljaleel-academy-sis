@@ -1,4 +1,4 @@
-# Production Deployment Guide (Nexus Web SIS)
+# Production Deployment Guide (AcadMe)
 
 This copy of the School Information System is optimized for web deployment using GitHub, Vercel, and Supabase.
 

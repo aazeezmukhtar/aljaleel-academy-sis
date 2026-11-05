@@ -18,7 +18,7 @@ function resolveSessionSecret(env = process.env) {
     throw new Error('SESSION_SECRET is required in production. Configure it in the hosting environment before starting AcadMe.');
   }
 
-  return 'nexus-sis-secret-key-offline-first';
+  return 'acadme-sis-secret-key-offline-first';
 }
 
 module.exports = { resolveSessionSecret };

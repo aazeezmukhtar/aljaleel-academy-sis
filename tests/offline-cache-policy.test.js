@@ -409,7 +409,7 @@ check('offline status indicator is present and reports browser storage persisten
 
 check('optional Background Sync is registered and its service-worker message is handled', () => {
   const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
-  assert.match(handler, /registration\.sync\.register\('sync-nexus'\)/);
+  assert.match(handler, /registration\.sync\.register\('sync-acadme'\)/);
   assert.match(handler, /event\.data\.type === 'TRIGGER_SYNC'/);
 });
 

@@ -299,8 +299,9 @@
             button.disabled = true;
             status.textContent = 'Checking saved offline preparation…';
             try {
-                if (window.NexusOffline && typeof window.NexusOffline.getPreparedDatasetStatus === 'function') {
-                    const saved = await window.NexusOffline.getPreparedDatasetStatus(datasetKey, datasetUrl);
+                const offline = window.AcadMeOffline || window.NexusOffline;
+                if (offline && typeof offline.getPreparedDatasetStatus === 'function') {
+                    const saved = await offline.getPreparedDatasetStatus(datasetKey, datasetUrl);
                     if (saved.status === 'fresh') {
                         status.textContent = 'Already ready offline. The saved sheet was verified; no download was needed.';
                         return;
@@ -324,10 +325,10 @@
                     response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
                     throw new Error('The active service worker did not confirm caching.');
                 }
-                if (!window.NexusOffline || typeof window.NexusOffline.recordPreparedDataset !== 'function') {
+                if (!offline || typeof offline.recordPreparedDataset !== 'function') {
                     throw new Error('Offline preparation registry is unavailable.');
                 }
-                await window.NexusOffline.recordPreparedDataset(datasetKey, 'results', datasetUrl);
+                await offline.recordPreparedDataset(datasetKey, 'results', datasetUrl);
                 status.textContent = 'Verified and saved offline. This exact class, subject, session and term sheet is ready.';
             } catch (error) {
                 console.warn('[AcadMe] Results offline preparation failed:', error);
@@ -693,13 +694,14 @@
                 }
                 console.warn('[AcadMe Offline] Result save request failed; queueing locally.', err);
                 try {
-                    if (!window.NexusOffline || typeof window.NexusOffline.saveResultOffline !== 'function') {
+                    const offline = window.AcadMeOffline || window.NexusOffline;
+                    if (!offline || typeof offline.saveResultOffline !== 'function') {
                         throw new Error('Offline storage is unavailable. Reconnect before leaving this page.');
                     }
                     // Approval/submission is a server-side action. Queue offline work as a draft
                     // and require the user to submit it explicitly after sync.
                     const offlinePayload = { ...payload, status: 'draft' };
-                    await window.NexusOffline.saveResultOffline(offlinePayload);
+                    await offline.saveResultOffline(offlinePayload);
                     alert(status === 'submitted'
                         ? 'Scores saved on this device as a pending draft. They have NOT been submitted. Reconnect, sync, review, and submit them online.'
                         : 'Scores saved on this device as a pending draft. They have not yet been saved to the school database.');

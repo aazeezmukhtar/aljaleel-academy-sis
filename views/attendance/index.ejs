@@ -212,9 +212,10 @@
         const sheetUrl = (classId, date) => '/attendance/take?class_id=' + encodeURIComponent(classId) + '&date=' + encodeURIComponent(date);
 
         async function hasUsablePreparedSheet(classId, date) {
-            if (!window.NexusOffline || typeof window.NexusOffline.getPreparedDatasetStatus !== 'function') return false;
+            const offline = window.AcadMeOffline || window.NexusOffline;
+            if (!offline || typeof offline.getPreparedDatasetStatus !== 'function') return false;
             try {
-                const status = await window.NexusOffline.getPreparedDatasetStatus(sheetKey(classId, date), sheetUrl(classId, date));
+                const status = await offline.getPreparedDatasetStatus(sheetKey(classId, date), sheetUrl(classId, date));
                 if (status.status === 'fresh' || status.status === 'stale') {
                     if (status.status === 'stale') stalePreparedSheets.add(sheetKey(classId, date));
                     return true;
@@ -284,10 +285,11 @@
                         if (response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
                             throw new Error('The active service worker did not confirm that this class sheet was cached.');
                         }
-                        if (!window.NexusOffline || typeof window.NexusOffline.recordPreparedDataset !== 'function') {
+                        const offline = window.AcadMeOffline || window.NexusOffline;
+                        if (!offline || typeof offline.recordPreparedDataset !== 'function') {
                             throw new Error('Offline preparation registry is unavailable; the sheet cannot be marked ready.');
                         }
-                        await window.NexusOffline.recordPreparedDataset(sheetKey(c.id, date), 'attendance', sheetUrl(c.id, date));
+                        await offline.recordPreparedDataset(sheetKey(c.id, date), 'attendance', sheetUrl(c.id, date));
                         return c;
                     }));
 

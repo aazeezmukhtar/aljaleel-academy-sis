@@ -424,7 +424,28 @@
                 if (yearFilter.value) params.set('admission_year', yearFilter.value);
 
                 const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`;
-                window.location.href = newUrl;
+                try {
+                    const response = await fetch(newUrl, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    const payload = await response.json();
+                    if (!response.ok || !payload.success) throw new Error('Unable to refresh student results.');
+                    updateTable(payload.students, payload.count);
+                    window.history.replaceState({}, '', newUrl);
+                } catch (error) {
+                    // Preserve a working directory if the network request fails mid-session.
+                    if (!navigator.onLine) {
+                        applyLocalOfflineFilters();
+                    } else {
+                        window.location.href = newUrl;
+                    }
+                }
+                renderChips();
             }
 
             function renderChips() {
@@ -540,7 +561,7 @@
             };
 
             function updateTable(students, count) {
-                studentCountBadge.innerHTML = `<strong>${count}</strong> ${count === 1 ? 'student found' : 'students found'}`;
+                studentCountBadge.textContent = `${count} ${count === 1 ? 'student found' : 'students found'}`;
 
                 if (!students || students.length === 0) {
                     studentTableBody.innerHTML = `
@@ -559,56 +580,49 @@
                 }
 
                 const rowsHtml = students.map(s => {
-                    const passportHtml = s.passport_photo_path 
-                        ? `<img src="${escapeHtml(s.passport_photo_path)}" alt="Photo" style="width: 100%; height: 100%; object-fit: cover;">`
+                    const passportHtml = s.passport_photo_path
+                        ? `<img src="${escapeHtml(s.passport_photo_path)}" alt="Photo of ${escapeHtml(s.first_name)}" style="width: 100%; height: 100%; object-fit: cover;">`
                         : `<i class="bi bi-person-fill" style="color: #9ca3af; font-size: 1.25rem;"></i>`;
-
-                    const classBadgeHtml = s.class_name 
-                        ? `<span class="student-class-inline" style="background: #e0e7ff; color: #4338ca; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: 500;">${escapeHtml(s.class_name)}</span>`
+                    const classBadgeHtml = s.class_name
+                        ? `<span class="student-class-inline">${escapeHtml(s.class_name)}</span>`
                         : `<span class="text-muted">Unassigned</span>`;
-
                     const statusHtml = s.status === 'active'
-                        ? `<span style="color: var(--success); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-check-circle-fill" style="font-size: 0.8rem;"></i> Active</span>`
-                        : `<span style="color: var(--danger); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;"><i class="bi bi-x-circle-fill" style="font-size: 0.8rem;"></i> ${escapeHtml(s.status)}</span>`;
+                        ? `<span style="color: var(--success); font-weight: 600;">Active</span>`
+                        : `<span style="color: var(--danger); font-weight: 600;">${escapeHtml(s.status || 'Unknown')}</span>`;
+                    const contactItems = [
+                        ['Student', s.phone],
+                        ['Parent', s.parent_phone],
+                        ['Alternate', s.parent_phone_alt]
+                    ].filter(item => item[1]);
+                    const contactsHtml = contactItems.length
+                        ? contactItems.map(item => `<a href="tel:${escapeHtml(item[1])}" style="display:inline-block; margin:2px 8px 2px 0; font-size:.82rem;">${escapeHtml(item[0])}: ${escapeHtml(item[1])}</a>`).join('')
+                        : '<span class="text-muted">No contact number</span>';
 
                     return `
-                        <tr data-student-id="${s.id}"
-                            data-search="${escapeHtml([s.first_name, s.last_name, s.admission_number, s.id].filter(Boolean).join(' ').toLowerCase())}"
+                        <tr data-student-id="${escapeHtml(s.id)}"
+                            data-search="${escapeHtml([s.first_name, s.last_name, s.admission_number, s.id, s.phone, s.parent_phone, s.parent_phone_alt].filter(Boolean).join(' ').toLowerCase())}"
                             data-class-ids="${escapeHtml(s.enrolled_class_ids || s.current_class_id || '')}"
                             data-section-ids="${escapeHtml(s.enrolled_section_ids || s.class_section_id || '')}"
                             data-gender="${escapeHtml(s.gender || '')}"
                             data-status="${escapeHtml(s.status || '')}"
                             data-admission-year="${escapeHtml(s.admission_date ? String(s.admission_date).slice(0, 4) : '')}">
                             <td data-label="Name">
-                                <div style="display: flex; align-items: center; gap: 15px;">
-                                    <div style="width: 44px; height: 44px; background: #f3f4f6; border-radius: 10px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid #fff; box-shadow: var(--shadow-sm); flex-shrink: 0;">
-                                        ${passportHtml}
-                                    </div>
-                                    <span style="font-weight: 600; font-size: 1rem; color: var(--text-primary);">
-                                        ${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}
-                                    </span>
+                                <div style="display:flex; align-items:center; gap:15px;">
+                                    <div style="width:44px; height:44px; background:#f3f4f6; border-radius:10px; overflow:hidden; display:flex; align-items:center; justify-content:center; flex-shrink:0;">${passportHtml}</div>
+                                    <span style="font-weight:600; color:var(--text-primary);">${escapeHtml(s.first_name)} ${escapeHtml(s.last_name)}</span>
                                 </div>
                             </td>
-                            <td data-label="ID">
-                                <span style="font-family: monospace; background: #f9fafb; padding: 2px 6px; border-radius: 4px; border: 1px solid #e5e5eb;">
-                                    ${escapeHtml(s.admission_number || 'PENDING')}
-                                </span>
-                            </td>
+                            <td data-label="ID"><span style="font-family:monospace;">${escapeHtml(s.admission_number || 'PENDING')}</span></td>
                             <td data-label="Gender">${escapeHtml(s.gender || '-')}</td>
+                            <td data-label="Contact Numbers"><div>${contactsHtml}</div></td>
                             <td data-label="Class">${classBadgeHtml}</td>
                             <td data-label="Status">${statusHtml}</td>
                             <td data-label="Action">
-                                <a href="/students/view/${s.id}" class="btn btn-outline" style="padding: 4px 12px; font-size: 0.85rem;">
-                                    View
-                                </a>
-                                <a href="/students/offline-view/${s.id}" class="btn btn-outline" style="padding: 4px 8px; font-size: 0.8rem;">
-                                    Offline profile
-                                </a>
+                                <a href="/students/view/${encodeURIComponent(s.id)}" class="btn btn-outline" style="padding:4px 12px; font-size:.85rem;">View</a>
                             </td>
                         </tr>
                     `;
                 }).join('');
-
                 studentTableBody.innerHTML = rowsHtml;
             }
 

@@ -64,6 +64,10 @@ async function applyEnrollmentChange(input, client) {
     }
 
     const normalizedDate = validateEffectiveDate(effectiveDate);
+    if (['internal_transfer', 'external_transfer', 'section_exit'].includes(eventType)) {
+        if (!normalizedDate) throw new Error('An effective date is required for this transfer or section exit.');
+        if (!reason || !String(reason).trim()) throw new Error('A reason is required for this transfer or section exit.');
+    }
     const student = await db.get(
         'SELECT id FROM students WHERE id = ? AND school_id = ?',
         [studentId, schoolId], client

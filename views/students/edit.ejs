@@ -16,8 +16,8 @@
                     </a>
                 </header>
 
-                <div class="card" style="max-width: 800px; margin: 0 auto; padding: 30px;">
-                    <form id="editStudentForm" enctype="multipart/form-data">
+                <div class="card student-edit-card" style="max-width: 800px; margin: 0 auto; padding: 30px;">
+                    <form id="editStudentForm" enctype="multipart/form-data" novalidate>
                         <input type="hidden" name="existing_photo" value="<%= student.passport_photo_path %>">
 
                         <h3 style="margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px;">Personal
@@ -25,25 +25,25 @@
                         <div class="form-grid"
                             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
                             <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" name="first_name" class="form-control"
+                                <label for="edit_first_name">First Name</label>
+                                <input id="edit_first_name" type="text" name="first_name" class="form-control"
                                     value="<%= student.first_name %>" required placeholder="e.g. John">
                             </div>
                             <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" name="last_name" class="form-control"
+                                <label for="edit_last_name">Last Name</label>
+                                <input id="edit_last_name" type="text" name="last_name" class="form-control"
                                     value="<%= student.last_name %>" required placeholder="e.g. Doe">
                             </div>
                             <div class="form-group">
-                                <label>Gender</label>
-                                <select name="gender" class="form-control" required>
+                                <label for="edit_gender">Gender</label>
+                                <select id="edit_gender" name="gender" class="form-control" required>
                                     <option value="Male" <%=student.gender==='Male' ? 'selected' : '' %>>Male</option>
                                     <option value="Female" <%=student.gender==='Female' ? 'selected' : '' %>>Female
                                     </option>
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Date of Birth</label>
+                                <label for="edit_dob">Date of Birth</label>
                                 <%
                                   let formattedDob = '';
                                   if (student.dob && String(student.dob).trim() !== '' && String(student.dob) !== 'null') {
@@ -62,7 +62,7 @@
                                       }
                                   }
                                 %>
-                                <input type="date" name="dob" class="form-control" value="<%= formattedDob %>">
+                                <input id="edit_dob" type="date" name="dob" class="form-control" value="<%= formattedDob %>">
                             </div>
                         </div>
 
@@ -72,13 +72,13 @@
                         <div class="form-grid"
                             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
                             <div class="form-group">
-                                <label>Student ID</label>
-                                <input type="text" name="admission_number" class="form-control"
+                                <label for="edit_admission_number">Student ID</label>
+                                <input id="edit_admission_number" type="text" name="admission_number" class="form-control"
                                     value="<%= student.admission_number %>" placeholder="e.g. ADM/2024/001">
                             </div>
                             <div class="form-group">
-                                <label>Status</label>
-                                <select name="status" class="form-control" required>
+                                <label for="edit_status">Status</label>
+                                <select id="edit_status" name="status" class="form-control" required>
                                     <option value="active" <%=student.status==='active' ? 'selected' : '' %>>Active</option>
                                     <option value="withdrawn" <%=student.status==='withdrawn' ? 'selected' : '' %>>Withdrawn</option>
                                     <option value="graduated" <%=student.status==='graduated' ? 'selected' : '' %>>Graduated</option>
@@ -105,13 +105,13 @@
                                     : { dot: '#059669', bg: '#d1fae5', text: '#065f46', border: '#a7f3d0' };
                             %>
                             <div class="form-group" style="background: #f8fafc; padding: 14px; border-radius: 12px; border: 1px solid #e2e8f0;">
-                                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                                <label for="edit_<%= fieldName %>" style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                                     <span style="display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: <%= theme.dot %>; box-shadow: 0 0 0 3px <%= theme.bg %>;"></span>
                                     <span style="background: <%= theme.bg %>; color: <%= theme.text %>; border: 1px solid <%= theme.border %>; padding: 3px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 700;">
                                         <%= sec.name %> Class
                                     </span>
                                 </label>
-                                <select name="<%= fieldName %>" class="form-control">
+                                <select id="edit_<%= fieldName %>" name="<%= fieldName %>" class="form-control">
                                     <option value="">— Not Enrolled —</option>
                                     <% sectionClasses.forEach(c => { %>
                                         <option value="<%= c.id %>" <%= currentEnrolledId == c.id ? 'selected' : '' %>><%= c.name %></option>
@@ -122,8 +122,8 @@
                         </div>
                         <% } else { %>
                         <div class="form-group" style="margin-top: 16px;">
-                            <label>Class</label>
-                            <select name="current_class_id" class="form-control">
+                            <label for="edit_current_class_id">Class</label>
+                            <select id="edit_current_class_id" name="current_class_id" class="form-control">
                                 <option value="">Select Class</option>
                                 <% classes.forEach(c => { %>
                                     <option value="<%= c.id %>" <%= student.current_class_id == c.id ? 'selected' : '' %>><%= c.name %></option>
@@ -138,18 +138,18 @@
                         <div class="form-grid"
                             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
                             <div class="form-group">
-                                <label>Student Phone Number</label>
-                                <input type="tel" name="phone" class="form-control"
+                                <label for="edit_phone">Student Phone Number</label>
+                                <input id="edit_phone" type="tel" name="phone" class="form-control"
                                     value="<%= student.phone || '' %>" placeholder="e.g. +234 800 000 0000">
                             </div>
                             <div class="form-group">
-                                <label>Student Email Address</label>
-                                <input type="email" name="email" class="form-control"
+                                <label for="edit_email">Student Email Address</label>
+                                <input id="edit_email" type="email" name="email" class="form-control"
                                     value="<%= student.email || '' %>" placeholder="student@example.com">
                             </div>
                             <div class="form-group" style="grid-column: 1 / -1;">
-                                <label>Student Residential Address</label>
-                                <textarea name="address" class="form-control"
+                                <label for="edit_address">Student Residential Address</label>
+                                <textarea id="edit_address" name="address" class="form-control"
                                     placeholder="Residential Address"><%= student.address || '' %></textarea>
                             </div>
                         </div>
@@ -160,30 +160,30 @@
                         <div class="form-grid"
                             style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
                             <div class="form-group">
-                                <label>Parent Phone Number</label>
-                                <input type="tel" name="parent_phone" class="form-control"
+                                <label for="edit_parent_phone">Parent Phone Number</label>
+                                <input id="edit_parent_phone" type="tel" name="parent_phone" class="form-control"
                                     value="<%= student.parent_phone || '' %>" placeholder="e.g. +234 800 000 0000">
                             </div>
                             <div class="form-group">
-                                <label>Parent Alternate Phone</label>
-                                <input type="tel" name="parent_phone_alt" class="form-control"
+                                <label for="edit_parent_phone_alt">Parent Alternate Phone</label>
+                                <input id="edit_parent_phone_alt" type="tel" name="parent_phone_alt" class="form-control"
                                     value="<%= student.parent_phone_alt || '' %>" placeholder="e.g. +234 800 000 0001">
                             </div>
                             <div class="form-group">
-                                <label>Parent Email Address</label>
-                                <input type="email" name="parent_email" class="form-control"
+                                <label for="edit_parent_email">Parent Email Address</label>
+                                <input id="edit_parent_email" type="email" name="parent_email" class="form-control"
                                     value="<%= student.parent_email || '' %>" placeholder="parent@example.com">
                             </div>
                             <div class="form-group" style="grid-column: 1 / -1;">
-                                <label>Parent Address</label>
-                                <textarea name="parent_address" class="form-control"
+                                <label for="edit_parent_address">Parent Address</label>
+                                <textarea id="edit_parent_address" name="parent_address" class="form-control"
                                     placeholder="Residential Address"><%= student.parent_address || '' %></textarea>
                             </div>
                         </div>
 
                         <div class="form-group" style="margin-top: 20px;">
-                            <label>Update Passport Photo</label>
-                            <input type="file" name="passport" class="form-control" accept="image/*" data-crop="square">
+                            <label for="edit_passport">Update Passport Photo</label>
+                            <input id="edit_passport" type="file" name="passport" class="form-control" accept="image/*" data-crop="square">
                             <small class="text-muted">You will be able to crop the photo before it is uploaded.</small>
                             <% if (student.passport_photo_path) { %>
                                 <div style="margin-top: 10px;">
@@ -193,10 +193,11 @@
                                 <% } %>
                         </div>
 
-                        <div style="margin-top: 40px; display: flex; gap: 15px;">
-                            <button type="submit" class="btn btn-primary" style="flex: 1;">Update Student
+                        <div id="studentUpdateStatus" class="text-muted" role="status" aria-live="polite" aria-atomic="true" style="margin-top: 18px;"></div>
+                        <div class="student-edit-actions" style="margin-top: 24px; display: flex; gap: 15px;">
+                            <button type="submit" class="btn btn-primary" style="flex: 1; min-height: 44px;">Update Student
                                 Profile</button>
-                            <a href="/students" class="btn btn-outline" style="flex: 1; text-align: center;">Cancel</a>
+                            <a href="/students" class="btn btn-outline" style="flex: 1; min-height: 44px; display: inline-flex; align-items: center; justify-content: center;">Cancel</a>
                         </div>
                     </form>
                 </div>
@@ -206,23 +207,34 @@
     <script>
         document.getElementById('editStudentForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const formData = new FormData(e.target);
+            const form = e.target;
+            const submitButton = form.querySelector('button[type="submit"]');
+            const status = document.getElementById('studentUpdateStatus');
+            const originalButtonText = submitButton.textContent.trim();
+            if (!form.reportValidity()) return;
+            const formData = new FormData(form);
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving changes…';
+            status.textContent = 'Saving student details. Please wait.';
 
             try {
                 const response = await fetch('/students/update/<%= student.id %>', {
                     method: 'POST',
                     body: formData
                 });
-                const result = await response.json();
-                if (result.success) {
+                const result = await response.json().catch(() => ({}));
+                if (response.ok && result.success) {
                     alert('Student updated successfully!');
                     window.location.href = '/students/view/<%= student.id %>';
                 } else {
-                    alert('Error: ' + result.message);
+                    status.textContent = result.message || 'The student details could not be updated. Please review the form and try again.';
                 }
             } catch (err) {
                 console.error(err);
-                alert('An error occurred during update.');
+                status.textContent = 'Unable to update the student details. Check your connection and try again.';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = originalButtonText;
             }
         });
     </script>

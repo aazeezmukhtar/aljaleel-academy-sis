@@ -154,6 +154,39 @@ check('student enrollment loads shared navigation and browser-side photo croppin
   assert.match(header, /\/js\/image-optimizer\.js/);
 });
 
+
+const studentEdit = read('views/students/edit.ejs');
+
+check('student edit form labels are associated with all personal and contact controls', () => {
+  ['first_name', 'last_name', 'gender', 'dob', 'admission_number', 'status', 'phone', 'email', 'address', 'parent_phone', 'parent_phone_alt', 'parent_email', 'parent_address', 'passport'].forEach(name => {
+    assert.match(studentEdit, new RegExp('label for="edit_' + name + '"'));
+    assert.match(studentEdit, new RegExp('id="edit_' + name + '"'));
+  });
+  assert.match(studentEdit, /label for="edit_<%= fieldName %>"/);
+  assert.match(studentEdit, /id="edit_<%= fieldName %>"/);
+});
+
+check('student edit form gives save feedback, prevents duplicate submissions and restores the button', () => {
+  assert.match(studentEdit, /id="studentUpdateStatus"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.match(studentEdit, /form\.reportValidity\(\)/);
+  assert.match(studentEdit, /submitButton\.disabled = true/);
+  assert.match(studentEdit, /finally \{/);
+  assert.match(studentEdit, /submitButton\.disabled = false/);
+  assert.match(studentEdit, /response\.json\(\)\.catch\(\(\) => \(\{\}\)\)/);
+});
+
+check('student edit form remains usable on narrow screens and with reduced motion', () => {
+  assert.match(studentEdit, /@media \(max-width: 640px\)/);
+  assert.match(studentEdit, /student-edit-actions \{ flex-direction: column; \}/);
+  assert.match(studentEdit, /:focus-visible/);
+  assert.match(studentEdit, /prefers-reduced-motion: reduce/);
+  assert.match(studentEdit, /min-height: 44px/);
+});
+
+check('student edit EJS template compiles', () => {
+  ejs.compile(studentEdit, { filename: path.join(__dirname, '..', 'views/students/edit.ejs') });
+});
+
 const adminDashboard = read('views/dashboard.ejs');
 const dashboardController = read('controllers/homeController.js');
 

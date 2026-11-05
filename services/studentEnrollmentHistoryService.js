@@ -127,7 +127,7 @@ async function applyEnrollmentChange(input, client) {
         }
         conflictSql += ' LIMIT 1';
         const conflictingTarget = await db.get(conflictSql, conflictParams, client);
-        if (conflictingTarget) {
+        if (conflictingTarget && Number(conflictingTarget.class_id) !== Number(destinationClassId)) {
             throw new Error('The student already has a different placement in the destination section and session. Resolve it before continuing.');
         }
     }
@@ -143,10 +143,16 @@ async function applyEnrollmentChange(input, client) {
     }
 
     if (destinationClass) {
-        await db.run(
-            'INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)',
-            [studentId, destinationClassId, destinationSession, destinationTerm], client
+        const existingDestination = await db.get(
+            'SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
+            [studentId, destinationClassId, destinationSession], client
         );
+        if (!existingDestination) {
+            await db.run(
+                'INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)',
+                [studentId, destinationClassId, destinationSession, destinationTerm], client
+            );
+        }
     }
 
     await db.run(`

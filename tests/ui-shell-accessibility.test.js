@@ -244,6 +244,7 @@ check('staff assignment dialogs trap keyboard focus and identify remove actions'
 });
 
 const adminNotificationBar = read('views/partials/notification_bar.ejs');
+const sharedFooter = read('views/partials/footer.ejs');
 
 check('admin dashboard notification control is keyboard operable and announces expanded state', () => {
   assert.match(adminDashboard, /role="button" tabindex="0" aria-label="Open notifications"/);
@@ -265,6 +266,7 @@ check('admin dashboard panels have named sections, accessible view-more control 
   assert.match(adminDashboard, /aria-labelledby="adminQuickActionsHeading"/);
   assert.match(adminDashboard, /aria-controls="adminActivityFeed"/);
   assert.match(adminDashboard, /aria-expanded="false" aria-controls="adminActivityFeed"/);
+  assert.match(sharedFooter, /btn\.setAttribute\('aria-expanded', String\(isExpanding\)\)/);
   assert.match(adminDashboard, /Finance &amp; Fees/);
   assert.match(adminDashboard, /Manage fee structures, payments and outstanding balances/);
 });

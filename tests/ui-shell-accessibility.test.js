@@ -206,7 +206,7 @@ check('staff profile displays the saved photo and assignment dialogs support key
   assert.match(staffProfile, /member\.avatar_image/);
   assert.match(staffProfile, /alt="Profile photo of/);
   assert.match(staffProfile, /role="dialog" aria-modal="true"/);
-  assert.match(staffProfile, /event\.key === "Escape"/);
+  assert.match(staffProfile, /event\.key !== "Escape"/);
   assert.match(staffProfile, /assignmentModalTrigger\.focus\(\)/);
   assert.match(staffProfile, /min-width: 44px/);
   assert.match(staffProfile, /event\.target !== modal/);

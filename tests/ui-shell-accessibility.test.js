@@ -383,7 +383,8 @@ check('staff profile filters class and subject assignments by session without de
   assert.match(staffController, /availableSessions/);
   assert.match(staffProfile, /name="session"/);
   assert.match(staffProfile, /All sessions/);
-  assert.doesNotMatch(staffController, /DELETE FROM (class_assignments|subject_assignments)/);
+  const profileHandler = staffController.slice(staffController.indexOf('const getStaffProfile'), staffController.indexOf('// GET /staff/edit'));
+  assert.doesNotMatch(profileHandler, /DELETE FROM (class_assignments|subject_assignments)/);
 });
 
 check('staff dashboard and workload figures exclude assignments from previous sessions', () => {

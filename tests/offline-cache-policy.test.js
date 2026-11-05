@@ -275,13 +275,21 @@ check('student directory offline access uses only the canonical unfiltered direc
   assert.match(source, /url\.searchParams\.size === 0/);
 });
 
-check('individual student profiles are excluded from offline caching', () => {
-  assert.doesNotMatch(source, /isStudentProfileViewPath/);
-  assert.doesNotMatch(source, /buildStudentOfflineProfileResponse/);
-  assert.doesNotMatch(source, /new URL\('\/students\/offline-view/);
-  assert.match(source, /offline-view/); // migration discards snapshots created by the previous release
-  assert.doesNotMatch(source, /canonicalProfileUrl/);
+check('only the privacy-limited offline student profile is eligible for seven-day caching', () => {
+  const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'studentController.js'), 'utf8');
+  const profileView = fs.readFileSync(path.join(__dirname, '..', 'views', 'students', 'offline-view.ejs'), 'utf8');
+  assert.match(source, /function isStudentOfflineProfilePath\(pathname\)/);
+  assert.match(source, /buildStudentOfflineProfileResponse\(exact\)/);
+  assert.match(source, /isStudentOfflineProfilePath\(url\.pathname\)\) return true/);
+  assert.match(source, /This limited student profile is read-only offline/);
+  assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
+  assert.match(controller, /SELECT id, first_name, last_name, gender, dob, admission_number,[\s\S]*passport_photo_path, phone, parent_phone, parent_phone_alt/);
+  assert.match(controller, /res\.render\('students\/offline-view'/);
+  assert.doesNotMatch(controller.slice(controller.indexOf('const getOfflineStudentProfile'), controller.indexOf('const getEditForm')), /student_fees|student_health|FROM results|password|parent_address|email/);
+  assert.doesNotMatch(profileView, /Health|Financial|Academic Records|student_fees|blood_group|genotype/);
+  assert.match(profileView, /data-acadme-offline-profile/);
   assert.match(source, /isOfflinePrivatePath/);
+  assert.match(source, /X-AcadMe-Offline-Prepare/);
 });
 
 check('student directory offline search renders matching rows, not only a count', () => {
@@ -322,7 +330,7 @@ check('offline student directory response carries a local offline marker and sev
   assert.match(source, /async function buildStudentDirectoryResponse\(cache, requestedUrl\)/);
   assert.match(source, /X-AcadMe-Cached-At/);
   assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
-  assert.doesNotMatch(source, /buildStudentOfflineProfileResponse/);
+  assert.match(source, /buildStudentOfflineProfileResponse/);
 });
 
 check('versioned same-origin assets share an unversioned cache key', () => {

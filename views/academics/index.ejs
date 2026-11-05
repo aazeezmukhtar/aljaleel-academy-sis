@@ -241,6 +241,16 @@
                                 </form>
                             </div>
 
+                            <form method="GET" action="/academics" class="form-group" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin: 0 0 16px;">
+                                <label for="academic-assignment-session" style="margin:0;">Show assignments</label>
+                                <select id="academic-assignment-session" name="session" class="form-control" style="max-width:240px;" onchange="this.form.submit()">
+                                    <option value="current" <%= selected_session === 'current' ? 'selected' : '' %>>Current session (by section)</option>
+                                    <% available_sessions.forEach(sess => { %>
+                                        <option value="<%= sess %>" <%= selected_session === sess ? 'selected' : '' %>><%= sess %></option>
+                                    <% }); %>
+                                    <option value="all" <%= selected_session === 'all' ? 'selected' : '' %>>All sessions</option>
+                                </select>
+                            </form>
                             <div class="table-container table-stack">
                                 <table class="data-table">
                                     <thead>
@@ -284,7 +294,7 @@
                                                         <tr>
                                                             <td colspan="5"
                                                                 style="text-align: center; padding: 40px; color: var(--text-muted);">
-                                                                No assignments found.</td>
+                                                                No assignments found for this session.</td>
                                                         </tr>
                                                         <% } %>
                                     </tbody>

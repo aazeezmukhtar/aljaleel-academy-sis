@@ -454,6 +454,7 @@ const getOfflineStudentProfile = async (req, res) => {
         `, [schoolId, id, activeCurrentSession]);
 
         res.set('Cache-Control', 'private, no-store');
+        res.set('X-AcadMe-Offline-Profile', 'safe-v1');
         res.render('students/offline-view', {
             title: 'Offline Student Profile',
             student,

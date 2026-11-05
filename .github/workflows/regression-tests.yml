@@ -36,6 +36,8 @@ jobs:
         run: npm run test:section-owned
       - name: Run UI shell accessibility regression checks
         run: npm run test:ui-shell
+      - name: Run student enrollment UI regression checks
+        run: npm run test:student-enrollment-ui
       - name: Remove disposable SQLite database
         if: always()
         run: rm -f .test-database.sqlite .test-database.sqlite-shm .test-database.sqlite-wal

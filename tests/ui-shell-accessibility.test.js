@@ -321,3 +321,44 @@ check('admin dashboard and notification partial compile as EJS templates', () =>
   ejs.compile(adminDashboard, { filename: path.join(__dirname, '..', 'views/dashboard.ejs') });
   ejs.compile(adminNotificationBar, { filename: path.join(__dirname, '..', 'views/partials/notification_bar.ejs') });
 });
+
+
+const academics = read('views/academics/index.ejs');
+
+check('academic management forms have associated labels and accessible disclosure controls', () => {
+  ['add_class_name', 'add_class_section', 'add_subject_name', 'add_subject_code', 'assignment_teacher', 'assignment_subject', 'assignment_class', 'assignment_session', 'edit_class_name', 'edit_class_section_id'].forEach(id => {
+    assert.ok(academics.includes('for="' + id + '"'), 'Missing academic form label for ' + id);
+  });
+  ['add-class-form', 'add-subject-form', 'add-assignment-form'].forEach(id => {
+    assert.ok(academics.includes('aria-controls="' + id + '" aria-expanded="false"'), 'Missing accessible disclosure trigger for ' + id);
+  });
+  assert.match(academics, /function toggleAcademicForm\(id, trigger\)/);
+  assert.match(academics, /trigger\.setAttribute\('aria-expanded', String\(opening\)\)/);
+});
+
+check('academic management communicates empty class and subject lists', () => {
+  assert.match(academics, /No classes have been added yet/);
+  assert.match(academics, /No subjects have been added yet/);
+  assert.match(academics, /No assignments found/);
+});
+
+check('edit class dialog supports accessible naming, keyboard dismissal and focus restoration', () => {
+  assert.match(academics, /role="dialog" aria-modal="true" aria-labelledby="editClassModalTitle"/);
+  assert.match(academics, /aria-label="Close edit class dialog"/);
+  assert.match(academics, /event\.key === 'Escape'/);
+  assert.match(academics, /event\.key === 'Tab'/);
+  assert.match(academics, /editClassModalTrigger\.focus\(\)/);
+  assert.match(academics, /min-height: 44px/);
+  assert.match(academics, /event\.target === modal/);
+});
+
+check('academic management explains the impact of destructive actions and adapts forms to mobile', () => {
+  assert.match(academics, /Classes with enrollment or attendance history cannot be deleted/);
+  assert.match(academics, /may affect existing academic setup/);
+  assert.match(academics, /@media \(max-width: 640px\)/);
+  assert.match(academics, /grid-template-columns: minmax\(0, 1fr\)/);
+});
+
+check('academic management EJS template compiles without syntax errors', () => {
+  ejs.compile(academics, { filename: path.join(__dirname, '..', 'views/academics/index.ejs') });
+});

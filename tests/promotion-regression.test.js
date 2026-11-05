@@ -26,6 +26,28 @@ async function run() {
   let schoolId = null;
   let foreignSchoolId = null;
   try {
+    // This test owns its schema setup and must not depend on another test's
+    // temporary database or migration execution order.
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS student_enrollment_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        school_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        section_id INTEGER,
+        source_class_id INTEGER,
+        destination_class_id INTEGER,
+        source_session TEXT,
+        destination_session TEXT,
+        event_type TEXT NOT NULL,
+        effective_date DATE,
+        reason TEXT,
+        destination_school TEXT,
+        recorded_by INTEGER,
+        source_enrollment_id INTEGER UNIQUE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (source_class_id IS NOT NULL OR destination_class_id IS NOT NULL)
+      )
+    `);
     await db.run("INSERT INTO schools (name, slug, current_session, current_term, status) VALUES (?, ?, '2025/2026', '2nd Term', 'active')", ['Promotion Test ' + token, slug]);
     schoolId = (await db.get('SELECT id FROM schools WHERE slug = ?', [slug])).id;
     await db.run("INSERT INTO schools (name, slug, current_session, current_term, status) VALUES (?, ?, '2025/2026', '2nd Term', 'active')", ['Foreign Test ' + token, 'promotion-foreign-' + token]);

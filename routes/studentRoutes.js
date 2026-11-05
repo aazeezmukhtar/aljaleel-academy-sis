@@ -33,6 +33,10 @@ router.get('/offline-view/:id', studentController.getOfflineStudentProfile);
 router.get('/transfer/:id', isAdmin, studentController.getStudentTransferPage);
 router.post('/transfer/:id', isAdmin, studentController.transferStudent);
 
+// Student departure workflow (Admin only)
+router.get('/departure/:id', isAdmin, studentController.getStudentDeparturePage);
+router.post('/departure/:id', isAdmin, studentController.recordStudentDeparture);
+
 // GET /students/view/:id
 router.get('/view/:id', studentController.getStudentProfile);
 

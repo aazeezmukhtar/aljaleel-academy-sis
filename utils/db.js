@@ -58,7 +58,7 @@ if (DB_TYPE === 'postgres') {
 async function all(sql, params = [], client = null) {
     if (DB_TYPE === 'postgres') {
         let counter = 1;
-        let pgSql = sql.replace(/\?/g, () => `${counter++}`);
+        let pgSql = sql.replace(/\\?/g, () => `$${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';
@@ -80,7 +80,7 @@ async function all(sql, params = [], client = null) {
 async function get(sql, params = [], client = null) {
     if (DB_TYPE === 'postgres') {
         let counter = 1;
-        let pgSql = sql.replace(/\?/g, () => `${counter++}`);
+        let pgSql = sql.replace(/\\?/g, () => `$${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';
@@ -102,7 +102,7 @@ async function get(sql, params = [], client = null) {
 async function run(sql, params = [], client = null) {
     if (DB_TYPE === 'postgres') {
         let counter = 1;
-        let pgSql = sql.replace(/\?/g, () => `${counter++}`);
+        let pgSql = sql.replace(/\\?/g, () => `$${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';

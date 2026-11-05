@@ -124,6 +124,11 @@ const base = {
     assert.deepStrictEqual(events.map(event => event.event_type), ['internal_transfer', 'promotion']);
     assert.strictEqual(events[0].source_class_id, 1000);
     assert.strictEqual(events[0].destination_class_id, 1001);
+    assert.strictEqual(events[0].source_session, '2026/2027');
+    const transferDetails = sqlite.prepare("SELECT effective_date, reason, section_id FROM student_enrollment_history WHERE event_type = 'internal_transfer'").get();
+    assert.strictEqual(transferDetails.effective_date, '2026-11-05');
+    assert.strictEqual(transferDetails.reason, 'Class change approved');
+    assert.strictEqual(transferDetails.section_id, 10);
     assert.strictEqual(events[1].source_session, '2026/2027');
     assert.strictEqual(events[1].destination_session, '2027/2028');
 

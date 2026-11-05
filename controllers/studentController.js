@@ -1,5 +1,5 @@
 const db = require('../utils/db');
-const { getAcademicContext, getSectionContext, getCurrentSession, getCurrentTerm, getAvailableSessions } = require('../utils/sessionHelper');
+const { getAcademicContext, getSectionContext, getCurrentSession, getCurrentTerm } = require('../utils/sessionHelper');
 const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
@@ -529,8 +529,9 @@ const transferStudent = async (req, res) => {
         const student = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [id, schoolId]);
         if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
         const source = await db.get(`
-            SELECT c.id, c.section_id FROM student_enrollments se
+            SELECT c.id, c.section_id, sec.name AS section_name FROM student_enrollments se
             JOIN classes c ON c.id = se.class_id
+            LEFT JOIN sections sec ON sec.id = c.section_id AND sec.school_id = c.school_id
             WHERE se.student_id = ? AND se.class_id = ? AND se.session = ? AND c.school_id = ?
         `, [id, sourceClassId, sourceSession, schoolId]);
         if (!source) return res.status(409).json({ success: false, message: 'The selected source placement no longer exists. Refresh and review the student placements.' });
@@ -542,10 +543,20 @@ const transferStudent = async (req, res) => {
         if (sourceClassId === destinationClassId) {
             return res.status(400).json({ success: false, message: 'Choose a different destination class.' });
         }
-        await changeEnrollment({
-            schoolId, studentId: Number(id), sectionId: source.section_id,
-            sourceClassId, destinationClassId, sourceSession, destinationSession: sourceSession,
-            eventType: 'internal_transfer', effectiveDate, reason, recordedBy: user.id
+        await db.transaction(async client => {
+            await changeEnrollment({
+                schoolId, studentId: Number(id), sectionId: source.section_id,
+                sourceClassId, destinationClassId, sourceSession, destinationSession: sourceSession,
+                eventType: 'internal_transfer', effectiveDate, reason, recordedBy: user.id
+            }, { inTransaction: true, client });
+            // current_class_id is a legacy single-class pointer; keep it aligned
+            // with Academy only. Tahfeez transfers must not overwrite it.
+            if (source.section_name === 'Academy') {
+                await db.run(
+                    'UPDATE students SET current_class_id = ? WHERE id = ? AND school_id = ?',
+                    [destinationClassId, id, schoolId], client
+                );
+            }
         });
         logAction(user.id, 'TRANSFER_STUDENT', 'STUDENT', {
             student_id: Number(id), source_class_id: sourceClassId,

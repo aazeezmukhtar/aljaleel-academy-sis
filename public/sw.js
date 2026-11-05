@@ -441,12 +441,14 @@ self.addEventListener('activate', (event) => {
             for (const request of previousKeys) {
                 const url = new URL(request.url);
                 if (isStudentDirectoryPath(url.pathname) ||
-                    /^\/students\/view\/\d+\/?$/.test(url.pathname) ||
-                    /^\/students\/offline-view\/\d+\/?$/.test(url.pathname)) continue;
+                    /^\/students\/view\/\d+\/?$/.test(url.pathname)) continue;
                 if (!isStaticAsset(url) && !isOfflinePrivatePath(url.pathname)) continue;
-                if (isStaticAsset(url) && await nextCache.match(request)) continue;
 
                 let response = await previousCache.match(request);
+                if (isStudentOfflineProfilePath(url.pathname) &&
+                    (!response || response.headers.get('X-AcadMe-Offline-Profile') !== 'safe-v1')) continue;
+                if (isStaticAsset(url) && await nextCache.match(request)) continue;
+
                 if (response) {
                     try {
                         // Older releases did not timestamp prepared attendance/results

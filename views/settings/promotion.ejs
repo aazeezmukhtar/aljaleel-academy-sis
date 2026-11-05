@@ -161,7 +161,7 @@
 .promotion-status[data-kind="error"],.promotion-warnings{background:#fff0ef;color:#9b2720;border:1px solid #f2c5c1}
 .promotion-status[data-kind="success"]{background:#edf8f0;color:#23633a;border:1px solid #c7e8d0}
 .promotion-status[data-kind="info"]{background:#eef5fb;color:#245477;border:1px solid #cbdff0}
-.promotion-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.promotion-totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:16px 0}
 .promotion-total{padding:12px;border:1px solid #e2e8f0;border-radius:9px;background:#fafbfd}
 .promotion-total strong{display:block;font-size:1.35rem;color:#1e293b}
 .promotion-total span{font-size:.78rem;color:#64748b}
@@ -190,7 +190,7 @@
  .promotion-actions{flex-direction:column-reverse}
  .promotion-actions>*{width:100%;text-align:center;justify-content:center}
  .promotion-preview-header{flex-direction:column}
- .promotion-totals{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ .promotion-totals{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
  .promotion-total{padding:9px 7px}
  .promotion-total strong{font-size:1.1rem}
  .promotion-total span{font-size:.7rem}
@@ -265,20 +265,21 @@ function updatePromotionCounts() {
         const count = inputs.filter(input => input.checked).length;
         selected += count;
         total += inputs.length;
+        const graduateGroup = group.dataset.isGraduate === 'true';
         const repeater = inputs.length - count;
         const countNode = group.querySelector('.promotion-group-counts');
-        if (countNode) countNode.textContent = count + ' advancing · ' + repeater + ' repeating';
+        if (countNode) countNode.textContent = count + (graduateGroup ? ' graduating · ' : ' advancing · ') + repeater + ' repeating';
         const selectAll = group.querySelector('[data-group-select="all"]');
         const clearAll = group.querySelector('[data-group-select="none"]');
         if (selectAll) selectAll.disabled = count === inputs.length;
         if (clearAll) clearAll.disabled = count === 0;
     });
-    const graduate = currentPreviewData ? currentPreviewData.preview.filter(group => group.isGraduate).reduce((sum, group) => sum + group.students.length, 0) : 0;
     const graduatingSelected = Array.from(document.querySelectorAll('.promotion-student-checkbox:checked')).filter(input => input.dataset.isGraduate === 'true').length;
+    const advancingSelected = selected - graduatingSelected;
     const repeaters = total - selected;
     const totals = document.getElementById('promotionTotals');
     totals.replaceChildren();
-    [['' + selected, 'Selected to advance / graduate'], ['' + repeaters, 'Repeating in current class'], ['' + total, 'Total students reviewed']].forEach(([value, label]) => {
+    [['' + advancingSelected, 'Advancing to another class'], ['' + graduatingSelected, 'Graduating / alumni'], ['' + repeaters, 'Repeating in current class'], ['' + total, 'Total students reviewed']].forEach(([value, label]) => {
         const card = document.createElement('div');
         card.className = 'promotion-total';
         const strong = document.createElement('strong'); strong.textContent = value;
@@ -295,6 +296,7 @@ function updatePromotionCounts() {
 function buildPreviewGroup(group, sourceSession) {
     const wrapper = document.createElement('section');
     wrapper.className = 'promotion-preview-group';
+    wrapper.dataset.isGraduate = String(!!group.isGraduate);
     const header = document.createElement('div');
     header.className = 'promotion-preview-group-header';
     const title = document.createElement('strong');

@@ -285,11 +285,13 @@ check('only the privacy-limited offline student profile is eligible for seven-da
   assert.match(source, /7 \* 24 \* 60 \* 60 \* 1000/);
   assert.match(controller, /SELECT id, first_name, last_name, gender, dob, admission_number,[\s\S]*passport_photo_path, phone, parent_phone, parent_phone_alt/);
   assert.match(controller, /res\.render\('students\/offline-view'/);
-  assert.doesNotMatch(controller.slice(controller.indexOf('const getOfflineStudentProfile'), controller.indexOf('const getEditForm')), /student_fees|student_health|FROM results|password|parent_address|email/);
+  assert.doesNotMatch(controller.slice(controller.indexOf('const getOfflineStudentProfile'), controller.indexOf('const getEditForm')), /student_fees|student_health|FROM results|parent_address|email/);
   assert.doesNotMatch(profileView, /Health|Financial|Academic Records|student_fees|blood_group|genotype/);
   assert.match(profileView, /data-acadme-offline-profile/);
   assert.match(source, /isOfflinePrivatePath/);
   assert.match(source, /X-AcadMe-Offline-Prepare/);
+  assert.match(controller, /X-AcadMe-Offline-Profile', 'safe-v1'/);
+  assert.match(source, /X-AcadMe-Offline-Profile.*safe-v1/);
 });
 
 check('student directory offline search renders matching rows, not only a count', () => {

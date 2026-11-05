@@ -77,6 +77,16 @@
                     }
                 </script>
 
+                <form method="GET" action="/staff/view/<%= member.id %>" class="form-group" style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:20px;">
+                    <label for="staff-assignment-session" style="margin:0;">Show assignments</label>
+                    <select id="staff-assignment-session" name="session" class="form-control" style="max-width:240px;" onchange="this.form.submit()">
+                        <option value="current" <%= selectedSession === 'current' ? 'selected' : '' %>>Current session (by section)</option>
+                        <% availableSessions.forEach(sess => { %>
+                            <option value="<%= sess %>" <%= selectedSession === sess ? 'selected' : '' %>><%= sess %></option>
+                        <% }); %>
+                        <option value="all" <%= selectedSession === 'all' ? 'selected' : '' %>>All sessions</option>
+                    </select>
+                </form>
                 <div class="grid-2">
                     <!-- Academic Reach -->
                     <div class="card">

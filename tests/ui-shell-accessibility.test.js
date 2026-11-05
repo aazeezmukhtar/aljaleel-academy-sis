@@ -362,3 +362,42 @@ check('academic management explains the impact of destructive actions and adapts
 check('academic management EJS template compiles without syntax errors', () => {
   ejs.compile(academics, { filename: path.join(__dirname, '..', 'views/academics/index.ejs') });
 });
+
+// Session-aware assignment display and summary regression coverage.
+const academicController = read('controllers/academicController.js');
+const staffController = read('controllers/staffController.js');
+const staffWorkloadController = read('controllers/reporting/staffReportController.js');
+const workloadView = read('views/reports/staff/workload.ejs');
+
+check('academic management defaults to section-current subject assignments and retains session history filters', () => {
+  assert.match(academicController, /getCurrentSession\(schoolId\)/);
+  assert.match(academicController, /sa\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
+  assert.match(academicController, /available_sessions: availableSessions/);
+  assert.match(academics, /name="session"/);
+  assert.match(academics, /Current session \(by section\)/);
+  assert.match(academics, /All sessions/);
+});
+
+check('staff profile filters class and subject assignments by session without deleting history', () => {
+  assert.match(staffController, /class_assignments ca[\s\S]*ca\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
+  assert.match(staffController, /subject_assignments sa[\s\S]*sa\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
+  assert.match(staffController, /availableSessions/);
+  assert.match(staffProfile, /name="session"/);
+  assert.match(staffProfile, /All sessions/);
+  const profileHandler = staffController.slice(staffController.indexOf('const getStaffProfile'), staffController.indexOf('// GET /staff/edit'));
+  assert.doesNotMatch(profileHandler, /DELETE FROM (class_assignments|subject_assignments)/);
+});
+
+check('staff dashboard and workload figures exclude assignments from previous sessions', () => {
+  assert.match(dashboardController, /ca\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
+  assert.match(dashboardController, /sa\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
+  assert.match(staffWorkloadController, /ca\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
+  assert.match(staffWorkloadController, /sa\.session = COALESCE\(NULLIF\(sec\.current_session, ''\), \?\)/);
+  assert.match(workloadView, /Current session assignments/);
+});
+
+check('session-aware staff report and academic assignment templates compile', () => {
+  ejs.compile(academics, { filename: path.join(__dirname, '..', 'views/academics/index.ejs') });
+  ejs.compile(staffProfile, { filename: path.join(__dirname, '..', 'views/staff/view.ejs') });
+  ejs.compile(workloadView, { filename: path.join(__dirname, '..', 'views/reports/staff/workload.ejs') });
+});

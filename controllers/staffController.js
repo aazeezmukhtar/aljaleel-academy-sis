@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 const { uploadFile } = require('../utils/storageHelper');
+const { getCurrentSession } = require('../utils/sessionHelper');
 
 // GET /staff - Show all staff members
 const getAllStaff = async (req, res) => {
@@ -55,22 +56,51 @@ const getStaffProfile = async (req, res) => {
         );
         if (!member) return res.status(404).send('Staff member not found');
 
-        const classAssignments = await db.all(`
+        const currentSession = await getCurrentSession(schoolId);
+        const assignmentSessions = await db.all(`
+            SELECT ca.session FROM class_assignments ca
+            JOIN classes c ON ca.class_id = c.id
+            WHERE ca.staff_id = ? AND c.school_id = ? AND ca.session IS NOT NULL
+            UNION
+            SELECT sa.session FROM subject_assignments sa
+            JOIN classes c ON sa.class_id = c.id
+            WHERE sa.teacher_id = ? AND c.school_id = ? AND sa.session IS NOT NULL
+            ORDER BY session DESC
+        `, [id, schoolId, id, schoolId]);
+        const availableSessions = assignmentSessions.map(row => row.session);
+        const requestedSession = req.query.session || 'current';
+        const selectedSession = requestedSession === 'all' || requestedSession === 'current' ||
+            availableSessions.includes(requestedSession) ? requestedSession : 'current';
+        let classSql = `
             SELECT ca.id, ca.session, c.name as class_name
             FROM class_assignments ca
             JOIN classes c ON ca.class_id = c.id
-            WHERE ca.staff_id = ?
-            ORDER BY ca.session DESC, c.name
-        `, [id]);
-
-        const subjectAssignments = await db.all(`
+            LEFT JOIN sections sec ON c.section_id = sec.id AND sec.school_id = c.school_id
+            WHERE ca.staff_id = ? AND c.school_id = ?`;
+        const classParams = [id, schoolId];
+        let subjectSql = `
             SELECT sa.id, sa.session, s.name as subject_name, c.name as class_name
             FROM subject_assignments sa
             JOIN subjects s ON sa.subject_id = s.id
             JOIN classes c ON sa.class_id = c.id
-            WHERE sa.teacher_id = ?
-            ORDER BY sa.session DESC, s.name
-        `, [id]);
+            LEFT JOIN sections sec ON c.section_id = sec.id AND sec.school_id = c.school_id
+            WHERE sa.teacher_id = ? AND c.school_id = ? AND s.school_id = ?`;
+        const subjectParams = [id, schoolId, schoolId];
+        if (selectedSession === 'current') {
+            classSql += " AND ca.session = COALESCE(NULLIF(sec.current_session, ''), ?)";
+            classParams.push(currentSession || '');
+            subjectSql += " AND sa.session = COALESCE(NULLIF(sec.current_session, ''), ?)";
+            subjectParams.push(currentSession || '');
+        } else if (selectedSession !== 'all') {
+            classSql += ' AND ca.session = ?';
+            classParams.push(selectedSession);
+            subjectSql += ' AND sa.session = ?';
+            subjectParams.push(selectedSession);
+        }
+        classSql += ' ORDER BY ca.session DESC, c.name';
+        subjectSql += ' ORDER BY sa.session DESC, s.name, c.name';
+        const classAssignments = await db.all(classSql, classParams);
+        const subjectAssignments = await db.all(subjectSql, subjectParams);
 
         const allClasses = await db.all(
             'SELECT * FROM classes WHERE school_id = ? ORDER BY name',
@@ -87,6 +117,8 @@ const getStaffProfile = async (req, res) => {
             user,
             classAssignments,
             subjectAssignments,
+            availableSessions,
+            selectedSession,
             allClasses,
             allSubjects
         });

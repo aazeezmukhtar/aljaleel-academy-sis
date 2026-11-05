@@ -1,4 +1,5 @@
 ﻿const db = require('../utils/db');
+const { getCurrentSession } = require('../utils/sessionHelper');
 
 const getAcademicDashboard = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
@@ -19,23 +20,40 @@ const getAcademicDashboard = async (req, res) => {
             "SELECT id, first_name, last_name, staff_id FROM staff WHERE status != 'inactive' AND school_id = ? ORDER BY last_name",
             [schoolId]
         );
-        const assignments = await db.all(`
-            SELECT sa.*, t.first_name, t.last_name, s.name as subject_name, c.name as class_name
+        const currentSession = await getCurrentSession(schoolId);
+        const assignmentSessions = await db.all(`
+            SELECT DISTINCT sa.session FROM subject_assignments sa
+            JOIN classes c ON sa.class_id = c.id
+            WHERE c.school_id = ? AND sa.session IS NOT NULL
+            ORDER BY sa.session DESC
+        `, [schoolId]);
+        const availableSessions = assignmentSessions.map(row => row.session);
+        const requestedSession = req.query.session || 'current';
+        const selectedSession = requestedSession === 'all' || requestedSession === 'current' ||
+            availableSessions.includes(requestedSession) ? requestedSession : 'current';
+        let assignmentSql = `
+            SELECT sa.*, t.first_name, t.last_name, s.name as subject_name,
+                   c.name as class_name, sec.name as section_name
             FROM subject_assignments sa
             JOIN staff t ON sa.teacher_id = t.id
             JOIN subjects s ON sa.subject_id = s.id
             JOIN classes c ON sa.class_id = c.id
-            WHERE c.school_id = ?
-            ORDER BY sa.session DESC, t.first_name, t.last_name
-        `, [schoolId]);
-
+            LEFT JOIN sections sec ON c.section_id = sec.id AND sec.school_id = c.school_id
+            WHERE c.school_id = ?`;
+        const assignmentParams = [schoolId];
+        if (selectedSession === 'current') {
+            assignmentSql += " AND sa.session = COALESCE(NULLIF(sec.current_session, ''), ?)";
+            assignmentParams.push(currentSession || '');
+        } else if (selectedSession !== 'all') {
+            assignmentSql += ' AND sa.session = ?';
+            assignmentParams.push(selectedSession);
+        }
+        assignmentSql += ' ORDER BY sa.session DESC, t.first_name, t.last_name, s.name, c.name';
+        const assignments = await db.all(assignmentSql, assignmentParams);
         res.render('academics/index', {
-            title: 'Academic Management',
-            sections,
-            classes,
-            subjects,
-            teachers,
-            assignments
+            title: 'Academic Management', sections, classes, subjects, teachers, assignments,
+            available_sessions: availableSessions, current_session: currentSession,
+            selected_session: selectedSession
         });
     } catch (err) {
         console.error('Academic Dashboard Error:', err);

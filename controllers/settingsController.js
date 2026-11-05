@@ -458,6 +458,20 @@ const processPromotion = async (req, res) => {
                             if (otherSectionEnrollment) {
                                 throw new Error('Graduation stopped: a selected student remains enrolled in another section. Review that student individually before graduating.');
                             }
+
+                            // Graduation must close the student's school placement,
+                            // not leave a pre-existing enrollment in the target session.
+                            const targetSectionEnrollment = await tx.get(`
+                                SELECT se.id, se.class_id
+                                FROM student_enrollments se
+                                JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+                                WHERE se.student_id = ? AND se.session = ? AND c.section_id = ?
+                                LIMIT 1
+                            `, [schoolId, student.id, targetSession, classSectionIdMap[classId]]);
+                            if (targetSectionEnrollment) {
+                                throw new Error('Graduation stopped: the student already has a placement in the target session for this section. Resolve it before graduating.');
+                            }
+
                             await changeEnrollment({
                                 schoolId,
                                 studentId: Number(student.id),
@@ -468,7 +482,7 @@ const processPromotion = async (req, res) => {
                                 recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                             }, { inTransaction: true, client });
                             await tx.run(
-                                "UPDATE students SET status = 'graduated' WHERE id = ? AND school_id = ?",
+                                "UPDATE students SET status = 'graduated', current_class_id = NULL WHERE id = ? AND school_id = ?",
                                 [student.id, schoolId]
                             );
                         } else {

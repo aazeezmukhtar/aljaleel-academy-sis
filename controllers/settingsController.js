@@ -2,6 +2,7 @@ const db = require('../utils/db');
 const tenantHelper = require('../utils/tenantHelper');
 const sessionHelper = require('../utils/sessionHelper');
 const { uploadFile } = require('../utils/storageHelper');
+const { changeEnrollment } = require('../services/studentEnrollmentHistoryService');
 
 // Get Settings Page
 const getSettingsPage = async (req, res) => {
@@ -346,6 +347,12 @@ const processPromotion = async (req, res) => {
             return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
         }
 
+        if (sourceSession === targetSession) {
+            const message = 'Same-session class changes must be processed through the dedicated Transfer Student window, not session promotion.';
+            if (isAjax) return res.status(400).json({ success: false, message });
+            return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+        }
+
         const classes = await db.all(`
             SELECT c.id, c.section_id, sec.name AS section_name
             FROM classes c
@@ -405,13 +412,18 @@ const processPromotion = async (req, res) => {
             return res.redirect(`/settings/promotion?message=${encodeURIComponent(message)}`);
         }
 
-        await db.transaction(async () => {
+        await db.transaction(async client => {
+            const tx = {
+                all: (sql, params = []) => db.all(sql, params, client),
+                get: (sql, params = []) => db.get(sql, params, client),
+                run: (sql, params = []) => db.run(sql, params, client)
+            };
             for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
                 const classId = parseInt(classIdStr, 10);
                 if (!classId) continue;
 
                 if (targetId === 'graduate') {
-                    const enrolledStudents = await db.all(`
+                    const enrolledStudents = await tx.all(`
                         SELECT s.id
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
@@ -435,7 +447,7 @@ const processPromotion = async (req, res) => {
                         if (selectedForGraduation) {
                             // Student status is global. Do not graduate a student who
                             // remains enrolled in another section in either session.
-                            const otherSectionEnrollment = await db.get(`
+                            const otherSectionEnrollment = await tx.get(`
                                 SELECT se.id
                                 FROM student_enrollments se
                                 JOIN classes c ON c.id = se.class_id AND c.school_id = ?
@@ -446,33 +458,48 @@ const processPromotion = async (req, res) => {
                             if (otherSectionEnrollment) {
                                 throw new Error('Graduation stopped: a selected student remains enrolled in another section. Review that student individually before graduating.');
                             }
-                            await db.run(
+                            await changeEnrollment({
+                                schoolId,
+                                studentId: Number(student.id),
+                                sectionId: classSectionIdMap[classId],
+                                sourceClassId: classId,
+                                sourceSession,
+                                eventType: 'graduation',
+                                recordedBy: req.session && req.session.staff ? req.session.staff.id : null
+                            }, { inTransaction: true, client });
+                            await tx.run(
                                 "UPDATE students SET status = 'graduated' WHERE id = ? AND school_id = ?",
                                 [student.id, schoolId]
                             );
                         } else {
                             // Unselected students repeat the same class in the target session.
-                            const existingTarget = await db.get(`
+                            const existingTargets = await tx.all(`
                                 SELECT se.class_id
                                 FROM student_enrollments se
                                 JOIN classes c ON c.id = se.class_id AND c.school_id = ?
                                 WHERE se.student_id = ? AND se.session = ? AND c.section_id = ?
-                                LIMIT 1
+                                ORDER BY se.id
                             `, [schoolId, student.id, targetSession, classSectionIdMap[classId]]);
-                            if (existingTarget && Number(existingTarget.class_id) !== Number(classId)) {
-                                throw new Error('Promotion stopped: a repeater already has a different class placement in the target session. Existing placements were not overwritten.');
+                            if (existingTargets.length > 1 ||
+                                (existingTargets[0] && Number(existingTargets[0].class_id) !== Number(classId))) {
+                                throw new Error('Promotion stopped: a repeater has a conflicting or ambiguous placement in the target section/session. Existing placements were not overwritten.');
                             }
-                            if (!existingTarget) {
-                                await db.run(`
-                                    INSERT INTO student_enrollments (student_id, class_id, session)
-                                    VALUES (?, ?, ?)
-                                `, [student.id, classId, targetSession]);
-                            }
+                            await changeEnrollment({
+                                schoolId,
+                                studentId: Number(student.id),
+                                sectionId: classSectionIdMap[classId],
+                                sourceClassId: classId,
+                                destinationClassId: classId,
+                                sourceSession,
+                                destinationSession: targetSession,
+                                eventType: 'repetition',
+                                recordedBy: req.session && req.session.staff ? req.session.staff.id : null
+                            }, { inTransaction: true, client });
                         }
                     }
                 } else if (targetId && targetId !== 'none') {
                     const targetClassId = parseInt(targetId, 10);
-                    const enrolledStudents = await db.all(`
+                    const enrolledStudents = await tx.all(`
                         SELECT s.id
                         FROM students s
                         JOIN student_enrollments se ON s.id = se.student_id
@@ -516,7 +543,7 @@ const processPromotion = async (req, res) => {
                             throw new Error('Promotion stopped because the destination class is outside the source section.');
                         }
 
-                        const existingTargetEnrollments = await db.all(`
+                        const existingTargetEnrollments = await tx.all(`
                             SELECT se.class_id
                             FROM student_enrollments se
                             JOIN classes c ON c.id = se.class_id AND c.school_id = ?
@@ -530,30 +557,20 @@ const processPromotion = async (req, res) => {
 
                         const existingTargetEnrollment = existingTargetEnrollments[0];
                         if (existingTargetEnrollment && Number(existingTargetEnrollment.class_id) !== Number(desiredClassId)) {
-                            // Same-session class change may replace only the exact source
-                            // enrollment it is moving from. Other placements remain conflicts.
-                            if (targetSession === sourceSession &&
-                                Number(existingTargetEnrollment.class_id) === Number(classId) &&
-                                Number(desiredClassId) !== Number(classId)) {
-                                await db.run(
-                                    'DELETE FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
-                                    [student.id, classId, targetSession]
-                                );
-                            } else {
-                                throw new Error('Promotion stopped: a student already has a different enrollment in the target session. Existing placements were not overwritten.');
-                            }
+                            throw new Error('Promotion stopped: a student already has a different enrollment in the target session. Existing placements were not overwritten.');
                         }
 
-                        const enrollmentNowExists = await db.get(
-                            'SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
-                            [student.id, desiredClassId, targetSession]
-                        );
-                        if (!enrollmentNowExists) {
-                            await db.run(`
-                                INSERT INTO student_enrollments (student_id, class_id, session)
-                                VALUES (?, ?, ?)
-                            `, [student.id, desiredClassId, targetSession]);
-                        }
+                        await changeEnrollment({
+                            schoolId,
+                            studentId: Number(student.id),
+                            sectionId: sourceSectionId,
+                            sourceClassId: classId,
+                            destinationClassId: desiredClassId,
+                            sourceSession,
+                            destinationSession: targetSession,
+                            eventType: selectedForPromotion && Number(desiredClassId) !== Number(classId) ? 'promotion' : 'repetition',
+                            recordedBy: req.session && req.session.staff ? req.session.staff.id : null
+                        }, { inTransaction: true, client });
 
                         // current_class_id is a legacy single-class field. Prefer Academy;
                         // fall back to the first configured section only where no Academy
@@ -561,7 +578,7 @@ const processPromotion = async (req, res) => {
                         const isCurrentClassSection = isAcademySection ||
                             (!hasAcademySection && Number(sourceSectionId) === Number(fallbackCurrentClassSectionId));
                         if (isCurrentClassSection) {
-                            await db.run(
+                            await tx.run(
                                 'UPDATE students SET current_class_id = ? WHERE id = ? AND school_id = ?',
                                 [desiredClassId, student.id, schoolId]
                             );
@@ -576,45 +593,45 @@ const processPromotion = async (req, res) => {
             // but must leave the current session and term untouched.
             if (targetSession !== sourceSession) {
                 // CRITICAL: Advance Active Academic Calendar for School & All Sections
-                await db.run(
+                await tx.run(
                     "UPDATE sections SET current_session = ?, current_term = '1st Term' WHERE school_id = ?",
                     [targetSession, schoolId]
                 );
     
-                await db.run(
+                await tx.run(
                     "UPDATE schools SET current_session = ?, current_term = '1st Term' WHERE id = ?",
                     [targetSession, schoolId]
                 );
     
                 // Upsert current_session in settings
-                const existingSession = await db.get(
+                const existingSession = await tx.get(
                     "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ?",
                     [schoolId]
                 );
                 if (existingSession) {
-                    await db.run(
+                    await tx.run(
                         "UPDATE settings SET value = ? WHERE key = 'current_session' AND school_id = ?",
                         [targetSession, schoolId]
                     );
                 } else {
-                    await db.run(
+                    await tx.run(
                         "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_session', ?)",
                         [schoolId, targetSession]
                     );
                 }
     
                 // Upsert current_term in settings
-                const existingTerm = await db.get(
+                const existingTerm = await tx.get(
                     "SELECT value FROM settings WHERE key = 'current_term' AND school_id = ?",
                     [schoolId]
                 );
                 if (existingTerm) {
-                    await db.run(
+                    await tx.run(
                         "UPDATE settings SET value = '1st Term' WHERE key = 'current_term' AND school_id = ?",
                         [schoolId]
                     );
                 } else {
-                    await db.run(
+                    await tx.run(
                         "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_term', '1st Term')",
                         [schoolId]
                     );
@@ -627,9 +644,7 @@ const processPromotion = async (req, res) => {
 
         tenantHelper.clearTenantCache();
         
-        const successMessage = targetSession === sourceSession
-            ? `Promotion completed successfully within ${sourceSession}. The academic calendar was not changed.`
-            : `Promotion completed successfully! Active session transitioned to ${targetSession} (1st Term).`;
+        const successMessage = `Promotion completed successfully! Active session transitioned to ${targetSession} (1st Term).`;
         if (isAjax) {
             return res.json({ success: true, message: successMessage, calendarAdvanced: targetSession !== sourceSession });
         }

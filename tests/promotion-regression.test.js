@@ -26,6 +26,28 @@ async function run() {
   let schoolId = null;
   let foreignSchoolId = null;
   try {
+    // This test owns its schema setup and must not depend on another test's
+    // temporary database or migration execution order.
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS student_enrollment_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        school_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        section_id INTEGER,
+        source_class_id INTEGER,
+        destination_class_id INTEGER,
+        source_session TEXT,
+        destination_session TEXT,
+        event_type TEXT NOT NULL,
+        effective_date DATE,
+        reason TEXT,
+        destination_school TEXT,
+        recorded_by INTEGER,
+        source_enrollment_id INTEGER UNIQUE,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (source_class_id IS NOT NULL OR destination_class_id IS NOT NULL)
+      )
+    `);
     await db.run("INSERT INTO schools (name, slug, current_session, current_term, status) VALUES (?, ?, '2025/2026', '2nd Term', 'active')", ['Promotion Test ' + token, slug]);
     schoolId = (await db.get('SELECT id FROM schools WHERE slug = ?', [slug])).id;
     await db.run("INSERT INTO schools (name, slug, current_session, current_term, status) VALUES (?, ?, '2025/2026', '2nd Term', 'active')", ['Foreign Test ' + token, 'promotion-foreign-' + token]);
@@ -108,8 +130,8 @@ async function run() {
       assert.strictEqual(unchangedCalendar.current_term, '2nd Term');
     }
 
-    // Same-session individual promotion is valid, but must not reset the school's term.
-    // Use a dedicated source class so this scenario cannot alter other tests' student fixtures.
+    // Same-session class movement must use the dedicated Transfer Student workflow.
+    // The session-promotion endpoint must reject it without changing placement or calendar.
     await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Same Session Source ' + token]);
     const sameSessionSourceClass = (await db.get('SELECT id FROM classes WHERE school_id = ? AND name = ?', [schoolId, 'Same Session Source ' + token])).id;
     await db.run("INSERT INTO students (school_id, first_name, last_name, gender, dob, admission_number, current_class_id, status) VALUES (?, 'SameSession', 'Promotion', 'Other', '2015-01-01', ?, ?, 'active')", [schoolId, 'PROMO-SAME-SESSION-' + token, sameSessionSourceClass]);
@@ -120,20 +142,16 @@ async function run() {
       schoolId, xhr: true,
       body: { source_session: '2025/2026', target_session: '2025/2026', mapping: { [sameSessionSourceClass]: String(targetClass) } }
     }, sameSession);
-    assert.strictEqual(sameSession.statusCode, 200);
-    assert.strictEqual(sameSession.data.success, true, 'Same-session individual promotion must remain allowed');
-    assert.strictEqual(sameSession.data.calendarAdvanced, false);
-    const movedStudent = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [sameSessionStudent, schoolId]);
-    assert.strictEqual(Number(movedStudent.current_class_id), Number(targetClass), "Same-session promotion must update the student's class");
-    const movedEnrollment = await db.get('SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ?', [sameSessionStudent, '2025/2026']);
-    assert.strictEqual(Number(movedEnrollment.class_id), Number(targetClass), 'Same-session target enrollment must be recorded');
+    assert.strictEqual(sameSession.statusCode, 400, 'Same-session movement must be routed through the dedicated transfer workflow');
+    assert.match(sameSession.data.message, /Transfer Student window/i);
+    const unchangedSameSession = await db.get('SELECT class_id FROM student_enrollments WHERE student_id = ? AND session = ?', [sameSessionStudent, '2025/2026']);
+    assert.strictEqual(Number(unchangedSameSession.class_id), Number(sameSessionSourceClass), 'Rejected same-session movement must preserve its source placement');
+    const sameSessionCurrentClass = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [sameSessionStudent, schoolId]);
+    assert.strictEqual(Number(sameSessionCurrentClass.current_class_id), Number(sameSessionSourceClass));
+    assert.strictEqual(await db.get('SELECT id FROM student_enrollment_history WHERE student_id = ? AND event_type = ?', [sameSessionStudent, 'internal_transfer']), undefined);
     const sameSessionCalendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
     assert.strictEqual(sameSessionCalendar.current_session, '2025/2026');
-    assert.strictEqual(sameSessionCalendar.current_term, '2nd Term', 'Same-session promotion must not reset the current term');
-    const sameSessionSettings = await db.get("SELECT value FROM settings WHERE school_id = ? AND key = 'current_term'", [schoolId]);
-    assert.strictEqual(sameSessionSettings.value, '2nd Term', 'School term setting must remain unchanged');
-    const sameSessionSections = await db.all('SELECT current_session, current_term FROM sections WHERE school_id = ?', [schoolId]);
-    assert.ok(sameSessionSections.every(row => row.current_session === '2025/2026' && row.current_term === '2nd Term'), 'Same-session promotion must not change section calendars');
+    assert.strictEqual(sameSessionCalendar.current_term, '2nd Term');
 
     // Cross-section promotion must be rejected before any writes. A student may have
     // legitimate enrollments in both sections, but promotion mappings must not
@@ -218,6 +236,7 @@ async function run() {
     assert.strictEqual(calendar.current_term, '2nd Term');
     let setting = await db.get("SELECT value FROM settings WHERE school_id = ? AND key = 'current_session'", [schoolId]);
     assert.strictEqual(setting.value, '2025/2026');
+    assert.strictEqual(await db.get("SELECT id FROM student_enrollment_history WHERE student_id = ? AND event_type = 'promotion'", [currentStudent]), undefined, 'Failed promotion must roll back its history event as well as enrollment and calendar writes');
     await db.run('DROP TRIGGER promotion_test_force_failure');
 
     const success = response();
@@ -229,6 +248,12 @@ async function run() {
     assert.ok(rows.some(r => Number(r.class_id) === Number(sourceClass) && r.session === '2025/2026'), 'Historical source enrollment must remain');
     assert.ok(rows.some(r => Number(r.class_id) === Number(targetClass) && r.session === '2026/2027'), 'Target enrollment must be added');
     assert.ok(rows.some(r => Number(r.class_id) === Number(otherSectionClass) && r.session === '2026/2027'), 'Other-section enrollment must remain');
+    const promotedHistory = await db.get("SELECT event_type, source_class_id, destination_class_id, source_session, destination_session FROM student_enrollment_history WHERE student_id = ? ORDER BY id DESC LIMIT 1", [currentStudent]);
+    assert.strictEqual(promotedHistory.event_type, 'promotion');
+    assert.strictEqual(Number(promotedHistory.source_class_id), Number(sourceClass));
+    assert.strictEqual(Number(promotedHistory.destination_class_id), Number(targetClass));
+    assert.strictEqual(promotedHistory.source_session, '2025/2026');
+    assert.strictEqual(promotedHistory.destination_session, '2026/2027');
     const oldStudent = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [previousStudent, schoolId]);
     assert.strictEqual(Number(oldStudent.current_class_id), Number(sourceClass), 'Previous-session-only student must not be promoted');
     assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND session = ?', [previousStudent, '2026/2027']), undefined);
@@ -282,6 +307,11 @@ async function run() {
     const graduated = await db.get('SELECT status FROM students WHERE id = ? AND school_id = ?', [graduatingStudent, schoolId]);
     assert.strictEqual(graduated.status, 'graduated');
     assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND session = ?', [graduatingStudent, '2027/2028']), undefined, 'Graduation must not create a normal target-session enrollment');
+    const graduationEvent = await db.get("SELECT event_type, source_class_id, destination_class_id, destination_session FROM student_enrollment_history WHERE student_id = ? ORDER BY id DESC LIMIT 1", [graduatingStudent]);
+    assert.strictEqual(graduationEvent.event_type, 'graduation');
+    assert.strictEqual(Number(graduationEvent.source_class_id), Number(graduationSourceClass));
+    assert.strictEqual(graduationEvent.destination_class_id, null);
+    assert.strictEqual(graduationEvent.destination_session, null);
 
     // Selective promotion: selected students advance; unchecked students repeat
     // in the same class for the target session. Both retain source-session history.
@@ -318,6 +348,10 @@ async function run() {
     assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [repeaterStudent, selectiveSourceClass, '2026/2027']), 'Repeater source-session history must remain');
     const repeaterCurrentClass = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [repeaterStudent, schoolId]);
     assert.strictEqual(Number(repeaterCurrentClass.current_class_id), Number(selectiveSourceClass), 'Repeater current class must remain unchanged');
+    const promotionEvents = await db.all("SELECT event_type, source_class_id, destination_class_id FROM student_enrollment_history WHERE student_id IN (?, ?) ORDER BY student_id", [selectedStudent, repeaterStudent]);
+    assert.strictEqual(promotionEvents.length, 2, 'Selected student and repeater must each receive one history event');
+    assert.strictEqual(promotionEvents.find(row => Number(row.source_class_id) === Number(selectiveSourceClass) && Number(row.destination_class_id) === Number(selectiveTargetClass)).event_type, 'promotion');
+    assert.strictEqual(promotionEvents.find(row => Number(row.source_class_id) === Number(selectiveSourceClass) && Number(row.destination_class_id) === Number(selectiveSourceClass)).event_type, 'repetition');
 
     // Selective graduation: selected students graduate; unchecked students repeat.
     await db.run('INSERT INTO classes (school_id, section_id, name) VALUES (?, ?, ?)', [schoolId, sectionIds[0], 'Selective Graduation ' + token]);
@@ -348,6 +382,8 @@ async function run() {
     assert.strictEqual((await db.get('SELECT status FROM students WHERE id = ?', [selectedGraduate])).status, 'graduated');
     assert.strictEqual((await db.get('SELECT status FROM students WHERE id = ?', [graduationRepeater])).status, 'active');
     assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [graduationRepeater, selectiveGraduationClass, '2028/2029']), 'Unchecked graduation student must repeat in the target session');
+    assert.strictEqual((await db.get("SELECT event_type FROM student_enrollment_history WHERE student_id = ? ORDER BY id DESC LIMIT 1", [selectedGraduate])).event_type, 'graduation');
+    assert.strictEqual((await db.get("SELECT event_type FROM student_enrollment_history WHERE student_id = ? ORDER BY id DESC LIMIT 1", [graduationRepeater])).event_type, 'repetition');
 
 
     // Invalid checkbox selections must fail closed before any partial writes.

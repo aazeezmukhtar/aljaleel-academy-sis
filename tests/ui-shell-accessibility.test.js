@@ -135,6 +135,7 @@ check('student portal navigation has 44px touch targets and visible keyboard foc
   assert.match(portalCss, /prefers-reduced-motion: reduce/);
 });
 
+const offlineStudentProfile = read('views/students/offline-view.ejs');
 const studentProfile = read('views/students/view.ejs');
 const enrollmentForm = read('views/students/enroll.ejs');
 
@@ -145,6 +146,14 @@ check('student profile uses the shared responsive, offline-aware staff shell', (
   assert.match(studentProfile, /@media \(max-width: 640px\)[\s\S]*\.detail-grid \{ grid-template-columns: 1fr; \}/);
   assert.match(header, /\/js\/offline-handler\.js/);
   assert.match(header, /\/js\/image-optimizer\.js/);
+});
+
+check('offline student profile uses the shared shell and contains only approved fields', () => {
+  assert.match(offlineStudentProfile, /data-acadme-offline-profile/);
+  assert.match(offlineStudentProfile, /Admission number/);
+  assert.match(offlineStudentProfile, /Parent \/ guardian primary phone/);
+  assert.doesNotMatch(offlineStudentProfile, /Health & Wellness|Financial Summary|Academic Records|blood_group|genotype|fees\.total/);
+  ejs.compile(offlineStudentProfile, { filename: path.join(__dirname, '..', 'views/students/offline-view.ejs') });
 });
 
 check('student enrollment loads shared navigation and browser-side photo cropping', () => {

@@ -139,7 +139,7 @@ const studentController = require('../controllers/studentController');
     db.transaction = async callback => callback(null);
     await studentController.updateStudent(req(''), res);
     assert.strictEqual(historyCalls.length, 0, 'A blank class field must not silently create or delete a placement');
-    assert.strictEqual(statusCode, 500, 'Clearing an existing placement must be blocked');
+    assert.strictEqual(statusCode, 400, 'Clearing an existing placement must be blocked with a validation response');
     console.log('[student-enrollment-update] Existing placement cannot be silently cleared from profile editing.');
   } finally {
     db.all = originalAll;

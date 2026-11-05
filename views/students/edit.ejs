@@ -1,3 +1,73 @@
+<style>
+    .student-edit-card {
+        box-sizing: border-box;
+        width: 100%;
+    }
+
+    .student-edit-card *,
+    .student-edit-card *::before,
+    .student-edit-card *::after {
+        box-sizing: border-box;
+    }
+
+    .student-edit-card .form-grid {
+        min-width: 0;
+    }
+
+    .student-edit-card .form-control {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .student-edit-actions {
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 640px) {
+        .student-edit-card {
+            padding: 16px !important;
+            margin: 0 8px !important;
+            width: auto;
+        }
+
+        .student-edit-card .form-grid {
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 14px !important;
+        }
+
+        .student-edit-card .form-group {
+            min-width: 0;
+        }
+
+        .student-edit-actions {
+            flex-direction: column;
+            gap: 10px !important;
+        }
+
+        .student-edit-actions > .btn {
+            width: 100%;
+            flex: 1 1 auto !important;
+        }
+
+        .content-header {
+            align-items: flex-start;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .student-edit-card *,
+        .student-edit-card *::before,
+        .student-edit-card *::after {
+            scroll-behavior: auto !important;
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
+</style>
+
 <%- include('../partials/header') %>
 
     <div class="dashboard-container">

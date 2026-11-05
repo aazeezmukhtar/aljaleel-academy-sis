@@ -39,7 +39,7 @@ async function applyEnrollmentChange(input, client) {
         sourceClassId = null, destinationClassId = null,
         sourceSession = null, destinationSession = null,
         eventType, effectiveDate = null, reason = null,
-        destinationSchool = null, recordedBy = null
+        destinationSchool = null, recordedBy = null, destinationTerm = null
     } = input || {};
 
     if (!positiveId(schoolId) || !positiveId(studentId)) {
@@ -144,8 +144,8 @@ async function applyEnrollmentChange(input, client) {
 
     if (destinationClass) {
         await db.run(
-            'INSERT INTO student_enrollments (student_id, class_id, session) VALUES (?, ?, ?)',
-            [studentId, destinationClassId, destinationSession], client
+            'INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)',
+            [studentId, destinationClassId, destinationSession, destinationTerm], client
         );
     }
 

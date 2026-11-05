@@ -4,6 +4,7 @@ const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
 const { uploadFile } = require('../utils/storageHelper');
+const { changeEnrollment } = require('../services/studentEnrollmentHistoryService');
 
 const getStudents = async (req, res) => {
     const user = req.session.staff;
@@ -631,6 +632,7 @@ const updateStudent = async (req, res) => {
                 return res.status(400).json({ success: false, message: 'Invalid class assignment.' });
             }
             const ctx = await getSectionContext(classRow.section_id, schoolId);
+            sectionPlans.length = 0;
             sectionPlans.push({
                 sectionId: classRow.section_id,
                 chosenClassId: classRow.id,
@@ -665,36 +667,73 @@ const updateStudent = async (req, res) => {
             schoolId
         ];
 
-        // Keep enrollment changes and profile updates atomic in both SQLite and
-        // PostgreSQL. Every PostgreSQL write uses the same transaction client.
+        // Resolve existing placements before writing. Profile editing is a
+        // correction tool, not a silent transfer/departure mechanism.
+        const studentExists = await db.get(
+            'SELECT id FROM students WHERE id = ? AND school_id = ?',
+            [id, schoolId]
+        );
+        if (!studentExists) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
         await db.transaction(async (client = null) => {
             for (const plan of sectionPlans) {
                 if (!plan.session) continue;
 
-                if (plan.legacySingleClass && plan.sectionId == null) {
-                    await db.run(
-                        'DELETE FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
-                        [id, plan.chosenClassId, plan.session],
-                        client
+                const currentPlacements = plan.sectionId == null
+                    ? await db.all(
+                        'SELECT se.id, se.class_id FROM student_enrollments se WHERE se.student_id = ? AND se.session = ? AND se.class_id IN (SELECT id FROM classes WHERE school_id = ? AND section_id IS NULL) ORDER BY se.id',
+                        [id, plan.session, schoolId], client
+                    )
+                    : await db.all(
+                        'SELECT se.id, se.class_id FROM student_enrollments se JOIN classes c ON c.id = se.class_id WHERE se.student_id = ? AND se.session = ? AND c.section_id = ? AND c.school_id = ? ORDER BY se.id',
+                        [id, plan.session, plan.sectionId, schoolId], client
                     );
-                } else {
-                    await db.run(`
-                        DELETE FROM student_enrollments
-                        WHERE student_id = ?
-                          AND class_id IN (SELECT id FROM classes WHERE section_id = ? AND school_id = ?)
-                          AND session = ?
-                    `, [id, plan.sectionId, schoolId, plan.session], client);
+
+                if (currentPlacements.length > 1) {
+                    const error = new Error('This student has multiple placements in the same section and session. Resolve the duplicate placements before editing the profile.');
+                    error.statusCode = 409;
+                    throw error;
+                }
+                const current = currentPlacements[0] || null;
+
+                if (current && !plan.chosenClassId) {
+                    const error = new Error('This student already has a placement in this section. Clearing it here would erase the current assignment; use the dedicated transfer or departure workflow instead.');
+                    error.statusCode = 400;
+                    throw error;
                 }
 
-                if (plan.chosenClassId) {
+                if (current && Number(current.class_id) !== Number(plan.chosenClassId)) {
+                    await changeEnrollment({
+                        schoolId,
+                        studentId: Number(id),
+                        sectionId: plan.sectionId,
+                        sourceClassId: Number(current.class_id),
+                        destinationClassId: Number(plan.chosenClassId),
+                        sourceSession: plan.session,
+                        destinationSession: plan.session,
+                        destinationTerm: plan.term,
+                        eventType: 'correction',
+                        recordedBy: user.id
+                    }, { inTransaction: true, client });
+                } else if (current && Number(current.class_id) === Number(plan.chosenClassId)) {
                     await db.run(
-                        `INSERT INTO student_enrollments (student_id, class_id, session, term)
-                         VALUES (?, ?, ?, ?)
-                         ON CONFLICT(student_id, class_id, session)
-                         DO UPDATE SET term = excluded.term`,
-                        [id, plan.chosenClassId, plan.session, plan.term],
+                        'UPDATE student_enrollments SET term = ? WHERE id = ?',
+                        [plan.term, current.id],
                         client
                     );
+                } else if (!current && plan.chosenClassId) {
+                    await changeEnrollment({
+                        schoolId,
+                        studentId: Number(id),
+                        sectionId: plan.sectionId,
+                        destinationClassId: Number(plan.chosenClassId),
+                        destinationSession: plan.session,
+                        destinationTerm: plan.term,
+                        eventType: 'admission',
+                        recordedBy: user.id
+                    }, { inTransaction: true, client });
                 }
             }
 
@@ -708,7 +747,7 @@ const updateStudent = async (req, res) => {
         }, req.ip);
     } catch (err) {
         console.error('Update Student Error:', err);
-        res.status(500).json({ success: false, message: 'Failed to update student.' });
+        res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Failed to update student.' });
     }
 };
 

@@ -19,6 +19,7 @@ sqlite.exec(`
     student_id INTEGER NOT NULL REFERENCES students(id),
     class_id INTEGER NOT NULL REFERENCES classes(id),
     session TEXT NOT NULL,
+    term TEXT,
     UNIQUE(student_id, class_id, session)
   );
   CREATE TABLE student_enrollment_history (

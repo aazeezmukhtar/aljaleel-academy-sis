@@ -9,7 +9,6 @@ delete process.env.DB_POOL_URL;
 const assert = require('assert');
 const db = require('../utils/db');
 const enrollmentHistoryService = require('../services/studentEnrollmentHistoryService');
-const originalChangeEnrollment = enrollmentHistoryService.changeEnrollment;
 enrollmentHistoryService.changeEnrollment = async (input, options = {}) => {
   assert.strictEqual(options.inTransaction, true,
     'Admission history must use the student creation transaction');
@@ -131,7 +130,7 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
     );
     assert.ok(transactionalWrites.length >= 3, 'Student, placement, and admission history writes should be attempted');
     assert.ok(transactionalWrites.every(w => w.client === fakeClient),
-      'Student and enrollment writes must use the same transaction client');
+      'Student, placement, and admission history writes must use the same transaction client');
     assert.strictEqual(res.redirectedTo, '/students/enroll?error=Enrollment failed',
       'Failed enrollment should report failure rather than success');
   });
@@ -197,9 +196,10 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
     assert.strictEqual(admissionEvents[0].params[5], 'admission', 'Initial placement must use the admission event type');
     assert.strictEqual(admissionEvents[0].params[6], 9, 'Admission event should record the enrolling staff member');
     const transactionalWrites = writes.filter(w =>
-      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments')
+      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments') ||
+      w.sql.includes('INSERT INTO student_enrollment_history')
     );
-    assert.ok(transactionalWrites.length >= 2, 'Student and enrollment writes should both be attempted');
+    assert.ok(transactionalWrites.length >= 3, 'Student, placement, and admission history writes should all be attempted');
     assert.ok(transactionalWrites.every(w => w.client === fakeClient),
       'Student and enrollment writes must use the same transaction client');
     assert.strictEqual(res.redirectedTo, '/students?success=true', 'Successful enrollment should retain existing redirect');

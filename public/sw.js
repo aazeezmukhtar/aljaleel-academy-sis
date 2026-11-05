@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v17';
+const CACHE_NAME = 'aljaleel-sis-v18';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -53,6 +53,10 @@ function staticCacheKey(url) {
     });
 }
 
+function isStudentOfflineProfilePath(pathname) {
+    return /^\/students\/offline-view\/\d+\/?$/.test(pathname);
+}
+
 function isStudentDirectoryPath(pathname) {
     return pathname === '/students' || pathname === '/students/';
 }
@@ -60,6 +64,7 @@ function isStudentDirectoryPath(pathname) {
 function isOfflinePrivatePath(pathname) {
     return OFFLINE_PAGE_PATHS.has(pathname) ||
         isStudentDirectoryPath(pathname) ||
+        isStudentOfflineProfilePath(pathname) ||
         /^\/staff\/view\/\d+\/?$/.test(pathname);
 }
 
@@ -109,6 +114,44 @@ async function buildStaffOfflineResponse(response) {
     headers.set('Cache-Control', 'no-store');
     headers.set('X-AcadMe-Offline-Page', 'read-only');
 
+    return new Response(responseHtml, {
+        status: response.status,
+        statusText: response.statusText,
+        headers
+    });
+}
+
+
+async function buildStudentOfflineProfileResponse(response) {
+    const cachedAt = Date.parse(response.headers.get('X-AcadMe-Cached-At') || '');
+    const maxAgeMs = 7 * 24 * 60 * 60 * 1000;
+    if (!Number.isFinite(cachedAt) || Date.now() - cachedAt > maxAgeMs) {
+        return new Response(
+            'This saved student profile is older than 7 days and has expired. Reconnect and prepare it again.',
+            {
+                status: 503,
+                statusText: 'Offline student profile expired',
+                headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store' }
+            }
+        );
+    }
+
+    const contentType = response.headers.get('Content-Type') || 'text/html; charset=utf-8';
+    if (!contentType.toLowerCase().includes('text/html')) return response;
+    const savedAt = new Date(cachedAt).toLocaleString();
+    const noticeHtml = '<div class="alert alert-info" role="status" aria-live="polite">' +
+        'Saved offline copy from ' + savedAt +
+        '. This limited student profile is read-only offline. Financial information, health records and academic results are intentionally not included. Reconnect to refresh this copy.' +
+        '</div>';
+    const html = await response.text();
+    const responseHtml = /<body[^>]*>/i.test(html)
+        ? html.replace(/<body[^>]*>/i, (bodyTag) => bodyTag.replace(/>$/, ' data-acadme-offline="true">') + noticeHtml)
+        : html.replace(/<\/body>/i, noticeHtml + '</body>');
+    const headers = new Headers(response.headers);
+    headers.delete('Content-Length');
+    headers.set('Content-Type', contentType);
+    headers.set('Cache-Control', 'no-store');
+    headers.set('X-AcadMe-Offline-Page', 'read-only');
     return new Response(responseHtml, {
         status: response.status,
         statusText: response.statusText,
@@ -208,6 +251,8 @@ function isOfflinePreparationRequest(request, url) {
             return value !== null && value.trim() !== '';
         });
     }
+
+    if (isStudentOfflineProfilePath(url.pathname)) return true;
 
     if (url.pathname === '/results/manage') {
         return ['class_id', 'subject_id', 'session', 'term'].every((key) => {
@@ -583,6 +628,9 @@ self.addEventListener('fetch', (event) => {
                             })
                             : true;
                     if (exact && hasRequiredEntryContext) {
+                        if (isStudentOfflineProfilePath(url.pathname)) {
+                            return buildStudentOfflineProfileResponse(exact);
+                        }
                         if (isStaffOfflinePath(url.pathname)) {
                             return buildStaffOfflineResponse(exact);
                         }

@@ -290,7 +290,7 @@ function updatePromotionCounts() {
     commitSummary.textContent = selected + ' selected to advance or graduate; ' + repeaters + ' will repeat. ' +
         (currentPreviewData && currentPreviewData.totalClasses ? currentPreviewData.totalClasses + ' class mappings included.' : '');
     const commit = document.getElementById('commitBtn');
-    commit.disabled = !currentPreviewData || !currentPreviewData.preview.length;
+    commit.disabled = !currentPreviewData || !currentPreviewData.preview.length || (currentPreviewData.warnings && currentPreviewData.warnings.length > 0);
 }
 
 function buildPreviewGroup(group, sourceSession) {
@@ -387,7 +387,7 @@ async function fetchPreview() {
             data.totalStudents + ' students · ' + data.totalClasses + ' classes · ' + source_session + ' → ' + target_session;
         currentPromotionPreviewSignature = getPromotionSignature();
         updatePromotionCounts();
-        setPromotionStatus('Review prepared. Check the students who should advance. Unchecked students will repeat.', 'success');
+        setPromotionStatus(data.warnings && data.warnings.length ? 'The review contains warnings. Resolve the class mapping issues before committing.' : 'Review prepared. Check the students who should advance. Unchecked students will repeat.', data.warnings && data.warnings.length ? 'error' : 'success');
         previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch (error) {
         setPromotionStatus(error.message || 'Failed to load the promotion review.', 'error');
@@ -401,6 +401,10 @@ async function confirmPromotion() {
     const mapping = getPromotionMapping();
     const source_session = document.getElementById('sourceSessionSelect').value;
     const target_session = document.getElementById('targetSessionSelect').value;
+    if (currentPreviewData && currentPreviewData.warnings && currentPreviewData.warnings.length) {
+        setPromotionStatus('Resolve all preview warnings and prepare a clean review before committing.', 'error');
+        return;
+    }
     if (!currentPromotionPreviewSignature || currentPromotionPreviewSignature !== getPromotionSignature()) {
         setPromotionStatus('The class mapping or session selection has changed. Prepare a new review before committing.', 'error');
         return;

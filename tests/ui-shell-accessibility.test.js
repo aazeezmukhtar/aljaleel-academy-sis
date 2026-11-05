@@ -363,6 +363,7 @@ check('academic management EJS template compiles without syntax errors', () => {
   ejs.compile(academics, { filename: path.join(__dirname, '..', 'views/academics/index.ejs') });
 });
 
+// Session-aware assignment display and summary regression coverage.
 const academicController = read('controllers/academicController.js');
 const staffController = read('controllers/staffController.js');
 const staffWorkloadController = read('controllers/reporting/staffReportController.js');

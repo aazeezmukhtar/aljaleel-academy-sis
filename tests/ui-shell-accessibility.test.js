@@ -150,7 +150,7 @@ check('student enrollment loads shared navigation and browser-side photo croppin
   assert.match(enrollmentForm, /include\('\.\.\/partials\/footer'\)/);
   assert.match(enrollmentForm, /data-crop="square"/);
   assert.doesNotMatch(enrollmentForm, /<!DOCTYPE html>|<head>|<\/head>|<body>|<\/body>|<\/html>/i);
-  assert.match(enrollmentForm, /@media \(max-width: 640px\)[\s\S]*\.grid-2 \{ grid-template-columns: 1fr; \}/);
+  assert.match(enrollmentForm, /@media \(max-width: 640px\)[\s\S]*\.student-enroll-grid \{ grid-template-columns: minmax\(0, 1fr\); gap: 14px; \}/);
   assert.match(header, /\/js\/image-optimizer\.js/);
 });
 

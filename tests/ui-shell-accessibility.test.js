@@ -233,3 +233,12 @@ check('changed staff EJS templates compile without syntax errors', () => {
     ejs.compile(read(file), { filename: path.join(__dirname, '..', file) });
   });
 });
+
+check('staff assignment dialogs trap keyboard focus and identify remove actions', () => {
+  assert.match(staffProfile, /event\.key !== "Tab"/);
+  assert.match(staffProfile, /document\.activeElement === last/);
+  assert.match(staffProfile, /aria-label="Remove subject assignment for/);
+  assert.match(staffProfile, /aria-label="Remove class assignment for/);
+  assert.match(staffProfile, /aria-controls="subjectAssignmentModal"/);
+  assert.match(staffProfile, /aria-controls="classAssignmentModal"/);
+});

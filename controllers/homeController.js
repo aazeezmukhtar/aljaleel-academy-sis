@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { getCurrentSession } = require('../utils/sessionHelper');
 
 const getDashboard = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
@@ -104,20 +105,24 @@ const getDashboard = async (req, res) => {
                 upcomingEvents
             });
         } else {
+            const currentSession = await getCurrentSession(schoolId);
             const assignedClasses = await db.all(`
-                SELECT DISTINCT c.id, c.name 
+                SELECT DISTINCT c.id, c.name
                 FROM class_assignments ca
                 JOIN classes c ON ca.class_id = c.id
+                LEFT JOIN sections sec ON c.section_id = sec.id AND sec.school_id = c.school_id
                 WHERE ca.staff_id = ? AND c.school_id = ?
-            `, [user.id, schoolId]);
-
+                  AND ca.session = COALESCE(NULLIF(sec.current_session, ''), ?)
+            `, [user.id, schoolId, currentSession || '']);
             const assignedSubjects = await db.all(`
                 SELECT DISTINCT s.id, s.name, c.name as class_name
                 FROM subject_assignments sa
                 JOIN subjects s ON sa.subject_id = s.id
                 JOIN classes c ON sa.class_id = c.id
-                WHERE sa.teacher_id = ? AND c.school_id = ?
-            `, [user.id, schoolId]);
+                LEFT JOIN sections sec ON c.section_id = sec.id AND sec.school_id = c.school_id
+                WHERE sa.teacher_id = ? AND c.school_id = ? AND s.school_id = ?
+                  AND sa.session = COALESCE(NULLIF(sec.current_session, ''), ?)
+            `, [user.id, schoolId, schoolId, currentSession || '']);
 
             const myStudentsCount = (await db.get(`
                 SELECT COUNT(DISTINCT se.student_id) as count 
@@ -126,7 +131,7 @@ const getDashboard = async (req, res) => {
                 JOIN classes c ON se.class_id = c.id
                 JOIN sections sec ON c.section_id = sec.id
                 WHERE se.session = sec.current_session AND se.class_id IN (
-                    SELECT class_id FROM class_assignments WHERE staff_id = ?
+                    SELECT ca.class_id FROM class_assignments ca WHERE ca.staff_id = ? AND ca.session = sec.current_session
                 ) AND s.status = 'active' AND s.school_id = ?
             `, [user.id, schoolId])).count;
 
@@ -137,9 +142,13 @@ const getDashboard = async (req, res) => {
                 FROM attendance a
                 JOIN classes c ON a.class_id = c.id
                 WHERE a.date = ? AND c.school_id = ? AND a.class_id IN (
-                    SELECT class_id FROM class_assignments WHERE staff_id = ?
+                    SELECT ca.class_id FROM class_assignments ca
+                    JOIN classes assigned_c ON ca.class_id = assigned_c.id
+                    LEFT JOIN sections assigned_sec ON assigned_c.section_id = assigned_sec.id
+                    WHERE ca.staff_id = ?
+                      AND ca.session = COALESCE(NULLIF(assigned_sec.current_session, ''), ?)
                 )
-            `, [today, schoolId, user.id]);
+            `, [today, schoolId, user.id, currentSession || '']);
 
             const myAttendance = myAttendanceData && myAttendanceData.total > 0
                 ? ((myAttendanceData.present / myAttendanceData.total) * 100).toFixed(1) + '%'

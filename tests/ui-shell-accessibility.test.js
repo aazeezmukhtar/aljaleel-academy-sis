@@ -103,6 +103,8 @@ check('student directory mobile cards retain clickable student and parent contac
   assert.match(students, /td\[data-label="Contact Numbers"\][\s\S]*grid-row: 3/);
   assert.match(students, /td\[data-label="Status"\][\s\S]*grid-row: 4/);
   assert.match(students, /td\[data-label="Action"\][\s\S]*grid-row: 4/);
+  assert.match(students, /overflow-wrap: anywhere !important;/);
+  assert.match(students, /white-space: normal !important;/);
 });
 
 check('student directory filter controls have accessible names and expanded state', () => {

@@ -10,6 +10,7 @@
     "start": "node app.js",
     "test:regression": "node tests/regression.test.js",
     "test:enrollment-history-migration": "node tests/student-enrollment-history-migration.test.js",
+    "test:enrollment-history-service": "node tests/student-enrollment-history-service.test.js",
     "pm2": "pm2 start app.js --name acadme-sis",
     "test:results-context": "node tests/result-context-integrity.test.js",
     "test:section-owned": "node tests/result-report-section-isolation.test.js && node tests/section-owned-academic-records-writes.test.js && node tests/section-owned-academic-records-portal.test.js && node tests/academics-results-class-isolation.test.js",

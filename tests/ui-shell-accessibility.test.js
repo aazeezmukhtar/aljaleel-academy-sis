@@ -131,3 +131,22 @@ check('student portal navigation has 44px touch targets and visible keyboard foc
   assert.match(portalCss, /\.acm-sidebar-item:focus-visible/);
   assert.match(portalCss, /prefers-reduced-motion: reduce/);
 });
+
+const studentProfile = read('views/students/view.ejs');
+const enrollmentForm = read('views/students/enroll.ejs');
+
+check('student profile uses the shared responsive, offline-aware staff shell', () => {
+  assert.match(studentProfile, /include\('\.\.\/partials\/header'\)/);
+  assert.match(studentProfile, /include\('\.\.\/partials\/footer'\)/);
+  assert.doesNotMatch(studentProfile, /<!DOCTYPE html>|<head>|<\/html>/i);
+  assert.match(header, /\/js\/offline-handler\.js/);
+  assert.match(header, /\/js\/image-optimizer\.js/);
+});
+
+check('student enrollment loads shared navigation and browser-side photo cropping', () => {
+  assert.match(enrollmentForm, /include\('\.\.\/partials\/header'\)/);
+  assert.match(enrollmentForm, /include\('\.\.\/partials\/footer'\)/);
+  assert.match(enrollmentForm, /data-crop="square"/);
+  assert.doesNotMatch(enrollmentForm, /<!DOCTYPE html>|<head>|<\/html>/i);
+  assert.match(header, /\/js\/image-optimizer\.js/);
+});

@@ -3,6 +3,7 @@
         const container = document.getElementById(containerId);
         const hiddenItems = container.querySelectorAll('.activity-item.hidden');
         const isExpanding = btn.textContent === 'View More';
+        btn.setAttribute('aria-expanded', String(isExpanding));
         
         if (isExpanding) {
             hiddenItems.forEach(item => {

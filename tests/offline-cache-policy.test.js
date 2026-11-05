@@ -324,8 +324,8 @@ check('student directory includes student and guardian contact numbers in its ca
   assert.match(controller, /SELECT s\.\*, c\.name as class_name/);
   assert.match(controller, /LOWER\(s\.phone\) LIKE \?/);
   assert.match(controller, /LOWER\(s\.parent_phone_alt\) LIKE \?/);
-  assert.doesNotMatch(controller, /getOfflineStudentProfile/);
-  assert.doesNotMatch(routes, /offline-view/);
+  assert.match(controller, /getOfflineStudentProfile/);
+  assert.match(routes, /router\.get\('\/offline-view\/:id', studentController\.getOfflineStudentProfile\)/);
   assert.match(source, /async function buildStudentDirectoryResponse/);
 });
 

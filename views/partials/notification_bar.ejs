@@ -191,11 +191,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', fetchNotifications);
-    window.addEventListener('click', () => {
+    function closeNotificationDropdowns() {
         document.querySelectorAll('.notification-dropdown').forEach(dropdown => {
             dropdown.style.display = 'none';
             const trigger = dropdown.closest('.notification-bell-container');
             if (trigger) trigger.setAttribute('aria-expanded', 'false');
         });
+    }
+
+    window.addEventListener('click', closeNotificationDropdowns);
+    window.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeNotificationDropdowns();
     });
 </script>

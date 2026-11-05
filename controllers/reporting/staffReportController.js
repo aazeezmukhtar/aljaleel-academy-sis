@@ -1,4 +1,5 @@
 ﻿const db = require('../../utils/db');
+const { getCurrentSession } = require('../../utils/sessionHelper');
 
 const getStaffDashboard = async (req, res) => {
     const user = req.session.staff;
@@ -44,42 +45,54 @@ const getStaffDirectory = async (req, res) => {
 
 const getWorkloadReport = async (req, res) => {
     const schoolId = req.schoolId || (req.session.staff ? req.session.staff.school_id : 1);
+    const currentSession = await getCurrentSession(schoolId);
     const staffWorkload = await db.all(`
-        SELECT 
+        SELECT
             s.id, s.first_name, s.last_name, s.role,
             COUNT(DISTINCT ca.class_id) as class_count,
             COUNT(DISTINCT sa.subject_id) as subject_count
         FROM staff s
         LEFT JOIN class_assignments ca ON s.id = ca.staff_id
+        LEFT JOIN classes class_c ON ca.class_id = class_c.id AND class_c.school_id = s.school_id
+        LEFT JOIN sections class_sec ON class_c.section_id = class_sec.id AND class_sec.school_id = s.school_id
         LEFT JOIN subject_assignments sa ON s.id = sa.teacher_id
+        LEFT JOIN classes subject_c ON sa.class_id = subject_c.id AND subject_c.school_id = s.school_id
+        LEFT JOIN sections subject_sec ON subject_c.section_id = subject_sec.id AND subject_sec.school_id = s.school_id
         WHERE s.status = 'active' AND s.role = 'Teacher'
           AND s.school_id = ?
+          AND (ca.id IS NULL OR ca.session = COALESCE(NULLIF(class_sec.current_session, ''), ?))
+          AND (sa.id IS NULL OR sa.session = COALESCE(NULLIF(subject_sec.current_session, ''), ?))
         GROUP BY s.id, s.first_name, s.last_name, s.role
         ORDER BY class_count DESC, subject_count DESC
-    `, [schoolId]);
+    `, [schoolId, currentSession || '', currentSession || '']);
 
-    // Fetch details for each staff
     for (const staff of staffWorkload) {
         staff.classes = (await db.all(`
-            SELECT c.name FROM classes c 
-            JOIN class_assignments ca ON c.id = ca.class_id 
-            WHERE ca.staff_id = ?
-              AND c.school_id = ?
-        `, [staff.id, schoolId])).map(c => c.name).join(', ');
+            SELECT c.name
+            FROM classes c
+            JOIN class_assignments ca ON c.id = ca.class_id
+            LEFT JOIN sections sec ON c.section_id = sec.id AND sec.school_id = c.school_id
+            WHERE ca.staff_id = ? AND c.school_id = ?
+              AND ca.session = COALESCE(NULLIF(sec.current_session, ''), ?)
+            ORDER BY c.name
+        `, [staff.id, schoolId, currentSession || ''])).map(c => c.name).join(', ');
 
         staff.subjects = (await db.all(`
-            SELECT sub.name as subject_name, c.name as class_name 
-            FROM subjects sub 
-            JOIN subject_assignments sa ON sub.id = sa.subject_id 
+            SELECT sub.name as subject_name, c.name as class_name
+            FROM subjects sub
+            JOIN subject_assignments sa ON sub.id = sa.subject_id
             JOIN classes c ON sa.class_id = c.id
-            WHERE sa.teacher_id = ?
-              AND c.school_id = ?
-        `, [staff.id, schoolId])).map(s => `${s.subject_name} (${s.class_name})`).join(', ');
+            LEFT JOIN sections sec ON c.section_id = sec.id AND sec.school_id = c.school_id
+            WHERE sa.teacher_id = ? AND c.school_id = ? AND sub.school_id = ?
+              AND sa.session = COALESCE(NULLIF(sec.current_session, ''), ?)
+            ORDER BY sub.name, c.name
+        `, [staff.id, schoolId, schoolId, currentSession || ''])).map(s => `${s.subject_name} (${s.class_name})`).join(', ');
     }
 
     res.render('reports/staff/workload', {
         title: 'Staff Workload',
-        staffWorkload
+        staffWorkload,
+        currentSession
     });
 };
 

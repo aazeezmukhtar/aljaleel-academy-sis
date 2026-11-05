@@ -24,6 +24,7 @@ const tests = [
   ['enrollment-helper-session-context.test.js', 'Session-specific enrollment class context tests'],
   ['student-enrollment-update.test.js', 'Student update class validation tests'],
   ['new-student-enrollment.test.js', 'New student enrollment consistency tests'],
+  ['student-delete-disabled.test.js', 'Student record retention and disabled deletion tests'],
   ['bulk-student-import.test.js', 'Bulk student import validation and atomicity tests'],
   ['section-calendar-isolation.test.js', 'Global and section academic calendar isolation tests'],
   ['class-deletion-history.test.js', 'Historical enrollment and attendance protection tests'],

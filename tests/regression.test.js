@@ -11,6 +11,7 @@ const tests = [
   ['database-fixture.test.js', 'Isolated SQLite schema smoke test'],
   ['student-enrollment-history-migration.test.js', 'Enrollment history migration, legacy baseline, and preservation tests'],
   ['student-enrollment-history-service.test.js', 'Transactional enrollment history service and section isolation tests'],
+  ['student-transfer-ui.test.js', 'Dedicated student transfer window and section-filtering tests'],
   ['result-helper.test.js', 'Result scoring unit tests'],
   ['result-context-integrity.test.js', 'Result class, subject, and enrollment context tests'],
   ['result-report-section-isolation.test.js', 'Section-isolated report-card query guards'],

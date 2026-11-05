@@ -32,7 +32,7 @@
               <option value="section_exit">Withdrawal from school</option>
             </select>
           </div>
-          <div class="departure-field" id="destinationSchoolField"><label for="destinationSchool">Destination school</label>
+          <div class="departure-field" id="destinationSchoolField"><label for="destinationSchool">Destination school (if known)</label>
             <input id="destinationSchool" type="text" maxlength="250" placeholder="Name of receiving school">
           </div>
           <div class="departure-grid">
@@ -49,7 +49,7 @@
 const departureType=document.getElementById('departureType'), destinationField=document.getElementById('destinationSchoolField');
 const destinationInput=document.getElementById('destinationSchool'), departureForm=document.getElementById('studentDepartureForm');
 const departureAlert=document.getElementById('departureAlert');
-function updateDestinationRequirement(){const external=departureType.value==='external_transfer';destinationField.hidden=!external;destinationInput.required=external;}
+function updateDestinationRequirement(){const external=departureType.value==='external_transfer';destinationField.hidden=!external;destinationInput.required=false;}
 departureType?.addEventListener('change',updateDestinationRequirement);if(departureType)updateDestinationRequirement();
 departureForm?.addEventListener('submit',async event=>{
   event.preventDefault();departureAlert.hidden=true;

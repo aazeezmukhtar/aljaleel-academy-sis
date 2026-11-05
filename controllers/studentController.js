@@ -627,7 +627,6 @@ const recordStudentDeparture = async (req, res) => {
         if (!Number.isSafeInteger(studentId) || studentId <= 0) return res.status(400).json({ success: false, message: 'Invalid student.' });
         if (!['external_transfer', 'section_exit'].includes(departureType)) return res.status(400).json({ success: false, message: 'Choose transfer to another school or withdrawal.' });
         if (!effectiveDate || !reason) return res.status(400).json({ success: false, message: 'Effective date and reason are required.' });
-        if (departureType === 'external_transfer' && !destinationSchool) return res.status(400).json({ success: false, message: 'Enter the destination school for an external transfer.' });
         const student = await db.get('SELECT id, status FROM students WHERE id = ? AND school_id = ?', [studentId, schoolId]);
         if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
         if (String(student.status || '').toLowerCase() === 'withdrawn') return res.status(409).json({ success: false, message: 'This student is already marked as withdrawn.' });

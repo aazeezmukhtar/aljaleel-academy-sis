@@ -151,7 +151,7 @@ const studentController = require('../controllers/studentController');
         return { current_session: '2026/2027', current_term: '2nd Term' };
       }
       if (sql.includes('FROM student_enrollments se JOIN classes c')) return { id: 77, class_id: 9 };
-      if (sql.includes('SELECT id FROM students WHERE id = ? AND school_id = ?')) return { id: 55 };
+      if (sql.includes('SELECT id, status FROM students WHERE id = ? AND school_id = ?')) return { id: 55, status: 'active' };
       throw new Error('Unexpected database lookup: ' + sql);
     };
     db.transaction = async callback => callback(null);

@@ -138,7 +138,8 @@ const enrollmentForm = read('views/students/enroll.ejs');
 check('student profile uses the shared responsive, offline-aware staff shell', () => {
   assert.match(studentProfile, /include\('\.\.\/partials\/header'\)/);
   assert.match(studentProfile, /include\('\.\.\/partials\/footer'\)/);
-  assert.doesNotMatch(studentProfile, /<!DOCTYPE html>|<head>|<\/html>/i);
+  assert.doesNotMatch(studentProfile, /<!DOCTYPE html>|<head>|<\/head>|<body>|<\/body>|<\/html>/i);
+  assert.match(studentProfile, /@media \(max-width: 640px\)[\s\S]*\.detail-grid \{ grid-template-columns: 1fr; \}/);
   assert.match(header, /\/js\/offline-handler\.js/);
   assert.match(header, /\/js\/image-optimizer\.js/);
 });
@@ -147,6 +148,7 @@ check('student enrollment loads shared navigation and browser-side photo croppin
   assert.match(enrollmentForm, /include\('\.\.\/partials\/header'\)/);
   assert.match(enrollmentForm, /include\('\.\.\/partials\/footer'\)/);
   assert.match(enrollmentForm, /data-crop="square"/);
-  assert.doesNotMatch(enrollmentForm, /<!DOCTYPE html>|<head>|<\/html>/i);
+  assert.doesNotMatch(enrollmentForm, /<!DOCTYPE html>|<head>|<\/head>|<body>|<\/body>|<\/html>/i);
+  assert.match(enrollmentForm, /@media \(max-width: 640px\)[\s\S]*\.grid-2 \{ grid-template-columns: 1fr; \}/);
   assert.match(header, /\/js\/image-optimizer\.js/);
 });

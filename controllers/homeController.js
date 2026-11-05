@@ -129,11 +129,14 @@ const getDashboard = async (req, res) => {
                 FROM student_enrollments se
                 JOIN students s ON se.student_id = s.id
                 JOIN classes c ON se.class_id = c.id
-                JOIN sections sec ON c.section_id = sec.id
-                WHERE se.session = sec.current_session AND se.class_id IN (
-                    SELECT ca.class_id FROM class_assignments ca WHERE ca.staff_id = ? AND ca.session = sec.current_session
+                LEFT JOIN sections sec ON c.section_id = sec.id
+                WHERE se.session = COALESCE(NULLIF(sec.current_session, ''), ?)
+                  AND se.class_id IN (
+                    SELECT ca.class_id FROM class_assignments ca
+                    WHERE ca.staff_id = ?
+                      AND ca.session = COALESCE(NULLIF(sec.current_session, ''), ?)
                 ) AND s.status = 'active' AND s.school_id = ?
-            `, [user.id, schoolId])).count;
+            `, [currentSession || '', user.id, currentSession || '', schoolId])).count;
 
             const myAttendanceData = await db.get(`
                 SELECT 

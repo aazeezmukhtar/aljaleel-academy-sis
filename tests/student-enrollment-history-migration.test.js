@@ -5,13 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const migrationPath = path.join(
-  __dirname,
-  '..',
-  'database',
-  'migrations',
-  '20261105_student_enrollment_history.sqlite.sql'
-);
+const migrationPath = path.join(__dirname, '..', 'database', 'migrations',
+  '20261105_student_enrollment_history.sqlite.sql');
 const migration = fs.readFileSync(migrationPath, 'utf8');
 const db = new Database(':memory:');
 
@@ -41,7 +36,7 @@ try {
     );
   `);
 
-  const seed = db.transaction(() => {
+  db.transaction(() => {
     db.prepare('INSERT INTO schools (id, name) VALUES (1, ?)').run('Test School');
     db.prepare('INSERT INTO sections (id, name) VALUES (10, ?)').run('Academy');
     db.prepare('INSERT INTO sections (id, name) VALUES (20, ?)').run('Tahfeez');
@@ -50,8 +45,7 @@ try {
     db.prepare('INSERT INTO classes (id, school_id, section_id, name) VALUES (2000, 1, 20, ?)').run('Tahfeez 1');
     db.prepare('INSERT INTO student_enrollments (id, student_id, class_id, session) VALUES (5000, 100, 1000, ?)').run('2025/2026');
     db.prepare('INSERT INTO student_enrollments (id, student_id, class_id, session) VALUES (5001, 100, 2000, ?)').run('2025/2026');
-  });
-  seed();
+  })();
 
   const before = db.prepare('SELECT * FROM student_enrollments ORDER BY id').all();
   db.exec(migration);
@@ -72,6 +66,20 @@ try {
   assert.deepStrictEqual(db.prepare('SELECT * FROM student_enrollments ORDER BY id').all(), before,
     'Migration must not modify existing enrollment assignments');
 
+  const sourceForeignKeys = db.prepare('PRAGMA foreign_key_list(student_enrollment_history)').all()
+    .filter(row => row.from === 'source_enrollment_id');
+  assert.strictEqual(sourceForeignKeys.length, 0,
+    'source_enrollment_id must remain a historical scalar reference, not a foreign key');
+
+  // Same-session movement removes the mutable assignment row. The baseline
+  // history entry must survive and must not block that operation.
+  db.prepare('DELETE FROM student_enrollments WHERE id = 5000').run();
+  assert.strictEqual(
+    db.prepare('SELECT COUNT(*) AS count FROM student_enrollment_history WHERE source_enrollment_id = 5000').get().count,
+    1,
+    'Deleting a replaced assignment must preserve its baseline history'
+  );
+
   db.exec(migration);
   assert.strictEqual(
     db.prepare('SELECT COUNT(*) AS count FROM student_enrollment_history').get().count,
@@ -90,10 +98,10 @@ try {
     INSERT INTO student_enrollment_history (
       school_id, student_id, destination_class_id, destination_session,
       event_type, source_enrollment_id
-    ) VALUES (1, 100, 1000, '2025/2026', 'legacy_baseline', 5000)
+    ) VALUES (1, 100, 1000, '2025/2026', 'legacy_baseline', 5001)
   `).run(), /UNIQUE constraint failed/, 'A source enrollment must not be imported twice');
 
-  console.log('[test-enrollment-history] SQLite migration, baseline import, idempotency and preservation checks passed.');
+  console.log('[test-enrollment-history] migration, provenance deletion, idempotency and preservation checks passed.');
 } finally {
   db.close();
 }

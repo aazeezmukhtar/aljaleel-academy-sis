@@ -26,6 +26,9 @@ router.get('/enroll', studentController.getEnrollmentForm);
 // POST /students/enroll (Action) ΓÇö Admin and Registrar only (enforced via controller role check)
 router.post('/enroll', upload.single('passport'), studentController.enrollStudent);
 
+// GET /students/offline-view/:id — minimal, read-only profile safe for offline retention
+router.get('/offline-view/:id', studentController.getOfflineStudentProfile);
+
 // GET /students/view/:id
 router.get('/view/:id', studentController.getStudentProfile);
 

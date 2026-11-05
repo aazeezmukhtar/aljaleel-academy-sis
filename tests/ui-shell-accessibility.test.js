@@ -103,6 +103,17 @@ check('student directory mobile cards retain clickable student and parent contac
   assert.match(students, /td\[data-label="Contact Numbers"\][\s\S]*grid-row: 3/);
   assert.match(students, /td\[data-label="Status"\][\s\S]*grid-row: 4/);
   assert.match(students, /td\[data-label="Action"\][\s\S]*grid-row: 4/);
+  assert.match(students, /overflow-wrap: anywhere !important;/);
+  assert.match(students, /white-space: normal !important;/);
+});
+
+check('student directory filters show selected values on mobile and search without a full-page reload', () => {
+  assert.match(students, /filter-current-label/);
+  assert.match(students, /syncMobileFilterLabels\(\)/);
+  assert.match(students, /'Accept': 'application\/json'/);
+  assert.match(students, /updateTable\(payload\.students, payload\.count\)/);
+  assert.match(students, /window\.history\.replaceState/);
+  ejs.compile(students, { filename: path.join(__dirname, '..', 'views/students/index.ejs') });
 });
 
 check('student directory filter controls have accessible names and expanded state', () => {
@@ -133,6 +144,7 @@ check('student portal navigation has 44px touch targets and visible keyboard foc
   assert.match(portalCss, /prefers-reduced-motion: reduce/);
 });
 
+const offlineStudentProfile = read('views/students/offline-view.ejs');
 const studentProfile = read('views/students/view.ejs');
 const enrollmentForm = read('views/students/enroll.ejs');
 
@@ -143,6 +155,14 @@ check('student profile uses the shared responsive, offline-aware staff shell', (
   assert.match(studentProfile, /@media \(max-width: 640px\)[\s\S]*\.detail-grid \{ grid-template-columns: 1fr; \}/);
   assert.match(header, /\/js\/offline-handler\.js/);
   assert.match(header, /\/js\/image-optimizer\.js/);
+});
+
+check('offline student profile uses the shared shell and contains only approved fields', () => {
+  assert.match(offlineStudentProfile, /data-acadme-offline-profile/);
+  assert.match(offlineStudentProfile, /Admission number/);
+  assert.match(offlineStudentProfile, /Parent \/ guardian primary phone/);
+  assert.doesNotMatch(offlineStudentProfile, /Health & Wellness|Financial Summary|Academic Records|blood_group|genotype|fees\.total/);
+  ejs.compile(offlineStudentProfile, { filename: path.join(__dirname, '..', 'views/students/offline-view.ejs') });
 });
 
 check('student enrollment loads shared navigation and browser-side photo cropping', () => {

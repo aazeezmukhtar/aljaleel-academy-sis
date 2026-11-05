@@ -119,10 +119,12 @@ const getStudents = async (req, res) => {
             OR LOWER(s.last_name || ', ' || s.first_name) LIKE ?
             OR LOWER(s.admission_number) LIKE ?
             OR CAST(s.id AS TEXT) LIKE ?
+            OR LOWER(s.phone) LIKE ?
             OR LOWER(s.parent_phone) LIKE ?
+            OR LOWER(s.parent_phone_alt) LIKE ?
             OR LOWER(s.parent_address) LIKE ?
         )`;
-        params.push(like, like, like, like, like, like, like, like, like);
+        params.push(like, like, like, like, like, like, like, like, like, like, like);
     }
 
     query += ` ORDER BY s.first_name ASC, s.last_name ASC`;
@@ -418,6 +420,49 @@ const getStudentProfile = async (req, res) => {
         });
     } catch (err) {
         console.error('Fetch Profile Error:', err);
+        res.status(500).send('Database Error');
+    }
+};
+
+
+const getOfflineStudentProfile = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const { id } = req.params;
+    try {
+        // Deliberately limited offline dataset: no fees, health, results, password,
+        // addresses, or other sensitive profile records are selected.
+        const student = await db.get(`
+            SELECT id, first_name, last_name, gender, dob, admission_number,
+                   passport_photo_path, phone, parent_phone, parent_phone_alt
+            FROM students
+            WHERE id = ? AND school_id = ?
+        `, [id, schoolId]);
+        if (!student) return res.status(404).send('Student not found');
+
+        const sessionSettingRow = await db.get(
+            "SELECT value FROM settings WHERE key = 'current_session'"
+        ).catch(() => null);
+        const activeCurrentSession = (sessionSettingRow && sessionSettingRow.value) || '2025/2026';
+        const classAssignments = await db.all(`
+            SELECT DISTINCT c.name AS class_name, sec.name AS section_name
+            FROM student_enrollments se
+            JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+            LEFT JOIN sections sec ON sec.id = c.section_id
+            WHERE se.student_id = ?
+              AND (se.session = sec.current_session OR se.session = ?)
+            ORDER BY sec.name, c.name
+        `, [schoolId, id, activeCurrentSession]);
+
+        res.set('Cache-Control', 'private, no-store');
+        res.set('X-AcadMe-Offline-Profile', 'safe-v1');
+        res.render('students/offline-view', {
+            title: 'Offline Student Profile',
+            student,
+            classAssignments,
+            user: req.session.staff
+        });
+    } catch (err) {
+        console.error('Fetch Offline Student Profile Error:', err);
         res.status(500).send('Database Error');
     }
 };
@@ -780,6 +825,6 @@ const resetStudentPassword = async (req, res) => {
 
 module.exports = {
     enrollStudent, getStudents, getEnrollmentForm,
-    getStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
+    getStudentProfile, getOfflineStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
 };
 

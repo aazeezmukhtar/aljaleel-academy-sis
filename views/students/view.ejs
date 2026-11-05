@@ -114,6 +114,9 @@
                                                     </div>
                                                 </div>
                                                 <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-start;">
+                                                    <button type="button" id="prepareOfflineStudentProfile" class="btn btn-outline" data-profile-url="/students/offline-view/<%= student.id %>">
+                                                        <i class="bi bi-download"></i> Prepare Offline Profile
+                                                    </button>
                                                     <a href="/students/edit/<%= student.id %>" class="btn btn-primary">
                                                         <i class="bi bi-pencil-square"></i> Edit Profile
                                                     </a>
@@ -135,6 +138,38 @@
                                 </div>
 
                                 <script>
+
+                                     document.addEventListener('DOMContentLoaded', () => {
+                                         const prepareButton = document.getElementById('prepareOfflineStudentProfile');
+                                         if (!prepareButton) return;
+                                         prepareButton.addEventListener('click', async () => {
+                                             if (!navigator.onLine) {
+                                                 alert('Connect to the internet to prepare this student profile for offline use.');
+                                                 return;
+                                             }
+                                             const original = prepareButton.innerHTML;
+                                             prepareButton.disabled = true;
+                                             prepareButton.textContent = 'Preparing…';
+                                             try {
+                                                 const response = await fetch(prepareButton.dataset.profileUrl, {
+                                                     method: 'GET',
+                                                     credentials: 'same-origin',
+                                                     headers: { 'X-AcadMe-Offline-Prepare': '1', 'Accept': 'text/html' }
+                                                 });
+                                                 if (!response.ok) throw new Error('The profile could not be prepared. Please try again.');
+                                                 if (response.headers.get('X-AcadMe-Offline-Cached') !== '1') {
+                                                     throw new Error('The browser did not confirm that the offline copy was saved. Check that the app is installed and try again.');
+                                                 }
+                                                 alert('A limited, read-only copy of this student profile is ready for offline use for up to 7 days.');
+                                             } catch (error) {
+                                                 alert(error.message || 'Could not prepare this profile for offline use.');
+                                             } finally {
+                                                 prepareButton.disabled = false;
+                                                 prepareButton.innerHTML = original;
+                                             }
+                                         });
+                                     });
+
                                      async function resetPassword(id) {
                                          if (!confirm('Are you sure you want to reset this student\'s password to default?')) return;
 

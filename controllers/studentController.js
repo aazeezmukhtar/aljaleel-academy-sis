@@ -681,15 +681,22 @@ const updateStudent = async (req, res) => {
             for (const plan of sectionPlans) {
                 if (!plan.session) continue;
 
-                const current = plan.sectionId == null
-                    ? await db.get(
-                        'SELECT se.id, se.class_id FROM student_enrollments se WHERE se.student_id = ? AND se.session = ? AND se.class_id IN (SELECT id FROM classes WHERE school_id = ? AND section_id IS NULL) LIMIT 1',
+                const currentPlacements = plan.sectionId == null
+                    ? await db.all(
+                        'SELECT se.id, se.class_id FROM student_enrollments se WHERE se.student_id = ? AND se.session = ? AND se.class_id IN (SELECT id FROM classes WHERE school_id = ? AND section_id IS NULL) ORDER BY se.id',
                         [id, plan.session, schoolId], client
                     )
-                    : await db.get(
-                        'SELECT se.id, se.class_id FROM student_enrollments se JOIN classes c ON c.id = se.class_id WHERE se.student_id = ? AND se.session = ? AND c.section_id = ? AND c.school_id = ? LIMIT 1',
+                    : await db.all(
+                        'SELECT se.id, se.class_id FROM student_enrollments se JOIN classes c ON c.id = se.class_id WHERE se.student_id = ? AND se.session = ? AND c.section_id = ? AND c.school_id = ? ORDER BY se.id',
                         [id, plan.session, plan.sectionId, schoolId], client
                     );
+
+                if (currentPlacements.length > 1) {
+                    const error = new Error('This student has multiple placements in the same section and session. Resolve the duplicate placements before editing the profile.');
+                    error.statusCode = 409;
+                    throw error;
+                }
+                const current = currentPlacements[0] || null;
 
                 if (current && !plan.chosenClassId) {
                     const error = new Error('This student already has a placement in this section. Clearing it here would erase the current assignment; use the dedicated transfer or departure workflow instead.');
@@ -710,6 +717,12 @@ const updateStudent = async (req, res) => {
                         eventType: 'correction',
                         recordedBy: user.id
                     }, { inTransaction: true, client });
+                } else if (current && Number(current.class_id) === Number(plan.chosenClassId)) {
+                    await db.run(
+                        'UPDATE student_enrollments SET term = ? WHERE id = ?',
+                        [plan.term, current.id],
+                        client
+                    );
                 } else if (!current && plan.chosenClassId) {
                     await changeEnrollment({
                         schoolId,

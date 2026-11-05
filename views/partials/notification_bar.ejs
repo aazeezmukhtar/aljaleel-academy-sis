@@ -184,11 +184,18 @@
     function toggleNotificationDropdown(e) {
         e.stopPropagation();
         const dropdown = e.currentTarget.querySelector('.notification-dropdown');
-        dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        if (!dropdown) return;
+        const isOpen = dropdown.style.display !== 'block';
+        dropdown.style.display = isOpen ? 'block' : 'none';
+        e.currentTarget.setAttribute('aria-expanded', String(isOpen));
     }
 
     document.addEventListener('DOMContentLoaded', fetchNotifications);
     window.addEventListener('click', () => {
-        document.querySelectorAll('.notification-dropdown').forEach(d => d.style.display = 'none');
+        document.querySelectorAll('.notification-dropdown').forEach(dropdown => {
+            dropdown.style.display = 'none';
+            const trigger = dropdown.closest('.notification-bell-container');
+            if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        });
     });
 </script>

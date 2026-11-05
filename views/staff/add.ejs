@@ -1,74 +1,90 @@
 <%- include('../partials/header') %>
 
-    <div class="dashboard-container">
-        <%- include('../partials/sidebar') %>
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+    <main class="main-content">
+        <header class="content-header">
+            <div>
+                <a href="/staff" class="staff-back-link">&larr; Back to Directory</a>
+                <h1>Register New Staff</h1>
+                <p class="text-muted">Create a staff account and set their school profile.</p>
+            </div>
+        </header>
 
-            <main class="main-content">
-                <header style="margin-bottom: 30px;">
-                    <a href="/staff" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back
-                        to Directory</a>
-                    <h1 style="margin-top: 20px;">Register New Staff</h1>
-                </header>
+        <section class="card staff-form-card">
+            <form action="/staff/add" method="POST" class="enroll-form" enctype="multipart/form-data">
+                <div class="grid-2">
+                    <div class="form-group">
+                        <label for="staff-first-name">First Name</label>
+                        <input id="staff-first-name" type="text" name="first_name" placeholder="Enter first name" required class="form-control" autocomplete="given-name">
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-last-name">Last Name</label>
+                        <input id="staff-last-name" type="text" name="last_name" placeholder="Enter last name" required class="form-control" autocomplete="family-name">
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-login-id">Staff ID (Login ID)</label>
+                        <input id="staff-login-id" type="text" name="staff_id" placeholder="e.g. teacher01, admin_js" required class="form-control" style="text-transform: lowercase;" autocapitalize="none" spellcheck="false" aria-describedby="staff-login-help">
+                        <small id="staff-login-help" class="text-muted">This will be used for login and must be unique.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-role">System Access Role</label>
+                        <select id="staff-role" name="role" required class="form-control">
+                            <option value="">-- Select Access --</option>
+                            <option value="Admin">Administrator</option>
+                            <option value="Teacher">Teacher</option>
+                            <option value="Bursar">Bursar</option>
+                            <option value="Principal">Principal</option>
+                            <option value="Staff">Non-Academic Staff</option>
+                        </select>
+                        <small class="text-muted">This determines the access available in AcadMe.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-designation">Designation / Title</label>
+                        <input id="staff-designation" type="text" name="designation" placeholder="e.g. Class Teacher, Registrar" required class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="staff-avatar">Profile Photo</label>
+                        <input id="staff-avatar" type="file" name="avatar_image" class="form-control" accept="image/*" data-crop="square" aria-describedby="staff-avatar-help">
+                        <small id="staff-avatar-help" class="text-muted">Optional. The photo will be cropped before upload and can be displayed on the school website.</small>
+                    </div>
+                </div>
 
-                <section class="card" style="max-width: 800px;">
-                    <form action="/staff/add" method="POST" class="enroll-form" enctype="multipart/form-data">
-                        <div class="grid-2">
-                            <div class="form-group">
-                                <label>First Name</label>
-                                <input type="text" name="first_name" placeholder="Enter first name" required class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label>Last Name</label>
-                                <input type="text" name="last_name" placeholder="Enter last name" required class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label>Staff ID (MANDATORY LOGIN ID)</label>
-                                <input type="text" name="staff_id" placeholder="e.g. tcher01, admin_js" required class="form-control" style="text-transform: lowercase;">
-                                <small class="text-muted">This will be used for login. Must be unique.</small>
-                            </div>
-                            <div class="form-group">
-                                <label>System Access Role</label>
-                                <select name="role" required class="form-control">
-                                    <option value="">-- Select Access --</option>
-                                    <option value="Admin">Administrator (Full Access)</option>
-                                    <option value="Teacher">Academic Staff (Class/Subject Access)</option>
-                                    <option value="Staff">Non-Academic Staff (Restricted Access)</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Designation / Title</label>
-                                <input type="text" name="designation" placeholder="e.g. Class Teacher, Registrar" required class="form-control">
-                            </div>
-                            <div class="form-group">
-                                <label>Profile Photo (Website)</label>
-                                <input type="file" name="avatar_image" class="form-control" accept="image/*" data-crop="square">
-                                <small class="text-muted">Crop the profile photo before it is uploaded.</small>
-                                <small class="text-muted">Photo to display publicly on the school website.</small>
-                            </div>
-                        </div>
+                <div class="form-group">
+                    <label for="staff-public-bio">Public Bio</label>
+                    <textarea id="staff-public-bio" name="public_bio" class="form-control" rows="3" placeholder="A brief bio visible on the public school website..."></textarea>
+                </div>
 
-                        <div class="form-group" style="margin-top: 20px;">
-                            <label>Public Bio</label>
-                            <textarea name="public_bio" class="form-control" rows="3" placeholder="A brief bio visible on the public school website..."></textarea>
-                        </div>
+                <div class="staff-website-toggle">
+                    <input type="checkbox" name="show_on_website" id="show_on_website" value="1">
+                    <label for="show_on_website">Show on Public Website (Faculty Section)</label>
+                </div>
 
-                        <div class="form-group" style="margin-top: 15px; display: flex; align-items: center; gap: 12px;">
-                            <input type="checkbox" name="show_on_website" id="show_on_website" style="width: 18px; height: 18px;">
-                            <label for="show_on_website" style="margin: 0; cursor: pointer; font-weight: 600;">Show on Public Website (Faculty Section)</label>
-                        </div>
+                <div class="alert alert-info staff-password-note" role="note">
+                    <i class="bi bi-info-circle-fill" aria-hidden="true"></i>
+                    <span><strong>Default password:</strong> <code>[StaffID]123</code>. The staff member should change it after their first login.</span>
+                </div>
 
-                        <div class="alert alert-info" style="margin-top: 20px;">
-                            <i class="bi bi-info-circle-fill"></i>
-                            <strong>Note:</strong> Default password for new staff is <code>[StaffID]123</code>. They should change it after first login.
-                        </div>
+                <div class="staff-form-actions">
+                    <button type="submit" class="btn btn-primary">Register Staff Member</button>
+                    <a href="/staff" class="btn btn-outline">Cancel</a>
+                </div>
+            </form>
+        </section>
+    </main>
+</div>
 
-                        <div style="margin-top: 30px; display: flex; gap: 10px;">
-                            <button type="submit" class="btn btn-primary">Register Staff Member</button>
-                            <a href="/staff" class="btn btn-outline">Cancel</a>
-                        </div>
-                    </form>
-                </section>
-            </main>
-    </div>
+<style>
+    .staff-form-card { max-width: 900px; }
+    .staff-back-link { display: inline-block; margin-bottom: 12px; color: var(--primary); font-weight: 600; }
+    .staff-website-toggle { display: flex; align-items: center; gap: 12px; margin: 18px 0; }
+    .staff-website-toggle input { width: 20px; height: 20px; flex: 0 0 auto; }
+    .staff-website-toggle label { margin: 0; cursor: pointer; font-weight: 600; }
+    .staff-password-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 20px; }
+    .staff-form-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+    @media (max-width: 600px) {
+        .staff-form-actions .btn { width: 100%; }
+    }
+</style>
 
-    <%- include('../partials/footer') %>
+<%- include('../partials/footer') %>

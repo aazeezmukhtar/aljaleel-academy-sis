@@ -50,7 +50,7 @@
         <span class="mobile-topbar-title"><%= title %></span>
         <div class="mobile-topbar-actions">
             <% if (typeof user !== 'undefined' && user) { %>
-            <div class="notification-bell-container" onclick="toggleNotificationDropdown(event)" style="position:relative;">
+            <div class="notification-bell-container" role="button" tabindex="0" aria-label="Open notifications" aria-haspopup="true" aria-expanded="false" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleNotificationDropdown(event); }" onclick="toggleNotificationDropdown(event)" style="position:relative;">
                 <i class="bi bi-bell-fill" style="font-size:1.4rem; color: var(--text-secondary);"></i>
                 <span class="notification-badge" id="topbar-notif-badge"></span>
                 <div class="notification-dropdown">

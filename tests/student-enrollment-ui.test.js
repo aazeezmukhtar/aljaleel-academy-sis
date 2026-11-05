@@ -35,7 +35,7 @@ for (const field of [
 ]) {
     assert.match(template, new RegExp('name="' + field + '"'));
 }
-assert.match(template, /section_\\$\{sec\.id\}_class_id/,
+assert.ok(template.includes('section_\u0024{sec.id}_class_id'),
     'Each section must retain its own class selector');
 assert.match(template, /data-crop="square"/,
     'Passport photo crop integration must remain enabled');

@@ -2,358 +2,453 @@
 
 <div class="dashboard-container">
     <%- include('../partials/sidebar') %>
-
-    <main class="main-content">
-        <header style="margin-bottom: 30px;">
-            <a href="/settings" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back to Settings</a>
-            <h1 style="margin-top: 20px;">Session Transition & Student Promotion</h1>
-            <p class="text-muted">Safely manage student advancement across academic sessions with strict section isolation.</p>
+    <main class="main-content promotion-page">
+        <header class="promotion-header">
+            <a href="/settings" class="promotion-back">&larr; Back to Settings</a>
+            <h1>Session Transition & Student Promotion</h1>
+            <p class="text-muted">Review class movements and decide which students advance, repeat or graduate.</p>
         </header>
 
-        <% if (success) { %>
-            <div class="alert alert-success" style="padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;"><%= success %></div>
-        <% } %>
-        <% if (error) { %>
-            <div class="alert alert-danger" style="padding: 15px 20px; border-radius: 8px; margin-bottom: 25px;"><%= error %></div>
-        <% } %>
+        <% if (success) { %><div class="alert alert-success" role="status"><%= success %></div><% } %>
+        <% if (error) { %><div class="alert alert-danger" role="alert"><%= error %></div><% } %>
 
-        <div class="alert alert-warning" style="border-left: 5px solid #f39c12; background: #fff8e1; color: #856404; padding: 20px; border-radius: 8px; margin-bottom: 25px;">
-            <h4 style="margin: 0 0 8px 0; font-size: 1.05rem;"><i class="bi bi-shield-exclamation"></i> Protected Multi-Section Operation</h4>
-            <p style="margin: 0; font-size: 0.9rem; line-height: 1.5;">
-                Promoting students from one section (e.g. <strong>Academy</strong>) will <strong>strictly preserve</strong> their enrollments in any other sections (e.g. <strong>Tahfeez</strong>). Cross-section class assignments are strictly prohibited. Always inspect the <strong>Interactive Preview</strong> before committing.
-            </p>
+        <div class="promotion-notice" role="note">
+            <strong><i class="bi bi-shield-check"></i> Section protection is active</strong>
+            <p>Academy and Tahfeez enrollments are handled separately. Promotion mappings cannot cross sections, and previous-session enrollment history is preserved.</p>
         </div>
 
-        <section class="card shadow-sm" style="padding: 25px; margin-bottom: 30px;">
+        <section class="card promotion-config">
             <form action="/settings/promotion" method="POST" id="promotionForm">
-                <!-- Session Configuration Bar -->
-                <div style="background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px 24px; margin-bottom: 25px; display: flex; flex-wrap: wrap; align-items: center; gap: 20px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <label style="font-weight: 700; color: #1e293b; margin: 0; white-space: nowrap;">Source Session (Promote From):</label>
-                        <select name="source_session" id="sourceSessionSelect" class="form-control" style="font-weight: 600; width: 150px;" onchange="changeSourceSession(this.value)">
+                <div class="promotion-session-grid">
+                    <div class="promotion-field">
+                        <label for="sourceSessionSelect">Source session <span>Promote from</span></label>
+                        <select name="source_session" id="sourceSessionSelect" class="form-control" onchange="changeSourceSession(this.value)">
                             <% available_sessions.forEach(s => { %>
                                 <option value="<%= s %>" <%= s === sourceSession ? 'selected' : '' %>><%= s %></option>
                             <% }) %>
                         </select>
                     </div>
-
-                    <div style="font-size: 1.3rem; color: #64748b;">&rarr;</div>
-
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <label style="font-weight: 700; color: #1e293b; margin: 0; white-space: nowrap;">Destination Session (Promote To):</label>
-                        <select name="target_session" id="targetSessionSelect" class="form-control" style="font-weight: 600; width: 150px;">
+                    <div class="promotion-session-arrow" aria-hidden="true"><i class="bi bi-arrow-right"></i></div>
+                    <div class="promotion-field">
+                        <label for="targetSessionSelect">Destination session <span>Promote to</span></label>
+                        <select name="target_session" id="targetSessionSelect" class="form-control">
                             <% available_sessions.forEach(s => { %>
                                 <option value="<%= s %>" <%= s === targetSession ? 'selected' : '' %>><%= s %></option>
                             <% }) %>
                         </select>
                     </div>
+                    <p class="promotion-session-hint">Student counts below reflect active enrollments in <strong><%= sourceSession %></strong>.</p>
+                </div>
 
-                    <div style="margin-left: auto; font-size: 0.85rem; color: #64748b;">
-                        Active Source Cohort Counts are based on <strong><%= sourceSession %></strong>
+                <div class="promotion-mapping-heading">
+                    <div>
+                        <h2>Class mapping</h2>
+                        <p class="text-muted">Choose the destination class for each source class. Leave a class unchanged if it should not be processed.</p>
                     </div>
                 </div>
 
-                <!-- Class Mapping Table -->
-                <table class="table" style="width: 100%;">
-                    <thead>
-                        <tr style="border-bottom: 2px solid #cbd5e1;">
-                            <th style="text-align: left; padding: 12px 16px;">Source Class (<%= sourceSession %>)</th>
-                            <th style="text-align: center; padding: 12px 16px;">Enrolled Students</th>
-                            <th style="text-align: left; padding: 12px 16px;">Advance / Promote To Target Class</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <% 
-                        // Group classes strictly by section ID
-                        let sectionsMap = {};
-                        sections.forEach(sec => {
-                            sectionsMap[sec.id] = {
-                                id: sec.id,
-                                name: sec.name,
-                                session: sec.current_session,
-                                classes: []
-                            };
-                        });
+                <div class="promotion-class-list">
+                    <%
+                    let sectionsMap = {};
+                    sections.forEach(sec => {
+                        sectionsMap[sec.id] = { id: sec.id, name: sec.name, classes: [] };
+                    });
+                    classes.forEach(cls => {
+                        const secId = cls.section_id || 1;
+                        if (!sectionsMap[secId]) sectionsMap[secId] = { id: secId, name: cls.section_name || 'General', classes: [] };
+                        sectionsMap[secId].classes.push(cls);
+                    });
+                    for (const [secId, secData] of Object.entries(sectionsMap)) {
+                        if (!secData.classes.length) continue;
+                    %>
+                    <section class="promotion-section-group" aria-label="<%= secData.name %> section">
+                        <div class="promotion-section-heading">
+                            <h3><i class="bi bi-layers-fill"></i> <%= secData.name %></h3>
+                            <span>Section history preserved</span>
+                        </div>
+                        <% secData.classes.forEach(cls => { %>
+                        <article class="promotion-class-card" data-class-card="<%= cls.id %>">
+                            <div class="promotion-class-info">
+                                <strong><%= cls.name %></strong>
+                                <span class="promotion-enrolled-count"><%= cls.studentCount %> active <%= cls.studentCount === 1 ? 'student' : 'students' %></span>
+                            </div>
+                            <div class="promotion-target-field">
+                                <label for="mapping-<%= cls.id %>">Destination for <%= cls.name %></label>
+                                <select id="mapping-<%= cls.id %>" name="mapping[<%= cls.id %>]" class="form-control mapping-select" data-source-id="<%= cls.id %>" data-source-name="<%= cls.name %>">
+                                    <option value="none">Do not process this class</option>
+                                    <option value="graduate">🎓 Graduating / Alumni</option>
+                                    <% const allowedTargets = secData.classes.filter(t => Number(t.id) !== Number(cls.id)); %>
+                                    <% if (allowedTargets.length) { %>
+                                        <optgroup label="<%= secData.name %> classes">
+                                            <% allowedTargets.forEach(target => { %><option value="<%= target.id %>"><%= target.name %></option><% }) %>
+                                        </optgroup>
+                                    <% } %>
+                                </select>
+                            </div>
+                        </article>
+                        <% }) %>
+                    </section>
+                    <% } %>
+                </div>
 
-                        classes.forEach(cls => {
-                            const secId = cls.section_id || 1;
-                            if (!sectionsMap[secId]) {
-                                sectionsMap[secId] = {
-                                    id: secId,
-                                    name: cls.section_name || 'General',
-                                    session: cls.currentSession,
-                                    classes: []
-                                };
-                            }
-                            sectionsMap[secId].classes.push(cls);
-                        });
-                        
-                        for (const [secId, secData] of Object.entries(sectionsMap)) {
-                            if (secData.classes.length === 0) continue;
-                        %>
-                            <tr style="background-color: #f8fafc; font-weight: bold;">
-                                <td colspan="3" style="padding: 14px 18px; border-bottom: 2px solid #e2e8f0; border-top: 2px solid #e2e8f0;">
-                                    <span style="font-size: 1.05rem; color: var(--primary);">
-                                        <i class="bi bi-layers-fill" style="margin-right: 6px;"></i><%= secData.name %> Section
-                                    </span>
-                                    <span class="badge" style="background: #e2e8f0; color: #475569; font-weight: 600; margin-left: 10px;">
-                                        Section History Preserved
-                                    </span>
-                                </td>
-                            </tr>
-                            <% secData.classes.forEach(cls => { %>
-                                <tr>
-                                    <td style="padding-left: 32px; vertical-align: middle;">
-                                        <strong style="font-size: 0.95rem; color: #1e293b;"><%= cls.name %></strong>
-                                    </td>
-                                    <td style="text-align: center; vertical-align: middle;">
-                                        <span class="badge" style="background: <%= cls.studentCount > 0 ? '#e0f2fe' : '#f1f5f9' %>; color: <%= cls.studentCount > 0 ? '#0369a1' : '#64748b' %>; font-size: 0.85rem; padding: 6px 12px; border-radius: 20px;">
-                                            <%= cls.studentCount %> Students
-                                        </span>
-                                    </td>
-                                    <td style="vertical-align: middle;">
-                                        <!-- Promotion targets are restricted to the same section as the source class. -->
-                                        <select name="mapping[<%= cls.id %>]" class="form-control mapping-select" data-source-id="<%= cls.id %>" data-source-name="<%= cls.name %>" style="max-width: 340px;">
-                                            <option value="none">-- No Change --</option>
-                                            <option value="graduate" style="color: #b91c1c; font-weight: 600;">🎓 Graduating / Alumni</option>
-                                            
-                                            <% Object.values(sectionsMap).filter(targetSection => Number(targetSection.id) === Number(secId)).forEach(targetSection => {
-                                                const allowedTargets = targetSection.classes.filter(t => t.id !== cls.id);
-                                                if (allowedTargets.length) {
-                                            %>
-                                                <optgroup label="<%= targetSection.name %> Section Classes:">
-                                                    <% allowedTargets.forEach(target => { %>
-                                                        <option value="<%= target.id %>"><%= target.name %></option>
-                                                    <% }) %>
-                                                </optgroup>
-                                            <% } }) %>
-                                        </select>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        <% } %>
-                    </tbody>
-                </table>
-
-                <!-- Action Toolbar -->
-                <div style="margin-top: 35px; padding-top: 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; gap: 15px;">
+                <div class="promotion-actions">
                     <a href="/settings" class="btn btn-outline">Cancel</a>
-                    <div style="display: flex; gap: 12px;">
-                        <button type="button" class="btn btn-outline" onclick="fetchPreview()" style="display: flex; align-items: center; gap: 8px;">
-                            <i class="bi bi-eye"></i> Preview Promotion Dry-Run
-                        </button>
-                        <button type="button" id="commitBtn" class="btn btn-primary" onclick="confirmPromotion()" style="display: flex; align-items: center; gap: 8px;">
-                            <i class="bi bi-check-circle"></i> Commit Session Transition
-                        </button>
-                    </div>
+                    <button type="button" id="previewBtn" class="btn btn-outline" onclick="fetchPreview()"><i class="bi bi-eye"></i> Review promotion</button>
                 </div>
             </form>
         </section>
 
-        <!-- Preview Modal / Card Container -->
-        <section id="previewSection" class="card shadow-sm" style="display: none; padding: 25px; margin-bottom: 35px; border-left: 5px solid #0284c7;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
-                <h3 style="margin: 0; color: #0369a1; display: flex; align-items: center; gap: 8px;">
-                    <i class="bi bi-clipboard-check"></i> Promotion Dry-Run Preview
-                </h3>
-                <span id="previewSummaryBadge" class="badge" style="background: #e0f2fe; color: #0369a1; font-size: 0.9rem; padding: 6px 14px;"></span>
+        <section id="previewSection" class="card promotion-preview" hidden aria-labelledby="previewTitle">
+            <div class="promotion-preview-header">
+                <div>
+                    <h2 id="previewTitle"><i class="bi bi-clipboard-check"></i> Review student decisions</h2>
+                    <p class="text-muted">Every checked student advances to the mapped class. Unchecked students repeat in their current class.</p>
+                </div>
+                <span id="previewSummaryBadge" class="promotion-summary-badge"></span>
             </div>
-            <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:14px;">
-                <strong style="font-size:0.9rem;">Select students who should advance:</strong>
-                <button type="button" class="btn btn-outline btn-sm" onclick="setPromotionSelection(true)">Select all</button>
-                <button type="button" class="btn btn-outline btn-sm" onclick="setPromotionSelection(false)">Clear all (repeat / do not graduate)</button>
-                <span class="text-muted" style="font-size:0.82rem;">Checked students advance to the mapped class. Unchecked students repeat their current class in the destination session.</span>
+            <div id="promotionStatus" class="promotion-status" role="status" aria-live="polite"></div>
+            <div id="promotionWarnings" class="promotion-warnings" role="alert" hidden></div>
+            <div id="promotionTotals" class="promotion-totals" aria-live="polite"></div>
+            <div class="promotion-selection-toolbar">
+                <strong>Student selection</strong>
+                <span class="text-muted">Select individually or use the controls for each class.</span>
+                <div class="promotion-selection-actions">
+                    <button type="button" class="btn btn-outline btn-sm" onclick="setPromotionSelection(true)">Select all students</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="setPromotionSelection(false)">Clear all</button>
+                </div>
             </div>
-            <div id="previewContent" style="max-height: 480px; overflow-y: auto;"></div>
+            <div id="previewContent" class="promotion-preview-content"></div>
+            <div class="promotion-commit-bar">
+                <p id="promotionCommitSummary">Review the counts before committing.</p>
+                <button type="button" id="commitBtn" class="btn btn-primary" onclick="confirmPromotion()" disabled><i class="bi bi-check-circle"></i> Commit session transition</button>
+            </div>
         </section>
     </main>
 </div>
 
+<style>
+.promotion-page{max-width:1440px}
+.promotion-header{margin-bottom:24px}
+.promotion-header h1{margin:14px 0 6px;font-size:clamp(1.45rem,3vw,2rem)}
+.promotion-back{color:var(--primary);text-decoration:none;font-weight:600}
+.promotion-notice{padding:16px 18px;margin-bottom:22px;border:1px solid #f2d48a;border-left:4px solid #d69e21;border-radius:10px;background:#fff9e9;color:#73520b}
+.promotion-notice strong{display:block;margin-bottom:6px}
+.promotion-notice p{margin:0;line-height:1.55;font-size:.92rem}
+.promotion-config,.promotion-preview{padding:clamp(15px,2.5vw,26px);margin-bottom:26px}
+.promotion-session-grid{display:grid;grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);gap:14px;align-items:end;padding:17px;background:#f5f7fa;border:1px solid #e2e8f0;border-radius:12px}
+.promotion-field label,.promotion-target-field label{display:block;font-weight:700;margin-bottom:7px}
+.promotion-field label span{display:block;font-size:.78rem;font-weight:400;color:#64748b}
+.promotion-session-arrow{text-align:center;padding-bottom:9px;color:#64748b}
+.promotion-session-hint{grid-column:1/-1;margin:0;color:#64748b;font-size:.82rem}
+.promotion-mapping-heading{margin:24px 0 12px}
+.promotion-mapping-heading h2,.promotion-preview-header h2{font-size:1.15rem;margin:0 0 5px}
+.promotion-mapping-heading p,.promotion-preview-header p{margin:0;font-size:.88rem}
+.promotion-section-group{margin-top:17px;border:1px solid #e2e8f0;border-radius:11px;overflow:hidden}
+.promotion-section-heading{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 15px;background:#f6f8fb;border-bottom:1px solid #e2e8f0}
+.promotion-section-heading h3{font-size:.98rem;margin:0;color:var(--primary)}
+.promotion-section-heading span{font-size:.74rem;color:#64748b}
+.promotion-class-card{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(220px,1.2fr);gap:16px;align-items:center;padding:14px 15px;border-bottom:1px solid #edf0f4}
+.promotion-class-card:last-child{border-bottom:0}
+.promotion-class-info{display:flex;flex-direction:column;gap:5px;min-width:0}
+.promotion-class-info strong{overflow-wrap:anywhere}
+.promotion-enrolled-count{font-size:.8rem;color:#64748b}
+.promotion-target-field{min-width:0}
+.promotion-actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:24px;padding-top:18px;border-top:1px solid #e2e8f0}
+.promotion-preview-header{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;margin-bottom:16px}
+.promotion-summary-badge{background:#e8f1fa;color:#17476a;border-radius:20px;padding:6px 11px;font-size:.8rem;white-space:nowrap}
+.promotion-status,.promotion-warnings{padding:10px 12px;border-radius:8px;margin:10px 0;font-size:.88rem}
+.promotion-status:empty{display:none}
+.promotion-status[data-kind="error"],.promotion-warnings{background:#fff0ef;color:#9b2720;border:1px solid #f2c5c1}
+.promotion-status[data-kind="success"]{background:#edf8f0;color:#23633a;border:1px solid #c7e8d0}
+.promotion-status[data-kind="info"]{background:#eef5fb;color:#245477;border:1px solid #cbdff0}
+.promotion-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0}
+.promotion-total{padding:12px;border:1px solid #e2e8f0;border-radius:9px;background:#fafbfd}
+.promotion-total strong{display:block;font-size:1.35rem;color:#1e293b}
+.promotion-total span{font-size:.78rem;color:#64748b}
+.promotion-selection-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0}
+.promotion-selection-toolbar>span{font-size:.82rem}
+.promotion-selection-actions{display:flex;gap:7px;margin-left:auto}
+.promotion-preview-content{max-height:620px;overflow-y:auto;padding:12px 2px}
+.promotion-preview-group{border:1px solid #e2e8f0;border-radius:10px;margin-bottom:14px;overflow:hidden}
+.promotion-preview-group-header{padding:12px 14px;background:#f7f9fc;border-bottom:1px solid #e2e8f0}
+.promotion-preview-group-header strong{display:block}
+.promotion-preview-group-header span{font-size:.8rem;color:#64748b}
+.promotion-group-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:9px}
+.promotion-group-counts{font-size:.8rem;color:#475569;margin-left:auto}
+.promotion-student-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:8px;padding:12px}
+.promotion-student-option{display:flex;align-items:flex-start;gap:9px;padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#fff;cursor:pointer;min-width:0}
+.promotion-student-option:has(input:checked){border-color:#80b5d9;background:#f1f8fd}
+.promotion-student-option input{margin-top:3px;flex-shrink:0}
+.promotion-student-option span{display:flex;flex-direction:column;gap:3px;min-width:0;overflow-wrap:anywhere}
+.promotion-student-option small{color:#64748b;font-family:monospace}
+.promotion-commit-bar{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;border-top:1px solid #e2e8f0;padding-top:16px;margin-top:8px}
+.promotion-commit-bar p{margin:0;font-size:.88rem;color:#475569}
+@media(max-width:700px){
+ .promotion-session-grid{grid-template-columns:1fr;gap:10px}
+ .promotion-session-arrow{display:none}
+ .promotion-class-card{grid-template-columns:1fr;gap:9px}
+ .promotion-actions{flex-direction:column-reverse}
+ .promotion-actions>*{width:100%;text-align:center;justify-content:center}
+ .promotion-preview-header{flex-direction:column}
+ .promotion-totals{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ .promotion-total{padding:9px 7px}
+ .promotion-total strong{font-size:1.1rem}
+ .promotion-total span{font-size:.7rem}
+ .promotion-selection-actions{width:100%;margin-left:0}
+ .promotion-selection-actions button{flex:1}
+ .promotion-commit-bar{align-items:stretch}
+ .promotion-commit-bar button{width:100%}
+}
+</style>
+
 <script>
-    let currentPromotionPreviewSignature = null;
-    function getPromotionMapping() {
-        const mapping = {};
-        document.querySelectorAll('.mapping-select').forEach(sel => {
-            const classId = sel.getAttribute('data-source-id');
-            if (sel.value && sel.value !== 'none') mapping[classId] = sel.value;
+let currentPromotionPreviewSignature = null;
+let currentPreviewData = null;
+
+function getPromotionMapping() {
+    const mapping = {};
+    document.querySelectorAll('.mapping-select').forEach(select => {
+        if (select.value && select.value !== 'none') mapping[select.dataset.sourceId] = select.value;
+    });
+    return mapping;
+}
+
+function getPromotionSignature() {
+    return JSON.stringify({
+        source_session: document.getElementById('sourceSessionSelect').value,
+        target_session: document.getElementById('targetSessionSelect').value,
+        mapping: Object.fromEntries(Object.entries(getPromotionMapping()).sort(([a], [b]) => Number(a) - Number(b)))
+    });
+}
+
+function setPromotionSelection(checked, sourceClassId = null) {
+    document.querySelectorAll('.promotion-student-checkbox').forEach(input => {
+        if (sourceClassId === null || input.dataset.sourceClassId === String(sourceClassId)) input.checked = checked;
+    });
+    updatePromotionCounts();
+}
+
+function changeSourceSession(newSession) {
+    const targetSession = document.getElementById('targetSessionSelect').value;
+    const params = new URLSearchParams({ source_session: newSession, target_session: targetSession });
+    window.location.href = '/settings/promotion?' + params.toString();
+}
+
+function setPromotionStatus(message, kind = 'info') {
+    const status = document.getElementById('promotionStatus');
+    status.textContent = message || '';
+    status.dataset.kind = kind;
+}
+
+function renderPromotionWarnings(warnings) {
+    const box = document.getElementById('promotionWarnings');
+    box.replaceChildren();
+    if (!warnings || !warnings.length) { box.hidden = true; return; }
+    const title = document.createElement('strong');
+    title.textContent = 'Please review these warnings:';
+    const list = document.createElement('ul');
+    warnings.forEach(message => {
+        const item = document.createElement('li');
+        item.textContent = message;
+        list.appendChild(item);
+    });
+    box.append(title, list);
+    box.hidden = false;
+}
+
+function updatePromotionCounts() {
+    const groups = document.querySelectorAll('.promotion-preview-group');
+    let selected = 0;
+    let total = 0;
+    groups.forEach(group => {
+        const inputs = Array.from(group.querySelectorAll('.promotion-student-checkbox'));
+        const count = inputs.filter(input => input.checked).length;
+        selected += count;
+        total += inputs.length;
+        const repeater = inputs.length - count;
+        const countNode = group.querySelector('.promotion-group-counts');
+        if (countNode) countNode.textContent = count + ' advancing · ' + repeater + ' repeating';
+        const selectAll = group.querySelector('[data-group-select="all"]');
+        const clearAll = group.querySelector('[data-group-select="none"]');
+        if (selectAll) selectAll.disabled = count === inputs.length;
+        if (clearAll) clearAll.disabled = count === 0;
+    });
+    const graduate = currentPreviewData ? currentPreviewData.preview.filter(group => group.isGraduate).reduce((sum, group) => sum + group.students.length, 0) : 0;
+    const graduatingSelected = Array.from(document.querySelectorAll('.promotion-student-checkbox:checked')).filter(input => input.dataset.isGraduate === 'true').length;
+    const repeaters = total - selected;
+    const totals = document.getElementById('promotionTotals');
+    totals.replaceChildren();
+    [['' + selected, 'Selected to advance / graduate'], ['' + repeaters, 'Repeating in current class'], ['' + total, 'Total students reviewed']].forEach(([value, label]) => {
+        const card = document.createElement('div');
+        card.className = 'promotion-total';
+        const strong = document.createElement('strong'); strong.textContent = value;
+        const span = document.createElement('span'); span.textContent = label;
+        card.append(strong, span); totals.appendChild(card);
+    });
+    const commitSummary = document.getElementById('promotionCommitSummary');
+    commitSummary.textContent = selected + ' selected to advance or graduate; ' + repeaters + ' will repeat. ' +
+        (currentPreviewData && currentPreviewData.totalClasses ? currentPreviewData.totalClasses + ' class mappings included.' : '');
+    const commit = document.getElementById('commitBtn');
+    commit.disabled = !currentPreviewData || !currentPreviewData.preview.length;
+}
+
+function buildPreviewGroup(group, sourceSession) {
+    const wrapper = document.createElement('section');
+    wrapper.className = 'promotion-preview-group';
+    const header = document.createElement('div');
+    header.className = 'promotion-preview-group-header';
+    const title = document.createElement('strong');
+    title.textContent = group.sourceClassName + ' → ' + group.targetClassName;
+    const meta = document.createElement('span');
+    meta.textContent = group.sectionName + ' · ' + group.studentCount + ' students · ' + (group.isGraduate ? 'Graduation' : 'Class promotion');
+    header.append(title, meta);
+
+    const controls = document.createElement('div');
+    controls.className = 'promotion-group-controls';
+    const selectAll = document.createElement('button');
+    selectAll.type = 'button'; selectAll.className = 'btn btn-outline btn-sm'; selectAll.textContent = 'Select class';
+    selectAll.dataset.groupSelect = 'all'; selectAll.addEventListener('click', () => setPromotionSelection(true, group.sourceClassId));
+    const clearAll = document.createElement('button');
+    clearAll.type = 'button'; clearAll.className = 'btn btn-outline btn-sm'; clearAll.textContent = 'Clear class';
+    clearAll.dataset.groupSelect = 'none'; clearAll.addEventListener('click', () => setPromotionSelection(false, group.sourceClassId));
+    const counts = document.createElement('span');
+    counts.className = 'promotion-group-counts';
+    controls.append(selectAll, clearAll, counts);
+    header.appendChild(controls);
+    wrapper.appendChild(header);
+
+    const grid = document.createElement('div');
+    grid.className = 'promotion-student-grid';
+    if (!group.students.length) {
+        const empty = document.createElement('p');
+        empty.className = 'text-muted'; empty.textContent = 'No active students are enrolled in this class for ' + sourceSession + '.';
+        grid.appendChild(empty);
+    }
+    group.students.forEach(student => {
+        const label = document.createElement('label');
+        label.className = 'promotion-student-option';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox'; checkbox.className = 'promotion-student-checkbox';
+        checkbox.dataset.sourceClassId = String(group.sourceClassId);
+        checkbox.dataset.isGraduate = String(!!group.isGraduate);
+        checkbox.value = String(student.id); checkbox.checked = true;
+        checkbox.addEventListener('change', updatePromotionCounts);
+        const details = document.createElement('span');
+        const name = document.createElement('strong'); name.textContent = student.name || 'Unnamed student';
+        const admission = document.createElement('small'); admission.textContent = student.admissionNumber || ('#' + student.id);
+        details.append(name, admission);
+        label.append(checkbox, details);
+        grid.appendChild(label);
+    });
+    wrapper.appendChild(grid);
+    return wrapper;
+}
+
+async function fetchPreview() {
+    const mapping = getPromotionMapping();
+    if (!Object.keys(mapping).length) {
+        setPromotionStatus('Choose at least one destination class or graduation option before requesting a review.', 'error');
+        document.getElementById('previewSection').hidden = false;
+        return;
+    }
+    const source_session = document.getElementById('sourceSessionSelect').value;
+    const target_session = document.getElementById('targetSessionSelect').value;
+    const previewSection = document.getElementById('previewSection');
+    const previewBtn = document.getElementById('previewBtn');
+    const commitBtn = document.getElementById('commitBtn');
+    currentPromotionPreviewSignature = null;
+    currentPreviewData = null;
+    commitBtn.disabled = true;
+    previewBtn.disabled = true;
+    previewBtn.textContent = 'Preparing review…';
+    previewSection.hidden = false;
+    document.getElementById('previewContent').replaceChildren();
+    renderPromotionWarnings([]);
+    setPromotionStatus('Preparing the student list. No records will be changed by this review.', 'info');
+    try {
+        const response = await fetch('/settings/promotion/preview', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source_session, target_session, mapping })
         });
-        return mapping;
-    }
-    function getPromotionSignature() {
-        return JSON.stringify({
-            source_session: document.getElementById('sourceSessionSelect').value,
-            target_session: document.getElementById('targetSessionSelect').value,
-            mapping: Object.fromEntries(Object.entries(getPromotionMapping()).sort(([a], [b]) => Number(a) - Number(b)))
-        });
-    }
-    function setPromotionSelection(checked) {
-        document.querySelectorAll('.promotion-student-checkbox').forEach(input => { input.checked = checked; });
-    }
-    function changeSourceSession(newSession) {
-        window.location.href = `/settings/promotion?source_session=${encodeURIComponent(newSession)}`;
-    }
-
-    // Escape all database/API values before inserting preview markup into innerHTML.
-    // Class names, student names and admission numbers are data, never trusted HTML.
-    function escapePromotionPreviewHtml(value) {
-        return String(value == null ? '' : value)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    async function fetchPreview() {
-        const form = document.getElementById('promotionForm');
-        const formData = new FormData(form);
-        const mapping = {};
-        
-        for (const [key, value] of formData.entries()) {
-            const match = key.match(/^mapping\[(\d+)\]$/);
-            if (match && value !== 'none') {
-                mapping[match[1]] = value;
-            }
-        }
-
-        if (Object.keys(mapping).length === 0) {
-            alert('Please select at least one class mapping before requesting a preview.');
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Unable to prepare the promotion review.');
+        renderPromotionWarnings(data.warnings || []);
+        if (!Array.isArray(data.preview) || !data.preview.length) {
+            setPromotionStatus('No valid class mappings are available to review. Check the warnings and your class selections.', 'error');
             return;
         }
-
-        const source_session = document.getElementById('sourceSessionSelect').value;
-        const target_session = document.getElementById('targetSessionSelect').value;
-
-        try {
-            const res = await fetch('/settings/promotion/preview', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ source_session, target_session, mapping })
-            });
-            const data = await res.json();
-
-            if (!data.success) {
-                alert('Preview Error: ' + data.message);
-                return;
-            }
-
-            if (Array.isArray(data.warnings) && data.warnings.length > 0) {
-                alert('Preview needs attention:\\n\\n' + data.warnings.join('\\n'));
-                return;
-            }
-
-            if (!Array.isArray(data.preview) || data.preview.length === 0) {
-                alert('No valid class mappings were available to preview. Check your selections and try again.');
-                return;
-            }
-
-            const previewSection = document.getElementById('previewSection');
-            const previewContent = document.getElementById('previewContent');
-            const summaryBadge = document.getElementById('previewSummaryBadge');
-
-            currentPromotionPreviewSignature = getPromotionSignature();
-            summaryBadge.textContent = `${data.totalStudents} Students across ${data.totalClasses} Classes (${source_session} → ${target_session})`;
-
-            let html = '';
-            data.preview.forEach(group => {
-                html += `
-                    <div style="margin-bottom: 20px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-                        <div style="background: #f8fafc; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e2e8f0;">
-                            <div>
-                                <span style="font-weight: 700; color: #1e293b;">${escapePromotionPreviewHtml(group.sourceClassName)}</span> 
-                                <span style="color: #64748b; font-size: 0.85rem;">(${escapePromotionPreviewHtml(group.sectionName)})</span>
-                                <span style="margin: 0 8px; color: #0284c7; font-weight: 700;">&rarr;</span>
-                                <span style="font-weight: 700; color: ${group.isGraduate ? '#b91c1c' : '#059669'};">${escapePromotionPreviewHtml(group.targetClassName)}</span>
-                            </div>
-                            <span class="badge" style="background: #e2e8f0; color: #334155;">${escapePromotionPreviewHtml(group.studentCount)} Students</span>
-                        </div>
-                        <div style="padding: 12px 18px;">
-                `;
-
-                if (group.students.length === 0) {
-                    html += `<p class="text-muted" style="margin: 0; font-style: italic;">No active students currently enrolled in this class for ${escapePromotionPreviewHtml(source_session)}.</p>`;
-                } else {
-                    html += `
-                        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px;">
-                            ${group.students.map(st => `
-                                <label style="background: #fff; border: 1px solid #e2e8f0; padding: 9px 10px; border-radius: 6px; font-size: 0.85rem; display: flex; align-items: flex-start; gap: 9px; cursor: pointer;">
-                                    <input type="checkbox" class="promotion-student-checkbox" data-source-class-id="${escapePromotionPreviewHtml(group.sourceClassId)}" value="${escapePromotionPreviewHtml(st.id)}" checked style="margin-top:3px; flex-shrink:0;">
-                                    <span style="display:flex; flex-direction:column; gap:3px; min-width:0;">
-                                        <strong>${escapePromotionPreviewHtml(st.name)}</strong>
-                                        <span style="color: #64748b; font-family: monospace;">${escapePromotionPreviewHtml(st.admissionNumber || '#' + st.id)}</span>
-                                    </span>
-                                </label>
-                            `).join('')}
-                        </div>
-                    `;
-                }
-
-                html += `</div></div>`;
-            });
-
-            previewContent.innerHTML = html;
-            previewSection.style.display = 'block';
-            previewSection.scrollIntoView({ behavior: 'smooth' });
-        } catch (err) {
-            alert('Failed to load preview: ' + err.message);
-        }
+        currentPreviewData = data;
+        const content = document.getElementById('previewContent');
+        data.preview.forEach(group => content.appendChild(buildPreviewGroup(group, source_session)));
+        document.getElementById('previewSummaryBadge').textContent =
+            data.totalStudents + ' students · ' + data.totalClasses + ' classes · ' + source_session + ' → ' + target_session;
+        currentPromotionPreviewSignature = getPromotionSignature();
+        updatePromotionCounts();
+        setPromotionStatus('Review prepared. Check the students who should advance. Unchecked students will repeat.', 'success');
+        previewSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (error) {
+        setPromotionStatus(error.message || 'Failed to load the promotion review.', 'error');
+    } finally {
+        previewBtn.disabled = false;
+        previewBtn.innerHTML = '<i class="bi bi-eye"></i> Review promotion';
     }
+}
 
-    async function confirmPromotion() {
-        const mapping = getPromotionMapping();
+async function confirmPromotion() {
+    const mapping = getPromotionMapping();
+    const source_session = document.getElementById('sourceSessionSelect').value;
+    const target_session = document.getElementById('targetSessionSelect').value;
+    if (!currentPromotionPreviewSignature || currentPromotionPreviewSignature !== getPromotionSignature()) {
+        setPromotionStatus('The class mapping or session selection has changed. Prepare a new review before committing.', 'error');
+        return;
+    }
+    const promote_student_ids = {};
+    document.querySelectorAll('.mapping-select').forEach(select => {
+        const classId = select.dataset.sourceId;
+        promote_student_ids[classId] = [];
+    });
+    document.querySelectorAll('.promotion-student-checkbox:checked').forEach(input => {
+        if (!promote_student_ids[input.dataset.sourceClassId]) promote_student_ids[input.dataset.sourceClassId] = [];
+        promote_student_ids[input.dataset.sourceClassId].push(Number(input.value));
+    });
+    const selected = Object.values(promote_student_ids).reduce((sum, ids) => sum + ids.length, 0);
+    const total = document.querySelectorAll('.promotion-student-checkbox').length;
+    const repeaters = total - selected;
+    const message = 'You are about to transition ' + source_session + ' to ' + target_session + '.\n\n' +
+        selected + ' students are selected to advance or graduate. ' + repeaters + ' unchecked students will repeat in their current class.\n\n' +
+        'Previous-session records and other-section enrollments will be preserved. This action updates student enrollments and, for an end-of-session transition, the active academic calendar.\n\nContinue?';
+    if (!window.confirm(message)) return;
 
-        if (Object.keys(mapping).length === 0) {
-            alert('Please select at least one class to promote.');
-            return;
-        }
-
-        const source_session = document.getElementById('sourceSessionSelect').value;
-        const target_session = document.getElementById('targetSessionSelect').value;
-
-        if (!currentPromotionPreviewSignature || currentPromotionPreviewSignature !== getPromotionSignature()) {
-            alert('Please run the preview again after changing the sessions or class mappings. Review the student checkboxes before committing.');
-            return;
-        }
-        const promote_student_ids = {};
-        document.querySelectorAll('.promotion-student-checkbox').forEach(input => {
-            const classId = input.getAttribute('data-source-class-id');
-            if (!promote_student_ids[classId]) promote_student_ids[classId] = [];
-            if (input.checked) promote_student_ids[classId].push(Number(input.value));
+    const commitBtn = document.getElementById('commitBtn');
+    commitBtn.disabled = true;
+    commitBtn.textContent = 'Processing session transition…';
+    setPromotionStatus('Processing. Please keep this page open.', 'info');
+    try {
+        const response = await fetch('/settings/promotion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ source_session, target_session, mapping, promote_student_ids })
         });
-        const selectedCount = Object.values(promote_student_ids).reduce((sum, ids) => sum + ids.length, 0);
-        const totalCount = document.querySelectorAll('.promotion-student-checkbox').length;
-        const repeaterCount = totalCount - selectedCount;
-        const commitBtn = document.getElementById('commitBtn');
-        if (confirm(`CRITICAL CONFIRMATION:\\nSource: ${source_session} → Destination: ${target_session}.\\n\\nStudents advancing/graduating: ${selectedCount}. Students repeating: ${repeaterCount}.\\n\\nUnchecked students will receive the same class assignment in the destination session. Previous-session records and other-section enrollments will be preserved.\\n\\nAre you sure you want to commit?`)) {
-            commitBtn.disabled = true;
-            commitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing Promotion...';
-
-            try {
-                const res = await fetch('/settings/promotion', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ source_session, target_session, mapping, promote_student_ids })
-                });
-
-                if (res.redirected) {
-                    window.location.href = res.url;
-                } else {
-                    const data = await res.json().catch(() => null);
-                    if (data && !data.success) {
-                        alert('Promotion Failed: ' + (data.message || 'Unknown error'));
-                        commitBtn.disabled = false;
-                        commitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Commit Session Transition';
-                    } else {
-                        window.location.reload();
-                    }
-                }
-            } catch (err) {
-                alert('Request failed: ' + err.message);
-                commitBtn.disabled = false;
-                commitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Commit Session Transition';
-            }
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data || !data.success) throw new Error((data && data.message) || 'Promotion could not be completed.');
+        setPromotionStatus(data.message || 'Promotion completed successfully.', 'success');
+        if (data.calendarAdvanced) {
+            setPromotionStatus((data.message || 'Promotion completed.') + ' Reloading the page to show the new academic calendar…', 'success');
         }
+        window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) {
+        setPromotionStatus(error.message || 'Promotion failed. No success was confirmed.', 'error');
+        commitBtn.disabled = false;
+        commitBtn.innerHTML = '<i class="bi bi-check-circle"></i> Commit session transition';
     }
+}
+
+document.getElementById('targetSessionSelect').addEventListener('change', () => {
+    currentPromotionPreviewSignature = null;
+    currentPreviewData = null;
+    document.getElementById('previewSection').hidden = true;
+});
 </script>
 
 <%- include('../partials/footer') %>

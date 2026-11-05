@@ -734,7 +734,7 @@ const updateStudent = async (req, res) => {
         }, req.ip);
     } catch (err) {
         console.error('Update Student Error:', err);
-        res.status(500).json({ success: false, message: 'Failed to update student.' });
+        res.status(err.statusCode || 500).json({ success: false, message: err.statusCode ? err.message : 'Failed to update student.' });
     }
 };
 

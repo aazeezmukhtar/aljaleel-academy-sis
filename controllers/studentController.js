@@ -351,11 +351,16 @@ const enrollStudent = async (req, res) => {
             if (!studentRow) throw new Error('Student record could not be verified after insertion.');
 
             for (const plan of assignmentPlans) {
-                await db.run(
-                    'INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)',
-                    [studentRow.id, plan.classId, plan.session, plan.term],
-                    client
-                );
+                await changeEnrollment({
+                    schoolId,
+                    studentId: studentRow.id,
+                    sectionId: plan.sectionId,
+                    destinationClassId: plan.classId,
+                    destinationSession: plan.session,
+                    destinationTerm: plan.term,
+                    eventType: 'admission',
+                    recordedBy: user.id
+                }, { inTransaction: true, client });
             }
         });
 
@@ -998,36 +1003,13 @@ const saveHealthRecord = async (req, res) => {
 };
 
 
+// Student records are retained permanently for academic and financial history.
+// Lifecycle changes must use graduation or the dedicated departure workflow.
 const deleteStudent = async (req, res) => {
-    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
-    const { id } = req.params;
-    try {
-        const student = await db.get(
-            'SELECT id FROM students WHERE id = ? AND school_id = ?',
-            [id, schoolId]
-        );
-        if (!student) {
-            return res.status(404).json({ success: false, message: 'Student not found.' });
-        }
-
-        await db.run('DELETE FROM attendance WHERE student_id = ?', [id]);
-        await db.run('DELETE FROM results WHERE student_id = ?', [id]);
-        await db.run('DELETE FROM payments WHERE student_id = ?', [id]);
-        await db.run('DELETE FROM student_fees WHERE student_id = ?', [id]);
-        await db.run('DELETE FROM affective_psychomotor WHERE student_id = ?', [id]);
-        await db.run('DELETE FROM class_posts WHERE student_id = ?', [id]);
-        await db.run('DELETE FROM student_health WHERE student_id = ?', [id]);
-        await db.run('DELETE FROM student_enrollments WHERE student_id = ?', [id]);
-        await db.run('DELETE FROM notification_reads WHERE user_id = ? AND user_type = ?', [id, 'student']);
-        await db.run('DELETE FROM students WHERE id = ? AND school_id = ?', [id, schoolId]);
-
-        logAction(req.session.staff.id, 'DELETE_STUDENT', 'STUDENT', { id }, req.ip);
-
-        res.json({ success: true, message: 'Student deleted successfully.' });
-    } catch (err) {
-        console.error('Delete Student Error:', err);
-        res.status(500).json({ success: false, message: 'Failed to delete student.' });
-    }
+    return res.status(410).json({
+        success: false,
+        message: 'Student deletion is disabled. Keep the record and use the appropriate graduation or departure workflow.'
+    });
 };
 
 const resetStudentPassword = async (req, res) => {

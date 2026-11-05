@@ -8,6 +8,24 @@ delete process.env.DB_POOL_URL;
 
 const assert = require('assert');
 const db = require('../utils/db');
+const enrollmentHistoryService = require('../services/studentEnrollmentHistoryService');
+enrollmentHistoryService.changeEnrollment = async (input, options = {}) => {
+  assert.strictEqual(options.inTransaction, true,
+    'Admission history must use the student creation transaction');
+  const client = options.client || null;
+  await db.run(
+    'INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)',
+    [input.studentId, input.destinationClassId, input.destinationSession, input.destinationTerm],
+    client
+  );
+  await db.run(
+    'INSERT INTO student_enrollment_history (school_id, student_id, section_id, destination_class_id, destination_session, event_type, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [input.schoolId, input.studentId, input.sectionId, input.destinationClassId,
+      input.destinationSession, input.eventType, input.recordedBy],
+    client
+  );
+  return { changed: true, eventType: input.eventType };
+};
 const studentController = require('../controllers/studentController');
 
 function responseRecorder() {
@@ -32,7 +50,7 @@ async function testRejectsClassFromWrongSectionBeforeWrites() {
     const writes = [];
     db.all = async (sql) => {
       if (sql.includes('FROM sections WHERE school_id = ?')) {
-        return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }];
+        return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }, { id: 4, name: 'Tahfeez', current_session: '2026/2027', current_term: '2nd Term' }];
       }
       if (sql.includes('FROM classes WHERE school_id = ?')) {
         return [{ id: 10, section_id: 3 }, { id: 20, section_id: 4 }];
@@ -72,7 +90,7 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
       if (sql.includes('FROM sections WHERE school_id = ?')) {
         return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }];
       }
-      if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }];
+      if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }, { id: 20, section_id: 4 }];
       throw new Error('Unexpected list query: ' + sql);
     };
     db.get = async (sql, params, client) => {
@@ -88,7 +106,7 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
     };
     db.run = async (sql, params, client) => {
       writes.push({ sql, client });
-      if (sql.includes('INSERT INTO student_enrollments')) throw new Error('Injected enrollment insert failure');
+      if (sql.includes('INSERT INTO student_enrollment_history')) throw new Error('Injected admission history insert failure');
       return { changes: 1, lastInsertRowid: 77 };
     };
     db.transaction = async (callback) => {
@@ -107,11 +125,12 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
     assert.strictEqual(rolledBack, true, 'Enrollment failure must roll back the student insert');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO students')), 'Student insert should be attempted');
     const transactionalWrites = writes.filter(w =>
-      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments')
+      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments') ||
+      w.sql.includes('INSERT INTO student_enrollment_history')
     );
-    assert.ok(transactionalWrites.length >= 2, 'Student insert and enrollment insert should both be attempted');
+    assert.ok(transactionalWrites.length >= 3, 'Student, placement, and admission history writes should be attempted');
     assert.ok(transactionalWrites.every(w => w.client === fakeClient),
-      'Student and enrollment writes must use the same transaction client');
+      'Student, placement, and admission history writes must use the same transaction client');
     assert.strictEqual(res.redirectedTo, '/students/enroll?error=Enrollment failed',
       'Failed enrollment should report failure rather than success');
   });
@@ -125,9 +144,9 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
     let transactionRolledBack = false;
     db.all = async (sql) => {
       if (sql.includes('FROM sections WHERE school_id = ?')) {
-        return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }];
+        return [{ id: 3, name: 'Academy', current_session: '2026/2027', current_term: '2nd Term' }, { id: 4, name: 'Tahfeez', current_session: '2026/2027', current_term: '2nd Term' }];
       }
-      if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }];
+      if (sql.includes('FROM classes WHERE school_id = ?')) return [{ id: 10, section_id: 3 }, { id: 20, section_id: 4 }];
       throw new Error('Unexpected list query: ' + sql);
     };
     db.get = async (sql, params, client) => {
@@ -163,7 +182,7 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
       session: { staff: { id: 9, role: 'Admin', school_id: 1 } },
       body: {
         first_name: 'Test', last_name: 'Student', gender: 'Female',
-        current_class_id: '10'
+        current_class_id: '10', section_3_class_id: '10', section_4_class_id: '20'
       },
       ip: '127.0.0.1'
     }, res);
@@ -172,12 +191,18 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
     assert.strictEqual(transactionRolledBack, false, 'Valid enrollment should commit');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO students')), 'Student row should be inserted');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO student_enrollments')), 'Enrollment row should be inserted');
+    const admissionEvents = writes.filter(w => w.sql.includes('INSERT INTO student_enrollment_history'));
+    assert.strictEqual(admissionEvents.length, 2, 'Dual-section admission should create one independent event per section');
+    assert.deepStrictEqual(admissionEvents.map(w => w.params[2]).sort(), [3, 4], 'Admission events must preserve section ownership');
+    assert.ok(admissionEvents.every(w => w.params[5] === 'admission'), 'Initial placements must use the admission event type');
+    assert.ok(admissionEvents.every(w => w.params[6] === 9), 'Each event must record the enrolling staff member');
     const transactionalWrites = writes.filter(w =>
-      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments')
+      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments') ||
+      w.sql.includes('INSERT INTO student_enrollment_history')
     );
-    assert.ok(transactionalWrites.length >= 2, 'Student and enrollment writes should both be attempted');
+    assert.ok(transactionalWrites.length >= 5, 'Student, two placements, and two admission events should all be attempted');
     assert.ok(transactionalWrites.every(w => w.client === fakeClient),
-      'Student and enrollment writes must use the same transaction client');
+      'Student, placement, and history writes must use the same transaction client');
     assert.strictEqual(res.redirectedTo, '/students?success=true', 'Successful enrollment should retain existing redirect');
   });
 }
@@ -186,7 +211,7 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
   await testRejectsClassFromWrongSectionBeforeWrites();
   await testEnrollmentUsesSectionSessionAndTermAndOneTransaction();
   await testEnrollmentFailureRollsBackStudentAndEnrollment();
-  console.log('[new-student-enrollment] Class validation, session/term context, and transaction tests passed.');
+  console.log('[new-student-enrollment] Class validation, admission history, session/term context, and transaction tests passed.');
 })().catch(error => {
   console.error('[new-student-enrollment] Test failed:', error);
   process.exitCode = 1;

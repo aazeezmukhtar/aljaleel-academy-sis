@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v17'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v18'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {

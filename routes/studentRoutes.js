@@ -29,6 +29,10 @@ router.post('/enroll', upload.single('passport'), studentController.enrollStuden
 // GET /students/offline-view/:id — minimal, read-only profile safe for offline retention
 router.get('/offline-view/:id', studentController.getOfflineStudentProfile);
 
+// Dedicated same-session internal transfer workflow (Admin only)
+router.get('/transfer/:id', isAdmin, studentController.getStudentTransferPage);
+router.post('/transfer/:id', isAdmin, studentController.transferStudent);
+
 // GET /students/view/:id
 router.get('/view/:id', studentController.getStudentProfile);
 

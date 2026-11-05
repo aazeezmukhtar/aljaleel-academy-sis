@@ -468,6 +468,107 @@ const getOfflineStudentProfile = async (req, res) => {
     }
 };
 
+
+const getStudentTransferPage = async (req, res) => {
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const { id } = req.params;
+    try {
+        const student = await db.get(
+            'SELECT id, first_name, last_name, admission_number FROM students WHERE id = ? AND school_id = ?',
+            [id, schoolId]
+        );
+        if (!student) return res.status(404).send('Student not found');
+        const currentSession = await getCurrentSession(schoolId);
+        const enrollments = await db.all(`
+            SELECT se.class_id, se.session, c.name AS class_name, c.section_id,
+                   sec.name AS section_name
+            FROM student_enrollments se
+            JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+            LEFT JOIN sections sec ON sec.id = c.section_id AND sec.school_id = ?
+            WHERE se.student_id = ?
+              AND (se.session = sec.current_session OR se.session = ?)
+            ORDER BY sec.name, c.name
+        `, [schoolId, schoolId, id, currentSession]);
+        const classes = await db.all(`
+            SELECT c.id, c.name, c.section_id, sec.name AS section_name
+            FROM classes c
+            LEFT JOIN sections sec ON sec.id = c.section_id AND sec.school_id = ?
+            WHERE c.school_id = ?
+            ORDER BY sec.name, c.name
+        `, [schoolId, schoolId]);
+        res.render('students/transfer', {
+            title: 'Transfer Student', student, enrollments, classes, currentSession,
+            error: req.query.error || null, user: req.session.staff
+        });
+    } catch (err) {
+        console.error('Student Transfer Page Error:', err);
+        res.status(500).send('Unable to load the student transfer page.');
+    }
+};
+
+const transferStudent = async (req, res) => {
+    const user = req.session.staff;
+    if (!user || user.role !== 'Admin') {
+        return res.status(403).json({ success: false, message: 'Admin privileges required.' });
+    }
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const { id } = req.params;
+    const sourceClassId = Number(req.body.source_class_id);
+    const destinationClassId = Number(req.body.destination_class_id);
+    const sourceSession = String(req.body.source_session || '').trim();
+    const effectiveDate = String(req.body.effective_date || '').trim();
+    const reason = String(req.body.reason || '').trim();
+    try {
+        if (!Number.isSafeInteger(sourceClassId) || sourceClassId <= 0 ||
+            !Number.isSafeInteger(destinationClassId) || destinationClassId <= 0) {
+            return res.status(400).json({ success: false, message: 'Select a valid current placement and destination class.' });
+        }
+        if (!sourceSession || !effectiveDate || !reason) {
+            return res.status(400).json({ success: false, message: 'Source session, effective date and transfer reason are required.' });
+        }
+        const student = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [id, schoolId]);
+        if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
+        const source = await db.get(`
+            SELECT c.id, c.section_id, sec.name AS section_name FROM student_enrollments se
+            JOIN classes c ON c.id = se.class_id
+            LEFT JOIN sections sec ON sec.id = c.section_id AND sec.school_id = c.school_id
+            WHERE se.student_id = ? AND se.class_id = ? AND se.session = ? AND c.school_id = ?
+        `, [id, sourceClassId, sourceSession, schoolId]);
+        if (!source) return res.status(409).json({ success: false, message: 'The selected source placement no longer exists. Refresh and review the student placements.' });
+        const destination = await db.get('SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?', [destinationClassId, schoolId]);
+        if (!destination) return res.status(400).json({ success: false, message: 'Destination class is not valid for this school.' });
+        if (Number(source.section_id) !== Number(destination.section_id)) {
+            return res.status(400).json({ success: false, message: 'A transfer must remain within the same section. Transfer Academy and Tahfeez placements separately.' });
+        }
+        if (sourceClassId === destinationClassId) {
+            return res.status(400).json({ success: false, message: 'Choose a different destination class.' });
+        }
+        await db.transaction(async client => {
+            await changeEnrollment({
+                schoolId, studentId: Number(id), sectionId: source.section_id,
+                sourceClassId, destinationClassId, sourceSession, destinationSession: sourceSession,
+                eventType: 'internal_transfer', effectiveDate, reason, recordedBy: user.id
+            }, { inTransaction: true, client });
+            // current_class_id is a legacy single-class pointer; keep it aligned
+            // with Academy only. Tahfeez transfers must not overwrite it.
+            if (source.section_name === 'Academy') {
+                await db.run(
+                    'UPDATE students SET current_class_id = ? WHERE id = ? AND school_id = ?',
+                    [destinationClassId, id, schoolId], client
+                );
+            }
+        });
+        logAction(user.id, 'TRANSFER_STUDENT', 'STUDENT', {
+            student_id: Number(id), source_class_id: sourceClassId,
+            destination_class_id: destinationClassId, session: sourceSession
+        }, req.ip);
+        return res.json({ success: true, message: 'Student transferred successfully. Previous academic and financial records have been preserved.' });
+    } catch (err) {
+        console.error('Transfer Student Error:', err);
+        return res.status(400).json({ success: false, message: err.message || 'Student transfer could not be completed.' });
+    }
+};
+
 const getEditForm = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
     const { id } = req.params;
@@ -864,6 +965,6 @@ const resetStudentPassword = async (req, res) => {
 
 module.exports = {
     enrollStudent, getStudents, getEnrollmentForm,
-    getStudentProfile, getOfflineStudentProfile, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
+    getStudentProfile, getOfflineStudentProfile, getStudentTransferPage, transferStudent, getEditForm, updateStudent, saveHealthRecord, deleteStudent, resetStudentPassword
 };
 

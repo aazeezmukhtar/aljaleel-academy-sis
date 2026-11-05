@@ -1,0 +1,85 @@
+<%- include('../partials/header') %>
+<style>
+.transfer-page{max-width:900px;margin:0 auto}.transfer-card{padding:clamp(16px,3vw,28px);margin-top:20px}
+.transfer-field{margin-bottom:18px;min-width:0}.transfer-field label{display:block;font-weight:700;margin-bottom:7px}
+.transfer-field select,.transfer-field input,.transfer-field textarea{width:100%;min-width:0}
+.transfer-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.transfer-note{padding:13px 15px;border:1px solid #cbdff0;background:#f1f7fc;color:#245477;border-radius:9px;margin:16px 0;line-height:1.5}
+.transfer-alert{padding:12px;border-radius:8px;background:#fff0ef;color:#9b2720;border:1px solid #f2c5c1;margin:14px 0}
+.transfer-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:640px){.transfer-grid{grid-template-columns:1fr}.transfer-actions>*{width:100%;text-align:center;justify-content:center}}
+</style>
+<div class="dashboard-container">
+  <%- include('../partials/sidebar') %>
+  <main class="main-content"><div class="transfer-page">
+    <a href="/students/view/<%= student.id %>" style="color:var(--primary);text-decoration:none;font-weight:600">← Back to Student Profile</a>
+    <header style="margin:18px 0 8px"><h1 style="margin:0">Transfer Student</h1>
+      <p style="color:var(--text-muted);margin:6px 0 0"><strong><%= student.first_name %> <%= student.last_name %></strong> · <%= student.admission_number || 'Admission pending' %></p></header>
+    <div class="card transfer-card"><h2 style="font-size:1.15rem;margin-top:0">Internal class transfer</h2>
+      <p style="color:var(--text-muted)">Move the student to another class within the same section and academic session. Academy and Tahfeez placements are independent; transfer each one separately.</p>
+      <% if (!enrollments.length) { %>
+        <div class="transfer-alert">No current class placements were found. Check the student's active session and enrollment records before proceeding.</div>
+      <% } else { %>
+        <div class="transfer-note"><strong>History protection:</strong> This records the effective date and reason, updates only the selected section's placement, and preserves previous academic and financial records.</div>
+        <% if (error) { %><div class="transfer-alert"><%= error %></div><% } %>
+        <div id="transferAlert" class="transfer-alert" role="alert" aria-live="polite" hidden></div>
+        <form id="studentTransferForm">
+          <div class="transfer-field"><label for="transferSource">Current section and class</label>
+            <select id="transferSource" required><option value="">Select the placement to transfer</option>
+              <% enrollments.forEach(enr => { %><option value="<%= enr.class_id %>" data-session="<%= enr.session %>" data-section-id="<%= enr.section_id %>">[<%= enr.section_name || 'Unsectioned' %>] <%= enr.class_name %> · <%= enr.session %></option><% }) %>
+            </select>
+          </div>
+          <div class="transfer-field"><label for="transferDestination">Destination class</label>
+            <select id="transferDestination" required disabled><option value="">Select source placement first</option></select>
+            <small style="color:var(--text-muted)">Only classes in the selected placement's section will be listed.</small>
+          </div>
+          <div class="transfer-grid">
+            <div class="transfer-field"><label for="transferDate">Effective date</label><input id="transferDate" type="date" value="<%= new Date().toISOString().slice(0,10) %>" required></div>
+            <div class="transfer-field"><label for="transferReason">Reason for transfer</label><input id="transferReason" type="text" maxlength="500" placeholder="e.g. Approved class reassignment" required></div>
+          </div>
+          <div class="transfer-actions"><a href="/students/view/<%= student.id %>" class="btn btn-outline">Cancel</a><button type="submit" id="transferSubmit" class="btn btn-primary">Confirm Transfer</button></div>
+        </form>
+      <% } %>
+    </div>
+  </div></main>
+</div>
+<script>
+const transferClasses = <%- JSON.stringify(classes) %>;
+const sourceSelect = document.getElementById('transferSource');
+const destinationSelect = document.getElementById('transferDestination');
+const transferForm = document.getElementById('studentTransferForm');
+const transferAlert = document.getElementById('transferAlert');
+function refreshTransferDestinations() {
+  const sourceOption = sourceSelect.options[sourceSelect.selectedIndex];
+  destinationSelect.replaceChildren();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = sourceOption && sourceOption.value ? 'Select destination class' : 'Select source placement first';
+  destinationSelect.appendChild(placeholder);
+  if (!sourceOption || !sourceOption.value) { destinationSelect.disabled = true; return; }
+  transferClasses.filter(item => String(item.section_id) === String(sourceOption.dataset.sectionId) && String(item.id) !== String(sourceOption.value)).forEach(item => {
+    const option = document.createElement('option'); option.value = item.id; option.textContent = item.name; destinationSelect.appendChild(option);
+  });
+  destinationSelect.disabled = destinationSelect.options.length <= 1;
+  if (destinationSelect.disabled) placeholder.textContent = 'No other class is available in this section';
+}
+sourceSelect?.addEventListener('change', refreshTransferDestinations);
+transferForm?.addEventListener('submit', async event => {
+  event.preventDefault(); transferAlert.hidden = true;
+  const sourceOption = sourceSelect.options[sourceSelect.selectedIndex];
+  if (!sourceOption?.value || !destinationSelect.value) { transferAlert.textContent = 'Select both the current placement and destination class.'; transferAlert.hidden = false; return; }
+  if (!window.confirm('Confirm transfer from ' + sourceOption.textContent + ' to ' + destinationSelect.options[destinationSelect.selectedIndex].textContent + '? Previous academic and financial records will remain unchanged.')) return;
+  const button = document.getElementById('transferSubmit'); button.disabled = true; button.textContent = 'Processing transfer…';
+  try {
+    const response = await fetch('/students/transfer/<%= student.id %>', {method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({
+      source_class_id:sourceOption.value,source_session:sourceOption.dataset.session,destination_class_id:destinationSelect.value,
+      effective_date:document.getElementById('transferDate').value,reason:document.getElementById('transferReason').value.trim()
+    })});
+    const result = await response.json(); if (!response.ok || !result.success) throw new Error(result.message || 'Transfer failed.');
+    transferAlert.style.background='#edf8f0';transferAlert.style.color='#23633a';transferAlert.style.borderColor='#c7e8d0';
+    transferAlert.textContent=result.message;transferAlert.hidden=false;button.textContent='Transfer completed';
+    window.setTimeout(()=>{window.location.href='/students/view/<%= student.id %>';},900);
+  } catch(error) { transferAlert.textContent=error.message || 'Transfer could not be completed.';transferAlert.hidden=false;button.disabled=false;button.textContent='Confirm Transfer'; }
+});
+</script>
+<%- include('../partials/footer') %>

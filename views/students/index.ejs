@@ -607,21 +607,21 @@
     </script>
 
     <style>
-        /* Keep comma-separated class assignments on one visible, non-scrollable line. */
+        /* Allow multiple section/class assignments to wrap on narrow screens. */
         .student-class-inline {
             display: inline-block !important;
-            white-space: nowrap !important;
-            width: max-content !important;
-            max-width: none !important;
-            min-width: max-content !important;
-            overflow: visible !important;
+            white-space: normal !important;
+            width: auto !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            overflow-wrap: anywhere !important;
             vertical-align: middle;
         }
 
         .student-mobile-cards td[data-label="Class"] {
-            min-width: max-content !important;
-            white-space: nowrap !important;
-            overflow: visible !important;
+            min-width: 0 !important;
+            white-space: normal !important;
+            overflow-wrap: anywhere !important;
         }
 
         .icon-filters {

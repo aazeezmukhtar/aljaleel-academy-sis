@@ -4,7 +4,7 @@
  * Syncs automatically when connection is restored.
  */
 
-const DB_NAME = 'NexusSIS_OfflineDB';
+const DB_NAME = 'AcadMeSIS_OfflineDB';
 const DB_VERSION = 3;
 
 let _idb = null;
@@ -41,7 +41,7 @@ function openDB() {
         };
 
         req.onerror = (e) => {
-            console.error('[NexusOffline] IndexedDB open failed:', e.target.error);
+            console.error('[AcadMeOffline] IndexedDB open failed:', e.target.error);
             reject(e.target.error);
         };
     });
@@ -168,7 +168,7 @@ async function getOfflineStorageStatus() {
             status.quota = Number.isFinite(estimate.quota) ? estimate.quota : null;
         }
     } catch (error) {
-        console.warn('[NexusOffline] Storage status check failed:', error);
+        console.warn('[AcadMeOffline] Storage status check failed:', error);
         status.error = error.message;
     }
     return status;
@@ -193,12 +193,12 @@ async function requestBackgroundSync() {
     try {
         const registration = await navigator.serviceWorker.ready;
         if (registration.sync && typeof registration.sync.register === 'function') {
-            await registration.sync.register('sync-nexus');
+            await registration.sync.register('sync-acadme');
             return true;
         }
     } catch (error) {
         // Background Sync is an enhancement only; foreground retries remain active.
-        console.info('[NexusOffline] Background Sync unavailable; foreground retry will handle queued work.', error);
+        console.info('[AcadMeOffline] Background Sync unavailable; foreground retry will handle queued work.', error);
     }
     return false;
 }
@@ -322,7 +322,7 @@ async function syncData() {
         try {
             attendanceItems = (await getAllQueued('attendance_sync')).filter(item => item._ownerKey === ownerKey);
         } catch (err) {
-            console.error('[NexusOffline] Could not read attendance queue:', err);
+            console.error('[AcadMeOffline] Could not read attendance queue:', err);
             failCount++;
         }
 
@@ -352,7 +352,7 @@ async function syncData() {
                     failCount++;
                 }
             } catch (err) {
-                console.warn('[NexusOffline] Attendance sync item remains queued:', err);
+                console.warn('[AcadMeOffline] Attendance sync item remains queued:', err);
                 failCount++;
             }
         }
@@ -361,7 +361,7 @@ async function syncData() {
         try {
             resultItems = (await getAllQueued('results_sync')).filter(item => item._ownerKey === ownerKey);
         } catch (err) {
-            console.error('[NexusOffline] Could not read results queue:', err);
+            console.error('[AcadMeOffline] Could not read results queue:', err);
             failCount++;
         }
 
@@ -389,7 +389,7 @@ async function syncData() {
                     failCount++;
                 }
             } catch (err) {
-                console.warn('[NexusOffline] Result sync item remains queued:', err);
+                console.warn('[AcadMeOffline] Result sync item remains queued:', err);
                 failCount++;
             }
         }
@@ -397,7 +397,7 @@ async function syncData() {
         updateSyncUI(failCount > 0 ? 'partial' : 'done', successCount, failCount);
     } catch (err) {
         // Always release the lock, even if IndexedDB or UI preparation fails.
-        console.error('[NexusOffline] Sync cycle failed; queued data was retained where possible:', err);
+        console.error('[AcadMeOffline] Sync cycle failed; queued data was retained where possible:', err);
         updateSyncUI('partial', successCount, failCount + 1);
     } finally {
         _isSyncing = false;
@@ -482,7 +482,7 @@ if ('serviceWorker' in navigator) {
 document.addEventListener('DOMContentLoaded', () => {
     openDB().then(() => {
         requestPersistentStorage().then(result => {
-            if (result.supported && !result.granted) console.info('[NexusOffline] Browser did not grant persistent storage.');
+            if (result.supported && !result.granted) console.info('[AcadMeOffline] Browser did not grant persistent storage.');
             updateSyncUI();
         });
         if (!navigator.onLine) {
@@ -490,12 +490,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         updateSyncUI();
         if (navigator.onLine) syncData();
-    }).catch(err => console.warn('[NexusOffline] Could not open IndexedDB:', err));
+    }).catch(err => console.warn('[AcadMeOffline] Could not open IndexedDB:', err));
 });
 
 // ─── Public API ────────────────────────────────────────────────────────────
 
-window.NexusOffline = {
+window.AcadMeOffline = window.NexusOffline = {
     saveAttendanceOffline,
     saveResultOffline,
     syncData,

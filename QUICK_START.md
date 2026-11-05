@@ -1,4 +1,4 @@
-# Nexus Local SIS - Quick Start Guide
+# AcadMe - Quick Start Guide
 
 ## 🚀 Starting the Application
 

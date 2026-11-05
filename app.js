@@ -111,7 +111,7 @@ app.use('/portal', isStudentAuthenticated, portalRoutes);
 
 if (require.main === module || process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
-        console.log(`Nexus Local SIS running at http://localhost:${PORT}`);
+        console.log(`AcadMe running at http://localhost:${PORT}`);
         console.log(`Mode: ${DB_TYPE === 'postgres' ? 'Cloud' : 'Local'} Database`);
     });
 }

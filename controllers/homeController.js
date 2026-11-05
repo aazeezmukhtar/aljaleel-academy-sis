@@ -89,7 +89,7 @@ const getDashboard = async (req, res) => {
             `, [today, schoolId]);
 
             return res.render('dashboard', {
-                title: 'Nexus SIS - Admin Dashboard',
+                title: 'AcadMe - Admin Dashboard',
                 role: 'Admin',
                 stats: {
                     totalStudents,
@@ -159,7 +159,7 @@ const getDashboard = async (req, res) => {
             `, [today, schoolId]);
 
             return res.render('dashboard_staff', {
-                title: 'Nexus SIS - Staff Dashboard',
+                title: 'AcadMe - Staff Dashboard',
                 role: user.role,
                 stats: {
                     assignedClasses: assignedClasses.length,

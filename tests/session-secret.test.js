@@ -24,7 +24,7 @@ assert.strictEqual(
 
 assert.strictEqual(
   resolveSessionSecret({ NODE_ENV: 'test' }),
-  'nexus-sis-secret-key-offline-first',
+  'acadme-sis-secret-key-offline-first',
   'local test environments should preserve the legacy fallback'
 );
 

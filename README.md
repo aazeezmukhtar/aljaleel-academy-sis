@@ -1,4 +1,4 @@
-# 🏫 Nexus SIS — Digital School Ecosystem
+# 🏫 AcadMe — Digital School Ecosystem
 
 A comprehensive, offline-first **School Information System** built with a seamless public-facing school website, a robust admin Content Management System (CMS), an optimized **100% Mobile Responsive** staff dashboard, and an integrated Student E-Learning Portal.
 

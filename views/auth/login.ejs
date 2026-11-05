@@ -27,7 +27,7 @@
                     <div class="input-with-icon">
                         <i class="bi bi-person-badge"></i>
                         <input type="text" id="staff_id" name="staff_id" placeholder="e.g. admin" required
-                            autofocus class="form-control">
+                            autocomplete="username" autocapitalize="none" spellcheck="false" class="form-control">
                     </div>
                 </div>
 
@@ -36,7 +36,7 @@
                     <div class="input-with-icon">
                         <i class="bi bi-key-fill"></i>
                         <input type="password" id="password" name="password" placeholder="••••••••" required
-                            class="form-control">
+                            autocomplete="current-password" class="form-control">
                         <button type="button" class="toggle-pwd-btn" onclick="togglePwd()" aria-label="Toggle password">
                             <i class="bi bi-eye" id="pwd-eye"></i>
                         </button>
@@ -58,13 +58,20 @@
     <style>
         .login-page {
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             align-items: center;
             justify-content: center;
             background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
             padding: 20px;
             position: relative;
-            overflow: hidden;
+            overflow-x: hidden;
+        }
+
+        /* The shared staff shell is for authenticated pages, not the login screen. */
+        body:has(.login-page) .mobile-topbar,
+        body:has(.login-page) .sync-indicator {
+            display: none !important;
         }
 
         .login-page::before, .login-page::after {
@@ -207,7 +214,45 @@
         }
 
         @media (max-width: 480px) {
-            .login-card { padding: 28px 20px; }
+            .login-page {
+                min-height: 100dvh;
+                padding: max(16px, env(safe-area-inset-top)) 16px
+                    max(16px, env(safe-area-inset-bottom));
+            }
+
+            .login-card {
+                padding: 28px 20px;
+                border-radius: 20px;
+                max-width: 420px;
+            }
+
+            .login-header { margin-bottom: 24px; }
+            .login-logo {
+                width: 64px;
+                height: 64px;
+                margin-bottom: 14px;
+            }
+
+            .toggle-pwd-btn {
+                min-width: 44px;
+                min-height: 44px;
+                justify-content: center;
+                right: 6px;
+            }
+
+            .login-page .form-control {
+                min-height: 48px;
+                font-size: 16px;
+            }
+        }
+
+        .login-page :focus-visible {
+            outline: 3px solid var(--school-primary, #6366f1);
+            outline-offset: 3px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .login-card { animation: none; }
         }
     </style>
 

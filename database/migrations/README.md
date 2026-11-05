@@ -17,14 +17,9 @@ This is an explicitly executed, additive migration. It is intentionally **not** 
 4. Leaves `effective_date` NULL for legacy baselines because the existing enrollment record does not establish its original start date.
 5. Uses unique `source_enrollment_id` as a scalar provenance identifier for idempotency. It is deliberately not a foreign key: current assignment rows may be replaced or removed while history must remain.
 
-### Existing databases
+### Existing PostgreSQL databases
 
-If the original migration was already applied before this correction, run the matching follow-up migration:
-
-- `20261105_student_enrollment_history_source_reference.sqlite.sql`
-- `20261105_student_enrollment_history_source_reference.postgres.sql`
-
-The SQLite follow-up rebuilds only the history table, preserving its rows and other foreign keys. The PostgreSQL follow-up drops only the generated constraint on `source_enrollment_id`.
+If the original PostgreSQL migration was already applied before this correction, run `20261105_student_enrollment_history_source_reference.postgres.sql` to remove the generated source-enrollment FK. The SQLite foundation is corrected for fresh migration runs. An SQLite database that already ran the earlier version needs a separately validated table rebuild; do not assume re-running the corrected create script alters an existing table.
 
 ### Preconditions
 

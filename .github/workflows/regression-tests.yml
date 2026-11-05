@@ -38,6 +38,8 @@ jobs:
         run: npm run test:ui-shell
       - name: Run student enrollment UI regression checks
         run: npm run test:student-enrollment-ui
+      - name: Run student promotion UI regression checks
+        run: node tests/promotion-preview-rendering.test.js
       - name: Remove disposable SQLite database
         if: always()
         run: rm -f .test-database.sqlite .test-database.sqlite-shm .test-database.sqlite-wal

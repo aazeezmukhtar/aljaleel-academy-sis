@@ -32,21 +32,19 @@
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3>Classes</h3>
-                            <button class="btn btn-sm"
-                                onclick="document.getElementById('add-class-form').style.display='block'">+ Add
-                                Class</button>
+                            <button type="button" class="btn btn-sm" aria-controls="add-class-form" aria-expanded="false" onclick="toggleAcademicForm('add-class-form', this)">+ Add Class</button>
                         </div>
 
                         <div id="add-class-form"
                             style="display: none; background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
                             <form action="/academics/classes/add" method="POST" class="grid-2">
                                 <div class="form-group">
-                                    <label>Class Name (e.g., JSS 1)</label>
-                                    <input type="text" name="name" required placeholder="Enter class name" class="form-control">
+                                    <label for="add_class_name">Class Name (e.g., JSS 1)</label>
+                                    <input id="add_class_name" type="text" name="name" required placeholder="Enter class name" class="form-control">
                                 </div>
                                 <div class="form-group">
-                                    <label>Section</label>
-                                    <select name="section_id" class="form-control">
+                                    <label for="add_class_section">Section</label>
+                                    <select id="add_class_section" name="section_id" class="form-control">
                                         <option value="">-- Select Section (Optional) --</option>
                                         <% if (typeof sections !== 'undefined' && sections) { %>
                                             <% sections.forEach(sec => { %>
@@ -73,6 +71,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    <% if (classes && classes.length > 0) { %>
                                     <% classes.forEach(c=> { %>
                                         <tr>
                                             <td><strong>
@@ -94,13 +93,16 @@
                                                     Edit
                                                 </button>
                                                 <form action="/academics/classes/delete/<%= c.id %>" method="POST"
-                                                    onsubmit="return confirm('Delete this class?')">
+                                                    onsubmit="return confirm('Delete this class only if it is no longer needed. Classes with enrollment or attendance history cannot be deleted. Continue?')">
                                                     <button type="submit"
                                                         style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600; padding: 0;">Delete</button>
                                                 </form>
                                             </td>
                                         </tr>
                                         <% }); %>
+                                    <% } else { %>
+                                        <tr><td colspan="3" class="text-muted" style="text-align:center; padding:32px;">No classes have been added yet. Use “Add Class” to create the first one.</td></tr>
+                                    <% } %>
                                 </tbody>
                             </table>
                         </div>
@@ -113,21 +115,19 @@
                         <div
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3>Subjects</h3>
-                            <button class="btn btn-sm"
-                                onclick="document.getElementById('add-subject-form').style.display='block'">+ Add
-                                Subject</button>
+                            <button type="button" class="btn btn-sm" aria-controls="add-subject-form" aria-expanded="false" onclick="toggleAcademicForm('add-subject-form', this)">+ Add Subject</button>
                         </div>
 
                         <div id="add-subject-form"
                             style="display: none; background: #f8f9fa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee;">
                             <form action="/academics/subjects/add" method="POST" class="grid-2">
                                 <div class="form-group">
-                                    <label>Subject Name</label>
-                                    <input type="text" name="name" required placeholder="e.g., Mathematics">
+                                    <label for="add_subject_name">Subject Name</label>
+                                    <input id="add_subject_name" type="text" name="name" required placeholder="e.g., Mathematics">
                                 </div>
                                 <div class="form-group">
-                                    <label>Subject Code</label>
-                                    <input type="text" name="code" required placeholder="e.g., MAT 101">
+                                    <label for="add_subject_code">Subject Code</label>
+                                    <input id="add_subject_code" type="text" name="code" required placeholder="e.g., MAT 101">
                                 </div>
                                 <div style="grid-column: span 2; display: flex; gap: 10px;">
                                     <button type="submit" class="btn">Save Subject</button>
@@ -147,7 +147,8 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <% subjects.forEach(s=> { %>
+                                    <% if (subjects && subjects.length > 0) { %>
+                                        <% subjects.forEach(s=> { %>
                                         <tr>
                                             <td><code
                                                     style="background: var(--accent-soft); padding: 2px 6px; border-radius: 4px; font-weight: bold;"><%= s.code %></code>
@@ -160,13 +161,16 @@
                                                 <a href="/academics/subjects/edit/<%= s.id %>"
                                                     style="color: var(--primary); text-decoration: none; font-weight: 600;">Edit</a>
                                                 <form action="/academics/subjects/delete/<%= s.id %>" method="POST"
-                                                    onsubmit="return confirm('Delete this subject?')">
+                                                    onsubmit="return confirm('Delete this subject? This may affect existing academic setup. Continue only if you are sure.')">
                                                     <button type="submit"
                                                         style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Delete</button>
                                                 </form>
                                             </td>
                                         </tr>
                                         <% }); %>
+                                    <% } else { %>
+                                        <tr><td colspan="3" class="text-muted" style="text-align:center; padding:32px;">No subjects have been added yet. Use “Add Subject” to create the first one.</td></tr>
+                                    <% } %>
                                 </tbody>
                             </table>
                         </div>
@@ -177,9 +181,7 @@
                             <div
                                 style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                                 <h3>Subject Assignments</h3>
-                                <button class="btn btn-sm"
-                                    onclick="document.getElementById('add-assignment-form').style.display='block'">+
-                                    Assign Teacher</button>
+                                <button type="button" class="btn btn-sm" aria-controls="add-assignment-form" aria-expanded="false" onclick="toggleAcademicForm('add-assignment-form', this)">+ Assign Teacher</button>
                             </div>
 
                             <div id="add-assignment-form"
@@ -187,8 +189,8 @@
                                 <form action="/academics/assignments/add" method="POST" class="grid-4"
                                     style="align-items: end;">
                                     <div class="form-group">
-                                        <label>Select Teacher</label>
-                                        <select name="teacher_id" required>
+                                        <label for="assignment_teacher">Select Teacher</label>
+                                        <select id="assignment_teacher" name="teacher_id" required>
                                             <option value="">-- Choose Teacher --</option>
                                             <% teachers.forEach(t=> { %>
                                                 <option value="<%= t.id %>">
@@ -198,8 +200,8 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>Select Subject</label>
-                                        <select name="subject_id" required>
+                                        <label for="assignment_subject">Select Subject</label>
+                                        <select id="assignment_subject" name="subject_id" required>
                                             <option value="">-- Choose Subject --</option>
                                             <% subjects.forEach(s=> { %>
                                                 <option value="<%= s.id %>">
@@ -209,8 +211,8 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>Select Class</label>
-                                        <select name="class_id" class="form-control" required>
+                                        <label for="assignment_class">Select Class</label>
+                                        <select id="assignment_class" name="class_id" class="form-control" required>
                                             <option value="">Select Class</option>
                                             <% if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
                                                 <% classes.forEach(c => { %>
@@ -220,8 +222,8 @@
                                         </select>
                                     </div>
                                     <div class="form-group">
-                                        <label>Session</label>
-                                        <select name="session" required>
+                                        <label for="assignment_session">Session</label>
+                                        <select id="assignment_session" name="session" required>
                                             <% if (typeof available_sessions !== 'undefined' && available_sessions && available_sessions.length > 0) { %>
                                                 <% available_sessions.forEach(sess => { %>
                                                     <option value="<%= sess %>" <%= (typeof current_session !== 'undefined' && current_session === sess) || (typeof school !== 'undefined' && school.current_session === sess) ? 'selected' : '' %>><%= sess %></option>
@@ -271,7 +273,7 @@
                                                     <td style="text-align: right;">
                                                         <form action="/academics/assignments/delete/<%= a.id %>"
                                                             method="POST"
-                                                            onsubmit="return confirm('Remove this assignment?')">
+                                                            onsubmit="return confirm('Remove this teacher assignment? Existing historical records will not be changed. Continue?')">
                                                             <button type="submit"
                                                                 style="color: #dc3545; border: none; background: none; cursor: pointer; font-weight: 600;">Remove</button>
                                                         </form>
@@ -294,19 +296,19 @@
     </div>
 
     <!-- Edit Class Modal -->
-    <div id="editClassModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
+    <div id="editClassModal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="editClassModalTitle" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center;">
         <div class="modal-content card" style="max-width: 450px; width: 90%; padding: 25px; border-radius: 12px; background: white; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="margin: 0;">Edit Class</h3>
-                <button type="button" onclick="closeEditClassModal()" style="font-size: 1.5rem; border: none; background: none; cursor: pointer; line-height: 1; padding: 0 5px;">&times;</button>
+                <h3 id="editClassModalTitle" style="margin: 0;">Edit Class</h3>
+                <button type="button" aria-label="Close edit class dialog" onclick="closeEditClassModal()" style="font-size: 1.5rem; border: none; background: none; cursor: pointer; line-height: 1; padding: 0 5px;">&times;</button>
             </div>
             <form id="editClassForm" method="POST">
                 <div class="form-group" style="margin-bottom: 15px;">
-                    <label>Class Name</label>
+                    <label for="edit_class_name">Class Name</label>
                     <input type="text" name="name" id="edit_class_name" required class="form-control" style="width: 100%;">
                 </div>
                 <div class="form-group" style="margin-bottom: 20px;">
-                    <label>Section</label>
+                    <label for="edit_class_section_id">Section</label>
                     <select name="section_id" id="edit_class_section_id" class="form-control" style="width: 100%;">
                         <option value="">-- Select Section (Optional) --</option>
                         <% if (typeof sections !== 'undefined' && sections) { %>
@@ -325,6 +327,19 @@
     </div>
 
     <script>
+        function toggleAcademicForm(id, trigger) {
+            const form = document.getElementById(id);
+            if (!form) return;
+            const opening = form.style.display === 'none' || !form.style.display;
+            form.style.display = opening ? 'block' : 'none';
+            trigger.setAttribute('aria-expanded', String(opening));
+            if (opening) {
+                const firstField = form.querySelector('input, select, textarea');
+                if (firstField) firstField.focus();
+            }
+        }
+
+        let editClassModalTrigger = null;
         function openEditClassModal(id, name, sectionId) {
             const form = document.getElementById('editClassForm');
             form.action = '/academics/classes/update/' + id;
@@ -332,20 +347,56 @@
             const select = document.getElementById('edit_class_section_id');
             select.value = sectionId ? String(sectionId) : '';
             const modal = document.getElementById('editClassModal');
+            editClassModalTrigger = document.activeElement;
             modal.style.display = 'flex';
+            document.getElementById('edit_class_name').focus();
         }
 
         function closeEditClassModal() {
-            document.getElementById('editClassModal').style.display = 'none';
+            const modal = document.getElementById('editClassModal');
+            modal.style.display = 'none';
+            if (editClassModalTrigger) editClassModalTrigger.focus();
         }
 
-        // Close modal if user clicks outside the card
-        window.addEventListener('click', function(e) {
+        window.addEventListener('keydown', function(event) {
             const modal = document.getElementById('editClassModal');
-            if (e.target === modal) {
+            if (modal.style.display !== 'flex') return;
+            if (event.key === 'Escape') {
+                event.preventDefault();
                 closeEditClassModal();
+            } else if (event.key === 'Tab') {
+                const focusable = Array.from(modal.querySelectorAll('button, input, select, textarea, a[href], [tabindex]:not([tabindex="-1"])'))
+                    .filter(element => !element.disabled && element.offsetParent !== null);
+                if (!focusable.length) return;
+                const first = focusable[0];
+                const last = focusable[focusable.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
             }
+        });
+
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('editClassModal');
+            if (event.target === modal) closeEditClassModal();
         });
     </script>
 
+
+    <style>
+        #editClassModal .modal-content { max-height: calc(100vh - 32px); overflow-y: auto; }
+        #editClassModal button { min-height: 44px; min-width: 44px; }
+        #editClassModal button:focus-visible, .activity-feed button:focus-visible, .activity-feed a:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+        @media (max-width: 640px) {
+            .activity-feed > div:first-child { flex-wrap: wrap; gap: 12px; }
+            .activity-feed form.grid-2, .activity-feed form.grid-4 { grid-template-columns: minmax(0, 1fr); }
+            .activity-feed form.grid-2 [style*="grid-column: span 2"], .activity-feed form.grid-4 [style*="grid-column: span 4"] { grid-column: 1 / -1 !important; flex-wrap: wrap; }
+            #editClassModal { padding: 16px; }
+            #editClassModal .modal-content { width: 100% !important; }
+        }
+    </style>
     <%- include('../partials/footer') %>

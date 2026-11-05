@@ -13,7 +13,7 @@ const getDashboard = async (req, res) => {
             )).count;
             
             const activeStaffCount = (await db.get(
-                "SELECT COUNT(*) as count FROM staff WHERE school_id = ?",
+                "SELECT COUNT(*) as count FROM staff WHERE status = 'active' AND school_id = ?",
                 [schoolId]
             )).count;
 

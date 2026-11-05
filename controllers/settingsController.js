@@ -414,9 +414,9 @@ const processPromotion = async (req, res) => {
 
         await db.transaction(async client => {
             const tx = {
-                all: (sql, params = []) => tx.all(sql, params, client),
-                get: (sql, params = []) => tx.get(sql, params, client),
-                run: (sql, params = []) => tx.run(sql, params, client)
+                all: (sql, params = []) => db.all(sql, params, client),
+                get: (sql, params = []) => db.get(sql, params, client),
+                run: (sql, params = []) => db.run(sql, params, client)
             };
             for (const [classIdStr, targetId] of Object.entries(mapping || {})) {
                 const classId = parseInt(classIdStr, 10);

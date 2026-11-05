@@ -157,12 +157,9 @@
                                     value="<%= student.admission_number %>" placeholder="e.g. ADM/2024/001">
                             </div>
                             <div class="form-group">
-                                <label for="edit_status">Status</label>
-                                <select id="edit_status" name="status" class="form-control" required>
-                                    <option value="active" <%=student.status==='active' ? 'selected' : '' %>>Active</option>
-                                    <option value="withdrawn" <%=student.status==='withdrawn' ? 'selected' : '' %>>Withdrawn</option>
-                                    <option value="graduated" <%=student.status==='graduated' ? 'selected' : '' %>>Graduated</option>
-                                </select>
+                                <label>Student Status</label>
+                                <div class="form-control" aria-readonly="true" style="background:#f8fafc"><%= (student.status || 'active').toUpperCase() %></div>
+                                <small style="color:#64748b">Status changes are handled through the dedicated departure or session promotion workflows.</small>
                             </div>
                         </div>
 

@@ -1,0 +1,72 @@
+<%- include('../partials/header') %>
+<style>
+.departure-page{max-width:900px;margin:0 auto}.departure-card{padding:clamp(16px,3vw,28px);margin-top:20px}
+.departure-field{margin-bottom:18px;min-width:0}.departure-field label{display:block;font-weight:700;margin-bottom:7px}
+.departure-field input,.departure-field select{width:100%;min-width:0}
+.departure-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.departure-note{padding:13px 15px;border:1px solid #f2d6a5;background:#fff8e8;color:#81520c;border-radius:9px;margin:16px 0;line-height:1.5}
+.departure-alert{padding:12px;border-radius:8px;background:#fff0ef;color:#9b2720;border:1px solid #f2c5c1;margin:14px 0}
+.departure-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+@media(max-width:640px){.departure-grid{grid-template-columns:1fr}.departure-actions>*{width:100%;text-align:center;justify-content:center}}
+</style>
+<div class="dashboard-container">
+  <%- include('../partials/sidebar') %>
+  <main class="main-content"><div class="departure-page">
+    <a href="/students/view/<%= student.id %>" style="color:var(--primary);text-decoration:none;font-weight:600">← Back to Student Profile</a>
+    <header style="margin:18px 0 8px"><h1 style="margin:0">Record Student Departure</h1>
+      <p style="color:var(--text-muted);margin:6px 0 0"><strong><%= student.first_name %> <%= student.last_name %></strong> · <%= student.admission_number || 'Admission pending' %></p></header>
+    <div class="card departure-card">
+      <h2 style="font-size:1.15rem;margin-top:0">Leaving Al-Jaleel Academy</h2>
+      <p style="color:var(--text-muted)">This is a school-level departure. All current placements across Academy and Tahfeez will be closed together. Previous class history, results, attendance, report cards and financial records will remain preserved.</p>
+      <% if (!placements.length) { %>
+        <div class="departure-alert">No current class placements were found. Review the student's enrollment records before recording a departure.</div>
+      <% } else { %>
+        <div class="departure-note"><strong>Current placements to be closed:</strong>
+          <ul style="margin:8px 0 0;padding-left:20px"><% placements.forEach(p => { %><li><%= p.section_name || 'Unsectioned' %> — <%= p.class_name %> (<%= p.session %>)</li><% }) %></ul>
+        </div>
+        <div id="departureAlert" class="departure-alert" role="alert" aria-live="polite" hidden></div>
+        <form id="studentDepartureForm">
+          <div class="departure-field"><label for="departureType">Departure type</label>
+            <select id="departureType" required>
+              <option value="external_transfer">Transfer to another school</option>
+              <option value="section_exit">Withdrawal from school</option>
+            </select>
+          </div>
+          <div class="departure-field" id="destinationSchoolField"><label for="destinationSchool">Destination school</label>
+            <input id="destinationSchool" type="text" maxlength="250" placeholder="Name of receiving school">
+          </div>
+          <div class="departure-grid">
+            <div class="departure-field"><label for="departureDate">Effective date</label><input id="departureDate" type="date" value="<%= new Date().toISOString().slice(0,10) %>" required></div>
+            <div class="departure-field"><label for="departureReason">Reason</label><input id="departureReason" type="text" maxlength="500" placeholder="Reason for leaving" required></div>
+          </div>
+          <div class="departure-actions"><a href="/students/view/<%= student.id %>" class="btn btn-outline">Cancel</a><button type="submit" id="departureSubmit" class="btn btn-primary">Confirm Departure</button></div>
+        </form>
+      <% } %>
+    </div>
+  </div></main>
+</div>
+<script>
+const departureType=document.getElementById('departureType'), destinationField=document.getElementById('destinationSchoolField');
+const destinationInput=document.getElementById('destinationSchool'), departureForm=document.getElementById('studentDepartureForm');
+const departureAlert=document.getElementById('departureAlert');
+function updateDestinationRequirement(){const external=departureType.value==='external_transfer';destinationField.hidden=!external;destinationInput.required=external;}
+departureType?.addEventListener('change',updateDestinationRequirement);if(departureType)updateDestinationRequirement();
+departureForm?.addEventListener('submit',async event=>{
+  event.preventDefault();departureAlert.hidden=true;
+  const kind=departureType.value;
+  const summary=kind==='external_transfer'?'transfer this student to '+destinationInput.value:'withdraw this student from Al-Jaleel Academy';
+  if(!window.confirm('Confirm that you want to '+summary+'? This will close all current Academy and Tahfeez placements. Historical academic and financial records will not be deleted.'))return;
+  const button=document.getElementById('departureSubmit');button.disabled=true;button.textContent='Recording departure…';
+  try{
+    const response=await fetch('/students/departure/<%= student.id %>',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({
+      departure_type:kind,destination_school:destinationInput.value.trim(),
+      effective_date:document.getElementById('departureDate').value,reason:document.getElementById('departureReason').value.trim()
+    })});
+    const result=await response.json();if(!response.ok||!result.success)throw new Error(result.message||'Departure could not be recorded.');
+    departureAlert.style.background='#edf8f0';departureAlert.style.color='#23633a';departureAlert.style.borderColor='#c7e8d0';
+    departureAlert.textContent=result.message;departureAlert.hidden=false;button.textContent='Departure recorded';
+    window.setTimeout(()=>{window.location.href='/students/view/<%= student.id %>';},900);
+  }catch(error){departureAlert.textContent=error.message||'Departure could not be recorded.';departureAlert.hidden=false;button.disabled=false;button.textContent='Confirm Departure';}
+});
+</script>
+<%- include('../partials/footer') %>

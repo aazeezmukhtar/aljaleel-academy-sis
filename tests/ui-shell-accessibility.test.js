@@ -107,6 +107,15 @@ check('student directory mobile cards retain clickable student and parent contac
   assert.match(students, /white-space: normal !important;/);
 });
 
+check('student directory filters show selected values on mobile and search without a full-page reload', () => {
+  assert.match(students, /filter-current-label/);
+  assert.match(students, /syncMobileFilterLabels\(\)/);
+  assert.match(students, /'Accept': 'application\/json'/);
+  assert.match(students, /updateTable\(payload\.students, payload\.count\)/);
+  assert.match(students, /window\.history\.replaceState/);
+  ejs.compile(students, { filename: path.join(__dirname, '..', 'views/students/index.ejs') });
+});
+
 check('student directory filter controls have accessible names and expanded state', () => {
   assert.match(students, /aria-label="Filter students by class"/);
   assert.match(students, /aria-label="Filter students by gender"/);

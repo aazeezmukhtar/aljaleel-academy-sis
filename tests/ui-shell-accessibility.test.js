@@ -152,3 +152,11 @@ check('student enrollment loads shared navigation and browser-side photo croppin
   assert.match(enrollmentForm, /@media \(max-width: 640px\)[\s\S]*\.grid-2 \{ grid-template-columns: 1fr; \}/);
   assert.match(header, /\/js\/image-optimizer\.js/);
 });
+
+const adminDashboard = read('views/dashboard.ejs');
+const dashboardController = read('controllers/homeController.js');
+
+check('admin dashboard distinguishes missing attendance records from zero attendance', () => {
+  assert.match(adminDashboard, /stats\.attendance === 'N\/A' \? '—' : stats\.attendance/);
+  assert.match(dashboardController, /FROM staff WHERE status = 'active' AND school_id = \?/);
+});

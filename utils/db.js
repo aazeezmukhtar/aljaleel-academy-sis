@@ -33,10 +33,10 @@ if (DB_TYPE === 'postgres') {
     if (isVercel) {
         console.warn('[Database] WARNING: SQLite is not recommended on Vercel. Attempting to open read-only.');
     }
-    
+
     try {
         const dbPath = path.join(__dirname, '../', process.env.DB_PATH || 'database.sqlite');
-        sqliteDb = new Database(dbPath, { 
+        sqliteDb = new Database(dbPath, {
             readonly: !!isVercel,
             fileMustExist: !!isVercel
         });
@@ -51,78 +51,69 @@ if (DB_TYPE === 'postgres') {
 
 /**
  * Executes a query and returns all rows.
- * @param {string} sql 
- * @param {Array} params 
+ * @param {string} sql
+ * @param {Array} params
+ * @param {Object} [client] Optional pg client (for transactions)
  */
-async function all(sql, params = []) {
+async function all(sql, params = [], client = null) {
     if (DB_TYPE === 'postgres') {
         let counter = 1;
-        let pgSql = sql.replace(/\?/g, () => `$${counter++}`);
+        let pgSql = sql.replace(/\?/g, () => `${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';
         }
-        const pgParams = params.map(p => {
-            if (p === undefined) return null;
-            return p;
-        });
-        const result = await pool.query(pgSql, pgParams);
+        const pgParams = params.map(p => p === undefined ? null : p);
+        const queryExecutor = client || pool;
+        const result = await queryExecutor.query(pgSql, pgParams);
         return result.rows;
-    } else {
-        return sqliteDb.prepare(sql).all(params);
     }
+    return sqliteDb.prepare(sql).all(params);
 }
 
 /**
  * Executes a query and returns the first row.
- * @param {string} sql 
- * @param {Array} params 
+ * @param {string} sql
+ * @param {Array} params
+ * @param {Object} [client] Optional pg client (for transactions)
  */
 async function get(sql, params = [], client = null) {
     if (DB_TYPE === 'postgres') {
         let counter = 1;
-        let pgSql = sql.replace(/\?/g, () => `$${counter++}`);
+        let pgSql = sql.replace(/\?/g, () => `${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';
         }
-        const pgParams = params.map(p => {
-            if (p === undefined) return null;
-            return p;
-        });
+        const pgParams = params.map(p => p === undefined ? null : p);
         const queryExecutor = client || pool;
         const result = await queryExecutor.query(pgSql, pgParams);
         return result.rows[0];
-    } else {
-        return sqliteDb.prepare(sql).get(params);
     }
+    return sqliteDb.prepare(sql).get(params);
 }
 
 /**
  * Executes a query (INSERT, UPDATE, DELETE).
- * @param {string} sql 
- * @param {Array} params 
+ * @param {string} sql
+ * @param {Array} params
  * @param {Object} [client] Optional pg client (for transactions)
  */
 async function run(sql, params = [], client = null) {
     if (DB_TYPE === 'postgres') {
         let counter = 1;
-        let pgSql = sql.replace(/\?/g, () => `$${counter++}`);
+        let pgSql = sql.replace(/\?/g, () => `${counter++}`);
         pgSql = pgSql.replace(/INSERT OR IGNORE/gi, 'INSERT');
         if (sql.match(/INSERT OR IGNORE/gi)) {
             pgSql += ' ON CONFLICT DO NOTHING';
         }
-        const pgParams = params.map(p => {
-            if (p === undefined) return null;
-            return p;
-        });
+        const pgParams = params.map(p => p === undefined ? null : p);
         const queryExecutor = client || pool;
         const result = await queryExecutor.query(pgSql, pgParams);
         return { changes: result.rowCount, lastInsertRowid: null };
-    } else {
-        const info = sqliteDb.prepare(sql).run(params);
-        return { changes: info.changes, lastInsertRowid: info.lastInsertRowid };
     }
+    const info = sqliteDb.prepare(sql).run(params);
+    return { changes: info.changes, lastInsertRowid: info.lastInsertRowid };
 }
 
 /**
@@ -142,16 +133,15 @@ async function transaction(callback) {
         } finally {
             client.release();
         }
-    } else {
-        sqliteDb.prepare('BEGIN').run();
-        try {
-            const result = await callback();
-            sqliteDb.prepare('COMMIT').run();
-            return result;
-        } catch (e) {
-            sqliteDb.prepare('ROLLBACK').run();
-            throw e;
-        }
+    }
+    sqliteDb.prepare('BEGIN').run();
+    try {
+        const result = await callback(null);
+        sqliteDb.prepare('COMMIT').run();
+        return result;
+    } catch (e) {
+        sqliteDb.prepare('ROLLBACK').run();
+        throw e;
     }
 }
 
@@ -163,4 +153,3 @@ module.exports = {
     DB_TYPE,
     pool
 };
-

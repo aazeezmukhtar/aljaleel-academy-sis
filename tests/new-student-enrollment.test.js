@@ -8,6 +8,25 @@ delete process.env.DB_POOL_URL;
 
 const assert = require('assert');
 const db = require('../utils/db');
+const enrollmentHistoryService = require('../services/studentEnrollmentHistoryService');
+const originalChangeEnrollment = enrollmentHistoryService.changeEnrollment;
+enrollmentHistoryService.changeEnrollment = async (input, options = {}) => {
+  assert.strictEqual(options.inTransaction, true,
+    'Admission history must use the student creation transaction');
+  const client = options.client || null;
+  await db.run(
+    'INSERT INTO student_enrollments (student_id, class_id, session, term) VALUES (?, ?, ?, ?)',
+    [input.studentId, input.destinationClassId, input.destinationSession, input.destinationTerm],
+    client
+  );
+  await db.run(
+    'INSERT INTO student_enrollment_history (school_id, student_id, section_id, destination_class_id, destination_session, event_type, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+    [input.schoolId, input.studentId, input.sectionId, input.destinationClassId,
+      input.destinationSession, input.eventType, input.recordedBy],
+    client
+  );
+  return { changed: true, eventType: input.eventType };
+};
 const studentController = require('../controllers/studentController');
 
 function responseRecorder() {
@@ -88,7 +107,7 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
     };
     db.run = async (sql, params, client) => {
       writes.push({ sql, client });
-      if (sql.includes('INSERT INTO student_enrollments')) throw new Error('Injected enrollment insert failure');
+      if (sql.includes('INSERT INTO student_enrollment_history')) throw new Error('Injected admission history insert failure');
       return { changes: 1, lastInsertRowid: 77 };
     };
     db.transaction = async (callback) => {
@@ -107,9 +126,10 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
     assert.strictEqual(rolledBack, true, 'Enrollment failure must roll back the student insert');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO students')), 'Student insert should be attempted');
     const transactionalWrites = writes.filter(w =>
-      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments')
+      w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments') ||
+      w.sql.includes('INSERT INTO student_enrollment_history')
     );
-    assert.ok(transactionalWrites.length >= 2, 'Student insert and enrollment insert should both be attempted');
+    assert.ok(transactionalWrites.length >= 3, 'Student, placement, and admission history writes should be attempted');
     assert.ok(transactionalWrites.every(w => w.client === fakeClient),
       'Student and enrollment writes must use the same transaction client');
     assert.strictEqual(res.redirectedTo, '/students/enroll?error=Enrollment failed',
@@ -172,6 +192,10 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
     assert.strictEqual(transactionRolledBack, false, 'Valid enrollment should commit');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO students')), 'Student row should be inserted');
     assert.ok(writes.some(w => w.sql.includes('INSERT INTO student_enrollments')), 'Enrollment row should be inserted');
+    const admissionEvents = writes.filter(w => w.sql.includes('INSERT INTO student_enrollment_history'));
+    assert.strictEqual(admissionEvents.length, 1, 'One admission event should be recorded for the selected section');
+    assert.strictEqual(admissionEvents[0].params[5], 'admission', 'Initial placement must use the admission event type');
+    assert.strictEqual(admissionEvents[0].params[6], 9, 'Admission event should record the enrolling staff member');
     const transactionalWrites = writes.filter(w =>
       w.sql.includes('INSERT INTO students') || w.sql.includes('INSERT INTO student_enrollments')
     );
@@ -186,7 +210,7 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
   await testRejectsClassFromWrongSectionBeforeWrites();
   await testEnrollmentUsesSectionSessionAndTermAndOneTransaction();
   await testEnrollmentFailureRollsBackStudentAndEnrollment();
-  console.log('[new-student-enrollment] Class validation, session/term context, and transaction tests passed.');
+  console.log('[new-student-enrollment] Class validation, admission history, session/term context, and transaction tests passed.');
 })().catch(error => {
   console.error('[new-student-enrollment] Test failed:', error);
   process.exitCode = 1;

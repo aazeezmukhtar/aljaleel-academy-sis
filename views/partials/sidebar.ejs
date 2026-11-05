@@ -1,7 +1,7 @@
 <!-- mobile-toggle button removed -->
-<div id="sidebar-overlay" class="sidebar-overlay"></div>
+<div id="sidebar-overlay" class="sidebar-overlay" aria-hidden="true"></div>
 
-<aside class="sidebar" id="main-sidebar">
+<aside class="sidebar" id="main-sidebar" aria-label="Main navigation">
     <% 
         const sData = (typeof school !== 'undefined' && school) ? school : {};
         const cSchool = (typeof currentSchool !== 'undefined' && currentSchool) ? currentSchool : {};
@@ -230,14 +230,54 @@
     document.addEventListener('DOMContentLoaded', () => {
         const sidebar = document.getElementById('main-sidebar');
         const overlay = document.getElementById('sidebar-overlay');
+        const menuButtons = document.querySelectorAll('.mobile-hamburger, .bottom-nav [aria-controls="main-sidebar"]');
+        const mobileQuery = window.matchMedia('(max-width: 991px)');
+
+        if (!sidebar || !overlay) return;
+
+        const setSidebarOpen = (isOpen) => {
+            sidebar.classList.toggle('active', isOpen && mobileQuery.matches);
+            overlay.classList.toggle('active', isOpen && mobileQuery.matches);
+            document.body.classList.toggle('sidebar-open', isOpen && mobileQuery.matches);
+            menuButtons.forEach((button) => {
+                button.setAttribute('aria-expanded', String(isOpen && mobileQuery.matches));
+                button.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+            });
+        };
 
         window.toggleSidebar = function() {
-            sidebar.classList.toggle('active');
-            overlay.classList.toggle('active');
-        }
+            setSidebarOpen(!sidebar.classList.contains('active'));
+        };
 
-        if (overlay) {
-            overlay.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', () => setSidebarOpen(false));
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && sidebar.classList.contains('active')) {
+                setSidebarOpen(false);
+                const trigger = document.querySelector('.mobile-hamburger');
+                if (trigger) trigger.focus();
+            }
+        });
+
+        sidebar.querySelectorAll('a').forEach((link) => {
+            link.addEventListener('click', () => {
+                if (mobileQuery.matches) setSidebarOpen(false);
+            });
+        });
+
+        const syncViewport = () => {
+            if (!mobileQuery.matches) {
+                sidebar.classList.remove('active');
+                overlay.classList.remove('active');
+                document.body.classList.remove('sidebar-open');
+                menuButtons.forEach((button) => button.setAttribute('aria-expanded', 'false'));
+            }
+        };
+
+        if (mobileQuery.addEventListener) {
+            mobileQuery.addEventListener('change', syncViewport);
+        } else {
+            mobileQuery.addListener(syncViewport);
         }
     });
 
@@ -268,7 +308,7 @@
             <i class="bi bi-calendar-check-fill"></i>
             <span>Attend.</span>
         </a>
-        <button class="bottom-nav-item" onclick="toggleSidebar()" aria-label="More menu">
+        <button type="button" class="bottom-nav-item" onclick="toggleSidebar()" aria-label="Open navigation menu" aria-controls="main-sidebar" aria-expanded="false">
             <i class="bi bi-grid-3x3-gap-fill"></i>
             <span>More</span>
         </button>

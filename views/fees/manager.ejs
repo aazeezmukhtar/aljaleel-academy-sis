@@ -52,11 +52,11 @@
                                                     <%= s.admission_number %>
                                                 </td>
                                                 <td data-label="Student Name">
-                                                    <div style="display: flex; align-items: center; justify-content: flex-end; gap: 10px;">
+                                                    <div style="display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0;">
                                                         <div
                                                             style="width: 32px; height: 32px; background: #f3f4f6; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
                                                             <% if (s.passport_photo_path) { %>
-                                                                <img src="<%= s.passport_photo_path %>"
+                                                                <img src="<%= s.passport_photo_path %>" alt="Student photo for <%= s.first_name %> <%= s.last_name %>"
                                                                     style="width: 100%; height: 100%; object-fit: cover;">
                                                                 <% } else { %>
                                                                     <i class="bi bi-person-fill"
@@ -86,10 +86,17 @@
                         </div>
                     </section>
                     <% } else if (filters.class_id) { %>
-                        <div class="card" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                            No students found for the selected criteria.
+                        <div class="card" style="text-align: center; padding: 40px; color: var(--text-muted);" role="status">
+                            <i class="bi bi-people" aria-hidden="true" style="font-size: 2rem; opacity: 0.45;"></i>
+                            <p style="margin: 10px 0 0;">No students found for the selected criteria.</p>
                         </div>
-                        <% } %>
+                    <% } else { %>
+                        <div class="emp-state" role="status">
+                            <i class="bi bi-wallet2" aria-hidden="true" style="font-size: 2.5rem; color: #cbd5e1;"></i>
+                            <h3>Select a class</h3>
+                            <p>Choose a class above to view student fee balances.</p>
+                        </div>
+                    <% } %>
             </main>
     </div>
 

@@ -208,12 +208,16 @@
                                             </td>
                                             <td data-label="CA 1">
                                                 <input type="number" class="form-control score-input ca1"
+                                                    aria-label="CA 1 score for <%= s.first_name %> <%= s.last_name %>"
+                                                    aria-invalid="false"
                                                     value="<%= s.ca1 %>" min="0" max="<%= resultConfig.ca1_max || 20 %>"
                                                     <%= isLocked ? 'disabled' : '' %>>
                                             </td>
                                             <% if (resultConfig.ca_count !=1) { %>
                                                 <td data-label="CA 2">
                                                     <input type="number" class="form-control score-input ca2"
+                                                        aria-label="CA 2 score for <%= s.first_name %> <%= s.last_name %>"
+                                                        aria-invalid="false"
                                                         value="<%= s.ca2 %>" min="0" max="<%= resultConfig.ca2_max || 20 %>"
                                                         <%= isLocked ? 'disabled' : '' %>>
                                                 </td>
@@ -222,6 +226,8 @@
                                                     <% } %>
                                                         <td data-label="Exam">
                                                             <input type="number" class="form-control score-input exam"
+                                                                aria-label="Exam score for <%= s.first_name %> <%= s.last_name %>"
+                                                                aria-invalid="false"
                                                                 value="<%= s.exam %>" min="0"
                                                                 max="<%= resultConfig.exam_max || 60 %>"
                                                                 <%= isLocked ? 'disabled' : '' %>>
@@ -541,12 +547,16 @@
             if (input.classList.contains('ca2')) max = CONFIG.CA2_MAX;
             if (input.classList.contains('exam')) max = CONFIG.EXAM_MAX;
 
-            const val = parseFloat(input.value);
-            if (val > max) {
-                input.classList.add('error');
-            } else {
+            if (input.value.trim() === '') {
                 input.classList.remove('error');
+                input.setAttribute('aria-invalid', 'false');
+                return;
             }
+
+            const val = Number(input.value);
+            const isInvalid = !Number.isFinite(val) || val < 0 || val > max;
+            input.classList.toggle('error', isInvalid);
+            input.setAttribute('aria-invalid', String(isInvalid));
         }
 
         function calculateRow(row) {
@@ -585,13 +595,16 @@
             const rows = document.querySelectorAll('#resultGrid tbody tr');
             const results = [];
             let hasError = false;
+            const btn = event && (event.currentTarget || event.target);
+            const oldText = btn ? btn.innerHTML : '';
 
             rows.forEach(row => {
                 const ca1 = row.querySelector('.ca1');
                 const ca2 = row.querySelector('.ca2');
                 const exam = row.querySelector('.exam');
 
-                // Check for validation errors
+                // Revalidate at save time, including negative values.
+                [ca1, ca2, exam].forEach(input => validateInput(input));
                 if (ca1.classList.contains('error') || ca2.classList.contains('error') || exam.classList.contains('error')) {
                     hasError = true;
                 }
@@ -608,7 +621,9 @@
             });
 
             if (hasError) {
-                alert('Please fix highlight errors (scores exceeding limits) before saving.');
+                const firstInvalid = document.querySelector('#resultGrid .score-input.error');
+                if (firstInvalid) firstInvalid.focus();
+                alert('Please correct the highlighted scores. Scores must be between 0 and their configured maximum.');
                 return;
             }
 
@@ -632,10 +647,10 @@
             };
 
             try {
-                const btn = event.currentTarget || event.target;
-                const oldText = btn.innerHTML;
-                btn.innerHTML = 'Saving...';
-                btn.disabled = true;
+                if (btn) {
+                    btn.innerHTML = 'Saving...';
+                    btn.disabled = true;
+                }
 
                 const res = await fetch('/results/save', {
                     method: 'POST',
@@ -645,8 +660,10 @@
 
                 if (res.redirected || res.status === 401) {
                     alert('Your session may have expired. Reconnect and sign in before syncing; this save was not queued automatically.');
-                    btn.innerHTML = oldText;
-                    btn.disabled = false;
+                    if (btn) {
+                        btn.innerHTML = oldText;
+                        btn.disabled = false;
+                    }
                     return;
                 }
                 const data = await res.json();
@@ -657,8 +674,10 @@
                     alert('Error: ' + (data.message || 'The server rejected this save.'));
                 }
 
-                btn.innerHTML = oldText;
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerHTML = oldText;
+                    btn.disabled = false;
+                }
 
             } catch (err) {
                 // Queue only network failures. Parsing/server errors must remain visible,
@@ -666,8 +685,10 @@
                 if (navigator.onLine && !(err instanceof TypeError)) {
                     console.error('[AcadMe] Result save failed for a non-network reason:', err);
                     alert('The result save failed. Nothing was queued offline. Please retry or reconnect and review the server response.');
-                    btn.innerHTML = oldText;
-                    btn.disabled = false;
+                    if (btn) {
+                        btn.innerHTML = oldText;
+                        btn.disabled = false;
+                    }
                     return;
                 }
                 console.warn('[AcadMe Offline] Result save request failed; queueing locally.', err);
@@ -685,8 +706,10 @@
                 } catch (queueError) {
                     alert('Could not save results offline: ' + queueError.message + '. Keep this page open and reconnect before leaving.');
                 } finally {
-                    btn.innerHTML = oldText;
-                    btn.disabled = false;
+                    if (btn) {
+                        btn.innerHTML = oldText;
+                        btn.disabled = false;
+                    }
                 }
             }
         }

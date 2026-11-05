@@ -14,7 +14,8 @@
     "test:section-owned": "node tests/result-report-section-isolation.test.js && node tests/section-owned-academic-records-writes.test.js && node tests/section-owned-academic-records-portal.test.js && node tests/academics-results-class-isolation.test.js",
     "test:image-optimizer": "node tests/image-optimizer.test.js",
     "test:offline-foundation": "node tests/offline-cache-policy.test.js",
-    "test:student-class-layout": "node tests/student-class-layout.test.js"
+    "test:student-class-layout": "node tests/student-class-layout.test.js",
+    "test:ui-shell": "node tests/ui-shell-accessibility.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

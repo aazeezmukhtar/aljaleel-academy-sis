@@ -1179,3 +1179,64 @@ table {
     }
 }
 
+
+
+/* ============================================================
+   UI/UX AUDIT — MOBILE SHELL ACCESSIBILITY & SAFE AREAS
+   ============================================================ */
+@media (max-width: 991px) {
+    body.sidebar-open {
+        overflow: hidden;
+    }
+
+    .mobile-hamburger,
+    .bottom-nav-item {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .mobile-hamburger {
+        min-width: 44px;
+        min-height: 44px;
+        justify-content: center;
+        border-radius: 10px;
+    }
+
+    .bottom-nav {
+        height: calc(60px + env(safe-area-inset-bottom, 0px));
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .bottom-nav-inner {
+        height: 60px;
+    }
+
+    .bottom-nav-spacer {
+        height: calc(68px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .main-content {
+        padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+
+    .sticky-save-bar {
+        bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+.mobile-hamburger:focus-visible,
+.bottom-nav-item:focus-visible,
+.sidebar a:focus-visible {
+    outline: 3px solid var(--school-secondary, #f59e0b);
+    outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

@@ -31,9 +31,9 @@
                             <!-- Search Input -->
                             <div class="search-input-wrapper">
                                 <i class="bi bi-search search-icon"></i>
-                                <input type="text" id="searchInput" name="search" placeholder="Search by student name, ID or admission number..."
+                                <input type="text" id="searchInput" name="search" aria-label="Search students by name, ID or admission number" placeholder="Search by student name, ID or admission number..."
                                     value="<%= filters.search || '' %>" class="form-control search-input" autocomplete="off">
-                                <button type="button" id="clearSearchBtn" class="clear-search-btn" style="<%= filters.search ? 'display:flex;' : 'display:none;' %>">
+                                <button type="button" id="clearSearchBtn" aria-label="Clear student search" class="clear-search-btn" style="<%= filters.search ? 'display:flex;' : 'display:none;' %>">
                                     <i class="bi bi-x-circle-fill"></i>
                                 </button>
                             </div>
@@ -42,7 +42,7 @@
                             <div class="direct-filters-group">
                                 <div class="filter-pill-wrapper" title="Class">
                                     <i class="bi bi-door-open-fill filter-icon"></i>
-                                    <select name="class_id" id="classFilter" class="filter-select">
+                                    <select name="class_id" id="classFilter" aria-label="Filter students by class" class="filter-select">
                                         <option value="">All Classes</option>
                                         <% if (typeof classes !== 'undefined' && classes) { classes.forEach(cls => { %>
                                             <option value="<%= cls.id %>" <%= filters.class_id == cls.id ? 'selected' : '' %>><%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %></option>
@@ -52,7 +52,7 @@
 
                                 <div class="filter-pill-wrapper" title="Gender">
                                     <i class="bi bi-people-fill filter-icon"></i>
-                                    <select name="gender" id="genderFilter" class="filter-select">
+                                    <select name="gender" id="genderFilter" aria-label="Filter students by gender" class="filter-select">
                                         <option value="">All Genders</option>
                                         <option value="Male" <%= filters.gender === 'Male' ? 'selected' : '' %>>Male</option>
                                         <option value="Female" <%= filters.gender === 'Female' ? 'selected' : '' %>>Female</option>
@@ -61,7 +61,7 @@
 
                                 <div class="filter-pill-wrapper" title="Status">
                                     <i class="bi bi-activity filter-icon"></i>
-                                    <select name="status" id="statusFilter" class="filter-select">
+                                    <select name="status" id="statusFilter" aria-label="Filter students by status" class="filter-select">
                                         <option value="">All Statuses</option>
                                         <% if (typeof statuses !== 'undefined' && statuses) { statuses.forEach(st => { %>
                                             <option value="<%= st %>" <%= filters.status === st ? 'selected' : '' %>><%= st.charAt(0).toUpperCase() + st.slice(1) %></option>
@@ -71,7 +71,7 @@
 
                                 <!-- More Filters Dropdown -->
                                 <div class="more-filters-dropdown">
-                                    <button type="button" id="moreFiltersBtn" class="btn btn-outline more-filters-btn">
+                                    <button type="button" id="moreFiltersBtn" class="btn btn-outline more-filters-btn" aria-label="Show more student filters" aria-controls="moreFiltersPopover" aria-expanded="false">
                                         <i class="bi bi-sliders"></i>
                                         <span class="more-btn-text">More</span>
                                         <span id="moreFilterBadge" class="filter-count-badge" style="display:none;">0</span>
@@ -80,14 +80,14 @@
                                     <div id="moreFiltersPopover" class="more-filters-popover">
                                         <div class="popover-header">
                                             <span><i class="bi bi-sliders" style="margin-right: 6px; color: var(--primary);"></i>More Filters</span>
-                                            <button type="button" class="popover-close-btn" id="closePopoverBtn"><i class="bi bi-x"></i></button>
+                                            <button type="button" class="popover-close-btn" id="closePopoverBtn" aria-label="Close more filters"><i class="bi bi-x"></i></button>
                                         </div>
                                         <div class="popover-body">
                                             <div class="form-group" style="margin-bottom: 12px;">
                                                 <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
                                                     <i class="bi bi-layers-fill" style="color: var(--primary);"></i> Section
                                                 </label>
-                                                <select name="section_id" id="sectionFilter" class="form-control" style="font-size: 0.85rem;">
+                                                <select name="section_id" id="sectionFilter" aria-label="Filter students by section" class="form-control" style="font-size: 0.85rem;">
                                                     <option value="">All Sections</option>
                                                     <% if (typeof sections !== 'undefined' && sections) { sections.forEach(sec => { %>
                                                         <option value="<%= sec.id %>" <%= filters.section_id == sec.id ? 'selected' : '' %>><%= sec.name %></option>
@@ -98,7 +98,7 @@
                                                 <label style="font-size: 0.8rem; font-weight: 600; color: #475569; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
                                                     <i class="bi bi-calendar-event" style="color: var(--primary);"></i> Admission Year
                                                 </label>
-                                                <select name="admission_year" id="yearFilter" class="form-control" style="font-size: 0.85rem;">
+                                                <select name="admission_year" id="yearFilter" aria-label="Filter students by admission year" class="form-control" style="font-size: 0.85rem;">
                                                     <option value="">All Years</option>
                                                     <% if (typeof admissionYears !== 'undefined' && admissionYears) { admissionYears.forEach(yr => { %>
                                                         <option value="<%= yr %>" <%= filters.admission_year == yr ? 'selected' : '' %>><%= yr %></option>
@@ -285,16 +285,28 @@
             // Toggle More Filters Popover
             moreFiltersBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                moreFiltersPopover.classList.toggle('active');
+                const isOpen = moreFiltersPopover.classList.toggle('active');
+                moreFiltersBtn.setAttribute('aria-expanded', String(isOpen));
             });
 
             closePopoverBtn.addEventListener('click', () => {
                 moreFiltersPopover.classList.remove('active');
+                moreFiltersBtn.setAttribute('aria-expanded', 'false');
+                moreFiltersBtn.focus();
             });
 
             document.addEventListener('click', (e) => {
                 if (!moreFiltersPopover.contains(e.target) && !moreFiltersBtn.contains(e.target)) {
                     moreFiltersPopover.classList.remove('active');
+                    moreFiltersBtn.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && moreFiltersPopover.classList.contains('active')) {
+                    moreFiltersPopover.classList.remove('active');
+                    moreFiltersBtn.setAttribute('aria-expanded', 'false');
+                    moreFiltersBtn.focus();
                 }
             });
 
@@ -1001,7 +1013,7 @@
                 background: white !important;
                 display: grid !important;
                 grid-template-columns: minmax(0, 1fr) max-content !important;
-                grid-template-rows: auto auto auto !important;
+                grid-template-rows: auto auto auto auto !important;
                 gap: 10px 8px !important;
                 box-shadow: 0 2px 5px rgba(0,0,0,0.04) !important;
                 width: 100% !important;
@@ -1041,17 +1053,29 @@
                 align-items: center;
             }
             
-            /* 3. Status and Action inline */
+            /* 3. Keep call and parent-contact actions visible on mobile */
+            .student-mobile-cards td[data-label="Contact Numbers"] {
+                grid-column: 1 / 3;
+                grid-row: 3;
+                min-width: 0 !important;
+            }
+
+            .student-mobile-cards td[data-label="Contact Numbers"] > div {
+                min-width: 0 !important;
+                width: 100%;
+            }
+
+            /* 4. Status and Action inline */
             .student-mobile-cards td[data-label="Status"] {
                 grid-column: 1;
-                grid-row: 3;
+                grid-row: 4;
                 display: flex !important;
                 align-items: center;
             }
             
             .student-mobile-cards td[data-label="Action"] {
                 grid-column: 2;
-                grid-row: 3;
+                grid-row: 4;
                 display: flex !important;
                 justify-content: flex-end;
                 align-items: center;

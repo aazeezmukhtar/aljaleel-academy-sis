@@ -867,18 +867,15 @@ const updateStudent = async (req, res) => {
 
         // Resolve existing placements before writing. Profile editing is a
         // correction tool, not a silent transfer/departure mechanism.
-        const existingStudent = await db.get('SELECT id, status FROM students WHERE id = ? AND school_id = ?', [id, schoolId]);
-        if (!existingStudent) return res.status(404).json({ success: false, message: 'Student not found.' });
-        if (String(status || '').toLowerCase() !== String(existingStudent.status || 'active').toLowerCase()) {
-            return res.status(400).json({ success: false, message: 'Student status cannot be changed through profile editing. Use the dedicated departure or session promotion workflow.' });
-        }
-
         const studentExists = await db.get(
-            'SELECT id FROM students WHERE id = ? AND school_id = ?',
+            'SELECT id, status FROM students WHERE id = ? AND school_id = ?',
             [id, schoolId]
         );
         if (!studentExists) {
             return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+        if (String(status || '').toLowerCase() !== String(studentExists.status || 'active').toLowerCase()) {
+            return res.status(400).json({ success: false, message: 'Student status cannot be changed through profile editing. Use the dedicated departure or session promotion workflow.' });
         }
 
         await db.transaction(async (client = null) => {

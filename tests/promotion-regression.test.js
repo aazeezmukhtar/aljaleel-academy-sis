@@ -214,6 +214,7 @@ async function run() {
     assert.strictEqual(calendar.current_term, '2nd Term');
     let setting = await db.get("SELECT value FROM settings WHERE school_id = ? AND key = 'current_session'", [schoolId]);
     assert.strictEqual(setting.value, '2025/2026');
+    assert.strictEqual(await db.get("SELECT id FROM student_enrollment_history WHERE student_id = ? AND event_type = 'promotion'", [currentStudent]), undefined, 'Failed promotion must roll back its history event as well as enrollment and calendar writes');
     await db.run('DROP TRIGGER promotion_test_force_failure');
 
     const success = response();

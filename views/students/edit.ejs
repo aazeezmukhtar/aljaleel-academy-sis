@@ -157,9 +157,9 @@
                                     value="<%= student.admission_number %>" placeholder="e.g. ADM/2024/001">
                             </div>
                             <div class="form-group">
-                                <label>Student Status</label>
+                                <label for="edit_status">Student Status</label>
                                 <input type="hidden" name="status" value="<%= student.status || 'active' %>">
-                                <div class="form-control" aria-readonly="true" style="background:#f8fafc"><%= (student.status || 'active').toUpperCase() %></div>
+                                <div id="edit_status" class="form-control" aria-readonly="true" style="background:#f8fafc"><%= (student.status || 'active').toUpperCase() %></div>
                                 <small style="color:#64748b">Status changes are handled through the dedicated departure or session promotion workflows.</small>
                             </div>
                         </div>

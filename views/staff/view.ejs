@@ -341,12 +341,36 @@
             });
         });
         document.addEventListener("keydown", event => {
-            if (event.key !== "Escape") return;
             const openModal = document.querySelector('.modal-overlay[style*="display: flex"]');
             if (!openModal) return;
-            event.preventDefault();
-            if (openModal.id === "classAssignmentModal") closeClassAssignmentModal();
-            if (openModal.id === "subjectAssignmentModal") closeSubjectAssignmentModal();
+
+            if (event.key === "Escape") {
+                event.preventDefault();
+                if (openModal.id === "classAssignmentModal") closeClassAssignmentModal();
+                if (openModal.id === "subjectAssignmentModal") closeSubjectAssignmentModal();
+                return;
+            }
+
+            if (event.key !== "Tab") return;
+            const dialog = openModal.querySelector('[role="dialog"]');
+            if (!dialog) return;
+            const focusable = Array.from(dialog.querySelectorAll(
+                'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )).filter(element => element.offsetParent !== null);
+            if (!focusable.length) {
+                event.preventDefault();
+                dialog.focus();
+                return;
+            }
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && (document.activeElement === first || document.activeElement === dialog)) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === dialog)) {
+                event.preventDefault();
+                first.focus();
+            }
         });
     </script>
 

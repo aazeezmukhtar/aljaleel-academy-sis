@@ -132,6 +132,30 @@ const base = {
     assert.strictEqual(events[1].source_session, '2026/2027');
     assert.strictEqual(events[1].destination_session, '2027/2028');
 
+
+    await changeEnrollment({
+      ...base, sectionId: 10, sourceClassId: 1001, destinationClassId: null,
+      sourceSession: '2026/2027', destinationSession: null,
+      eventType: 'external_transfer', effectiveDate: '2026-11-05',
+      reason: 'Family relocation', destinationSchool: 'New Horizon School'
+    });
+    await changeEnrollment({
+      ...base, sectionId: 20, sourceClassId: 2000, destinationClassId: null,
+      sourceSession: '2026/2027', destinationSession: null,
+      eventType: 'section_exit', effectiveDate: '2026-11-05',
+      reason: 'School withdrawal', destinationSchool: null
+    });
+    assert.strictEqual(sqlite.prepare(
+      'SELECT COUNT(*) AS count FROM student_enrollments WHERE student_id = 100 AND session = ?'
+    ).get('2026/2027').count, 0, 'School departure must close all selected current section placements');
+    const departureEvents = sqlite.prepare(
+      "SELECT event_type, section_id, destination_school FROM student_enrollment_history WHERE event_type IN ('external_transfer','section_exit') ORDER BY id"
+    ).all();
+    assert.deepStrictEqual(departureEvents, [
+      { event_type: 'external_transfer', section_id: 10, destination_school: 'New Horizon School' },
+      { event_type: 'section_exit', section_id: 20, destination_school: null }
+    ], 'Departure events must retain each section and destination school details');
+
     console.log('[test-enrollment-history-service] Same-session transfer, cross-session preservation, section isolation and validation checks passed.');
   } finally {
     sqlite.close();

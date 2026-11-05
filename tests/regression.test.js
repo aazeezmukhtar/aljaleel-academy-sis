@@ -45,6 +45,7 @@ for (const [file, label] of tests) {
     DB_PATH: process.env.DB_PATH || '.test-database.sqlite',
     SESSION_SECRET: 'ci-only-session-secret-that-is-long-enough-123456'
   };
+  // Never pass production database connection strings to child test processes.
   delete testEnv.DATABASE_URL;
   delete testEnv.DB_POOL_URL;
   const result = spawnSync(process.execPath, [path.join(__dirname, file)], {

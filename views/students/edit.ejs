@@ -67,6 +67,15 @@
             transition-duration: 0.01ms !important;
         }
     }
+
+    /* Keep keyboard focus clearly visible throughout the student edit form. */
+    .student-edit-card :focus-visible,
+    .student-edit-actions .btn:focus-visible {
+        outline: 3px solid #1d4ed8;
+        outline-offset: 3px;
+        border-radius: 4px;
+    }
+
 </style>
 
 <%- include('../partials/header') %>

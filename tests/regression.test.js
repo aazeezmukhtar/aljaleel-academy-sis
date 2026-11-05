@@ -10,6 +10,7 @@ const tests = [
   ['session-secret.test.js', 'Session secret configuration unit tests'],
   ['database-fixture.test.js', 'Isolated SQLite schema smoke test'],
   ['student-enrollment-history-migration.test.js', 'Enrollment history migration, legacy baseline, and preservation tests'],
+  ['student-enrollment-history-service.test.js', 'Transactional enrollment history service and section isolation tests'],
   ['result-helper.test.js', 'Result scoring unit tests'],
   ['result-context-integrity.test.js', 'Result class, subject, and enrollment context tests'],
   ['result-report-section-isolation.test.js', 'Section-isolated report-card query guards'],
@@ -44,7 +45,6 @@ for (const [file, label] of tests) {
     DB_PATH: process.env.DB_PATH || '.test-database.sqlite',
     SESSION_SECRET: 'ci-only-session-secret-that-is-long-enough-123456'
   };
-  // Never pass production database connection strings to child test processes.
   delete testEnv.DATABASE_URL;
   delete testEnv.DB_POOL_URL;
   const result = spawnSync(process.execPath, [path.join(__dirname, file)], {

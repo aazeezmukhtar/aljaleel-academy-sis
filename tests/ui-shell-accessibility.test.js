@@ -242,3 +242,49 @@ check('staff assignment dialogs trap keyboard focus and identify remove actions'
   assert.match(staffProfile, /aria-controls="subjectAssignmentModal"/);
   assert.match(staffProfile, /aria-controls="classAssignmentModal"/);
 });
+
+const adminNotificationBar = read('views/partials/notification_bar.ejs');
+const sharedFooter = read('views/partials/footer.ejs');
+
+check('admin dashboard notification control is keyboard operable and announces expanded state', () => {
+  assert.match(adminDashboard, /role="button" tabindex="0" aria-label="Open notifications"/);
+  assert.match(adminDashboard, /event\.key === 'Enter'/);
+  assert.match(adminDashboard, /aria-expanded="false"/);
+  assert.match(adminNotificationBar, /function closeNotificationDropdowns\(\)/);
+  assert.match(adminNotificationBar, /event\.key === 'Escape'/);
+  assert.match(adminNotificationBar, /setAttribute\('aria-expanded', 'false'\)/);
+});
+
+check('admin dashboard revenue progress is accessible and visually capped at 100 percent', () => {
+  assert.match(adminDashboard, /role="progressbar" aria-label="Revenue collection progress"/);
+  assert.match(adminDashboard, /aria-valuemax="100"/);
+  assert.match(adminDashboard, /Math\.min\(100, Math\.max\(0, Number\(stats\.revenuePercentage\) \|\| 0\)\)/);
+});
+
+check('admin dashboard panels have named sections, accessible view-more control and clear finance actions', () => {
+  assert.match(adminDashboard, /aria-label="School summary statistics"/);
+  assert.match(adminDashboard, /aria-labelledby="adminQuickActionsHeading"/);
+  assert.match(adminDashboard, /aria-controls="adminActivityFeed"/);
+  assert.match(adminDashboard, /aria-expanded="false" aria-controls="adminActivityFeed"/);
+  assert.match(sharedFooter, /btn\.setAttribute\('aria-expanded', String\(isExpanding\)\)/);
+  assert.match(adminDashboard, /Finance &amp; Fees/);
+  assert.match(adminDashboard, /Manage fee structures, payments and outstanding balances/);
+});
+
+check('admin dashboard announcement read-state storage failures do not break the dashboard', () => {
+  assert.match(adminDashboard, /try \{[\s\S]*localStorage\.getItem\('read_announcements'\)[\s\S]*catch \(error\)/);
+  assert.match(adminDashboard, /localStorage\.setItem\('read_announcements'/);
+  assert.match(adminDashboard, /Opening an announcement must not depend on writable browser storage/);
+});
+
+check('admin dashboard has responsive touch-friendly panels and reduced-motion support', () => {
+  assert.match(adminDashboard, /@media \(max-width: 640px\)/);
+  assert.match(adminDashboard, /min-height: 0; padding: 20px 14px/);
+  assert.match(adminDashboard, /:focus-visible/);
+  assert.match(adminDashboard, /prefers-reduced-motion: reduce/);
+});
+
+check('admin dashboard and notification partial compile as EJS templates', () => {
+  ejs.compile(adminDashboard, { filename: path.join(__dirname, '..', 'views/dashboard.ejs') });
+  ejs.compile(adminNotificationBar, { filename: path.join(__dirname, '..', 'views/partials/notification_bar.ejs') });
+});

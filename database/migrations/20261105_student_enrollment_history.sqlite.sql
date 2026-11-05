@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS student_enrollment_history (
     reason TEXT,
     destination_school TEXT,
     recorded_by INTEGER REFERENCES staff(id),
-    source_enrollment_id INTEGER UNIQUE REFERENCES student_enrollments(id),
+    -- Historical provenance only. Enrollment rows are intentionally replaced
+    -- or removed by same-session movements and must not be FK-restricted.
+    source_enrollment_id INTEGER UNIQUE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (source_class_id IS NOT NULL OR destination_class_id IS NOT NULL)
 );
@@ -41,24 +43,12 @@ CREATE INDEX IF NOT EXISTS idx_student_enrollment_history_section
 -- the current enrollment table does not establish when the placement began.
 -- source_enrollment_id + UNIQUE makes this import safe to rerun.
 INSERT INTO student_enrollment_history (
-    school_id,
-    student_id,
-    section_id,
-    destination_class_id,
-    destination_session,
-    event_type,
-    effective_date,
-    reason,
-    source_enrollment_id
+    school_id, student_id, section_id, destination_class_id,
+    destination_session, event_type, effective_date, reason, source_enrollment_id
 )
 SELECT
-    s.school_id,
-    se.student_id,
-    c.section_id,
-    se.class_id,
-    se.session,
-    'legacy_baseline',
-    NULL,
+    s.school_id, se.student_id, c.section_id, se.class_id,
+    se.session, 'legacy_baseline', NULL,
     'Imported from existing enrollment; original placement date is unknown.',
     se.id
 FROM student_enrollments se
@@ -66,7 +56,6 @@ JOIN students s ON s.id = se.student_id
 JOIN classes c ON c.id = se.class_id
 WHERE s.school_id IS NOT NULL
   AND NOT EXISTS (
-      SELECT 1
-      FROM student_enrollment_history h
+      SELECT 1 FROM student_enrollment_history h
       WHERE h.source_enrollment_id = se.id
   );

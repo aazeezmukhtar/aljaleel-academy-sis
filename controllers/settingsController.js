@@ -473,15 +473,16 @@ const processPromotion = async (req, res) => {
                             );
                         } else {
                             // Unselected students repeat the same class in the target session.
-                            const existingTarget = await tx.get(`
+                            const existingTargets = await tx.all(`
                                 SELECT se.class_id
                                 FROM student_enrollments se
                                 JOIN classes c ON c.id = se.class_id AND c.school_id = ?
                                 WHERE se.student_id = ? AND se.session = ? AND c.section_id = ?
-                                LIMIT 1
+                                ORDER BY se.id
                             `, [schoolId, student.id, targetSession, classSectionIdMap[classId]]);
-                            if (existingTarget && Number(existingTarget.class_id) !== Number(classId)) {
-                                throw new Error('Promotion stopped: a repeater already has a different class placement in the target session. Existing placements were not overwritten.');
+                            if (existingTargets.length > 1 ||
+                                (existingTargets[0] && Number(existingTargets[0].class_id) !== Number(classId))) {
+                                throw new Error('Promotion stopped: a repeater has a conflicting or ambiguous placement in the target section/session. Existing placements were not overwritten.');
                             }
                             await changeEnrollment({
                                 schoolId,
@@ -567,7 +568,7 @@ const processPromotion = async (req, res) => {
                             destinationClassId: desiredClassId,
                             sourceSession,
                             destinationSession: targetSession,
-                            eventType: selectedForPromotion ? 'promotion' : 'repetition',
+                            eventType: selectedForPromotion && Number(desiredClassId) !== Number(classId) ? 'promotion' : 'repetition',
                             recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                         }, { inTransaction: true, client });
 

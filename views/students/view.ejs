@@ -130,6 +130,11 @@
                                                             style="border-color: #b45309; color: #92400e; font-weight: 600;">
                                                             <i class="bi bi-box-arrow-up-right"></i> Record Departure
                                                         </a>
+                                                        <% } else { %>
+                                                        <a href="/students/edit/<%= student.id %>" class="btn btn-outline"
+                                                            style="border-color: #059669; color: #047857; font-weight: 600;">
+                                                            <i class="bi bi-person-check"></i> Re-enroll Student
+                                                        </a>
                                                         <% } %>
                                                         <button onclick="resetPassword('<%= student.id %>')" class="btn btn-outline"
                                                             style="border-color: var(--school-secondary); color: var(--school-secondary);">

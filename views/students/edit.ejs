@@ -160,7 +160,11 @@
                                 <label for="edit_status">Student Status</label>
                                 <input type="hidden" name="status" value="<%= student.status || 'active' %>">
                                 <div id="edit_status" class="form-control" aria-readonly="true" style="background:#f8fafc"><%= (student.status || 'active').toUpperCase() %></div>
-                                <small style="color:#64748b">Status changes are handled through the dedicated departure or session promotion workflows.</small>
+                                <% if (String(student.status || '').toLowerCase() === 'withdrawn') { %>
+                                    <small style="color:#059669; font-weight:600;"><i class="bi bi-info-circle"></i> Assigning a class below will automatically re-enroll this student as ACTIVE.</small>
+                                <% } else { %>
+                                    <small style="color:#64748b">Status changes are handled through the dedicated departure or session promotion workflows.</small>
+                                <% } %>
                             </div>
                         </div>
 

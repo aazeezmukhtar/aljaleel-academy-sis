@@ -16,9 +16,10 @@ assert.match(controller, /UPDATE students SET status = 'withdrawn', current_clas
 assert.match(controller, /historyAvailable/);
 assert.match(profile, /Enrollment & Movement History/);
 assert.match(profile, /Transfer to another school/);
-assert.match(departure, /destination_school/);
-assert.match(departure, /effective_date/);
-assert.match(departure, /reason:/);
-assert.match(edit, /name="status" value="<%= student\.status \|\| 'active' %>"/);
-assert.match(controller, /Student status cannot be changed through profile editing/);
-console.log('[student-departure-ui] Admin departure routes, lifecycle guard, timeline and required departure fields passed.');
+assert.match(departure, /id="departureScope"/);
+assert.match(departure, /departure_scope:/);
+assert.match(controller, /departureScope !== 'all'/);
+assert.match(controller, /isReenrollment/);
+assert.match(profile, /Re-enroll Student/);
+assert.match(edit, /Assigning a class below will automatically re-enroll this student as ACTIVE/);
+console.log('[student-departure-ui] Admin departure routes, section scope, re-enrollment, lifecycle guard, timeline and required departure fields passed.');

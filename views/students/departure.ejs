@@ -16,20 +16,33 @@
     <header style="margin:18px 0 8px"><h1 style="margin:0">Record Student Departure</h1>
       <p style="color:var(--text-muted);margin:6px 0 0"><strong><%= student.first_name %> <%= student.last_name %></strong> · <%= student.admission_number || 'Admission pending' %></p></header>
     <div class="card departure-card">
-      <h2 style="font-size:1.15rem;margin-top:0">Leaving Al-Jaleel Academy</h2>
-      <p style="color:var(--text-muted)">This is a school-level departure. All current placements across Academy and Tahfeez will be closed together. Previous class history, results, attendance, report cards and financial records will remain preserved.</p>
+      <h2 style="font-size:1.15rem;margin-top:0">Record Departure</h2>
+      <p style="color:var(--text-muted)">Record a student departure or external transfer. When departing a specific section, placements in other sections remain active. Previous class history, results, attendance, report cards and financial records will remain preserved.</p>
       <% if (!placements.length) { %>
         <div class="departure-alert">No current class placements were found. Review the student's enrollment records before recording a departure.</div>
       <% } else { %>
-        <div class="departure-note"><strong>Current placements to be closed:</strong>
+        <div class="departure-note"><strong>Current placements:</strong>
           <ul style="margin:8px 0 0;padding-left:20px"><% placements.forEach(p => { %><li><%= p.section_name || 'Unsectioned' %> — <%= p.class_name %> (<%= p.session %>)</li><% }) %></ul>
         </div>
         <div id="departureAlert" class="departure-alert" role="alert" aria-live="polite" hidden></div>
         <form id="studentDepartureForm">
+          <% if (placements.length > 1) { %>
+          <div class="departure-field"><label for="departureScope">Departure scope</label>
+            <select id="departureScope" required>
+              <option value="all">Entire School (Close all sections)</option>
+              <% placements.forEach(p => { %>
+                <option value="<%= p.section_id %>"><%= p.section_name || 'Section' %> only (<%= p.class_name %>)</option>
+              <% }) %>
+            </select>
+            <small style="color:var(--text-muted);display:block;margin-top:5px">Select a specific section if the student is departing only that section while remaining enrolled in others.</small>
+          </div>
+          <% } else { %>
+            <input type="hidden" id="departureScope" value="all">
+          <% } %>
           <div class="departure-field"><label for="departureType">Departure type</label>
             <select id="departureType" required>
               <option value="external_transfer">Transfer to another school</option>
-              <option value="section_exit">Withdrawal from school</option>
+              <option value="section_exit">Withdrawal / Exit</option>
             </select>
           </div>
           <div class="departure-field" id="destinationSchoolField"><label for="destinationSchool">Destination school (if known)</label>
@@ -48,18 +61,22 @@
 <script>
 const departureType=document.getElementById('departureType'), destinationField=document.getElementById('destinationSchoolField');
 const destinationInput=document.getElementById('destinationSchool'), departureForm=document.getElementById('studentDepartureForm');
-const departureAlert=document.getElementById('departureAlert');
+const departureAlert=document.getElementById('departureAlert'), departureScope=document.getElementById('departureScope');
 function updateDestinationRequirement(){const external=departureType.value==='external_transfer';destinationField.hidden=!external;destinationInput.required=false;}
 departureType?.addEventListener('change',updateDestinationRequirement);if(departureType)updateDestinationRequirement();
 departureForm?.addEventListener('submit',async event=>{
   event.preventDefault();departureAlert.hidden=true;
   const kind=departureType.value;
-  const summary=kind==='external_transfer'?'transfer this student to '+destinationInput.value:'withdraw this student from Al-Jaleel Academy';
-  if(!window.confirm('Confirm that you want to '+summary+'? This will close all current Academy and Tahfeez placements. Historical academic and financial records will not be deleted.'))return;
+  const scopeVal=departureScope ? departureScope.value : 'all';
+  const scopeText=departureScope && departureScope.selectedIndex >= 0 ? departureScope.options[departureScope.selectedIndex].text : 'all sections';
+  const summary=kind==='external_transfer'
+    ? 'record an external transfer for '+scopeText+(destinationInput.value.trim() ? ' to '+destinationInput.value.trim() : '')
+    : 'record a departure / withdrawal for '+scopeText;
+  if(!window.confirm('Confirm that you want to '+summary+'? Historical academic and financial records will not be deleted.'))return;
   const button=document.getElementById('departureSubmit');button.disabled=true;button.textContent='Recording departure…';
   try{
     const response=await fetch('/students/departure/<%= student.id %>',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({
-      departure_type:kind,destination_school:destinationInput.value.trim(),
+      departure_type:kind,departure_scope:scopeVal,destination_school:destinationInput.value.trim(),
       effective_date:document.getElementById('departureDate').value,reason:document.getElementById('departureReason').value.trim()
     })});
     const result=await response.json();if(!response.ok||!result.success)throw new Error(result.message||'Departure could not be recorded.');

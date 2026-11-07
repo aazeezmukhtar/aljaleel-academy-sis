@@ -628,16 +628,17 @@ const recordStudentDeparture = async (req, res) => {
     const effectiveDate = String(req.body.effective_date || '').trim();
     const reason = String(req.body.reason || '').trim();
     const destinationSchool = String(req.body.destination_school || '').trim();
+    const departureScope = String(req.body.departure_scope || 'all').trim();
     try {
         if (!Number.isSafeInteger(studentId) || studentId <= 0) return res.status(400).json({ success: false, message: 'Invalid student.' });
         if (!['external_transfer', 'section_exit'].includes(departureType)) return res.status(400).json({ success: false, message: 'Choose transfer to another school or withdrawal.' });
         if (!effectiveDate || !reason) return res.status(400).json({ success: false, message: 'Effective date and reason are required.' });
-        const student = await db.get('SELECT id, status FROM students WHERE id = ? AND school_id = ?', [studentId, schoolId]);
+        const student = await db.get('SELECT id, status, current_class_id FROM students WHERE id = ? AND school_id = ?', [studentId, schoolId]);
         if (!student) return res.status(404).json({ success: false, message: 'Student not found.' });
         if (String(student.status || '').toLowerCase() === 'withdrawn') return res.status(409).json({ success: false, message: 'This student is already marked as withdrawn.' });
         const currentSession = await getCurrentSession(schoolId);
         const placements = await db.all(`
-            SELECT se.class_id, se.session, c.section_id
+            SELECT se.class_id, se.session, c.name AS class_name, c.section_id, sec.name AS section_name
             FROM student_enrollments se
             JOIN classes c ON c.id = se.class_id AND c.school_id = ?
             LEFT JOIN sections sec ON sec.id = c.section_id AND sec.school_id = ?
@@ -645,8 +646,25 @@ const recordStudentDeparture = async (req, res) => {
             ORDER BY c.section_id, c.id
         `, [schoolId, schoolId, studentId, currentSession]);
         if (!placements.length) return res.status(409).json({ success: false, message: 'No current class placements were found. Review the student enrollment records before recording a departure.' });
+
+        let targetPlacements = placements;
+        let isSectionSpecific = false;
+        let targetSectionName = '';
+
+        if (departureScope !== 'all' && placements.length > 1) {
+            const requestedSecId = Number(departureScope);
+            targetPlacements = placements.filter(p => Number(p.section_id) === requestedSecId);
+            if (!targetPlacements.length) {
+                return res.status(400).json({ success: false, message: 'The selected section placement was not found for this student.' });
+            }
+            isSectionSpecific = true;
+            targetSectionName = targetPlacements[0].section_name || 'Section';
+        }
+
+        const willCloseAll = !isSectionSpecific || (targetPlacements.length === placements.length);
+
         await db.transaction(async client => {
-            for (const placement of placements) {
+            for (const placement of targetPlacements) {
                 await changeEnrollment({
                     schoolId, studentId, sectionId: placement.section_id,
                     sourceClassId: Number(placement.class_id), sourceSession: placement.session,
@@ -655,15 +673,40 @@ const recordStudentDeparture = async (req, res) => {
                     recordedBy: user.id
                 }, { inTransaction: true, client });
             }
-            await db.run("UPDATE students SET status = 'withdrawn', current_class_id = NULL WHERE id = ? AND school_id = ?", [studentId, schoolId], client);
+
+            if (willCloseAll) {
+                await db.run("UPDATE students SET status = 'withdrawn', current_class_id = NULL WHERE id = ? AND school_id = ?", [studentId, schoolId], client);
+            } else {
+                // If student departed a specific section, check if current_class_id was in that section
+                const closedClassIds = new Set(targetPlacements.map(p => Number(p.class_id)));
+                if (student.current_class_id && closedClassIds.has(Number(student.current_class_id))) {
+                    const remainingPlacements = placements.filter(p => !closedClassIds.has(Number(p.class_id)));
+                    const nextClassId = remainingPlacements.length ? Number(remainingPlacements[0].class_id) : null;
+                    await db.run("UPDATE students SET current_class_id = ? WHERE id = ? AND school_id = ?", [nextClassId, studentId, schoolId], client);
+                }
+            }
         });
+
         logAction(user.id, 'RECORD_STUDENT_DEPARTURE', 'STUDENT', {
             student_id: studentId, departure_type: departureType, effective_date: effectiveDate,
-            destination_school: destinationSchool || null, placement_count: placements.length
+            destination_school: destinationSchool || null,
+            departure_scope: departureScope,
+            target_placement_count: targetPlacements.length,
+            will_close_all: willCloseAll
         }, req.ip);
-        return res.json({ success: true, message: departureType === 'external_transfer'
-            ? 'External transfer recorded. Current Academy and Tahfeez placements are closed; historical academic and financial records remain intact.'
-            : 'Student withdrawal recorded. Current Academy and Tahfeez placements are closed; historical academic and financial records remain intact.' });
+
+        let successMessage = '';
+        if (willCloseAll) {
+            successMessage = departureType === 'external_transfer'
+                ? 'External transfer recorded. Current Academy and Tahfeez placements are closed; historical academic and financial records remain intact.'
+                : 'Student withdrawal recorded. Current Academy and Tahfeez placements are closed; historical academic and financial records remain intact.';
+        } else {
+            successMessage = departureType === 'external_transfer'
+                ? `External transfer recorded for ${targetSectionName}. Student remains active in other enrolled section(s).`
+                : `Section exit recorded for ${targetSectionName}. Student remains active in other enrolled section(s).`;
+        }
+
+        return res.json({ success: true, message: successMessage });
     } catch (err) {
         console.error('Record Student Departure Error:', err);
         return res.status(400).json({ success: false, message: err.message || 'Student departure could not be recorded.' });
@@ -844,6 +887,36 @@ const updateStudent = async (req, res) => {
             });
         }
 
+        // Resolve existing placements before writing. Profile editing is a
+        // correction tool, not a silent transfer/departure mechanism.
+        // However, assigning a class to a withdrawn student acts as re-enrollment.
+        const studentExists = await db.get(
+            'SELECT id, status, current_class_id FROM students WHERE id = ? AND school_id = ?',
+            [id, schoolId]
+        );
+        if (!studentExists) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        const isWithdrawn = String(studentExists.status || '').toLowerCase() === 'withdrawn';
+        const hasAssignedClass = sectionPlans.some(p => Boolean(p.chosenClassId));
+
+        let statusToSave = studentExists.status || 'active';
+        let isReenrollment = false;
+
+        if (isWithdrawn) {
+            if (hasAssignedClass) {
+                statusToSave = 'active';
+                isReenrollment = true;
+            } else {
+                statusToSave = 'withdrawn';
+            }
+        } else {
+            if (status && String(status).toLowerCase() !== String(studentExists.status || 'active').toLowerCase()) {
+                return res.status(400).json({ success: false, message: 'Student status cannot be changed through profile editing. Use the dedicated departure or session promotion workflow.' });
+            }
+        }
+
         const sql = `
             UPDATE students SET
                 first_name = ?, last_name = ?, gender = ?, dob = ?,
@@ -864,23 +937,10 @@ const updateStudent = async (req, res) => {
             phone || null,
             address || null,
             passport_photo_path,
-            status,
+            statusToSave,
             id,
             schoolId
         ];
-
-        // Resolve existing placements before writing. Profile editing is a
-        // correction tool, not a silent transfer/departure mechanism.
-        const studentExists = await db.get(
-            'SELECT id, status FROM students WHERE id = ? AND school_id = ?',
-            [id, schoolId]
-        );
-        if (!studentExists) {
-            return res.status(404).json({ success: false, message: 'Student not found.' });
-        }
-        if (String(status || '').toLowerCase() !== String(studentExists.status || 'active').toLowerCase()) {
-            return res.status(400).json({ success: false, message: 'Student status cannot be changed through profile editing. Use the dedicated departure or session promotion workflow.' });
-        }
 
         await db.transaction(async (client = null) => {
             for (const plan of sectionPlans) {
@@ -937,6 +997,7 @@ const updateStudent = async (req, res) => {
                         destinationSession: plan.session,
                         destinationTerm: plan.term,
                         eventType: 'admission',
+                        reason: isReenrollment ? 'Re-enrollment after departure' : null,
                         recordedBy: user.id
                     }, { inTransaction: true, client });
                 }
@@ -945,7 +1006,10 @@ const updateStudent = async (req, res) => {
             await db.run(sql, studentParams, client);
         });
 
-        res.json({ success: true, message: 'Student updated successfully.' });
+        const successMessage = isReenrollment
+            ? 'Student re-enrolled and updated successfully.'
+            : 'Student updated successfully.';
+        res.json({ success: true, message: successMessage });
 
         logAction(req.session.staff.id, 'UPDATE_STUDENT', 'STUDENT', {
             id, first_name, last_name, admission_number

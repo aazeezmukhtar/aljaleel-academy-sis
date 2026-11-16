@@ -168,7 +168,9 @@ const getTakeAttendance = async (req, res) => {
             date,
             students,
             currentTerm: settings.term,
-            currentSession: settings.session
+            currentSession: settings.session,
+            readOnly: false,
+            hasRecords: true
         });
     } catch (err) {
         console.error('getTakeAttendance Error:', err);

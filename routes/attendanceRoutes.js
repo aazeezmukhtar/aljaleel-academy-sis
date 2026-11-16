@@ -4,6 +4,7 @@ const attendanceController = require('../controllers/attendanceController');
 
 router.get('/', attendanceController.getIndex);
 router.get('/take', attendanceController.getTakeAttendance);
+router.get('/yesterday', attendanceController.getPreviousDayAttendance);
 router.post('/save', attendanceController.saveAttendance);
 router.get('/report', attendanceController.getReport);
 

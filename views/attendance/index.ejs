@@ -104,9 +104,16 @@
                         A student may meet both conditions.
                     </p>
 
+                    <div class="attendance-risk-filter" role="group" aria-label="Filter attendance alerts by section">
+                        <button type="button" class="attendance-risk-filter-button active" data-section-filter="all" aria-pressed="true">All sections</button>
+                        <% attendanceSections.forEach(sectionName => { %>
+                        <button type="button" class="attendance-risk-filter-button" data-section-filter="<%= sectionName %>" aria-pressed="false"><%= sectionName %></button>
+                        <% }); %>
+                    </div>
+                    <p class="attendance-risk-filter-empty" hidden>No flagged classes in this section.</p>
                     <div class="attendance-risk-groups">
                         <% flaggedGroups.forEach((group, groupIndex) => { %>
-                        <details class="attendance-risk-class" <%= groupIndex === 0 ? 'open' : '' %>>
+                        <details class="attendance-risk-class" data-section-name="<%= group.section_name %>" <%= groupIndex === 0 ? 'open' : '' %>>
                             <summary>
                                 <span class="attendance-risk-class-name">
                                     <i class="bi bi-door-open-fill"></i>
@@ -217,6 +224,10 @@
                 </section>
 
                 <style>
+                    .attendance-risk-filter { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+                    .attendance-risk-filter-button { border:1px solid var(--border-subtle); border-radius:999px; padding:8px 14px; background:var(--bg-subtle,#f8fafc); color:var(--text-primary,#1e293b); font:inherit; font-size:.84rem; cursor:pointer; }
+                    .attendance-risk-filter-button.active { background:var(--primary,#001c2c); border-color:var(--primary,#001c2c); color:#fff; }
+                    .attendance-risk-filter-empty { margin:0 0 12px; padding:12px; border:1px dashed var(--border-subtle); border-radius:10px; color:var(--text-muted); font-size:.85rem; }
                     .attendance-risk-section { border-top: 4px solid #dc2626; margin-top: 10px; }
                     .attendance-risk-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
                     .attendance-risk-heading h3 { color:#b91c1c; margin:0; display:flex; align-items:center; gap:8px; }
@@ -280,6 +291,33 @@
             </main>
     </div>
 
+
+<script>
+    (() => {
+        const filters = document.querySelectorAll('[data-section-filter]');
+        const groups = document.querySelectorAll('.attendance-risk-class[data-section-name]');
+        const emptyState = document.querySelector('.attendance-risk-filter-empty');
+        if (!filters.length || !groups.length) return;
+
+        filters.forEach(button => {
+            button.addEventListener('click', () => {
+                const selected = button.dataset.sectionFilter;
+                let visible = 0;
+                groups.forEach(group => {
+                    const show = selected === 'all' || group.dataset.sectionName === selected;
+                    group.hidden = !show;
+                    if (show) visible += 1;
+                });
+                filters.forEach(item => {
+                    const active = item === button;
+                    item.classList.toggle('active', active);
+                    item.setAttribute('aria-pressed', String(active));
+                });
+                if (emptyState) emptyState.hidden = visible > 0;
+            });
+        });
+    })();
+</script>
 
 <script>
     function viewPreviousAttendance() {

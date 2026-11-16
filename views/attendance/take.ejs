@@ -58,7 +58,6 @@
                                     <strong class="row-name"><%= student.first_name %> <%= student.last_name %></strong>
                                     <div style="display: flex; gap: 10px; align-items: center; margin-top: 2px;">
                                         <small class="row-index">SN : <%= index + 1 %></small>
-                                        <small class="row-id">REG : <%= student.admission_number || 'N/A' %></small>
                                     </div>
                                 </div>
                             </div>
@@ -193,7 +192,7 @@
     .row-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
     .row-index { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
     .row-bio { display: flex; flex-direction: column; min-width: 0; justify-content: center; flex: 1; }
-    .row-name { display: block; width: 100%; font-size: 0.95rem; color: #1e293b; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-transform: uppercase; }
+    .row-name { display: block; width: 100%; font-size: 0.88rem; color: #1e293b; font-weight: 700; line-height: 1.2; white-space: normal; overflow: visible; overflow-wrap: anywhere; text-align: left; text-transform: uppercase; }
     .row-id { font-size: 0.75rem; color: #64748b; font-weight: 600; text-transform: uppercase; }
 
     /* Cycle Button */
@@ -225,6 +224,8 @@
 
     @media (max-width: 991px) {
         .student-row-card { padding: 8px 10px; }
+        .row-info, .row-bio { text-align: left; align-items: flex-start; }
+        .row-name { font-size: 0.82rem; line-height: 1.2; }
         .cycle-btn { width: 65px; padding: 5px 2px; font-size: 0.6rem; }
         .cycle-btn i { font-size: 1.1rem; }
         .sticky-attendance-header { margin: -10px -10px 15px; padding: 10px 15px; }

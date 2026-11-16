@@ -256,6 +256,8 @@
         }
     }
 
+    [hidden] { display: none !important; }
+
     /* Modal */
     .modal-overlay {
         position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -281,6 +283,34 @@
         'Leave': 'bi-journal-text',
         'Late': 'bi-clock-fill'
     };
+
+    function enableAttendanceEditing() {
+        document.querySelectorAll('.student-row-card').forEach(card => {
+            const btn = card.querySelector('.cycle-btn');
+            const input = card.querySelector('.status-input');
+            if (btn.dataset.state === 'Not recorded') {
+                btn.dataset.state = 'Absent';
+                input.value = 'Absent';
+                btn.className = 'cycle-btn btn-status-absent';
+                btn.querySelector('i').className = 'bi ' + STATUS_ICONS.Absent;
+                btn.querySelector('.status-label').textContent = 'Absent';
+            }
+            btn.disabled = false;
+        });
+
+        document.getElementById('edit-attendance-btn').hidden = true;
+        document.querySelectorAll('.attendance-save-action, .attendance-mobile-save, .mark-all-present-action')
+            .forEach(element => { element.hidden = false; });
+
+        const notice = document.querySelector('.attendance-container .alert');
+        if (notice) {
+            notice.className = 'alert alert-info';
+            notice.querySelector('strong').textContent = 'Editing yesterday’s attendance';
+            notice.querySelector('div').textContent = 'Changes will be saved against yesterday’s date.';
+        }
+
+        updateAttendanceSummary();
+    }
 
     function cycleStatus(studentId) {
         const card = document.querySelector(`.student-row-card[data-student-id="${studentId}"]`);

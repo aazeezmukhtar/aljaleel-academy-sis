@@ -12,11 +12,14 @@
                     <h1 style="font-size: 1.25rem; margin: 0;"><%= readOnly ? 'Previous Day Attendance' : 'Mark Attendance' %></h1>
                 </div>
                 <div class="action-buttons">
-                    <% if (!readOnly) { %>
-                    <button type="submit" form="attendance-form" class="btn btn-primary">
-                        <i class="bi bi-cloud-check-fill"></i> Save Records
+                    <% if (readOnly) { %>
+                    <button type="button" id="edit-attendance-btn" class="btn btn-outline" onclick="enableAttendanceEditing()">
+                        <i class="bi bi-pencil-square"></i> Edit
                     </button>
                     <% } %>
+                    <button type="submit" form="attendance-form" class="btn btn-primary attendance-save-action" <%= readOnly ? 'hidden' : '' %>>
+                        <i class="bi bi-cloud-check-fill"></i> Save Records
+                    </button>
                 </div>
             </div>
             <div class="header-meta">
@@ -24,11 +27,9 @@
                     <span class="meta-pill"><i class="bi bi-door-open"></i> <%= clazz.name %></span>
                     <span class="meta-pill" id="attendance-date-label"><i class="bi bi-calendar-event"></i> <%= new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
                 </div>
-                <% if (!readOnly) { %>
-                <button type="button" class="btn btn-outline btn-xs" onclick="markAllPresent()">
+                <button type="button" class="btn btn-outline btn-xs mark-all-present-action" onclick="markAllPresent()" <%= readOnly ? 'hidden' : '' %>>
                     Mark All Present
                 </button>
-                <% } %>
             </div>
         </div>
 
@@ -36,15 +37,13 @@
             <% if (readOnly) { %>
                 <div class="alert <%= hasRecords ? 'alert-info' : 'alert-warning' %>" role="status">
                     <strong><%= hasRecords ? 'Read-only attendance record' : 'No attendance recorded' %></strong>
-                    <div><%= hasRecords ? 'You are viewing the saved attendance for this class and date. No changes can be made here.' : 'There are no saved attendance records for this class on this date.' %></div>
+                    <div><%= hasRecords ? 'You are viewing the saved attendance for this class and date.' : 'There are no saved attendance records for this class on this date. You can still enter them using Edit.' %></div>
                 </div>
             <% } else { %>
                 <p class="text-muted" style="margin-bottom: 15px; font-size: 0.85rem;"><%= students.length %> Students enrolled in this class.</p>
             <% } %>
 
-            <% if (!readOnly || hasRecords) { %>
             <div id="attendance-status-summary" class="attendance-status-summary" role="status" aria-live="polite" aria-atomic="true"></div>
-            <% } %>
 
             <form id="attendance-form" class="attendance-form">
                 <input type="hidden" name="class_id" value="<%= class_id %>">
@@ -52,7 +51,6 @@
                 <input type="hidden" name="session" value="<%= locals.currentSession || '' %>">
                 <input type="hidden" name="term" value="<%= locals.currentTerm || '' %>">
 
-                <% if (!readOnly || hasRecords) { %>
                 <div class="student-grid">
                     <% students.forEach((student, index) => { 
                         const currentStatus = student.status || (readOnly ? 'Not recorded' : 'Absent');
@@ -91,7 +89,6 @@
                         </div>
                     <% }); %>
                 </div>
-                <% } %>
             </form>
         </section>
         <div class="attendance-bottom-spacer" aria-hidden="true"></div>
@@ -107,8 +104,7 @@
         </div>
 
         <!-- Sticky Save Bar (mobile only) -->
-        <% if (!readOnly) { %>
-        <div class="sticky-save-bar">
+        <div class="sticky-save-bar attendance-mobile-save" <%= readOnly ? 'hidden' : '' %>>
             <a href="/attendance" class="btn btn-outline" style="flex:0; padding: 12px 16px;">
                 <i class="bi bi-arrow-left"></i>
             </a>
@@ -116,7 +112,6 @@
                 <i class="bi bi-cloud-check-fill"></i> Save Records
             </button>
         </div>
-        <% } %>
     </main>
 </div>
 

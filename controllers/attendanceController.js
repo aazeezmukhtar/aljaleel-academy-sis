@@ -184,7 +184,7 @@ const getPreviousDayAttendance = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
-    if (!class_id || !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(date || ''))) {
+    if (!class_id || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) {
         return res.redirect('/attendance');
     }
 

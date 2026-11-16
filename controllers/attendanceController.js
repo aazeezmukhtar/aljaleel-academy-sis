@@ -178,13 +178,13 @@ const getTakeAttendance = async (req, res) => {
     }
 };
 
-// GET /attendance/yesterday - Read-only attendance for the day before the selected date
+// GET /attendance/yesterday - View the previous calendar day's attendance
 const getPreviousDayAttendance = async (req, res) => {
-    const { class_id, date } = req.query;
+    const { class_id } = req.query;
     const user = req.session.staff;
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
-    if (!class_id || !/^\d{4}-\d{2}-\d{2}$/.test(String(date || ''))) {
+    if (!class_id || !Number.isInteger(Number(class_id)) || Number(class_id) <= 0) {
         return res.redirect('/attendance');
     }
 
@@ -202,32 +202,49 @@ const getPreviousDayAttendance = async (req, res) => {
         );
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
-        const settings = await getAcademicSettings(Number(class_id), schoolId);
+        // Use the school's local calendar date, not the server's UTC date.
+        const todayParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Lagos',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        }).formatToParts(new Date()).reduce((parts, item) => {
+            if (item.type !== 'literal') parts[item.type] = item.value;
+            return parts;
+        }, {});
+        const today = new Date(Date.UTC(
+            Number(todayParts.year),
+            Number(todayParts.month) - 1,
+            Number(todayParts.day)
+        ));
+        today.setUTCDate(today.getUTCDate() - 1);
+        const date = [
+            today.getUTCFullYear(),
+            String(today.getUTCMonth() + 1).padStart(2, '0'),
+            String(today.getUTCDate()).padStart(2, '0')
+        ].join('-');
+
+        // Find records by class and calendar date first. This also handles
+        // yesterday falling across an academic session/term boundary.
+        const rows = await db.all(
+            'SELECT student_id, status, session, term FROM attendance WHERE class_id = ? AND date = ?',
+            [Number(class_id), date]
+        );
+        const hasRecords = rows.length > 0;
+        const settings = hasRecords
+            ? { session: rows[0].session, term: rows[0].term }
+            : await getAcademicSettings(Number(class_id), schoolId);
+
         const students = await getAttendanceStudents(
             Number(class_id), settings.session, schoolId, date
         );
-
-        const recorded = await db.get(
-            'SELECT COUNT(*) AS count FROM attendance WHERE class_id = ? AND date = ? AND session = ? AND term = ?',
-            [Number(class_id), date, settings.session, settings.term]
-        );
-        const hasRecords = Number(recorded && recorded.count || 0) > 0;
-
-        if (hasRecords) {
-            const rows = await db.all(
-                'SELECT student_id, status FROM attendance WHERE class_id = ? AND date = ? AND session = ? AND term = ?',
-                [Number(class_id), date, settings.session, settings.term]
-            );
-            const statusByStudent = new Map(rows.map(row => [String(row.student_id), row.status]));
-            students.forEach(student => {
-                student.status = statusByStudent.get(String(student.id)) || null;
-            });
-        } else {
-            students.forEach(student => { student.status = null; });
-        }
+        const statusByStudent = new Map(rows.map(row => [String(row.student_id), row.status]));
+        students.forEach(student => {
+            student.status = statusByStudent.get(String(student.id)) || null;
+        });
 
         res.render('attendance/take', {
-            title: 'Previous Day Attendance',
+            title: "Yesterday's Attendance",
             clazz,
             class_id,
             date,

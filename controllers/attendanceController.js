@@ -176,6 +176,71 @@ const getTakeAttendance = async (req, res) => {
     }
 };
 
+// GET /attendance/yesterday - Read-only attendance for the day before the selected date
+const getPreviousDayAttendance = async (req, res) => {
+    const { class_id, date } = req.query;
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+
+    if (!class_id || !/^\\d{4}-\\d{2}-\\d{2}$/.test(String(date || ''))) {
+        return res.redirect('/attendance');
+    }
+
+    try {
+        if (user.role !== 'Admin') {
+            const assignedClasses = await getAssignedClasses(user, schoolId);
+            if (!assignedClasses.some(c => String(c.id) === String(class_id))) {
+                return res.redirect('/attendance?error=Access Denied');
+            }
+        }
+
+        const clazz = await db.get(
+            'SELECT * FROM classes WHERE id = ? AND school_id = ?',
+            [Number(class_id), schoolId]
+        );
+        if (!clazz) return res.redirect('/attendance?error=Class not found');
+
+        const settings = await getAcademicSettings(Number(class_id), schoolId);
+        const students = await getAttendanceStudents(
+            Number(class_id), settings.session, schoolId, date
+        );
+
+        const recorded = await db.get(
+            'SELECT COUNT(*) AS count FROM attendance WHERE class_id = ? AND date = ? AND session = ? AND term = ?',
+            [Number(class_id), date, settings.session, settings.term]
+        );
+        const hasRecords = Number(recorded && recorded.count || 0) > 0;
+
+        if (hasRecords) {
+            const rows = await db.all(
+                'SELECT student_id, status FROM attendance WHERE class_id = ? AND date = ? AND session = ? AND term = ?',
+                [Number(class_id), date, settings.session, settings.term]
+            );
+            const statusByStudent = new Map(rows.map(row => [String(row.student_id), row.status]));
+            students.forEach(student => {
+                student.status = statusByStudent.get(String(student.id)) || null;
+            });
+        } else {
+            students.forEach(student => { student.status = null; });
+        }
+
+        res.render('attendance/take', {
+            title: 'Previous Day Attendance',
+            clazz,
+            class_id,
+            date,
+            students,
+            currentTerm: settings.term,
+            currentSession: settings.session,
+            readOnly: true,
+            hasRecords
+        });
+    } catch (err) {
+        console.error('getPreviousDayAttendance Error:', err);
+        res.status(500).send('Database Error');
+    }
+};
+
 // POST /attendance/save - Save student attendance records
 const saveAttendance = async (req, res) => {
     const { class_id, date, session, term, attendance, reasons = {}, custom_reasons = {} } = req.body;
@@ -365,5 +430,5 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, saveAttendance, getReport, getStaffAttendance, saveStaffAttendance };
+module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, getReport, getStaffAttendance, saveStaffAttendance };
 

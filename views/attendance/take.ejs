@@ -55,7 +55,7 @@
                 <% if (!readOnly || hasRecords) { %>
                 <div class="student-grid">
                     <% students.forEach((student, index) => { 
-                        const currentStatus = student.status || 'Absent';
+                        const currentStatus = student.status || (readOnly ? 'Not recorded' : 'Absent');
                     %>
                         <div class="student-row-card" data-student-id="<%= student.id %>">
                             <input type="hidden" class="status-input" name="attendance[<%= student.id %>]" value="<%= currentStatus %>">
@@ -78,13 +78,13 @@
 
                             <div class="row-action">
                                 <button type="button" 
-                                        class="cycle-btn btn-status-<%= currentStatus.toLowerCase() %>" 
+                                        class="cycle-btn <%= currentStatus === 'Not recorded' ? 'btn-status-unrecorded' : 'btn-status-' + currentStatus.toLowerCase() %>" 
                                         data-state="<%= currentStatus %>"
                                         aria-label="Attendance status for <%= student.first_name %> <%= student.last_name %>: <%= currentStatus %>. Activate to change status."
                                         title="Tap to change attendance status"
                                         <%= readOnly ? 'disabled' : '' %>
                                         onclick="cycleStatus('<%= student.id %>')">
-                                    <i class="bi <%= currentStatus === 'Present' ? 'bi-check-circle-fill' : currentStatus === 'Late' ? 'bi-clock-fill' : currentStatus === 'Leave' ? 'bi-journal-text' : 'bi-x-circle-fill' %>"></i>
+                                    <i class="bi <%= currentStatus === 'Present' ? 'bi-check-circle-fill' : currentStatus === 'Late' ? 'bi-clock-fill' : currentStatus === 'Leave' ? 'bi-journal-text' : currentStatus === 'Not recorded' ? 'bi-dash-circle' : 'bi-x-circle-fill' %>"></i>
                                     <span class="status-label"><%= currentStatus %></span>
                                 </button>
                             </div>
@@ -236,6 +236,7 @@
     .btn-status-present { background: #f0fdf4; color: #10b981; border-color: #dcfce7; }
     .btn-status-leave { background: #eef2ff; color: #6366f1; border-color: #e0e7ff; }
     .btn-status-late { background: #fffbeb; color: #f59e0b; border-color: #fef3c7; }
+    .btn-status-unrecorded { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
 
     .cycle-btn i { font-size: 1.2rem; line-height: 1; }
 

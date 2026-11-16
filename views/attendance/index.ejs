@@ -72,10 +72,11 @@
                 </section>
 
                 <!-- Flagged / At-Risk Students Section -->
-                <% if (typeof flaggedStudents !== 'undefined' && flaggedStudents && Object.keys(flaggedStudents).length > 0) { %>
+                <% if (typeof attendanceGroups !== 'undefined' && attendanceGroups && attendanceGroups.length > 0) { %>
                 <%
-                    const flaggedGroups = Object.values(flaggedStudents);
+                    const flaggedGroups = attendanceGroups;
                     const flaggedTotal = flaggedGroups.reduce((total, group) => total + group.students.length, 0);
+                    const affectedClassCount = flaggedGroups.filter(group => group.students.length > 0).length;
                 %>
                 <section class="card attendance-risk-section">
                     <div class="attendance-risk-heading">
@@ -92,8 +93,8 @@
                             <span>Flagged students</span>
                         </div>
                         <div class="attendance-risk-stat">
-                            <strong><%= flaggedGroups.length %></strong>
-                            <span>Classes affected</span>
+                            <strong><%= affectedClassCount %></strong>
+                            <span>Classes with alerts</span>
                         </div>
                     </div>
 
@@ -109,7 +110,7 @@
                             <summary>
                                 <span class="attendance-risk-class-name">
                                     <i class="bi bi-door-open-fill"></i>
-                                    <span><%= group.class.name %></span>
+                                    <span><%= group.class.name %><small style="display:block;font-weight:500;color:var(--text-muted);font-size:.75rem;"><%= group.section_name %></small></span>
                                 </span>
                                 <span class="attendance-risk-class-meta">
                                     <span class="attendance-risk-class-count"><%= group.students.length %> flagged</span>
@@ -117,6 +118,11 @@
                                 </span>
                             </summary>
 
+                            <% if (!group.hasAcademicContext) { %>
+                            <p class="attendance-risk-guidance" style="padding:12px;margin:0;">Attendance alerts cannot be calculated because this class's section has no complete current session and term configured.</p>
+                            <% } else if (group.students.length === 0) { %>
+                            <p class="attendance-risk-guidance" style="padding:12px;margin:0;">No students in this class currently meet the attendance warning thresholds.</p>
+                            <% } else { %>
                             <!-- Desktop: retain the detailed table -->
                             <div class="attendance-risk-desktop">
                                 <div class="table-container">
@@ -127,7 +133,6 @@
                                                 <th>Parent Contact</th>
                                                 <th style="text-align:center;">Total Absences</th>
                                                 <th style="text-align:center;">Consecutive Streak</th>
-                                                <th>Flag Reason(s)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -157,13 +162,6 @@
                                                     <% } else { %>
                                                     <strong class="attendance-risk-streak"><%= st.current_consecutive_absent_days %> days</strong>
                                                     <% } %>
-                                                </td>
-                                                <td>
-                                                    <div class="attendance-risk-reasons">
-                                                        <% st.flag_reason.forEach(reason => { %>
-                                                        <span class="attendance-risk-reason"><%= reason %></span>
-                                                        <% }); %>
-                                                    </div>
                                                 </td>
                                             </tr>
                                             <% }); %>
@@ -209,14 +207,10 @@
                                         </div>
                                     </div>
 
-                                    <div class="attendance-risk-reasons">
-                                        <% st.flag_reason.forEach(reason => { %>
-                                        <span class="attendance-risk-reason"><%= reason %></span>
-                                        <% }); %>
-                                    </div>
                                 </article>
                                 <% }); %>
                             </div>
+                            <% } %>
                         </details>
                         <% }); %>
                     </div>
@@ -255,8 +249,6 @@
                     .attendance-risk-absence { color:#b91c1c; }
                     .attendance-risk-streak { color:#b45309; }
                     .attendance-risk-broken { color:#047857; font-size:.82rem; }
-                    .attendance-risk-reasons { display:flex; flex-wrap:wrap; gap:5px; }
-                    .attendance-risk-reason { display:inline-flex; background:#fff1f2; color:#9f1239; border:1px solid #fecdd3; border-radius:999px; padding:4px 8px; font-size:.72rem; line-height:1.25; }
                     .attendance-risk-mobile { display:none; }
                     @media (max-width:768px) {
                         .attendance-risk-section { padding:14px; }
@@ -278,7 +270,6 @@
                         .attendance-risk-metrics > div { display:flex; flex-direction:column; gap:3px; min-width:0; background:#f8fafc; border-radius:8px; padding:8px; }
                         .attendance-risk-metrics span { color:var(--text-muted); font-size:.7rem; }
                         .attendance-risk-metrics strong { font-size:.84rem; overflow-wrap:anywhere; }
-                        .attendance-risk-reason { font-size:.68rem; }
                     }
                     @media (min-width:769px) {
                         .attendance-risk-class > summary { padding:13px 16px; }

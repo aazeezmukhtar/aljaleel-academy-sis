@@ -48,7 +48,7 @@
                                 <i class="bi bi-clock-history"></i> View Previous Day's Attendance
                             </button>
                             <p class="text-muted" style="font-size:0.78rem;margin:6px 0 0;text-align:center;">
-                                Opens a read-only record for the day before your selected date.
+                                Opens yesterday's attendance for the selected class.
                             </p>
                         </form>
                         <p id="attendance-offline-prep-status" role="status" aria-live="polite" style="margin-top:12px;font-size:0.85rem;color:var(--text-muted);">Offline attendance preparation will be checked while you are online.</p>
@@ -166,22 +166,13 @@
     function viewPreviousAttendance() {
         const form = document.getElementById('attendance-selection-form');
         const classField = form && form.querySelector('[name="class_id"]');
-        const dateField = form && form.querySelector('[name="date"]');
         if (!classField || !classField.value) {
             alert('Please select a class first.');
             return;
         }
-        if (!dateField || !/^\\d{4}-\\d{2}-\\d{2}$/.test(dateField.value)) {
-            alert('Please select a valid attendance date first.');
-            return;
-        }
-        const parts = dateField.value.split('-').map(Number);
-        const previous = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] - 1));
-        const previousDate = previous.getUTCFullYear() + '-' +
-            String(previous.getUTCMonth() + 1).padStart(2, '0') + '-' +
-            String(previous.getUTCDate()).padStart(2, '0');
+        // The server calculates yesterday using the Africa/Lagos calendar date.
         window.location.href = '/attendance/yesterday?class_id=' +
-            encodeURIComponent(classField.value) + '&date=' + encodeURIComponent(previousDate);
+            encodeURIComponent(classField.value);
     }
 </script>
 

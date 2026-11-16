@@ -8,38 +8,54 @@ const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
 const getAssignedClasses = async (user, schoolId) => {
     if (!schoolId) return [];
     if (user.role === 'Admin') {
-        return await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
+        return await db.all(`
+            SELECT c.*, s.name AS section_name
+            FROM classes c
+            LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
+            WHERE c.school_id = ?
+            ORDER BY s.name ASC, c.name ASC
+        `, [schoolId]);
     }
     const staffId = Number(user.id);
     return await db.all(`
-        SELECT DISTINCT c.* 
+        SELECT DISTINCT c.*, s.name AS section_name
         FROM classes c
+        LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
         LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
         LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
         WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
           AND c.school_id = ?
-        ORDER BY c.name ASC
+        ORDER BY s.name ASC, c.name ASC
     `, [staffId, staffId, staffId, schoolId]);
 };
 
-// Helper: get current academic settings (section-aware)
+// Resolve academic settings from the class's own section when it belongs to one.
+// A configured section must never silently inherit another section's current term/session.
 const getAcademicSettings = async (class_id = null, schoolId) => {
     if (class_id && schoolId) {
-        const sec = await db.get(`
-            SELECT s.current_session, s.current_term 
-            FROM sections s 
-            JOIN classes c ON c.section_id = s.id 
-            WHERE c.id = ? AND c.school_id = ?
-        `, [class_id, schoolId]);
-        if (sec && sec.current_session && sec.current_term) {
-            return { session: sec.current_session, term: sec.current_term };
+        const section = await db.get(`
+            SELECT s.id, s.current_session, s.current_term
+            FROM sections s
+            JOIN classes c ON c.section_id = s.id
+            WHERE c.id = ? AND c.school_id = ? AND s.school_id = ?
+        `, [class_id, schoolId, schoolId]);
+
+        if (section) {
+            return {
+                session: section.current_session || null,
+                term: section.current_term || null,
+                sectionConfigured: Boolean(section.current_session && section.current_term)
+            };
         }
     }
+
+    // Keep legacy/unsectioned classes working with the school's current settings.
     const session = schoolId ? await sessionHelper.getCurrentSession(schoolId) : null;
     const term = schoolId ? await sessionHelper.getCurrentTerm(schoolId) : null;
     return {
         session: session || null,
-        term: term || null
+        term: term || null,
+        sectionConfigured: Boolean(session && term)
     };
 };
 
@@ -63,43 +79,46 @@ const getIndex = async (req, res) => {
         const consecutiveAbsenceLimit = Number(consecutiveRow ? consecutiveRow.value : 3);
 const schoolInfo = await db.get('SELECT name, phone FROM schools WHERE id = ?', [schoolId]);
 
-        const flaggedStudents = {};
+        const attendanceGroups = [];
         for (const cls of classes) {
             const academicSettings = await getAcademicSettings(cls.id, schoolId);
+            const hasAcademicContext = Boolean(academicSettings.session && academicSettings.term);
+            let attendanceRecords = [];
 
-            const attendanceRecords = await db.all(`
-                SELECT a.student_id, a.status, a.date, s.first_name, s.last_name, s.parent_phone, a.reason
-                FROM attendance a
-                JOIN students s ON a.student_id = s.id
-                WHERE a.class_id = ? AND a.term = ? AND a.session = ?
-                ORDER BY a.student_id, a.date ASC
-            `, [cls.id, academicSettings.term, academicSettings.session]);
+            if (hasAcademicContext) {
+                attendanceRecords = await db.all(`
+                    SELECT a.student_id, a.status, a.date, s.first_name, s.last_name, s.parent_phone, a.reason
+                    FROM attendance a
+                    JOIN students s ON a.student_id = s.id
+                    WHERE a.class_id = ? AND a.term = ? AND a.session = ?
+                    ORDER BY a.student_id, a.date ASC
+                `, [cls.id, academicSettings.term, academicSettings.session]);
+            }
 
             const { summarizeAttendanceRecords } = require('../utils/attendanceStreakHelper');
             const studentStats = summarizeAttendanceRecords(attendanceRecords);
 
-            // Determine flagged students based on total and current consecutive absences
-            const flagged = Object.values(studentStats).filter(s => {
-                s.flag_reason = [];
-                if (s.total_absent_days >= termAbsenceLimit) {
-                    s.flag_reason.push(`Term Limit: ${s.total_absent_days} absences`);
+            // Determine flagged students based on total and current consecutive absences.
+            const flagged = Object.values(studentStats).filter(student => {
+                student.flag_reason = [];
+                if (student.total_absent_days >= termAbsenceLimit) {
+                    student.flag_reason.push(`Term Limit: ${student.total_absent_days} absences`);
                 }
-                if (s.current_consecutive_absent_days >= consecutiveAbsenceLimit) {
-                    s.flag_reason.push(`Consecutive: ${s.current_consecutive_absent_days} days`);
+                if (student.current_consecutive_absent_days >= consecutiveAbsenceLimit) {
+                    student.flag_reason.push(`Consecutive: ${student.current_consecutive_absent_days} days`);
                 }
-                return s.flag_reason.length > 0;
+                return student.flag_reason.length > 0;
             });
 
-            // Generate WhatsApp contact details for each flagged student
-            flagged.forEach(st => {
+            flagged.forEach(student => {
                 const wa = buildWhatsAppAttendanceAction({
-                    parent_phone: st.parent_phone,
-                    total_absences: st.total_absent_days,
-                    consecutive_absences: st.current_consecutive_absent_days,
+                    parent_phone: student.parent_phone,
+                    total_absences: student.total_absent_days,
+                    consecutive_absences: student.current_consecutive_absent_days,
                     term_limit: termAbsenceLimit,
                     consecutive_limit: consecutiveAbsenceLimit,
                     context: {
-                        student_name: `${st.first_name} ${st.last_name}`,
+                        student_name: `${student.first_name} ${student.last_name}`,
                         class_name: cls.name,
                         term: academicSettings.term,
                         session: academicSettings.session,
@@ -107,21 +126,27 @@ const schoolInfo = await db.get('SELECT name, phone FROM schools WHERE id = ?', 
                         school_phone: schoolInfo.phone
                     }
                 });
-                st.whatsapp_url = wa.whatsapp_url;
-                st.whatsapp_phone = wa.display_phone;
-                st.whatsapp_message = wa.message;
-                st.has_valid_whatsapp = wa.is_valid;
+                student.whatsapp_url = wa.whatsapp_url;
+                student.whatsapp_phone = wa.display_phone;
+                student.whatsapp_message = wa.message;
+                student.has_valid_whatsapp = wa.is_valid;
             });
 
-            if (flagged.length > 0) {
-                flaggedStudents[cls.id] = { class: cls, students: flagged };
-            }
+            // Keep every class visible, including classes with no flagged students.
+            attendanceGroups.push({
+                class: cls,
+                section_name: cls.section_name || 'Unassigned section',
+                students: flagged,
+                hasAcademicContext,
+                session: academicSettings.session,
+                term: academicSettings.term
+            });
         }
         res.render('attendance/index', {
             title: 'Attendance Management',
             classes,
             user,
-            flaggedStudents,
+            attendanceGroups,
             termAbsenceLimit,
             consecutiveAbsenceLimit
         });

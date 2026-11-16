@@ -18,7 +18,7 @@
                         <p style="margin-bottom: 20px; color: var(--text-muted);">Select a class and date to start
                             marking attendance.</p>
 
-                        <form action="/attendance/take" method="GET" class="enroll-form">
+                        <form id="attendance-selection-form" action="/attendance/take" method="GET" class="enroll-form">
                             <div class="form-group">
                                 <label>Select Class</label>
                                 <% if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
@@ -43,6 +43,13 @@
                             </div>
                             <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">Start
                                 Marking</button>
+                            <button type="button" class="btn btn-outline" onclick="viewPreviousAttendance()"
+                                style="width: 100%; margin-top: 8px;">
+                                <i class="bi bi-clock-history"></i> View Previous Day's Attendance
+                            </button>
+                            <p class="text-muted" style="font-size:0.78rem;margin:6px 0 0;text-align:center;">
+                                Opens a read-only record for the day before your selected date.
+                            </p>
                         </form>
                         <p id="attendance-offline-prep-status" role="status" aria-live="polite" style="margin-top:12px;font-size:0.85rem;color:var(--text-muted);">Offline attendance preparation will be checked while you are online.</p>
                     </div>
@@ -154,6 +161,29 @@
             </main>
     </div>
 
+
+<script>
+    function viewPreviousAttendance() {
+        const form = document.getElementById('attendance-selection-form');
+        const classField = form && form.querySelector('[name="class_id"]');
+        const dateField = form && form.querySelector('[name="date"]');
+        if (!classField || !classField.value) {
+            alert('Please select a class first.');
+            return;
+        }
+        if (!dateField || !/^\\d{4}-\\d{2}-\\d{2}$/.test(dateField.value)) {
+            alert('Please select a valid attendance date first.');
+            return;
+        }
+        const parts = dateField.value.split('-').map(Number);
+        const previous = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2] - 1));
+        const previousDate = previous.getUTCFullYear() + '-' +
+            String(previous.getUTCMonth() + 1).padStart(2, '0') + '-' +
+            String(previous.getUTCDate()).padStart(2, '0');
+        window.location.href = '/attendance/yesterday?class_id=' +
+            encodeURIComponent(classField.value) + '&date=' + encodeURIComponent(previousDate);
+    }
+</script>
 
 <script>
     // Prepare a rolling seven-calendar-day window, plus the chosen date when it falls outside that window.

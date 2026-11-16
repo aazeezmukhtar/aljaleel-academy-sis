@@ -73,90 +73,218 @@
 
                 <!-- Flagged / At-Risk Students Section -->
                 <% if (typeof flaggedStudents !== 'undefined' && flaggedStudents && Object.keys(flaggedStudents).length > 0) { %>
-                <section class="card" style="border-top: 4px solid #ef4444; margin-top: 10px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <%
+                    const flaggedGroups = Object.values(flaggedStudents);
+                    const flaggedTotal = flaggedGroups.reduce((total, group) => total + group.students.length, 0);
+                %>
+                <section class="card attendance-risk-section">
+                    <div class="attendance-risk-heading">
                         <div>
-                            <h3 style="color: #dc2626; margin: 0; display: flex; align-items: center; gap: 8px;">
-                                <i class="bi bi-exclamation-triangle-fill"></i> At-Risk & Flagged Students
-                            </h3>
-                            <p style="color: var(--text-muted); margin: 4px 0 0 0; font-size: 0.9rem;">
-                                Students exceeding term absence limit (<%= termAbsenceLimit || 10 %> days) or consecutive absence limit (<%= consecutiveAbsenceLimit || 3 %> days).
-                            </p>
+                            <h3><i class="bi bi-exclamation-triangle-fill"></i> Attendance alerts</h3>
+                            <p>Students who have reached an attendance warning threshold.</p>
+                        </div>
+                        <span class="attendance-risk-total"><%= flaggedTotal %> flagged</span>
+                    </div>
+
+                    <div class="attendance-risk-overview">
+                        <div class="attendance-risk-stat">
+                            <strong><%= flaggedTotal %></strong>
+                            <span>Flagged students</span>
+                        </div>
+                        <div class="attendance-risk-stat">
+                            <strong><%= flaggedGroups.length %></strong>
+                            <span>Classes affected</span>
                         </div>
                     </div>
 
-                    <% Object.values(flaggedStudents).forEach(group => { %>
-                        <div style="margin-bottom: 20px; background: #fef2f2; border: 1px solid #fee2e2; border-radius: 10px; padding: 15px;">
-                            <h4 style="margin: 0 0 10px 0; color: #991b1b; display: flex; align-items: center; gap: 6px;">
-                                <i class="bi bi-door-open-fill"></i> <%= group.class.name %>
-                            </h4>
-                            <div class="table-container mobile-cards">
-                                <table class="data-table" style="background: white;">
-                                    <thead>
-                                        <tr>
-                                            <th>Student Name</th>
-                                            <th>Parent Contact</th>
-                                            <th style="text-align: center;">Total Absences</th>
-                                            <th style="text-align: center;">Consecutive Streak</th>
-                                            <th>Flag Reason(s)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <% group.students.forEach(st => { %>
+                    <p class="attendance-risk-guidance">
+                        Alerts are based on <strong><%= termAbsenceLimit || 10 %> total absences</strong>
+                        or <strong><%= consecutiveAbsenceLimit || 3 %> consecutive absences</strong>.
+                        A student may meet both conditions.
+                    </p>
+
+                    <div class="attendance-risk-groups">
+                        <% flaggedGroups.forEach((group, groupIndex) => { %>
+                        <details class="attendance-risk-class" <%= groupIndex === 0 ? 'open' : '' %>>
+                            <summary>
+                                <span class="attendance-risk-class-name">
+                                    <i class="bi bi-door-open-fill"></i>
+                                    <span><%= group.class.name %></span>
+                                </span>
+                                <span class="attendance-risk-class-meta">
+                                    <span class="attendance-risk-class-count"><%= group.students.length %> flagged</span>
+                                    <i class="bi bi-chevron-down attendance-risk-chevron"></i>
+                                </span>
+                            </summary>
+
+                            <!-- Desktop: retain the detailed table -->
+                            <div class="attendance-risk-desktop">
+                                <div class="table-container">
+                                    <table class="data-table">
+                                        <thead>
                                             <tr>
-                                                <td data-label="Student Name">
-                                                    <strong style="color: #1e293b;"><%= st.first_name %> <%= st.last_name %></strong>
+                                                <th>Student Name</th>
+                                                <th>Parent Contact</th>
+                                                <th style="text-align:center;">Total Absences</th>
+                                                <th style="text-align:center;">Consecutive Streak</th>
+                                                <th>Flag Reason(s)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <% group.students.forEach(st => { %>
+                                            <tr>
+                                                <td><strong><%= st.first_name %> <%= st.last_name %></strong></td>
+                                                <td>
+                                                    <div class="attendance-risk-contact">
+                                                        <% if (st.has_valid_whatsapp && st.whatsapp_url) { %>
+                                                        <a class="attendance-risk-contact-icon whatsapp" href="<%= st.whatsapp_url %>" target="_blank" rel="noopener noreferrer" aria-label="Message <%= st.first_name %>'s parent on WhatsApp" title="WhatsApp">
+                                                            <i class="bi bi-whatsapp"></i>
+                                                        </a>
+                                                        <% } %>
+                                                        <% if (st.parent_phone) { %>
+                                                        <a class="attendance-risk-contact-icon phone" href="tel:<%= st.parent_phone %>" aria-label="Call <%= st.first_name %>'s parent" title="Call parent">
+                                                            <i class="bi bi-telephone-fill"></i>
+                                                        </a>
+                                                        <% } else { %>
+                                                        <span class="text-muted" title="No parent contact available">No contact</span>
+                                                        <% } %>
+                                                    </div>
                                                 </td>
-                                                <td data-label="Parent Contact">
-                                                    <% if (st.has_valid_whatsapp && st.whatsapp_url) { %>
-                                                        <div style="display: flex; flex-direction: column; gap: 5px; align-items: flex-start;">
-                                                            <a href="<%= st.whatsapp_url %>" target="_blank" rel="noopener noreferrer" 
-                                                               title="Open WhatsApp with pre-filled message"
-                                                               style="display: inline-flex; align-items: center; gap: 6px; background-color: #25D366; color: white; padding: 4px 10px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.82rem; transition: background 0.2s ease;">
-                                                                <i class="bi bi-whatsapp" style="font-size: 0.95rem;"></i> WhatsApp
-                                                            </a>
-                                                            <a href="tel:<%= st.parent_phone %>" style="color: #64748b; font-size: 0.82rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                                                                <i class="bi bi-telephone-fill" style="font-size: 0.75rem;"></i> <%= st.parent_phone %>
-                                                            </a>
-                                                        </div>
-                                                    <% } else if (st.parent_phone) { %>
-                                                        <div style="display: flex; flex-direction: column; gap: 2px;">
-                                                            <a href="tel:<%= st.parent_phone %>" style="color: #2563eb; text-decoration: none; font-size: 0.88rem;">
-                                                                <i class="bi bi-telephone-fill"></i> <%= st.parent_phone %>
-                                                            </a>
-                                                            <span style="font-size: 0.75rem; color: #dc2626;">Invalid WhatsApp format</span>
-                                                        </div>
-                                                    <% } else { %>
-                                                        <span class="text-muted" style="font-size: 0.85rem; font-style: italic;">
-                                                            <i class="bi bi-telephone-x" style="margin-right: 3px;"></i> No contact available
-                                                        </span>
-                                                    <% } %>
-                                                </td>
-                                                <td data-label="Total Absences" style="text-align: center;">
-                                                    <span style="font-weight: 700; color: #dc2626;"><%= st.total_absent_days %> days</span>
-                                                </td>
-                                                <td data-label="Consecutive Streak" style="text-align: center;">
+                                                <td style="text-align:center;"><strong class="attendance-risk-absence"><%= st.total_absent_days %> days</strong></td>
+                                                <td style="text-align:center;">
                                                     <% if (st.current_consecutive_absent_days === 0) { %>
-                                                        <span style="font-weight: 600; color: #059669; background: #ecfdf5; padding: 2px 8px; border-radius: 4px; font-size: 0.85rem;">0 days (Broken)</span>
+                                                    <span class="attendance-risk-broken">0 days · Broken</span>
                                                     <% } else { %>
-                                                        <span style="font-weight: 700; color: #d97706;"><%= st.current_consecutive_absent_days %> days</span>
+                                                    <strong class="attendance-risk-streak"><%= st.current_consecutive_absent_days %> days</strong>
                                                     <% } %>
                                                 </td>
-                                                <td data-label="Flag Reason(s)">
-                                                    <% st.flag_reason.forEach(reason => { %>
-                                                        <span class="badge" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; font-size: 0.75rem; margin-right: 4px;">
-                                                            <%= reason %>
-                                                        </span>
-                                                    <% }); %>
+                                                <td>
+                                                    <div class="attendance-risk-reasons">
+                                                        <% st.flag_reason.forEach(reason => { %>
+                                                        <span class="attendance-risk-reason"><%= reason %></span>
+                                                        <% }); %>
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        <% }); %>
-                                    </tbody>
-                                </table>
+                                            <% }); %>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
-                    <% }); %>
+
+                            <!-- Mobile: purpose-built student cards -->
+                            <div class="attendance-risk-mobile">
+                                <% group.students.forEach(st => { %>
+                                <article class="attendance-risk-student">
+                                    <div class="attendance-risk-student-top">
+                                        <strong class="attendance-risk-student-name"><%= st.first_name %> <%= st.last_name %></strong>
+                                        <div class="attendance-risk-contact">
+                                            <% if (st.has_valid_whatsapp && st.whatsapp_url) { %>
+                                            <a class="attendance-risk-contact-icon whatsapp" href="<%= st.whatsapp_url %>" target="_blank" rel="noopener noreferrer" aria-label="Message <%= st.first_name %>'s parent on WhatsApp" title="WhatsApp">
+                                                <i class="bi bi-whatsapp"></i>
+                                            </a>
+                                            <% } %>
+                                            <% if (st.parent_phone) { %>
+                                            <a class="attendance-risk-contact-icon phone" href="tel:<%= st.parent_phone %>" aria-label="Call <%= st.first_name %>'s parent" title="Call parent">
+                                                <i class="bi bi-telephone-fill"></i>
+                                            </a>
+                                            <% } else { %>
+                                            <span class="attendance-risk-no-contact" title="No parent contact available"><i class="bi bi-telephone-x"></i></span>
+                                            <% } %>
+                                        </div>
+                                    </div>
+
+                                    <div class="attendance-risk-metrics">
+                                        <div>
+                                            <span>Total absences</span>
+                                            <strong class="attendance-risk-absence"><%= st.total_absent_days %> days</strong>
+                                        </div>
+                                        <div>
+                                            <span>Current streak</span>
+                                            <% if (st.current_consecutive_absent_days === 0) { %>
+                                            <strong class="attendance-risk-broken">0 days · Broken</strong>
+                                            <% } else { %>
+                                            <strong class="attendance-risk-streak"><%= st.current_consecutive_absent_days %> days</strong>
+                                            <% } %>
+                                        </div>
+                                    </div>
+
+                                    <div class="attendance-risk-reasons">
+                                        <% st.flag_reason.forEach(reason => { %>
+                                        <span class="attendance-risk-reason"><%= reason %></span>
+                                        <% }); %>
+                                    </div>
+                                </article>
+                                <% }); %>
+                            </div>
+                        </details>
+                        <% }); %>
+                    </div>
                 </section>
+
+                <style>
+                    .attendance-risk-section { border-top: 4px solid #dc2626; margin-top: 10px; }
+                    .attendance-risk-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
+                    .attendance-risk-heading h3 { color:#b91c1c; margin:0; display:flex; align-items:center; gap:8px; }
+                    .attendance-risk-heading p { color:var(--text-muted); margin:5px 0 0; font-size:.9rem; }
+                    .attendance-risk-total { flex-shrink:0; border-radius:999px; background:#fee2e2; color:#991b1b; padding:6px 12px; font-size:.82rem; font-weight:700; }
+                    .attendance-risk-overview { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
+                    .attendance-risk-stat { display:flex; flex-direction:column; gap:2px; background:var(--bg-subtle,#f8fafc); border:1px solid var(--border-subtle); border-radius:12px; padding:12px 14px; }
+                    .attendance-risk-stat strong { font-size:1.45rem; line-height:1.2; color:var(--text-primary,#1e293b); }
+                    .attendance-risk-stat span { font-size:.78rem; color:var(--text-muted); }
+                    .attendance-risk-guidance { color:var(--text-muted); font-size:.82rem; margin:0 0 16px; line-height:1.5; }
+                    .attendance-risk-groups { display:grid; gap:10px; }
+                    .attendance-risk-class { border:1px solid var(--border-subtle); border-radius:12px; overflow:hidden; background:#fff; }
+                    .attendance-risk-class > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px; cursor:pointer; list-style:none; background:#fff7f7; }
+                    .attendance-risk-class > summary::-webkit-details-marker { display:none; }
+                    .attendance-risk-class-name,.attendance-risk-class-meta { display:flex; align-items:center; gap:9px; min-width:0; }
+                    .attendance-risk-class-name { color:#7f1d1d; font-weight:700; }
+                    .attendance-risk-class-name span { overflow-wrap:anywhere; }
+                    .attendance-risk-class-count { color:#991b1b; background:#fee2e2; border-radius:999px; padding:4px 9px; white-space:nowrap; font-size:.75rem; font-weight:700; }
+                    .attendance-risk-chevron { color:#991b1b; transition:transform .2s ease; }
+                    .attendance-risk-class[open] .attendance-risk-chevron { transform:rotate(180deg); }
+                    .attendance-risk-desktop { padding:0 12px 12px; }
+                    .attendance-risk-desktop .table-container { overflow-x:auto; }
+                    .attendance-risk-desktop .data-table { min-width:680px; }
+                    .attendance-risk-desktop .data-table td { vertical-align:middle; }
+                    .attendance-risk-contact { display:flex; align-items:center; gap:8px; }
+                    .attendance-risk-contact-icon { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; text-decoration:none; font-size:1rem; transition:transform .15s ease,background .15s ease; }
+                    .attendance-risk-contact-icon:active { transform:scale(.94); }
+                    .attendance-risk-contact-icon.whatsapp { color:#15803d; background:#dcfce7; }
+                    .attendance-risk-contact-icon.phone { color:#1d4ed8; background:#dbeafe; }
+                    .attendance-risk-absence { color:#b91c1c; }
+                    .attendance-risk-streak { color:#b45309; }
+                    .attendance-risk-broken { color:#047857; font-size:.82rem; }
+                    .attendance-risk-reasons { display:flex; flex-wrap:wrap; gap:5px; }
+                    .attendance-risk-reason { display:inline-flex; background:#fff1f2; color:#9f1239; border:1px solid #fecdd3; border-radius:999px; padding:4px 8px; font-size:.72rem; line-height:1.25; }
+                    .attendance-risk-mobile { display:none; }
+                    @media (max-width:768px) {
+                        .attendance-risk-section { padding:14px; }
+                        .attendance-risk-heading { align-items:center; }
+                        .attendance-risk-heading h3 { font-size:1.05rem; }
+                        .attendance-risk-heading p { font-size:.8rem; }
+                        .attendance-risk-overview { gap:8px; }
+                        .attendance-risk-stat { padding:10px 12px; }
+                        .attendance-risk-stat strong { font-size:1.3rem; }
+                        .attendance-risk-class > summary { padding:12px; }
+                        .attendance-risk-desktop { display:none; }
+                        .attendance-risk-mobile { display:grid; gap:9px; padding:10px; }
+                        .attendance-risk-student { min-width:0; border:1px solid #e2e8f0; border-radius:11px; padding:12px; background:#fff; }
+                        .attendance-risk-student-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+                        .attendance-risk-student-name { min-width:0; color:#1e293b; font-size:.9rem; line-height:1.3; overflow-wrap:anywhere; }
+                        .attendance-risk-contact { flex-shrink:0; }
+                        .attendance-risk-contact-icon { width:34px; height:34px; }
+                        .attendance-risk-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:12px 0 10px; }
+                        .attendance-risk-metrics > div { display:flex; flex-direction:column; gap:3px; min-width:0; background:#f8fafc; border-radius:8px; padding:8px; }
+                        .attendance-risk-metrics span { color:var(--text-muted); font-size:.7rem; }
+                        .attendance-risk-metrics strong { font-size:.84rem; overflow-wrap:anywhere; }
+                        .attendance-risk-reason { font-size:.68rem; }
+                    }
+                    @media (min-width:769px) {
+                        .attendance-risk-class > summary { padding:13px 16px; }
+                        .attendance-risk-desktop .data-table { margin:0; }
+                    }
+                </style>
                 <% } %>
             </main>
     </div>

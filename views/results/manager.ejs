@@ -136,7 +136,7 @@
                     <% const visibleStatuses = [...new Set(studentStatuses.filter(Boolean))]; %>
                     <% const sheetStatus = visibleStatuses.length === 0 ? 'New / Draft' : (visibleStatuses.length === 1 && studentStatuses.every(status => status === visibleStatuses[0]) ? visibleStatuses[0] : 'Mixed / Incomplete'); %>
                     <div class="card">
-                        <div
+                        <div class="result-sheet-header"
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3 style="margin: 0;">
                                 Grade Sheet
@@ -252,6 +252,7 @@
                             </button>
                         </div>
                     </div>
+                    <div class="result-entry-bottom-spacer" aria-hidden="true"></div>
 
                     <% } else if (filters.class_id && filters.subject_id) { %>
                         <div class="emp-state">
@@ -358,11 +359,16 @@
         }
 
         @media (max-width: 768px) {
+            .result-sheet-header {
+                flex-direction: column;
+                align-items: flex-start !important;
+                gap: 8px;
+            }
             .result-actions-group {
                 flex-direction: column;
-                align-items: stretch;
+                align-items: flex-start;
                 width: 100%;
-                gap: 10px;
+                gap: 6px;
             }
             .button-stack {
                 display: none; /* Hide on mobile in favor of sticky bar */
@@ -370,13 +376,17 @@
             .result-config-info {
                 margin: 0;
                 font-size: 0.8rem;
-                text-align: center;
+                text-align: left;
             }
             .card-header {
                 flex-direction: column;
                 align-items: flex-start !important;
                 gap: 15px;
             }
+        }
+
+        .result-entry-bottom-spacer {
+            height: 0;
         }
 
         .sticky-save-bar {
@@ -402,6 +412,11 @@
         @media (max-width: 991px) {
             .sticky-save-bar {
                 display: block;
+                bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+                padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+            }
+            .result-entry-bottom-spacer {
+                height: calc(112px + env(safe-area-inset-bottom, 0px));
             }
         }
         .filter-grid {
@@ -504,6 +519,38 @@
             .mobile-cards td[data-label="Student"] {
                 flex: 1;
                 min-width: 0;
+                text-align: left !important;
+                padding: 0 !important;
+            }
+
+            .mobile-cards td[data-label="Student"] .row-info {
+                width: 100%;
+                justify-content: flex-start;
+                text-align: left;
+            }
+
+            .mobile-cards td[data-label="Student"] .row-bio {
+                align-items: flex-start;
+                text-align: left;
+            }
+
+            .mobile-cards .row-name {
+                font-size: 0.82rem !important;
+                line-height: 1.2;
+                white-space: normal !important;
+                overflow: visible !important;
+                text-overflow: clip !important;
+                overflow-wrap: anywhere;
+                text-align: left !important;
+            }
+
+            /* Keep the name area readable by removing the extra registration line. */
+            .mobile-cards .row-id {
+                display: none !important;
+            }
+
+            .mobile-cards .row-index {
+                font-size: 0.68rem !important;
             }
 
             /* Score fields compacted beside */

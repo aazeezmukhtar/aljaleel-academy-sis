@@ -132,21 +132,27 @@ const schoolInfo = await db.get('SELECT name, phone FROM schools WHERE id = ?', 
                 student.has_valid_whatsapp = wa.is_valid;
             });
 
-            // Keep every class visible, including classes with no flagged students.
-            attendanceGroups.push({
-                class: cls,
-                section_name: cls.section_name || 'Unassigned section',
-                students: flagged,
-                hasAcademicContext,
-                session: academicSettings.session,
-                term: academicSettings.term
-            });
+            // Only classes with actual flagged students belong in the alerts list.
+            if (flagged.length > 0) {
+                attendanceGroups.push({
+                    class: cls,
+                    section_name: cls.section_name || 'Unassigned section',
+                    students: flagged,
+                    hasAcademicContext,
+                    session: academicSettings.session,
+                    term: academicSettings.term
+                });
+            }
         }
+        const attendanceSections = [...new Set(
+            classes.map(cls => cls.section_name || 'Unassigned section')
+        )].sort((a, b) => a.localeCompare(b));
         res.render('attendance/index', {
             title: 'Attendance Management',
             classes,
             user,
             attendanceGroups,
+            attendanceSections,
             termAbsenceLimit,
             consecutiveAbsenceLimit
         });

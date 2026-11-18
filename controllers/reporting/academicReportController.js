@@ -71,7 +71,7 @@ const getBroadsheet = async (req, res) => {
                 FROM results r
                 WHERE r.term = ? AND r.session = ?
                   AND r.class_id = ?
-                  AND r.status IN ('submitted', 'approved', 'published')
+                  AND r.status IN ('approved', 'published')
             `, [term, session, class_id]);
 
             // Build result lookup map: resultMap[student_id][subject_id]

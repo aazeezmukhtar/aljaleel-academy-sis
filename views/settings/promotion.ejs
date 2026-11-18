@@ -84,6 +84,8 @@
                                         </optgroup>
                                     <% } %>
                                 </select>
+                                <label for="commencement-<%= cls.id %>" style="display:block;margin-top:10px;">Section commencement date</label>
+                                <input type="date" id="commencement-<%= cls.id %>" class="form-control commencement-date" data-source-id="<%= cls.id %>" aria-label="<%= secData.name %> commencement date for <%= cls.name %>">
                             </div>
                         </article>
                         <% }) %>
@@ -217,7 +219,11 @@ function getPromotionSignature() {
     return JSON.stringify({
         source_session: document.getElementById('sourceSessionSelect').value,
         target_session: document.getElementById('targetSessionSelect').value,
-        mapping: Object.fromEntries(Object.entries(getPromotionMapping()).sort(([a], [b]) => Number(a) - Number(b)))
+        mapping: Object.fromEntries(Object.entries(getPromotionMapping()).sort(([a], [b]) => Number(a) - Number(b))),
+        commencement_dates: Object.fromEntries(Object.entries(getPromotionMapping()).map(([id]) => {
+            const input = document.querySelector('.commencement-date[data-source-id="' + id + '"]');
+            return [id, input ? input.value : ''];
+        }))
     });
 }
 
@@ -355,6 +361,11 @@ async function fetchPreview() {
     }
     const source_session = document.getElementById('sourceSessionSelect').value;
     const target_session = document.getElementById('targetSessionSelect').value;
+    const commencement_dates = {};
+    Object.entries(mapping).forEach(([classId]) => {
+        const input = document.querySelector('.commencement-date[data-source-id="' + classId + '"]');
+        commencement_dates[classId] = input ? input.value : '';
+    });
     const previewSection = document.getElementById('previewSection');
     const previewBtn = document.getElementById('previewBtn');
     const commitBtn = document.getElementById('commitBtn');
@@ -371,7 +382,7 @@ async function fetchPreview() {
         const response = await fetch('/settings/promotion/preview', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source_session, target_session, mapping })
+            body: JSON.stringify({ source_session, target_session, mapping, commencement_dates })
         });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.message || 'Unable to prepare the promotion review.');
@@ -434,7 +445,7 @@ async function confirmPromotion() {
         const response = await fetch('/settings/promotion', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ source_session, target_session, mapping, promote_student_ids })
+            body: JSON.stringify({ source_session, target_session, mapping, promote_student_ids, commencement_dates })
         });
         const data = await response.json().catch(() => null);
         if (!response.ok || !data || !data.success) throw new Error((data && data.message) || 'Promotion could not be completed.');

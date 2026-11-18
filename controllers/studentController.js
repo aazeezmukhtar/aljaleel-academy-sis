@@ -309,7 +309,13 @@ const enrollStudent = async (req, res) => {
         // Backward-compatible single-class form is used only when this form
         // did not submit section selectors at all (blank selectors mean "skip").
         if (!hasSectionSelectors && assignments.length === 0 && legacyClass) {
-            assignments.push({ sectionId: legacyClass.section_id || null, classId: legacyClass.id });
+            let startDate;
+            try {
+                startDate = validateEffectiveDate(req.body.effective_date);
+            } catch (dateError) {
+                return res.redirect('/students/enroll?error=' + encodeURIComponent(dateError.message));
+            }
+            assignments.push({ sectionId: legacyClass.section_id || null, classId: legacyClass.id, startDate });
         } else if (hasSectionSelectors && legacyClass &&
                    assignments.length > 0 &&
                    !assignments.some(item => Number(item.classId) === Number(legacyClass.id))) {

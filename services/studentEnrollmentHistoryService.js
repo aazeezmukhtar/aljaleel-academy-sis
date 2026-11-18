@@ -21,7 +21,9 @@ const REQUIRED_CLASS_SHAPES = {
 const positiveId = value => Number.isSafeInteger(Number(value)) && Number(value) > 0;
 
 function validateEffectiveDate(value) {
-    if (value === undefined || value === null || value === '') return null;
+    if (value === undefined || value === null || value === '') {
+        throw new Error('An effective date is required for every dated enrollment event.');
+    }
     const date = String(value).trim();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         throw new Error('Effective date must use YYYY-MM-DD format.');
@@ -33,21 +35,26 @@ function validateEffectiveDate(value) {
     return date;
 }
 
+function shiftDate(date, days) {
+    const value = new Date(date + 'T00:00:00Z');
+    value.setUTCDate(value.getUTCDate() + days);
+    return value.toISOString().slice(0, 10);
+}
+
 async function applyEnrollmentChange(input, client) {
     const {
         schoolId, studentId, sectionId: requestedSectionId,
         sourceClassId = null, destinationClassId = null,
         sourceSession = null, destinationSession = null,
-        eventType, effectiveDate = null, reason = null,
-        destinationSchool = null, recordedBy = null, destinationTerm = null
+        eventType, effectiveDate,
+        reason = null, destinationSchool = null,
+        recordedBy = null, destinationTerm = null
     } = input || {};
 
     if (!positiveId(schoolId) || !positiveId(studentId)) {
         throw new Error('A valid school and student are required for an enrollment change.');
     }
-    if (!EVENT_TYPES.has(eventType)) {
-        throw new Error('Unsupported enrollment history event type.');
-    }
+    if (!EVENT_TYPES.has(eventType)) throw new Error('Unsupported enrollment history event type.');
 
     const shape = REQUIRED_CLASS_SHAPES[eventType];
     if ((shape === 'source' && (!sourceClassId || destinationClassId)) ||
@@ -64,14 +71,17 @@ async function applyEnrollmentChange(input, client) {
     }
 
     const normalizedDate = validateEffectiveDate(effectiveDate);
-    if (['internal_transfer', 'external_transfer', 'section_exit'].includes(eventType)) {
-        if (!normalizedDate) throw new Error('An effective date is required for this transfer or section exit.');
-        if (!reason || !String(reason).trim()) throw new Error('A reason is required for this transfer or section exit.');
+    if (['internal_transfer', 'external_transfer', 'section_exit'].includes(eventType) &&
+        (!reason || !String(reason).trim())) {
+        throw new Error('A reason is required for this transfer or section exit.');
     }
-    const student = await db.get(
-        'SELECT id FROM students WHERE id = ? AND school_id = ?',
-        [studentId, schoolId], client
-    );
+
+    // Serialize changes for the same student in PostgreSQL. SQLite already
+    // serializes the enclosing write transaction.
+    const studentLockSql = db.DB_TYPE === 'postgres'
+        ? 'SELECT id FROM students WHERE id = ? AND school_id = ? FOR UPDATE'
+        : 'SELECT id FROM students WHERE id = ? AND school_id = ?';
+    const student = await db.get(studentLockSql, [studentId, schoolId], client);
     if (!student) throw new Error('Student was not found in this school.');
 
     let sourceClass = null;
@@ -116,9 +126,7 @@ async function applyEnrollmentChange(input, client) {
             SELECT se.id, se.class_id
             FROM student_enrollments se
             JOIN classes c ON c.id = se.class_id AND c.school_id = ?
-            WHERE se.student_id = ?
-              AND se.session = ?
-              AND c.section_id = ?
+            WHERE se.student_id = ? AND se.session = ? AND c.section_id = ?
         `;
         const conflictParams = [schoolId, studentId, destinationSession, resolvedSectionId];
         if (sourceClass && String(sourceSession) === String(destinationSession)) {
@@ -133,8 +141,7 @@ async function applyEnrollmentChange(input, client) {
     }
 
     // Same-session moves replace the current row. Cross-session moves preserve
-    // the source row as historical placement and add the destination row.
-    // Departures remove the source placement without deleting academic records.
+    // the source row as historical placement.
     if (sourceClass && (!destinationClass || String(sourceSession) === String(destinationSession))) {
         await db.run(
             'DELETE FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?',
@@ -172,18 +179,74 @@ async function applyEnrollmentChange(input, client) {
         positiveId(recordedBy) ? Number(recordedBy) : null
     ], client);
 
+    const event = await db.get(`
+        SELECT id FROM student_enrollment_history
+        WHERE school_id = ? AND student_id = ? AND section_id = ?
+          AND event_type = ? AND effective_date = ?
+        ORDER BY id DESC LIMIT 1
+    `, [schoolId, studentId, resolvedSectionId, eventType, normalizedDate], client);
+    if (!event) throw new Error('Enrollment event could not be verified after insertion.');
+
+    // Close a known dated source period. Legacy placements without a known
+    // start date intentionally have no period row and remain undated.
+    if (sourceClass) {
+        const sourcePeriod = await db.get(`
+            SELECT id, start_date FROM student_enrollment_periods
+            WHERE school_id = ? AND student_id = ? AND section_id = ?
+              AND class_id = ? AND session = ? AND end_date IS NULL
+            ORDER BY start_date DESC, id DESC LIMIT 1
+        `, [schoolId, studentId, resolvedSectionId, sourceClassId, sourceSession], client);
+
+        if (sourcePeriod) {
+            const sourceEndDate = ['graduation', 'external_transfer', 'section_exit'].includes(eventType)
+                ? normalizedDate
+                : shiftDate(normalizedDate, -1);
+            if (sourceEndDate < sourcePeriod.start_date) {
+                throw new Error('The effective date would end the source placement before it began.');
+            }
+            await db.run(`
+                UPDATE student_enrollment_periods
+                SET end_date = ?, end_event_id = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ? AND end_date IS NULL
+            `, [sourceEndDate, event.id, sourcePeriod.id], client);
+        }
+    }
+
+    // Create a destination period after closing the source period. Reject any
+    // remaining overlap in the same student/section timeline.
+    if (destinationClass) {
+        const overlap = await db.get(`
+            SELECT id FROM student_enrollment_periods
+            WHERE school_id = ? AND student_id = ? AND section_id = ?
+              AND start_date <= COALESCE(end_date, '9999-12-31')
+              AND ? <= COALESCE(end_date, '9999-12-31')
+            LIMIT 1
+        `, [schoolId, studentId, resolvedSectionId, normalizedDate, normalizedDate], client);
+        if (overlap) {
+            throw new Error('This effective date overlaps an existing dated placement in the same section. Review the timeline before continuing.');
+        }
+        await db.run(`
+            INSERT INTO student_enrollment_periods (
+                school_id, student_id, section_id, class_id, session,
+                start_date, start_event_id, date_status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, 'confirmed')
+        `, [
+            schoolId, studentId, resolvedSectionId, destinationClassId,
+            destinationSession, normalizedDate, event.id
+        ], client);
+    }
+
     return {
         changed: true, sectionId: resolvedSectionId,
         sourceClassId: sourceClassId || null,
         destinationClassId: destinationClassId || null,
-        eventType
+        eventType, eventId: event.id
     };
 }
 
 /**
  * Apply one assignment change atomically. Callers already inside a transaction
- * must pass { inTransaction: true, client }; SQLite uses a null client while
- * PostgreSQL uses the transaction-scoped PoolClient.
+ * must pass { inTransaction: true, client }.
  */
 async function changeEnrollment(input, options = {}) {
     if (options.inTransaction) {
@@ -192,7 +255,4 @@ async function changeEnrollment(input, options = {}) {
     return db.transaction(async client => applyEnrollmentChange(input, client || null));
 }
 
-module.exports = {
-    changeEnrollment,
-    EVENT_TYPES: Array.from(EVENT_TYPES)
-};
+module.exports = { changeEnrollment, EVENT_TYPES: Array.from(EVENT_TYPES), validateEffectiveDate };

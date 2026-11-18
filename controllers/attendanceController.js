@@ -302,8 +302,17 @@ const saveAttendance = async (req, res) => {
     }
 
     try {
-        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [Number(class_id), schoolId]);
+        const classCheck = await db.get(
+            'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
+            [Number(class_id), schoolId]
+        );
         if (!classCheck) return res.status(403).json({ success: false, message: 'Class not found or access denied' });
+        if (!classCheck.section_id) {
+            return res.status(409).json({
+                success: false,
+                message: 'This class has no section assigned. Attendance cannot be saved until its section is configured.'
+            });
+        }
 
         if (user.role !== 'Admin') {
             const assignedClasses = await getAssignedClasses(user, schoolId);
@@ -312,12 +321,16 @@ const saveAttendance = async (req, res) => {
         }
 
         const sql = `
-            INSERT INTO attendance (student_id, class_id, date, status, session, term, reason, reason_type, custom_reason)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(student_id, date, session, term)
-            DO UPDATE SET status = excluded.status, class_id = excluded.class_id, 
-                          reason = excluded.reason, reason_type = excluded.reason_type, 
-                          custom_reason = excluded.custom_reason
+            INSERT INTO attendance
+                (student_id, class_id, section_id, date, status, session, term, reason, reason_type, custom_reason)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(student_id, section_id, date, session, term)
+            DO UPDATE SET
+                status = excluded.status,
+                class_id = excluded.class_id,
+                reason = excluded.reason,
+                reason_type = excluded.reason_type,
+                custom_reason = excluded.custom_reason
         `;
 
         await db.transaction(async () => {
@@ -325,8 +338,31 @@ const saveAttendance = async (req, res) => {
                 const student_id = Number(studentIdStr);
                 if (isNaN(student_id)) continue;
 
-                // Validate student belongs to tenant
-                const studentCheck = await db.get('SELECT id FROM students WHERE id = ? AND school_id = ?', [student_id, schoolId]);
+                // Validate tenant ownership and membership in the selected class/session.
+                // Preserve the legacy current_class_id fallback only when the student has
+                // no enrollment row at all for this session, matching the attendance sheet.
+                const studentCheck = await db.get(`
+                    SELECT s.id
+                    FROM students s
+                    WHERE s.id = ? AND s.school_id = ?
+                      AND (
+                        EXISTS (
+                            SELECT 1 FROM student_enrollments se
+                            WHERE se.student_id = s.id
+                              AND se.class_id = ?
+                              AND se.session = ?
+                        )
+                        OR (
+                            s.current_class_id = ?
+                            AND NOT EXISTS (
+                                SELECT 1 FROM student_enrollments se_current
+                                WHERE se_current.student_id = s.id
+                                  AND se_current.session = ?
+                            )
+                        )
+                      )
+                `, [student_id, schoolId, Number(class_id), session || (await getAcademicSettings(class_id, schoolId)).session,
+                    Number(class_id), session || (await getAcademicSettings(class_id, schoolId)).session]);
                 if (!studentCheck) continue;
 
                 const settings = await getAcademicSettings(class_id, schoolId);
@@ -343,6 +379,7 @@ const saveAttendance = async (req, res) => {
                 await db.run(sql, [
                     student_id,
                     Number(class_id),
+                    Number(classCheck.section_id),
                     date,
                     status,
                     session || settings.session,

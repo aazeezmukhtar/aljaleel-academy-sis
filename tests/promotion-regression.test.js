@@ -443,7 +443,8 @@ async function run() {
         source_session: '2028/2029',
         target_session: '2029/2030',
         mapping: { [invalidSelectionClass]: String(targetClass) },
-        promote_student_ids: { [invalidSelectionClass]: [currentStudent] }
+        promote_student_ids: { [invalidSelectionClass]: [currentStudent] },
+        commencement_dates: { [invalidSelectionClass]: '2029-06-30' }
       }
     }, invalidSelection);
     assert.strictEqual(invalidSelection.statusCode, 500, 'Selection IDs outside the mapped source cohort must be rejected');

@@ -125,7 +125,13 @@ const deleteClass = async (req, res) => {
             'SELECT COUNT(*) AS count FROM attendance WHERE class_id = ?',
             [id]
         );
-        if (Number(enrollmentHistory?.count || 0) > 0 || Number(attendanceHistory?.count || 0) > 0) {
+        const placementHistory = await db.get(
+            'SELECT COUNT(*) AS count FROM student_enrollment_periods WHERE class_id = ? AND school_id = ?',
+            [id, schoolId]
+        );
+        if (Number(enrollmentHistory?.count || 0) > 0 ||
+            Number(attendanceHistory?.count || 0) > 0 ||
+            Number(placementHistory?.count || 0) > 0) {
             return res.status(409).send(
                 'This class has historical enrollment or attendance records and cannot be deleted. Preserve the records and stop using the class instead.'
             );

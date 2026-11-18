@@ -161,7 +161,7 @@ const getLowAttendance = async (req, res) => {
                 JOIN attendance a ON s.id = a.student_id
                 JOIN classes c ON a.class_id = c.id
                 WHERE a.term = $1 AND a.session = $2 AND s.school_id = $3
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, a.section_id
+                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, a.class_id
                 HAVING ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) < $4
                 AND COUNT(a.id) > 0
                 ORDER BY percentage ASC`
@@ -171,8 +171,8 @@ const getLowAttendance = async (req, res) => {
                     COUNT(a.id) as total_days,
                     ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(a.id) * 100, 1) as percentage
                 FROM students s
-                JOIN classes c ON s.current_class_id = c.id
                 JOIN attendance a ON s.id = a.student_id
+                JOIN classes c ON a.class_id = c.id
                 WHERE a.term = ? AND a.session = ? AND s.school_id = ?
                 GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, a.section_id
                 HAVING percentage < ? AND total_days > 0

@@ -34,3 +34,21 @@ Run `node tests/student-enrollment-history-migration.test.js`.
 The in-memory SQLite test enables foreign-key enforcement and verifies dual-section baselines, null legacy dates, source-row deletion without loss of history, idempotency, event validation, and preservation of existing enrollment rows.
 
 PostgreSQL execution should additionally be verified against a disposable PostgreSQL database matching the deployed schema before production approval.
+
+## Dated student enrollment periods (2026-11-17)
+
+Files:
+
+- `20261117_student_enrollment_periods.sqlite.sql`
+- `20261117_student_enrollment_periods.postgres.sql`
+- `20261117_student_enrollment_periods.md`
+
+This is a separate additive foundation. It creates `student_enrollment_periods` for section-scoped placement date ranges while leaving `student_enrollments`, `student_enrollment_history`, attendance, results, and student status unchanged. It is not wired into application startup and does not backfill or invent legacy dates.
+
+See the dedicated migration note for the date conventions, ownership checks, preconditions, and production safety requirements.
+
+### Test
+
+Run `node tests/student-enrollment-periods-migration.test.js`.
+
+The in-memory SQLite test verifies the schema, foreign-key-backed references, date ordering, supported date statuses, and safe reruns. PostgreSQL must also be tested against a disposable database matching the deployed schema before production approval.

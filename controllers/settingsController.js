@@ -2,7 +2,7 @@ const db = require('../utils/db');
 const tenantHelper = require('../utils/tenantHelper');
 const sessionHelper = require('../utils/sessionHelper');
 const { uploadFile } = require('../utils/storageHelper');
-const { changeEnrollment } = require('../services/studentEnrollmentHistoryService');
+const { changeEnrollment, validateEffectiveDate } = require('../services/studentEnrollmentHistoryService');
 
 // Get Settings Page
 const getSettingsPage = async (req, res) => {
@@ -412,6 +412,26 @@ const processPromotion = async (req, res) => {
             return res.redirect(`/settings/promotion?message=${encodeURIComponent(message)}`);
         }
 
+        const commencementDatesByClass = {};
+        for (const [classId, targetId] of Object.entries(mapping || {})) {
+            if (!targetId || targetId === 'none') continue;
+            try {
+                commencementDatesByClass[classId] = validateEffectiveDate(
+                    (req.body.commencement_dates || {})[classId]
+                );
+            } catch (dateError) {
+                const message = `A valid commencement date is required for section class ${classId}: ${dateError.message}`;
+                if (isAjax) return res.status(400).json({ success: false, message });
+                return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+            }
+        }
+
+        const affectedSectionIds = Array.from(new Set(
+            Object.keys(commencementDatesByClass)
+                .map(classId => Number(classSectionIdMap[Number(classId)]))
+                .filter(Number.isSafeInteger)
+        ));
+
         await db.transaction(async client => {
             const tx = {
                 all: (sql, params = []) => db.all(sql, params, client),
@@ -445,20 +465,6 @@ const processPromotion = async (req, res) => {
                     for (const student of enrolledStudents) {
                         const selectedForGraduation = !hasExplicitStudentSelection || classSelection.has(Number(student.id));
                         if (selectedForGraduation) {
-                            // Student status is global. Do not graduate a student who
-                            // remains enrolled in another section in either session.
-                            const otherSectionEnrollment = await tx.get(`
-                                SELECT se.id
-                                FROM student_enrollments se
-                                JOIN classes c ON c.id = se.class_id AND c.school_id = ?
-                                WHERE se.student_id = ? AND se.session IN (?, ?)
-                                  AND c.section_id <> ?
-                                LIMIT 1
-                            `, [schoolId, student.id, sourceSession, targetSession, classSectionIdMap[classId]]);
-                            if (otherSectionEnrollment) {
-                                throw new Error('Graduation stopped: a selected student remains enrolled in another section. Review that student individually before graduating.');
-                            }
-
                             // Graduation must close the student's school placement,
                             // not leave a pre-existing enrollment in the target session.
                             const targetSectionEnrollment = await tx.get(`
@@ -479,11 +485,32 @@ const processPromotion = async (req, res) => {
                                 sourceClassId: classId,
                                 sourceSession,
                                 eventType: 'graduation',
+                                effectiveDate: commencementDatesByClass[String(classId)],
                                 recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                             }, { inTransaction: true, client });
+                            const remainingOpenPeriods = await tx.get(`
+                                SELECT id
+                                FROM student_enrollment_periods
+                                WHERE school_id = ? AND student_id = ? AND end_date IS NULL
+                                UNION ALL
+                                SELECT se.id
+                                FROM student_enrollments se
+                                JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+                                WHERE se.student_id = ? AND se.session IN (?, ?)
+                                  AND c.section_id <> ?
+                                LIMIT 1
+                            `, [
+                                schoolId, student.id, schoolId, student.id,
+                                sourceSession, targetSession, classSectionIdMap[classId]
+                            ]);
+
                             await tx.run(
-                                "UPDATE students SET status = 'graduated', current_class_id = NULL WHERE id = ? AND school_id = ?",
-                                [student.id, schoolId]
+                                remainingOpenPeriods
+                                    ? "UPDATE students SET status = 'active', current_class_id = CASE WHEN current_class_id = ? THEN NULL ELSE current_class_id END WHERE id = ? AND school_id = ?"
+                                    : "UPDATE students SET status = 'graduated', current_class_id = NULL WHERE id = ? AND school_id = ?",
+                                remainingOpenPeriods
+                                    ? [classId, student.id, schoolId]
+                                    : [student.id, schoolId]
                             );
                         } else {
                             // Unselected students repeat the same class in the target session.
@@ -507,6 +534,7 @@ const processPromotion = async (req, res) => {
                                 sourceSession,
                                 destinationSession: targetSession,
                                 eventType: 'repetition',
+                                effectiveDate: commencementDatesByClass[String(classId)],
                                 recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                             }, { inTransaction: true, client });
                         }
@@ -583,6 +611,7 @@ const processPromotion = async (req, res) => {
                             sourceSession,
                             destinationSession: targetSession,
                             eventType: selectedForPromotion && Number(desiredClassId) !== Number(classId) ? 'promotion' : 'repetition',
+                            effectiveDate: commencementDatesByClass[String(classId)],
                             recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                         }, { inTransaction: true, client });
 
@@ -606,18 +635,30 @@ const processPromotion = async (req, res) => {
             // Same-session promotions are valid for individual student movement,
             // but must leave the current session and term untouched.
             if (targetSession !== sourceSession) {
-                // CRITICAL: Advance Active Academic Calendar for School & All Sections
-                await tx.run(
-                    "UPDATE sections SET current_session = ?, current_term = '1st Term' WHERE school_id = ?",
-                    [targetSession, schoolId]
+                // Advance only sections represented by the processed class mappings.
+                for (const sectionId of affectedSectionIds) {
+                    await tx.run(
+                        "UPDATE sections SET current_session = ?, current_term = '1st Term' WHERE id = ? AND school_id = ?",
+                        [targetSession, sectionId, schoolId]
+                    );
+                }
+
+                // Keep legacy school-wide calendar values in sync only when
+                // every configured section is part of this transition.
+                const allSections = await tx.all(
+                    'SELECT id FROM sections WHERE school_id = ?',
+                    [schoolId]
                 );
-    
-                await tx.run(
-                    "UPDATE schools SET current_session = ?, current_term = '1st Term' WHERE id = ?",
-                    [targetSession, schoolId]
-                );
-    
-                // Upsert current_session in settings
+                const allSectionsIncluded = allSections.length > 0 &&
+                    allSections.every(section => affectedSectionIds.includes(Number(section.id)));
+
+                if (allSectionsIncluded) {
+                    await tx.run(
+                        "UPDATE schools SET current_session = ?, current_term = '1st Term' WHERE id = ?",
+                        [targetSession, schoolId]
+                    );
+
+                    // Upsert current_session in settings
                 const existingSession = await tx.get(
                     "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ?",
                     [schoolId]
@@ -649,6 +690,7 @@ const processPromotion = async (req, res) => {
                         "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_term', '1st Term')",
                         [schoolId]
                     );
+                    }
                 }
             }
 

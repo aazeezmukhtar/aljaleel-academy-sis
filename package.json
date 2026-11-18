@@ -20,7 +20,9 @@
     "test:student-enrollment-ui": "node tests/student-enrollment-ui.test.js",
     "test:student-departure-ui": "node tests/student-departure-ui.test.js",
     "test:student-departure-reenrollment": "node tests/student-departure-and-reenrollment.test.js",
-    "test:ui-shell": "node tests/ui-shell-accessibility.test.js"
+    "test:ui-shell": "node tests/ui-shell-accessibility.test.js",
+    "test:enrollment-periods-migration": "node tests/student-enrollment-periods-migration.test.js",
+    "test:bulk-import-visibility": "node tests/bulk-import-visibility.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

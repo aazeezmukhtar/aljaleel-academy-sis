@@ -118,7 +118,7 @@ async function testEnrollmentFailureRollsBackStudentAndEnrollment() {
     await studentController.enrollStudent({
       schoolId: 1,
       session: { staff: { id: 9, role: 'Admin', school_id: 1 } },
-      body: { first_name: 'Test', last_name: 'Student', gender: 'Female', current_class_id: '10' },
+      body: { first_name: 'Test', last_name: 'Student', gender: 'Female', current_class_id: '10', effective_date: '2026-09-01' },
       ip: '127.0.0.1'
     }, res);
 
@@ -182,7 +182,7 @@ async function testEnrollmentUsesSectionSessionAndTermAndOneTransaction() {
       session: { staff: { id: 9, role: 'Admin', school_id: 1 } },
       body: {
         first_name: 'Test', last_name: 'Student', gender: 'Female',
-        current_class_id: '10', section_3_class_id: '10', section_4_class_id: '20'
+        current_class_id: '10', section_3_class_id: '10', section_3_start_date: '2026-09-01', section_4_class_id: '20', section_4_start_date: '2026-09-01'
       },
       ip: '127.0.0.1'
     }, res);

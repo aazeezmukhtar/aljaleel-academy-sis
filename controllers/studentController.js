@@ -4,7 +4,7 @@ const { logAction } = require('../utils/logger');
 const { generateUniqueID } = require('../utils/idHelper');
 const bcrypt = require('bcryptjs');
 const { uploadFile } = require('../utils/storageHelper');
-const { changeEnrollment } = require('../services/studentEnrollmentHistoryService');
+const { changeEnrollment, validateEffectiveDate } = require('../services/studentEnrollmentHistoryService');
 
 const getStudents = async (req, res) => {
     const user = req.session.staff;
@@ -297,13 +297,25 @@ const enrollStudent = async (req, res) => {
             if (!cls || Number(cls.section_id) !== sectionId) {
                 return res.redirect('/students/enroll?error=Invalid class assignment');
             }
-            assignments.push({ sectionId, classId: cls.id });
+            let startDate;
+            try {
+                startDate = validateEffectiveDate(req.body[`section_${sectionId}_start_date`]);
+            } catch (dateError) {
+                return res.redirect('/students/enroll?error=' + encodeURIComponent(dateError.message));
+            }
+            assignments.push({ sectionId, classId: cls.id, startDate });
         }
 
         // Backward-compatible single-class form is used only when this form
         // did not submit section selectors at all (blank selectors mean "skip").
         if (!hasSectionSelectors && assignments.length === 0 && legacyClass) {
-            assignments.push({ sectionId: legacyClass.section_id || null, classId: legacyClass.id });
+            let startDate;
+            try {
+                startDate = validateEffectiveDate(req.body.effective_date);
+            } catch (dateError) {
+                return res.redirect('/students/enroll?error=' + encodeURIComponent(dateError.message));
+            }
+            assignments.push({ sectionId: legacyClass.section_id || null, classId: legacyClass.id, startDate });
         } else if (hasSectionSelectors && legacyClass &&
                    assignments.length > 0 &&
                    !assignments.some(item => Number(item.classId) === Number(legacyClass.id))) {
@@ -318,6 +330,9 @@ const enrollStudent = async (req, res) => {
             const term = context && context.term;
             if (!session || !term) {
                 throw new Error('Academic session or term is not configured for the selected class.');
+            }
+            if (!assignment.startDate) {
+                throw new Error('A commencement date is required for each selected section.');
             }
             assignmentPlans.push({ ...assignment, session, term });
         }
@@ -359,6 +374,7 @@ const enrollStudent = async (req, res) => {
                     destinationSession: plan.session,
                     destinationTerm: plan.term,
                     eventType: 'admission',
+                    effectiveDate: plan.startDate,
                     recordedBy: user.id
                 }, { inTransaction: true, client });
             }
@@ -866,7 +882,8 @@ const updateStudent = async (req, res) => {
                 sectionId: sec.id,
                 chosenClassId,
                 session: (ctx && ctx.session) || sec.current_session || activeSession,
-                term: (ctx && ctx.term) || sec.current_term || '1st Term'
+                term: (ctx && ctx.term) || sec.current_term || '1st Term',
+                effectiveDate: req.body[`section_${sec.id}_effective_date`] || null
             });
         }
 
@@ -883,6 +900,7 @@ const updateStudent = async (req, res) => {
                 chosenClassId: classRow.id,
                 session: (ctx && ctx.session) || activeSession,
                 term: (ctx && ctx.term) || '1st Term',
+                effectiveDate: req.body.effective_date || null,
                 legacySingleClass: true
             });
         }
@@ -980,6 +998,7 @@ const updateStudent = async (req, res) => {
                         destinationSession: plan.session,
                         destinationTerm: plan.term,
                         eventType: 'correction',
+                        effectiveDate: validateEffectiveDate(plan.effectiveDate),
                         recordedBy: user.id
                     }, { inTransaction: true, client });
                 } else if (current && Number(current.class_id) === Number(plan.chosenClassId)) {
@@ -997,6 +1016,7 @@ const updateStudent = async (req, res) => {
                         destinationSession: plan.session,
                         destinationTerm: plan.term,
                         eventType: 'admission',
+                        effectiveDate: validateEffectiveDate(plan.effectiveDate),
                         reason: isReenrollment ? 'Re-enrollment after departure' : null,
                         recordedBy: user.id
                     }, { inTransaction: true, client });

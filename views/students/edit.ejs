@@ -199,6 +199,9 @@
                                         <option value="<%= c.id %>" <%= currentEnrolledId == c.id ? 'selected' : '' %>><%= c.name %></option>
                                     <% }); %>
                                 </select>
+                                <label for="edit_section_<%= sec.id %>_effective_date" style="display:block;margin-top:10px;">Effective date (if changing placement)</label>
+                                <input type="date" id="edit_section_<%= sec.id %>_effective_date" name="section_<%= sec.id %>_effective_date" class="form-control">
+                                <small class="text-muted">Required only when changing the class assignment or re-enrolling this section.</small>
                             </div>
                             <% }); %>
                         </div>

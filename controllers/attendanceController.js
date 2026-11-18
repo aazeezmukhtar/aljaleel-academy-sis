@@ -333,6 +333,16 @@ const saveAttendance = async (req, res) => {
                 custom_reason = excluded.custom_reason
         `;
 
+        const settings = await getAcademicSettings(class_id, schoolId);
+        const effectiveSession = session || settings.session;
+        const effectiveTerm = term || settings.term;
+        if (!effectiveSession || !effectiveTerm) {
+            return res.status(409).json({
+                success: false,
+                message: 'The selected class has no configured academic session and term.'
+            });
+        }
+
         await db.transaction(async () => {
             for (const [studentIdStr, status] of Object.entries(attendance || {})) {
                 const student_id = Number(studentIdStr);
@@ -361,11 +371,9 @@ const saveAttendance = async (req, res) => {
                             )
                         )
                       )
-                `, [student_id, schoolId, Number(class_id), session || (await getAcademicSettings(class_id, schoolId)).session,
-                    Number(class_id), session || (await getAcademicSettings(class_id, schoolId)).session]);
+                `, [student_id, schoolId, Number(class_id), effectiveSession,
+                    Number(class_id), effectiveSession]);
                 if (!studentCheck) continue;
-
-                const settings = await getAcademicSettings(class_id, schoolId);
                 
                 const rawReason = reasons[studentIdStr] || null;
                 const customReason = custom_reasons[studentIdStr] || null;
@@ -382,8 +390,8 @@ const saveAttendance = async (req, res) => {
                     Number(classCheck.section_id),
                     date,
                     status,
-                    session || settings.session,
-                    term || settings.term,
+                    effectiveSession,
+                    effectiveTerm,
                     reason,
                     rawReason,
                     customReason

@@ -39,7 +39,7 @@ const studentController = require('../controllers/studentController');
     body: {
       first_name: 'Test', last_name: 'Student', gender: 'Female',
       dob: '2015-01-01', admission_number: 'TEST-55',
-      status: 'active', section_3_class_id: String(classId)
+      status: 'active', section_3_class_id: String(classId), section_3_effective_date: '2026-11-01'
     }
   });
   const res = {
@@ -88,7 +88,7 @@ const studentController = require('../controllers/studentController');
       if (sql.includes('SELECT current_session, current_term FROM sections')) {
         return { current_session: '2026/2027', current_term: '2nd Term' };
       }
-      if (sql.includes('SELECT id, status FROM students WHERE id = ? AND school_id = ?')) return { id: 55, status: 'active' };
+      if (sql.includes('SELECT id, status, current_class_id FROM students WHERE id = ? AND school_id = ?')) return { id: 55, status: 'active' };
       throw new Error('Unexpected database lookup: ' + sql);
     };
     db.run = async (sql, params, client) => {

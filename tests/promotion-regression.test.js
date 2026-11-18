@@ -326,7 +326,7 @@ async function run() {
     const targetConflictGraduation = response();
     await controller.processPromotion({
       schoolId, xhr: true,
-      body: { source_session: '2026/2027', target_session: '2027/2028', mapping: { [graduationSourceClass]: 'graduate' } }
+      body: { source_session: '2026/2027', target_session: '2027/2028', mapping: { [graduationSourceClass]: 'graduate' }, commencement_dates: { [graduationSourceClass]: '2027-06-30' } }
     }, targetConflictGraduation);
     assert.strictEqual(targetConflictGraduation.statusCode, 500, 'Same-section target-session placements must block graduation');
     assert.match(targetConflictGraduation.data.message, /target session/i);
@@ -441,7 +441,7 @@ async function run() {
     const blockedGraduation = response();
     await controller.processPromotion({
       schoolId, xhr: true,
-      body: { source_session: '2028/2029', target_session: '2029/2030', mapping: { [selectiveGraduationClass]: 'graduate' } }
+      body: { source_session: '2028/2029', target_session: '2029/2030', mapping: { [selectiveGraduationClass]: 'graduate' }, commencement_dates: { [selectiveGraduationClass]: '2029-06-30' } }
     }, blockedGraduation);
     assert.strictEqual(blockedGraduation.statusCode, 200, 'Graduation from one section must be allowed when another section placement remains');
     assert.strictEqual(blockedGraduation.data.success, true);

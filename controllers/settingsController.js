@@ -486,8 +486,17 @@ const processPromotion = async (req, res) => {
                                 SELECT id
                                 FROM student_enrollment_periods
                                 WHERE school_id = ? AND student_id = ? AND end_date IS NULL
+                                UNION ALL
+                                SELECT se.id
+                                FROM student_enrollments se
+                                JOIN classes c ON c.id = se.class_id AND c.school_id = ?
+                                WHERE se.student_id = ? AND se.session IN (?, ?)
+                                  AND c.section_id <> ?
                                 LIMIT 1
-                            `, [schoolId, student.id]);
+                            `, [
+                                schoolId, student.id, schoolId, student.id,
+                                sourceSession, targetSession, classSectionIdMap[classId]
+                            ]);
 
                             await tx.run(
                                 remainingOpenPeriods

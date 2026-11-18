@@ -276,18 +276,19 @@ async function run() {
     assert.strictEqual(Number(oldStudent.current_class_id), Number(sourceClass), 'Previous-session-only student must not be promoted');
     assert.strictEqual(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND session = ?', [previousStudent, '2026/2027']), undefined);
 
-    for (const id of sectionIds) {
-      const section = await db.get('SELECT current_session, current_term FROM sections WHERE id = ? AND school_id = ?', [id, schoolId]);
-      assert.strictEqual(section.current_session, '2026/2027');
-      assert.strictEqual(section.current_term, '1st Term');
-    }
+    const sourceSection = await db.get('SELECT current_session, current_term FROM sections WHERE id = ? AND school_id = ?', [sectionIds[0], schoolId]);
+    assert.strictEqual(sourceSection.current_session, '2026/2027', 'The section included in the promotion must advance');
+    assert.strictEqual(sourceSection.current_term, '1st Term');
+    const untouchedSection = await db.get('SELECT current_session, current_term FROM sections WHERE id = ? AND school_id = ?', [sectionIds[1], schoolId]);
+    assert.strictEqual(untouchedSection.current_session, '2025/2026', 'A section not included in the promotion must keep its calendar');
+    assert.strictEqual(untouchedSection.current_term, '2nd Term');
     calendar = await db.get('SELECT current_session, current_term FROM schools WHERE id = ?', [schoolId]);
-    assert.strictEqual(calendar.current_session, '2026/2027');
-    assert.strictEqual(calendar.current_term, '1st Term');
+    assert.strictEqual(calendar.current_session, '2025/2026', 'Legacy school-wide calendar must remain unchanged for a partial section transition');
+    assert.strictEqual(calendar.current_term, '2nd Term');
     setting = await db.get("SELECT value FROM settings WHERE school_id = ? AND key = 'current_session'", [schoolId]);
-    assert.strictEqual(setting.value, '2026/2027');
+    assert.strictEqual(setting.value, '2025/2026', 'Legacy session setting must remain unchanged for a partial section transition');
     const term = await db.get("SELECT value FROM settings WHERE school_id = ? AND key = 'current_term'", [schoolId]);
-    assert.strictEqual(term.value, '1st Term');
+    assert.strictEqual(term.value, '2nd Term');
 
     // A stale extra target-session enrollment is ambiguous and must not be silently
     // deleted or replaced by a repeated promotion.

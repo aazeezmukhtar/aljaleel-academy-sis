@@ -27,6 +27,9 @@ async function attemptDeleteWithHistory(historyType) {
       if (sql.toLowerCase().includes('count(') && sql.includes('attendance')) {
         return { count: historyType === 'attendance' ? 1 : 0 };
       }
+      if (sql.toLowerCase().includes('count(') && sql.includes('student_enrollment_periods')) {
+        return { count: historyType === 'placement' ? 1 : 0 };
+      }
       throw new Error('Unexpected database read: ' + sql);
     };
     db.all = async () => [];
@@ -53,7 +56,8 @@ async function attemptDeleteWithHistory(historyType) {
 (async () => {
   await attemptDeleteWithHistory('enrollment');
   await attemptDeleteWithHistory('attendance');
-  console.log('[class-deletion-history] Historical enrollment and attendance protection tests passed.');
+  await attemptDeleteWithHistory('placement');
+  console.log('[class-deletion-history] Enrollment, dated placement and attendance protection tests passed.');
 })().catch(error => {
   console.error('[class-deletion-history] Test failed:', error);
   process.exitCode = 1;

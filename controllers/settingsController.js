@@ -426,6 +426,12 @@ const processPromotion = async (req, res) => {
             }
         }
 
+        const affectedSectionIds = Array.from(new Set(
+            Object.keys(commencementDatesByClass)
+                .map(classId => Number(classSectionIdMap[Number(classId)]))
+                .filter(Number.isSafeInteger)
+        ));
+
         await db.transaction(async client => {
             const tx = {
                 all: (sql, params = []) => db.all(sql, params, client),
@@ -629,18 +635,30 @@ const processPromotion = async (req, res) => {
             // Same-session promotions are valid for individual student movement,
             // but must leave the current session and term untouched.
             if (targetSession !== sourceSession) {
-                // CRITICAL: Advance Active Academic Calendar for School & All Sections
-                await tx.run(
-                    "UPDATE sections SET current_session = ?, current_term = '1st Term' WHERE school_id = ?",
-                    [targetSession, schoolId]
+                // Advance only sections represented by the processed class mappings.
+                for (const sectionId of affectedSectionIds) {
+                    await tx.run(
+                        "UPDATE sections SET current_session = ?, current_term = '1st Term' WHERE id = ? AND school_id = ?",
+                        [targetSession, sectionId, schoolId]
+                    );
+                }
+
+                // Keep legacy school-wide calendar values in sync only when
+                // every configured section is part of this transition.
+                const allSections = await tx.all(
+                    'SELECT id FROM sections WHERE school_id = ?',
+                    [schoolId]
                 );
-    
-                await tx.run(
-                    "UPDATE schools SET current_session = ?, current_term = '1st Term' WHERE id = ?",
-                    [targetSession, schoolId]
-                );
-    
-                // Upsert current_session in settings
+                const allSectionsIncluded = allSections.length > 0 &&
+                    allSections.every(section => affectedSectionIds.includes(Number(section.id)));
+
+                if (allSectionsIncluded) {
+                    await tx.run(
+                        "UPDATE schools SET current_session = ?, current_term = '1st Term' WHERE id = ?",
+                        [targetSession, schoolId]
+                    );
+
+                    // Upsert current_session in settings
                 const existingSession = await tx.get(
                     "SELECT value FROM settings WHERE key = 'current_session' AND school_id = ?",
                     [schoolId]
@@ -672,6 +690,7 @@ const processPromotion = async (req, res) => {
                         "INSERT INTO settings (school_id, key, value) VALUES (?, 'current_term', '1st Term')",
                         [schoolId]
                     );
+                    }
                 }
             }
 

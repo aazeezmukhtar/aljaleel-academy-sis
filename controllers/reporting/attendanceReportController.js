@@ -80,7 +80,6 @@ const getRegister = async (req, res) => {
                 SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number
                 FROM students s
                 WHERE s.school_id = ?
-                  AND s.status = 'active'
                   AND (
                     EXISTS (
                       SELECT 1
@@ -112,11 +111,19 @@ const getRegister = async (req, res) => {
 
             const clazz = await db.get('SELECT name FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
 
+            const attendanceByStudent = new Map();
+            (attendance || []).forEach(row => {
+                const key = String(row.student_id);
+                if (!attendanceByStudent.has(key)) attendanceByStudent.set(key, []);
+                attendanceByStudent.get(key).push(row);
+            });
+
             const formattedStudents = (students || []).map(s => {
                 const studentAttendance = {};
                 let present = 0, absent = 0, late = 0;
-                attendance.filter(a => a.student_id === s.id).forEach(a => {
-                    const day = new Date(a.date).getDate();
+                (attendanceByStudent.get(String(s.id)) || []).forEach(a => {
+                    // Parse the database date as a calendar date, not a UTC timestamp.
+                    const day = Number(String(a.date).slice(8, 10));
                     studentAttendance[day] = a.status;
                     if (a.status === 'Present') present++;
                     else if (a.status === 'Absent') absent++;

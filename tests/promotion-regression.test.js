@@ -296,7 +296,7 @@ async function run() {
     const repeated = response();
     await controller.processPromotion({
       schoolId, xhr: true,
-      body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) } }
+      body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) }, commencement_dates: { [sourceClass]: '2026-09-01' } }
     }, repeated);
     assert.strictEqual(repeated.statusCode, 500);
     assert.strictEqual(repeated.data.success, false, 'Ambiguous target placements must stop promotion');

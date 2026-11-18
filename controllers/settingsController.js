@@ -2,7 +2,7 @@ const db = require('../utils/db');
 const tenantHelper = require('../utils/tenantHelper');
 const sessionHelper = require('../utils/sessionHelper');
 const { uploadFile } = require('../utils/storageHelper');
-const { changeEnrollment } = require('../services/studentEnrollmentHistoryService');
+const { changeEnrollment, validateEffectiveDate } = require('../services/studentEnrollmentHistoryService');
 
 // Get Settings Page
 const getSettingsPage = async (req, res) => {
@@ -412,6 +412,20 @@ const processPromotion = async (req, res) => {
             return res.redirect(`/settings/promotion?message=${encodeURIComponent(message)}`);
         }
 
+        const commencementDatesByClass = {};
+        for (const [classId, targetId] of Object.entries(mapping || {})) {
+            if (!targetId || targetId === 'none') continue;
+            try {
+                commencementDatesByClass[classId] = validateEffectiveDate(
+                    (req.body.commencement_dates || {})[classId]
+                );
+            } catch (dateError) {
+                const message = `A valid commencement date is required for section class ${classId}: ${dateError.message}`;
+                if (isAjax) return res.status(400).json({ success: false, message });
+                return res.redirect(`/settings/promotion?error=${encodeURIComponent(message)}`);
+            }
+        }
+
         await db.transaction(async client => {
             const tx = {
                 all: (sql, params = []) => db.all(sql, params, client),
@@ -479,6 +493,7 @@ const processPromotion = async (req, res) => {
                                 sourceClassId: classId,
                                 sourceSession,
                                 eventType: 'graduation',
+                                effectiveDate: commencementDatesByClass[String(classId)],
                                 recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                             }, { inTransaction: true, client });
                             await tx.run(
@@ -507,6 +522,7 @@ const processPromotion = async (req, res) => {
                                 sourceSession,
                                 destinationSession: targetSession,
                                 eventType: 'repetition',
+                                effectiveDate: commencementDatesByClass[String(classId)],
                                 recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                             }, { inTransaction: true, client });
                         }
@@ -583,6 +599,7 @@ const processPromotion = async (req, res) => {
                             sourceSession,
                             destinationSession: targetSession,
                             eventType: selectedForPromotion && Number(desiredClassId) !== Number(classId) ? 'promotion' : 'repetition',
+                            effectiveDate: commencementDatesByClass[String(classId)],
                             recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                         }, { inTransaction: true, client });
 

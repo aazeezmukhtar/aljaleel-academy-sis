@@ -166,7 +166,7 @@ const getLowAttendance = async (req, res) => {
         if (term && session) {
             const lowAttendanceSql = db.DB_TYPE === 'postgres'
                 ? `SELECT
-                    s.first_name, s.last_name, s.admission_number, c.name as class_name,
+                    s.first_name, s.last_name, s.admission_number, c.name as class_name, c.section_id,
                     SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present_days,
                     COUNT(a.id) as total_days,
                     ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) as percentage
@@ -174,7 +174,7 @@ const getLowAttendance = async (req, res) => {
                 JOIN attendance a ON s.id = a.student_id
                 JOIN classes c ON a.class_id = c.id
                 WHERE a.term = $1 AND a.session = $2 AND s.school_id = $4
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, a.class_id
+                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, c.section_id, a.class_id
                 HAVING ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) < $3
                 AND COUNT(a.id) > 0
                 ORDER BY percentage ASC`

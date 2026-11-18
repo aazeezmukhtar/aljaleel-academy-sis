@@ -153,7 +153,7 @@ const base = {
     await assert.rejects(() => changeEnrollment({
       ...base, eventType: 'admission', sourceClassId: null,
       destinationClassId: 1000, sourceSession: null,
-      destinationSession: '2027/2028', effectiveDate: '2027-01-01'
+      destinationSession: '2028/2029', effectiveDate: '2027-01-01'
     }), /overlaps an existing dated placement/,
       'A new open-ended placement must not overlap an existing open period in the same section');
 

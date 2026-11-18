@@ -67,3 +67,16 @@ The application save path now derives section from the selected class on the ser
 ### Test
 
 Run `npm run test:attendance-section`. This SQLite invariant test checks class-derived backfill and independent same-day attendance for separate sections. It is not a substitute for running the migration against a disposable PostgreSQL database matching production.
+
+
+The SQLite counterpart is `20261118_section_aware_attendance.sqlite.sql`. It rebuilds
+the attendance table to replace the old table-level unique constraint while
+preserving IDs, status, date, session, term, reason fields, and arm_id. It is
+also explicit/manual and must be tested on a backup copy before use. Run
+`npm run test:attendance-sqlite` for the disposable in-memory preservation test.
+
+Historical attendance registers now use `student_enrollment_periods` where
+placement dates overlap the selected month, and include students with recorded
+attendance in that month to preserve legacy evidence. Legacy enrollment dates
+are not inferred. The dated-period migration must exist before this report
+query is deployed.

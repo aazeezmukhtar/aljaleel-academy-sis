@@ -278,6 +278,9 @@
                                             <option value="<%= cls.id %>"><%= cls.name %><%= cls.section_name ? ' (' + cls.section_name + ')' : '' %></option>
                                         <% }); %>
                                     </select>
+                                    <label for="effective_date" style="margin-top:12px;">Commencement date</label>
+                                    <input type="date" id="effective_date" name="effective_date">
+                                    <small class="student-enroll-help">Required when assigning a class. This is the first officially enrolled day.</small>
                                 </div>
                             </div>
                         <% } %>

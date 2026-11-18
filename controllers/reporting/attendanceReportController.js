@@ -5,7 +5,7 @@ const getAttendanceDashboard = async (req, res) => {
     const schoolId = req.schoolId || (user ? user.school_id : 1);
     try {
         const dateSql = db.DB_TYPE === 'postgres'
-            ? "SELECT COUNT(*) as count FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.date = CURRENT_DATE AND s.school_id = $2"
+            ? "SELECT COUNT(*) as count FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.date = CURRENT_DATE AND s.school_id = $1"
             : "SELECT COUNT(*) as count FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.date = date('now') AND s.school_id = ?";
         const statsResult = await db.get(dateSql, [schoolId]);
         const stats = {
@@ -31,7 +31,8 @@ const getDailyAttendance = async (req, res) => {
         let records = [];
         if (class_id && date) {
             records = await db.all(`
-                SELECT s.first_name, s.last_name, s.admission_number, a.status, a.date
+                SELECT s.first_name, s.last_name, s.admission_number,
+                       a.status, a.date, a.section_id
                 FROM students s
                 JOIN attendance a ON s.id = a.student_id
                 WHERE a.class_id = ? AND a.date = ?
@@ -157,11 +158,11 @@ const getLowAttendance = async (req, res) => {
                     COUNT(a.id) as total_days,
                     ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) as percentage
                 FROM students s
-                JOIN classes c ON s.current_class_id = c.id
                 JOIN attendance a ON s.id = a.student_id
-                WHERE a.term = $1 AND a.session = $2 AND s.school_id = $2
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
-                HAVING ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) < $3
+                JOIN classes c ON a.class_id = c.id
+                WHERE a.term = $1 AND a.session = $2 AND s.school_id = $3
+                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, a.section_id
+                HAVING ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) < $4
                 AND COUNT(a.id) > 0
                 ORDER BY percentage ASC`
                 : `SELECT
@@ -173,7 +174,7 @@ const getLowAttendance = async (req, res) => {
                 JOIN classes c ON s.current_class_id = c.id
                 JOIN attendance a ON s.id = a.student_id
                 WHERE a.term = ? AND a.session = ? AND s.school_id = ?
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, a.section_id
                 HAVING percentage < ? AND total_days > 0
                 ORDER BY percentage ASC`;
             students = await db.all(lowAttendanceSql, db.DB_TYPE === 'postgres' ? [term, session, activeThreshold, schoolId] : [term, session, schoolId, activeThreshold]);

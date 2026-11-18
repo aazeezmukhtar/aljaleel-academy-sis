@@ -150,6 +150,12 @@ const base = {
       destinationClassId: 1001, sourceSession: null,
       destinationSession: '2026/2027', effectiveDate: null
     }), /required/, 'Admission must have an explicit commencement date');
+    await assert.rejects(() => changeEnrollment({
+      ...base, eventType: 'admission', sourceClassId: null,
+      destinationClassId: 1000, sourceSession: null,
+      destinationSession: '2027/2028', effectiveDate: '2027-01-01'
+    }), /overlaps an existing dated placement/,
+      'A new open-ended placement must not overlap an existing open period in the same section');
 
     const events = sqlite.prepare(
       'SELECT event_type, source_class_id, destination_class_id, source_session, destination_session FROM student_enrollment_history ORDER BY id'

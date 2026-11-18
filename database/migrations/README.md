@@ -52,3 +52,18 @@ See the dedicated migration note for the date conventions, ownership checks, pre
 Run `node tests/student-enrollment-periods-migration.test.js`.
 
 The in-memory SQLite test verifies the schema, foreign-key-backed references, date ordering, supported date statuses, and safe reruns. PostgreSQL must also be tested against a disposable database matching the deployed schema before production approval.
+
+## Section-aware attendance foundation (2026-11-18)
+
+Files:
+
+- `20261118_section_aware_attendance.postgres.sql`
+- `20261118_section_aware_attendance.md`
+
+This is an explicit/manual PostgreSQL migration. It adds attendance section ownership by deriving each existing row's section from its class, verifies ownership and duplicate invariants, and replaces the legacy global uniqueness key with a section-scoped key. It is not wired into application startup. Review the migration note and rerun all read-only preflight queries immediately before any production execution.
+
+The application save path now derives section from the selected class on the server, requires a configured session/term, and checks the student's membership in the selected class for that session (with the existing legacy current-class fallback only when no session enrollment exists).
+
+### Test
+
+Run `npm run test:attendance-section`. This SQLite invariant test checks class-derived backfill and independent same-day attendance for separate sections. It is not a substitute for running the migration against a disposable PostgreSQL database matching production.

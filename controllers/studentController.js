@@ -876,7 +876,8 @@ const updateStudent = async (req, res) => {
                 sectionId: sec.id,
                 chosenClassId,
                 session: (ctx && ctx.session) || sec.current_session || activeSession,
-                term: (ctx && ctx.term) || sec.current_term || '1st Term'
+                term: (ctx && ctx.term) || sec.current_term || '1st Term',
+                effectiveDate: req.body[`section_${sec.id}_effective_date`] || null
             });
         }
 
@@ -893,6 +894,7 @@ const updateStudent = async (req, res) => {
                 chosenClassId: classRow.id,
                 session: (ctx && ctx.session) || activeSession,
                 term: (ctx && ctx.term) || '1st Term',
+                effectiveDate: req.body.effective_date || null,
                 legacySingleClass: true
             });
         }
@@ -990,6 +992,7 @@ const updateStudent = async (req, res) => {
                         destinationSession: plan.session,
                         destinationTerm: plan.term,
                         eventType: 'correction',
+                        effectiveDate: validateEffectiveDate(plan.effectiveDate),
                         recordedBy: user.id
                     }, { inTransaction: true, client });
                 } else if (current && Number(current.class_id) === Number(plan.chosenClassId)) {
@@ -1007,6 +1010,7 @@ const updateStudent = async (req, res) => {
                         destinationSession: plan.session,
                         destinationTerm: plan.term,
                         eventType: 'admission',
+                        effectiveDate: validateEffectiveDate(plan.effectiveDate),
                         reason: isReenrollment ? 'Re-enrollment after departure' : null,
                         recordedBy: user.id
                     }, { inTransaction: true, client });

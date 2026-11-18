@@ -459,20 +459,6 @@ const processPromotion = async (req, res) => {
                     for (const student of enrolledStudents) {
                         const selectedForGraduation = !hasExplicitStudentSelection || classSelection.has(Number(student.id));
                         if (selectedForGraduation) {
-                            // Student status is global. Do not graduate a student who
-                            // remains enrolled in another section in either session.
-                            const otherSectionEnrollment = await tx.get(`
-                                SELECT se.id
-                                FROM student_enrollments se
-                                JOIN classes c ON c.id = se.class_id AND c.school_id = ?
-                                WHERE se.student_id = ? AND se.session IN (?, ?)
-                                  AND c.section_id <> ?
-                                LIMIT 1
-                            `, [schoolId, student.id, sourceSession, targetSession, classSectionIdMap[classId]]);
-                            if (otherSectionEnrollment) {
-                                throw new Error('Graduation stopped: a selected student remains enrolled in another section. Review that student individually before graduating.');
-                            }
-
                             // Graduation must close the student's school placement,
                             // not leave a pre-existing enrollment in the target session.
                             const targetSectionEnrollment = await tx.get(`
@@ -496,9 +482,20 @@ const processPromotion = async (req, res) => {
                                 effectiveDate: commencementDatesByClass[String(classId)],
                                 recordedBy: req.session && req.session.staff ? req.session.staff.id : null
                             }, { inTransaction: true, client });
+                            const remainingOpenPeriods = await tx.get(`
+                                SELECT id
+                                FROM student_enrollment_periods
+                                WHERE school_id = ? AND student_id = ? AND end_date IS NULL
+                                LIMIT 1
+                            `, [schoolId, student.id]);
+
                             await tx.run(
-                                "UPDATE students SET status = 'graduated', current_class_id = NULL WHERE id = ? AND school_id = ?",
-                                [student.id, schoolId]
+                                remainingOpenPeriods
+                                    ? "UPDATE students SET status = 'active', current_class_id = CASE WHEN current_class_id = ? THEN NULL ELSE current_class_id END WHERE id = ? AND school_id = ?"
+                                    : "UPDATE students SET status = 'graduated', current_class_id = NULL WHERE id = ? AND school_id = ?",
+                                remainingOpenPeriods
+                                    ? [classId, student.id, schoolId]
+                                    : [student.id, schoolId]
                             );
                         } else {
                             // Unselected students repeat the same class in the target session.

@@ -420,7 +420,8 @@ const getReport = async (req, res) => {
     const user = req.session.staff;
 
     try {
-        const classes = await getAssignedClasses(user);
+        const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
+        const classes = await getAssignedClasses(user, schoolId);
         let reportData = null;
 
         if (class_id && start_date && end_date) {
@@ -441,10 +442,11 @@ const getReport = async (req, res) => {
                     COUNT(a.id) as total_days
                     FROM students s
                     JOIN attendance a ON s.id = a.student_id
-                    WHERE a.class_id = ? AND a.date BETWEEN ? AND ?
+                    JOIN classes c ON c.id = a.class_id AND c.school_id = s.school_id
+                    WHERE a.class_id = ? AND a.date BETWEEN ? AND ? AND s.school_id = ?
                     GROUP BY s.id
                     ORDER BY s.last_name, s.first_name
-                `, [Number(class_id), start_date, end_date]);
+                `, [Number(class_id), start_date, end_date, schoolId]);
             }
         }
 

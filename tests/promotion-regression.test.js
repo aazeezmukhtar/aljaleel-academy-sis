@@ -48,6 +48,24 @@ async function run() {
         CHECK (source_class_id IS NOT NULL OR destination_class_id IS NOT NULL)
       )
     `);
+    await db.run(`
+      CREATE TABLE IF NOT EXISTS student_enrollment_periods (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        school_id INTEGER NOT NULL,
+        student_id INTEGER NOT NULL,
+        section_id INTEGER NOT NULL,
+        class_id INTEGER NOT NULL,
+        session TEXT NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE,
+        start_event_id INTEGER,
+        end_event_id INTEGER,
+        date_status TEXT NOT NULL DEFAULT 'confirmed',
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        CHECK (end_date IS NULL OR end_date >= start_date)
+      )
+    `);
     await db.run("INSERT INTO schools (name, slug, current_session, current_term, status) VALUES (?, ?, '2025/2026', '2nd Term', 'active')", ['Promotion Test ' + token, slug]);
     schoolId = (await db.get('SELECT id FROM schools WHERE slug = ?', [slug])).id;
     await db.run("INSERT INTO schools (name, slug, current_session, current_term, status) VALUES (?, ?, '2025/2026', '2nd Term', 'active')", ['Foreign Test ' + token, 'promotion-foreign-' + token]);

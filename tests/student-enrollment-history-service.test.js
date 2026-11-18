@@ -22,6 +22,21 @@ sqlite.exec(`
     term TEXT,
     UNIQUE(student_id, class_id, session)
   );
+  CREATE TABLE student_enrollment_periods (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    school_id INTEGER NOT NULL,
+    student_id INTEGER NOT NULL,
+    section_id INTEGER NOT NULL,
+    class_id INTEGER NOT NULL,
+    session TEXT NOT NULL,
+    start_date TEXT NOT NULL,
+    end_date TEXT,
+    start_event_id INTEGER,
+    end_event_id INTEGER,
+    date_status TEXT NOT NULL DEFAULT 'confirmed',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE TABLE student_enrollment_history (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     school_id INTEGER NOT NULL REFERENCES schools(id),
@@ -48,6 +63,11 @@ sqlite.exec(`
   INSERT INTO classes VALUES (1000, 1, 10), (1001, 1, 10), (2000, 1, 20);
   INSERT INTO student_enrollments (student_id, class_id, session)
     VALUES (100, 1000, '2026/2027'), (100, 2000, '2026/2027');
+  INSERT INTO student_enrollment_periods
+    (school_id, student_id, section_id, class_id, session, start_date)
+    VALUES
+      (1, 100, 10, 1000, '2026/2027', '2026-09-01'),
+      (1, 100, 20, 2000, '2026/2027', '2026-09-01');
 `);
 
 const fakeDb = {
@@ -100,7 +120,7 @@ const base = {
       ...base,
       sourceClassId: 1001, destinationClassId: 1001,
       sourceSession: '2026/2027', destinationSession: '2027/2028',
-      eventType: 'promotion', effectiveDate: null, reason: null
+      eventType: 'promotion', effectiveDate: '2027-09-01', reason: null
     });
     assert.strictEqual(promotion.changed, true);
     assert.strictEqual(sqlite.prepare(
@@ -109,6 +129,14 @@ const base = {
     assert.strictEqual(sqlite.prepare(
       'SELECT COUNT(*) AS count FROM student_enrollments WHERE student_id = 100 AND class_id = 1001 AND session = ?'
     ).get('2027/2028').count, 1, 'Cross-session promotion must add destination placement');
+    const closedTransferPeriod = sqlite.prepare(
+      'SELECT end_date FROM student_enrollment_periods WHERE class_id = 1000'
+    ).get();
+    assert.strictEqual(closedTransferPeriod.end_date, '2026-11-04', 'Transfer must end source placement the day before destination begins');
+    const newPromotionPeriod = sqlite.prepare(
+      "SELECT start_date, end_date FROM student_enrollment_periods WHERE class_id = 1001 AND session = '2027/2028'"
+    ).get();
+    assert.deepStrictEqual(newPromotionPeriod, { start_date: '2027-09-01', end_date: null }, 'Promotion must open a dated destination period');
 
     await assert.rejects(() => changeEnrollment({
       ...base, destinationClassId: 2000, eventType: 'internal_transfer'
@@ -117,6 +145,11 @@ const base = {
     await assert.rejects(() => changeEnrollment({
       ...base, effectiveDate: '2026-02-30'
     }), /valid calendar date/, 'Invalid effective dates must be rejected');
+    await assert.rejects(() => changeEnrollment({
+      ...base, eventType: 'admission', sourceClassId: null,
+      destinationClassId: 1001, sourceSession: null,
+      destinationSession: '2026/2027', effectiveDate: null
+    }), /required/, 'Admission must have an explicit commencement date');
 
     const events = sqlite.prepare(
       'SELECT event_type, source_class_id, destination_class_id, source_session, destination_session FROM student_enrollment_history ORDER BY id'

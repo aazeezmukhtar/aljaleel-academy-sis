@@ -23,7 +23,8 @@
     "test:ui-shell": "node tests/ui-shell-accessibility.test.js",
     "test:enrollment-periods-migration": "node tests/student-enrollment-periods-migration.test.js",
     "test:bulk-import-visibility": "node tests/bulk-import-visibility.test.js",
-    "test:attendance-section": "node tests/section-aware-attendance-migration.test.js"
+    "test:attendance-section": "node tests/section-aware-attendance-migration.test.js",
+    "test:attendance-postgres": "node tests/section-aware-attendance-postgres.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

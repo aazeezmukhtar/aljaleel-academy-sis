@@ -218,8 +218,8 @@ async function applyEnrollmentChange(input, client) {
         const overlap = await db.get(`
             SELECT id FROM student_enrollment_periods
             WHERE school_id = ? AND student_id = ? AND section_id = ?
-              AND start_date <= COALESCE(end_date, '9999-12-31')
-              AND ? <= COALESCE(end_date, '9999-12-31')
+              AND start_date <= ?
+              AND COALESCE(end_date, '9999-12-31') >= ?
             LIMIT 1
         `, [schoolId, studentId, resolvedSectionId, normalizedDate, normalizedDate], client);
         if (overlap) {

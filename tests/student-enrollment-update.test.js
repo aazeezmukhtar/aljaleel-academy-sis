@@ -17,6 +17,12 @@ require.cache[servicePath] = {
     changeEnrollment: async (input, options) => {
       historyCalls.push({ input, options });
       return { changed: true };
+    },
+    validateEffectiveDate: value => {
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(String(value || ''))) throw new Error('A valid effective date is required.');
+      const date = new Date(String(value) + 'T00:00:00Z');
+      if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) throw new Error('A valid effective date is required.');
+      return value;
     }
   }
 };

@@ -20,6 +20,7 @@ const tests = [
   ['section-owned-academic-records-writes.test.js', 'Class-owned result and section-specific trait write tests'],
   ['attendance-streak.test.js', 'Attendance streak and history unit tests'],
   ['attendance-student-helper.test.js', 'Attendance missing-student rows regression tests'],
+  ['section-aware-attendance-migration.test.js', 'Section-derived attendance backfill and section-scoped uniqueness tests'],
   ['enrollment-session.test.js', 'Enrollment session isolation unit tests'],
   ['enrollment-helper-session-context.test.js', 'Session-specific enrollment class context tests'],
   ['student-enrollment-update.test.js', 'Student update class validation tests'],

@@ -73,28 +73,34 @@ const getRegister = async (req, res) => {
             const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
             const endDate = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-            const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session' AND school_id = ? ORDER BY school_id DESC LIMIT 1", [schoolId]);
-            const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
-            let students = await db.all(`
-                SELECT s.id, s.first_name, s.last_name, s.admission_number
+            // Build the historical class roster from dated placement periods.
+            // Also retain students with actual attendance in the requested month,
+            // including legacy rows whose original placement dates are unknown.
+            const students = await db.all(`
+                SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number
                 FROM students s
-                JOIN student_enrollments se ON s.id = se.student_id
-                WHERE se.class_id = ? AND se.session = ?
-                AND s.status = 'active'
-                AND s.school_id = ?
+                WHERE s.school_id = ?
+                  AND s.status = 'active'
+                  AND (
+                    EXISTS (
+                      SELECT 1
+                      FROM student_enrollment_periods ep
+                      WHERE ep.student_id = s.id
+                        AND ep.school_id = s.school_id
+                        AND ep.class_id = ?
+                        AND ep.start_date <= ?
+                        AND (ep.end_date IS NULL OR ep.end_date >= ?)
+                    )
+                    OR EXISTS (
+                      SELECT 1
+                      FROM attendance a_legacy
+                      WHERE a_legacy.student_id = s.id
+                        AND a_legacy.class_id = ?
+                        AND a_legacy.date BETWEEN ? AND ?
+                    )
+                  )
                 ORDER BY s.last_name, s.first_name
-            `, [class_id, currentSession, schoolId]);
-
-            if (!students || students.length === 0) {
-                students = await db.all(`
-                    SELECT id, first_name, last_name, admission_number
-                    FROM students
-                    WHERE current_class_id = ? AND status = 'active'
-                      AND school_id = ?
-                    ORDER BY last_name, first_name
-                `, [class_id, schoolId]);
-            }
+            `, [schoolId, class_id, endDate, startDate, class_id, startDate, endDate]);
 
             const attendance = await db.all(`
                 SELECT a.student_id, a.date, a.status

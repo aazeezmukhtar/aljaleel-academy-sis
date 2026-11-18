@@ -218,10 +218,9 @@ async function applyEnrollmentChange(input, client) {
         const overlap = await db.get(`
             SELECT id FROM student_enrollment_periods
             WHERE school_id = ? AND student_id = ? AND section_id = ?
-              AND start_date <= ?
               AND COALESCE(end_date, '9999-12-31') >= ?
             LIMIT 1
-        `, [schoolId, studentId, resolvedSectionId, normalizedDate, normalizedDate], client);
+        `, [schoolId, studentId, resolvedSectionId, normalizedDate], client);
         if (overlap) {
             throw new Error('This effective date overlaps an existing dated placement in the same section. Review the timeline before continuing.');
         }

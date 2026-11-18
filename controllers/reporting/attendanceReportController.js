@@ -5,7 +5,7 @@ const getAttendanceDashboard = async (req, res) => {
     const schoolId = req.schoolId || (user ? user.school_id : 1);
     try {
         const dateSql = db.DB_TYPE === 'postgres'
-            ? "SELECT COUNT(*) as count FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.date = CURRENT_DATE AND s.school_id = $2"
+            ? "SELECT COUNT(*) as count FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.date = CURRENT_DATE AND s.school_id = $1"
             : "SELECT COUNT(*) as count FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.date = date('now') AND s.school_id = ?";
         const statsResult = await db.get(dateSql, [schoolId]);
         const stats = {
@@ -31,7 +31,8 @@ const getDailyAttendance = async (req, res) => {
         let records = [];
         if (class_id && date) {
             records = await db.all(`
-                SELECT s.first_name, s.last_name, s.admission_number, a.status, a.date
+                SELECT s.first_name, s.last_name, s.admission_number,
+                       a.status, a.date, a.section_id
                 FROM students s
                 JOIN attendance a ON s.id = a.student_id
                 WHERE a.class_id = ? AND a.date = ?
@@ -72,28 +73,33 @@ const getRegister = async (req, res) => {
             const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
             const endDate = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-            const sessionRow = await db.get("SELECT value FROM settings WHERE key = 'current_session' AND school_id = ? ORDER BY school_id DESC LIMIT 1", [schoolId]);
-            const currentSession = sessionRow ? sessionRow.value : '2024/2025';
-
-            let students = await db.all(`
-                SELECT s.id, s.first_name, s.last_name, s.admission_number
+            // Build the historical class roster from dated placement periods.
+            // Also retain students with actual attendance in the requested month,
+            // including legacy rows whose original placement dates are unknown.
+            const students = await db.all(`
+                SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number
                 FROM students s
-                JOIN student_enrollments se ON s.id = se.student_id
-                WHERE se.class_id = ? AND se.session = ?
-                AND s.status = 'active'
-                AND s.school_id = ?
+                WHERE s.school_id = ?
+                  AND (
+                    EXISTS (
+                      SELECT 1
+                      FROM student_enrollment_periods ep
+                      WHERE ep.student_id = s.id
+                        AND ep.school_id = s.school_id
+                        AND ep.class_id = ?
+                        AND ep.start_date <= ?
+                        AND (ep.end_date IS NULL OR ep.end_date >= ?)
+                    )
+                    OR EXISTS (
+                      SELECT 1
+                      FROM attendance a_legacy
+                      WHERE a_legacy.student_id = s.id
+                        AND a_legacy.class_id = ?
+                        AND a_legacy.date BETWEEN ? AND ?
+                    )
+                  )
                 ORDER BY s.last_name, s.first_name
-            `, [class_id, currentSession, schoolId]);
-
-            if (!students || students.length === 0) {
-                students = await db.all(`
-                    SELECT id, first_name, last_name, admission_number
-                    FROM students
-                    WHERE current_class_id = ? AND status = 'active'
-                      AND school_id = ?
-                    ORDER BY last_name, first_name
-                `, [class_id, schoolId]);
-            }
+            `, [schoolId, class_id, endDate, startDate, class_id, startDate, endDate]);
 
             const attendance = await db.all(`
                 SELECT a.student_id, a.date, a.status
@@ -105,11 +111,19 @@ const getRegister = async (req, res) => {
 
             const clazz = await db.get('SELECT name FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
 
+            const attendanceByStudent = new Map();
+            (attendance || []).forEach(row => {
+                const key = String(row.student_id);
+                if (!attendanceByStudent.has(key)) attendanceByStudent.set(key, []);
+                attendanceByStudent.get(key).push(row);
+            });
+
             const formattedStudents = (students || []).map(s => {
                 const studentAttendance = {};
                 let present = 0, absent = 0, late = 0;
-                attendance.filter(a => a.student_id === s.id).forEach(a => {
-                    const day = new Date(a.date).getDate();
+                (attendanceByStudent.get(String(s.id)) || []).forEach(a => {
+                    // Parse the database date as a calendar date, not a UTC timestamp.
+                    const day = Number(String(a.date).slice(8, 10));
                     studentAttendance[day] = a.status;
                     if (a.status === 'Present') present++;
                     else if (a.status === 'Absent') absent++;
@@ -152,15 +166,15 @@ const getLowAttendance = async (req, res) => {
         if (term && session) {
             const lowAttendanceSql = db.DB_TYPE === 'postgres'
                 ? `SELECT
-                    s.first_name, s.last_name, s.admission_number, c.name as class_name,
+                    s.first_name, s.last_name, s.admission_number, c.name as class_name, c.section_id,
                     SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present_days,
                     COUNT(a.id) as total_days,
                     ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) as percentage
                 FROM students s
-                JOIN classes c ON s.current_class_id = c.id
                 JOIN attendance a ON s.id = a.student_id
-                WHERE a.term = $1 AND a.session = $2 AND s.school_id = $2
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+                JOIN classes c ON a.class_id = c.id
+                WHERE a.term = $1 AND a.session = $2 AND s.school_id = $4
+                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, c.section_id, a.class_id
                 HAVING ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) < $3
                 AND COUNT(a.id) > 0
                 ORDER BY percentage ASC`
@@ -170,10 +184,10 @@ const getLowAttendance = async (req, res) => {
                     COUNT(a.id) as total_days,
                     ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(a.id) * 100, 1) as percentage
                 FROM students s
-                JOIN classes c ON s.current_class_id = c.id
                 JOIN attendance a ON s.id = a.student_id
+                JOIN classes c ON a.class_id = c.id
                 WHERE a.term = ? AND a.session = ? AND s.school_id = ?
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name
+                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, a.class_id
                 HAVING percentage < ? AND total_days > 0
                 ORDER BY percentage ASC`;
             students = await db.all(lowAttendanceSql, db.DB_TYPE === 'postgres' ? [term, session, activeThreshold, schoolId] : [term, session, schoolId, activeThreshold]);

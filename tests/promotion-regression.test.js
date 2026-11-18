@@ -222,7 +222,7 @@ async function run() {
     // This exercises transaction rollback without relying on SQLite FK settings.
     await db.run("CREATE TRIGGER promotion_test_force_failure BEFORE INSERT ON student_enrollments WHEN NEW.session = '2026/2027' AND NEW.class_id = " + Number(targetClass) + " BEGIN SELECT RAISE(ABORT, 'intentional promotion regression test failure'); END");
     const failed = response();
-    await controller.processPromotion({ schoolId, xhr: true, body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) } } }, failed);
+    await controller.processPromotion({ schoolId, xhr: true, body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) }, commencement_dates: { [sourceClass]: '2026-09-01' } } }, failed);
     assert.strictEqual(failed.statusCode, 500, 'Injected write failure must return HTTP 500');
     assert.strictEqual(failed.data.success, false);
     let student = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [currentStudent, schoolId]);
@@ -240,7 +240,7 @@ async function run() {
     await db.run('DROP TRIGGER promotion_test_force_failure');
 
     const success = response();
-    await controller.processPromotion({ schoolId, xhr: true, body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) } } }, success);
+    await controller.processPromotion({ schoolId, xhr: true, body: { source_session: '2025/2026', target_session: '2026/2027', mapping: { [sourceClass]: String(targetClass) }, commencement_dates: { [sourceClass]: '2026-09-01' } } }, success);
     assert.strictEqual(success.data.success, true, 'Valid promotion must succeed');
     student = await db.get('SELECT current_class_id FROM students WHERE id = ? AND school_id = ?', [currentStudent, schoolId]);
     assert.strictEqual(Number(student.current_class_id), Number(targetClass));
@@ -300,7 +300,7 @@ async function run() {
     const graduation = response();
     await controller.processPromotion({
       schoolId, xhr: true,
-      body: { source_session: '2026/2027', target_session: '2027/2028', mapping: { [graduationSourceClass]: 'graduate' } }
+      body: { source_session: '2026/2027', target_session: '2027/2028', mapping: { [graduationSourceClass]: 'graduate' }, commencement_dates: { [graduationSourceClass]: '2027-06-30' } }
     }, graduation);
     assert.strictEqual(graduation.statusCode, 200);
     assert.strictEqual(graduation.data.success, true, 'Graduation mapping should succeed');
@@ -360,6 +360,7 @@ async function run() {
         source_session: '2026/2027',
         target_session: '2027/2028',
         mapping: { [selectiveSourceClass]: String(selectiveTargetClass) },
+        commencement_dates: { [selectiveSourceClass]: '2027-09-01' },
         promote_student_ids: { [selectiveSourceClass]: [selectedStudent] }
       }
     }, selective);
@@ -397,6 +398,7 @@ async function run() {
         source_session: '2027/2028',
         target_session: '2028/2029',
         mapping: { [selectiveGraduationClass]: 'graduate' },
+        commencement_dates: { [selectiveGraduationClass]: '2029-06-30' },
         promote_student_ids: { [selectiveGraduationClass]: [selectedGraduate] }
       }
     }, selectiveGraduation);
@@ -441,9 +443,9 @@ async function run() {
       schoolId, xhr: true,
       body: { source_session: '2028/2029', target_session: '2029/2030', mapping: { [selectiveGraduationClass]: 'graduate' } }
     }, blockedGraduation);
-    assert.strictEqual(blockedGraduation.statusCode, 500, 'Graduation must be blocked for cross-section students');
-    assert.match(blockedGraduation.data.message, /another section/i);
-    assert.strictEqual((await db.get('SELECT status FROM students WHERE id = ? AND school_id = ?', [dualSectionGraduate, schoolId])).status, 'active', 'Blocked graduation must not change global student status');
+    assert.strictEqual(blockedGraduation.statusCode, 200, 'Graduation from one section must be allowed when another section placement remains');
+    assert.strictEqual(blockedGraduation.data.success, true);
+    assert.strictEqual((await db.get('SELECT status FROM students WHERE id = ? AND school_id = ?', [dualSectionGraduate, schoolId])).status, 'active', 'A student remaining in another section must stay active');
     assert.ok(await db.get('SELECT id FROM student_enrollments WHERE student_id = ? AND class_id = ? AND session = ?', [dualSectionGraduate, otherSectionClass, '2029/2030']), 'Blocked graduation must preserve other-section enrollment');
 
     // An unchecked repeater must not overwrite a different pre-existing target-session placement.
@@ -462,6 +464,7 @@ async function run() {
         source_session: '2028/2029',
         target_session: '2029/2030',
         mapping: { [repeaterConflictSource]: String(targetClass) },
+        commencement_dates: { [repeaterConflictSource]: '2030-09-01' },
         promote_student_ids: { [repeaterConflictSource]: [] }
       }
     }, repeaterConflict);

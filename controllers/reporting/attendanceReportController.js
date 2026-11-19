@@ -15,12 +15,22 @@ const getAttendanceDashboard = async (req, res) => {
             if (selectedSection.current_session && selectedSection.current_term) {
                 const classes = await db.all('SELECT id, section_id FROM classes WHERE school_id = ? AND section_id = ? ORDER BY id', [schoolId, selectedSectionId]);
                 const analytics = require('../../services/attendanceAnalyticsService');
+                const expectedDays = require('../../services/expectedAttendanceDaysService');
+                const expectedClassIds = new Set();
                 for (const cls of classes) {
+                    const classification = await expectedDays.calculate({
+                        schoolId, sectionId: selectedSectionId, classId: Number(cls.id),
+                        session: selectedSection.current_session, term: selectedSection.current_term,
+                        startDate: today, endDate: today
+                    });
+                    if (!classification.days.some(day => day.status === 'expected')) continue;
+                    expectedClassIds.add(Number(cls.id));
                     const roster = await db.all(`SELECT DISTINCT st.id
                         FROM students st JOIN student_enrollment_periods ep
                           ON ep.student_id = st.id AND ep.school_id = st.school_id
                         WHERE st.school_id = ? AND ep.section_id = ? AND ep.class_id = ?
-                          AND ep.session = ? AND ep.start_date <= ?
+                          AND ep.session = ? AND ep.date_status = 'confirmed'
+                          AND ep.start_date <= ?
                           AND (ep.end_date IS NULL OR ep.end_date >= ?)`,
                     [schoolId, selectedSectionId, cls.id, selectedSection.current_session, today, today]);
                     for (const student of roster) {
@@ -40,14 +50,13 @@ const getAttendanceDashboard = async (req, res) => {
                         }
                     }
                 }
-                const registerStats = await db.get(`SELECT
-                    COUNT(*) AS submitted_registers
+                const registerRows = await db.all(`SELECT class_id
                     FROM attendance_registers
                     WHERE school_id = ? AND section_id = ? AND attendance_date = ?
                       AND session = ? AND term = ? AND status = 'submitted'`,
                 [schoolId, selectedSectionId, today, selectedSection.current_session, selectedSection.current_term]);
-                stats.submitted_registers = Number(registerStats ? registerStats.submitted_registers : 0);
-                stats.expected_registers = classes.length;
+                stats.submitted_registers = registerRows.filter(row => expectedClassIds.has(Number(row.class_id))).length;
+                stats.expected_registers = expectedClassIds.size;
             }
         }
         return res.render('reports/attendance/index', {

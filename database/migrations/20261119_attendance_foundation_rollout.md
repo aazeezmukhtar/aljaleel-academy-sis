@@ -51,7 +51,27 @@ Run against a verified, read-only connection to the target database. Do not use 
 
 ### Core ownership and duplicate checks
 
-For PostgreSQL, run the checks in `20261118_section_aware_attendance.md` and additionally inspect:
+First inventory the existing objects. This is read-only and is safe before the new tables have been created:
+
+```sql
+SELECT table_name
+FROM information_schema.tables
+WHERE table_schema = 'public'
+  AND table_name IN (
+    'student_enrollment_history', 'student_enrollment_periods',
+    'section_academic_periods', 'class_attendance_schedules',
+    'class_attendance_closures', 'class_attendance_responsibilities',
+    'attendance_registers', 'attendance_register_events',
+    'attendance_register_reminders'
+  )
+ORDER BY table_name;
+```
+
+For SQLite, use `SELECT name FROM sqlite_master WHERE type = 'table' AND name IN (...)`.
+
+Run the checks in `20261118_section_aware_attendance.md` against the existing attendance table. Also verify that `student_enrollment_history` exists before the dated-period migration.
+
+The following two PostgreSQL checks apply only if `student_enrollment_periods` already exists (for example, when verifying a partial or previous rollout). If it does not exist yet, do not run them; its absence is expected before migration step 1.
 
 ```sql
 SELECT COUNT(*) AS classes_with_invalid_section_owner
@@ -85,7 +105,7 @@ WHERE a.date_status = 'confirmed' AND b.date_status = 'confirmed';
 
 SQLite uses the same ownership joins and date overlap predicate, with `IS NOT` for distinct-value checks and `'9999-12-31'` as the open-end sentinel.
 
-Also inspect existing rows and counts in `attendance`, `student_enrollment_periods`, `class_attendance_responsibilities`, `attendance_registers`, and any pre-existing object with the same target table names. The target register/calendar tables should be absent before their first migration unless a documented partial rollout is being reconciled.
+Inspect existing rows in `attendance` and `student_enrollment_history`. If `student_enrollment_periods` already exists, run its ownership and overlap checks above and inspect its row counts. The calendar, responsibility, register, event, and reminder tables should normally be absent before their first migration. If any already exists, stop and compare its exact schema, indexes, constraints, triggers, and row counts with the corresponding migration and CI fixture before deciding whether this is a partial rollout. Never run a create migration over an unexplained existing object.
 
 ### Stop conditions
 

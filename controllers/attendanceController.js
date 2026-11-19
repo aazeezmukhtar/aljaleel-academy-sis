@@ -287,6 +287,10 @@ const getPreviousDayAttendance = async (req, res) => {
         students.forEach(student => {
             student.status = statusByStudent.get(String(student.id)) || null;
         });
+        const register = await require('../services/attendanceRegisterService').getRegister({
+            schoolId, classId: Number(class_id), sectionId: Number(clazz.section_id),
+            date, session: settings.session, term: settings.term, actorId: Number(user.id)
+        });
 
         res.render('attendance/take', {
             title: "Yesterday's Attendance",
@@ -296,6 +300,10 @@ const getPreviousDayAttendance = async (req, res) => {
             students,
             currentTerm: settings.term,
             currentSession: settings.session,
+            registerStatus: register ? register.status : 'open',
+            registerVersion: register ? register.submission_version : 0,
+            registerEvents: register ? register.events : [],
+            isAttendanceAdmin: user.role === 'Admin',
             readOnly: true,
             hasRecords
         });

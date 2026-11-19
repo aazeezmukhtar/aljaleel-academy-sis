@@ -5,6 +5,7 @@ const sessionHelper = require('../utils/sessionHelper');
 const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
 const attendanceRegisterGeneration = require('../services/attendanceRegisterGenerationService');
 const attendanceRegisterWorkflow = require('../services/attendanceRegisterWorkflowService');
+const attendanceRegisterAdministration = require('../services/attendanceRegisterAdministrationService');
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user, schoolId) => {
@@ -270,6 +271,7 @@ const getTakeAttendance = async (req, res) => {
             registerSkipReason,
             readOnly,
             canEdit: !registerBlocked && !locked && canManageRegister,
+            isAdmin: user.role === 'Admin',
             hasRecords: true
         });
     } catch (err) {
@@ -726,6 +728,50 @@ const submitAttendanceRegister = async (req, res) => {
     }
 };
 
+// POST /attendance/reopen - Reopen a submitted register for administrator-approved correction
+const reopenAttendanceRegister = async (req, res) => {
+    const { class_id, date, reason } = req.body || {};
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Session expired' });
+    }
+    if (user.role !== 'Admin') {
+        return res.status(403).json({ success: false, message: 'Only an administrator may reopen a submitted register.' });
+    }
+    if (!class_id || !Number.isSafeInteger(Number(class_id)) || Number(class_id) <= 0 || !date) {
+        return res.status(400).json({ success: false, message: 'A valid class and attendance date are required.' });
+    }
+
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).json({ success: false, message: 'The attendance register foundation is not installed.' });
+        }
+        const reopened = await attendanceRegisterAdministration.reopenRegister({
+            schoolId,
+            classId: Number(class_id),
+            registerDate: date,
+            actorStaffId: user.id,
+            reason
+        });
+        logAction(user.id, 'REOPEN_ATTENDANCE_REGISTER', 'ATTENDANCE_REGISTER', {
+            class_id, date, register_id: reopened.registerId, reason: reopened.reason
+        }, req.ip);
+        return res.json({
+            success: true,
+            message: 'Attendance register reopened. The correction is recorded in the audit history.',
+            register: reopened
+        });
+    } catch (err) {
+        console.error('reopenAttendanceRegister Error:', err);
+        return res.status(409).json({
+            success: false,
+            message: err.message || 'The attendance register could not be reopened.'
+        });
+    }
+};
+
 // GET /attendance/report - Attendance summary report
 const getReport = async (req, res) => {
     const { class_id, start_date, end_date } = req.query;
@@ -839,5 +885,5 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, getReport, getStaffAttendance, saveStaffAttendance };
+module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getReport, getStaffAttendance, saveStaffAttendance };
 

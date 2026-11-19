@@ -49,7 +49,7 @@
                             <span>Low-attendance threshold: <strong><%= reportMeta.threshold %>%</strong></span>
                             <% } %>
                             <% if (reportMeta.registerCompletion && reportMeta.registerCompletion.generatedRegisters !== null) { %>
-                            <span>Registers submitted: <strong><%= reportMeta.registerCompletion.submittedRegisters %> / <%= reportMeta.registerCompletion.generatedRegisters %></strong></span>
+                            <span>Generated registers submitted: <strong><%= reportMeta.registerCompletion.submittedRegisters %> / <%= reportMeta.registerCompletion.generatedRegisters %></strong></span>
                             <% } %>
                         </div>
                         <p class="text-muted" style="margin:8px 0 0;font-size:.85rem;">Present, Late and Leave count as attended days. Incomplete registers are excluded until submitted.</p>

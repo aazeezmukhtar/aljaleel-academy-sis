@@ -192,6 +192,11 @@ const getTakeAttendance = async (req, res) => {
             date
         );
 
+        const register = await require('../services/attendanceRegisterService').getRegister({
+            schoolId, classId: Number(class_id), sectionId: Number(clazz.section_id),
+            date, session: settings.session, term: settings.term, actorId: Number(user.id)
+        });
+
         res.render('attendance/take', {
             title: 'Mark Attendance',
             clazz,
@@ -200,6 +205,10 @@ const getTakeAttendance = async (req, res) => {
             students,
             currentTerm: settings.term,
             currentSession: settings.session,
+            registerStatus: register ? register.status : 'open',
+            registerVersion: register ? register.submission_version : 0,
+            registerEvents: register ? register.events : [],
+            isAttendanceAdmin: user.role === 'Admin',
             readOnly: false,
             hasRecords: true
         });

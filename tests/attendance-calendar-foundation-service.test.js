@@ -76,7 +76,7 @@ const service=require('../services/attendanceFoundationService');
       weekdays:{monday:true},createdBy:7
     }),/does not belong to this school/,'Cross-school class must fail');
 
-    const responsibility=await service.create('attendance_responsibility',{
+    const nextSchedule=await service.create('attendance_schedule',{\n      schoolId:1,classId:100,session:'2026/2027',\n      effectiveFrom:'2027-01-01',effectiveTo:null,weekdays:{saturday:true},createdBy:7\n    });\n    assert.ok(nextSchedule.id>0);\n\n    const responsibility=await service.create('attendance_responsibility',{
       schoolId:1,classId:100,staffId:7,session:'2026/2027',
       effectiveFrom:'2026-09-01',effectiveTo:null,createdBy:7
     });
@@ -106,7 +106,7 @@ const service=require('../services/attendanceFoundationService');
 
     const auditBefore=sqlite.prepare('SELECT COUNT(*) AS n FROM attendance_foundation_audit_logs').get().n;
     await assert.rejects(()=>service.correct('attendance_schedule',schedule.id,{
-      effective_from:'2026-08-01'
+      effective_to:'2027-01-02'
     },'Move schedule earlier',7,1),e=>e.code==='ATTENDANCE_FOUNDATION_CONFLICT');
     assert.equal(sqlite.prepare('SELECT effective_from FROM class_attendance_schedules WHERE id=?').get(schedule.id).effective_from,'2026-09-01');
     assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM attendance_foundation_audit_logs').get().n,auditBefore,
@@ -116,7 +116,7 @@ const service=require('../services/attendanceFoundationService');
     assert.equal(sqlite.prepare('SELECT status FROM class_attendance_closures WHERE id=?').get(closure.id).status,'cancelled');
 
     sqlite.exec(`CREATE TRIGGER reject_foundation_audit BEFORE INSERT ON attendance_foundation_audit_logs
-      WHEN NEW.reason = 'force audit failure' BEGIN SELECT RAISE(ABORT,'forced audit failure'); END;`);
+      BEGIN SELECT RAISE(ABORT,'forced audit failure'); END;`);
     await assert.rejects(()=>service.create('attendance_closure',{
       schoolId:1,scopeType:'school',closureDate:'2026-12-31',
       reason:'Year end',createdBy:7

@@ -280,6 +280,17 @@ async function getPendingCount() {
     }
 }
 
+async function getPendingAttendanceCount() {
+    try {
+        const ownerKey = getOfflineOwnerKey();
+        if (!ownerKey) return 0;
+        const attendanceItems = await getAllQueued('attendance_sync');
+        return attendanceItems.filter(item => item._ownerKey === ownerKey).length;
+    } catch {
+        return 0;
+    }
+}
+
 async function getQuarantinedQueueCount() {
     try {
         const att = await getAllQueued('attendance_sync');
@@ -500,6 +511,7 @@ window.AcadMeOffline = window.NexusOffline = {
     saveResultOffline,
     syncData,
     getPendingCount,
+    getPendingAttendanceCount,
     getQuarantinedQueueCount,
     getPreparedDatasetStatus,
     recordPreparedDataset,

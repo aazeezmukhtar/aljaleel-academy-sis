@@ -107,3 +107,22 @@ Audit atomicity tests:
 - assert audit rows cannot be updated or deleted.
 
 These are service-level acceptance tests, not claims that the current migration alone enforces the rules. The matching service implementation and its tests are a later implementation phase. The present preflight migration test exercises DDL constraints and transaction rollback only.
+
+## Expected-attendance-days service (isolated implementation phase)
+
+- Service: `services/expectedAttendanceDaysService.js`
+- API: `calculate({ schoolId, sectionId, classId, session, term, startDate, endDate, studentId? })`
+- The service is read-only. It does not write attendance, alter calendars/enrolments, calculate percentages, issue reminders, or change routes/UI.
+- Class dates are classified as `expected`, `closed`, `non_opening`, `unknown_schedule`, `outside_term`, or `unknown_period`.
+- With `studentId`, the service additionally requires a dated placement in the exact school/section/class/session. Confirmed enrollment start/end dates are inclusive. Dates with no confirmed placement are `outside_enrollment`; missing or review-needed enrollment history is `unknown_enrollment`, never assumed eligible.
+- The requested range is returned in full. Dates outside the selected term are explicitly marked `outside_term`; a missing term configuration yields `unknown_period` rather than guessed term dates.
+- Effective-dated class schedules are evaluated per date. Schedule gaps are `unknown_schedule`, not non-opening days or closures.
+- Closures are applied only to opening days. School, section and class closures can all apply on one date; that date is classified once as `closed`, with all applicable closure IDs retained. Cancelled closures are ignored.
+- Every lookup is scoped by school and the explicitly selected section. The class is verified to belong to that section; Academy and Tahfeez are never combined.
+- The service returns per-day classifications, status counts and warnings. Approved Leave is not handled here; it remains a full attendance credit in the later attendance analytics layer.
+
+Disposable tests:
+- `node tests/expected-attendance-days-service.test.js`
+- `PG_TEST_URL=<disposable-postgres-url> node tests/expected-attendance-days-postgres.test.js`
+
+These tests use isolated SQLite memory and PostgreSQL temporary-schema fixtures. The PostgreSQL test refuses to use `DATABASE_URL`.

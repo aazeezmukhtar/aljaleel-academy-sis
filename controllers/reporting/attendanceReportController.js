@@ -197,49 +197,68 @@ const getRegister = async (req, res) => {
 const getLowAttendance = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (user ? user.school_id : 1);
-    const { term, session, threshold } = req.query;
-    const activeThreshold = threshold || 75;
+    const selectedSectionId = req.query.section_id ? Number(req.query.section_id) : null;
+    const activeThreshold = req.query.threshold === undefined || req.query.threshold === '' ? 75 : Number(req.query.threshold);
+    const sections = await db.all('SELECT id, name, current_session, current_term FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
+    let students = [];
+    let selectedSection = null;
+    let reportContext = null;
+    let reportError = null;
     try {
-        let students = [];
-        if (term && session) {
-            const lowAttendanceSql = db.DB_TYPE === 'postgres'
-                ? `SELECT
-                    s.first_name, s.last_name, s.admission_number, c.name as class_name, c.section_id,
-                    SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present_days,
-                    COUNT(a.id) as total_days,
-                    ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) as percentage
-                FROM students s
-                JOIN attendance a ON s.id = a.student_id
-                JOIN classes c ON a.class_id = c.id
-                WHERE a.term = $1 AND a.session = $2 AND s.school_id = $4
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, c.section_id, a.class_id
-                HAVING ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS NUMERIC) / NULLIF(COUNT(a.id),0) * 100,1) < $3
-                AND COUNT(a.id) > 0
-                ORDER BY percentage ASC`
-                : `SELECT
-                    s.first_name, s.last_name, s.admission_number, c.name as class_name,
-                    SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present_days,
-                    COUNT(a.id) as total_days,
-                    ROUND(CAST(SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) AS FLOAT) / COUNT(a.id) * 100, 1) as percentage
-                FROM students s
-                JOIN attendance a ON s.id = a.student_id
-                JOIN classes c ON a.class_id = c.id
-                WHERE a.term = ? AND a.session = ? AND s.school_id = ?
-                GROUP BY s.id, s.first_name, s.last_name, s.admission_number, c.name, a.class_id
-                HAVING percentage < ? AND total_days > 0
-                ORDER BY percentage ASC`;
-            students = await db.all(lowAttendanceSql, db.DB_TYPE === 'postgres' ? [term, session, activeThreshold, schoolId] : [term, session, schoolId, activeThreshold]);
+        if (!Number.isFinite(activeThreshold) || activeThreshold < 0 || activeThreshold > 100) {
+            throw new Error('Attendance threshold must be between 0 and 100.');
         }
-
-        res.render('reports/attendance/low', {
-            title: 'Low Attendance Alerts',
-            students,
-            user,
-            query: { term, session, threshold: activeThreshold }
+        if (selectedSectionId) {
+            selectedSection = sections.find(section => Number(section.id) === selectedSectionId) || null;
+            if (!selectedSection) return res.status(400).send('The selected section does not belong to this school.');
+            if (!selectedSection.current_session || !selectedSection.current_term) {
+                throw new Error('Configure the selected section’s current session and term first.');
+            }
+            const period = await db.get(`SELECT start_date, end_date FROM section_academic_periods
+                WHERE school_id = ? AND section_id = ? AND session = ? AND term = ? LIMIT 1`,
+            [schoolId, selectedSectionId, selectedSection.current_session, selectedSection.current_term]);
+            if (!period) throw new Error('No academic date range is configured for this section and term.');
+            const classes = await db.all('SELECT id, name FROM classes WHERE school_id = ? AND section_id = ? ORDER BY name',
+                [schoolId, selectedSectionId]);
+            const roster = await db.all(`SELECT DISTINCT st.id, st.first_name, st.last_name, st.admission_number,
+                    c.id AS class_id, c.name AS class_name
+                FROM students st
+                JOIN student_enrollment_periods ep ON ep.student_id = st.id AND ep.school_id = st.school_id
+                JOIN classes c ON c.id = ep.class_id AND c.school_id = ep.school_id AND c.section_id = ep.section_id
+                WHERE st.school_id = ? AND ep.section_id = ? AND ep.session = ?
+                  AND ep.start_date <= ? AND (ep.end_date IS NULL OR ep.end_date >= ?)
+                ORDER BY c.name, st.last_name, st.first_name`,
+            [schoolId, selectedSectionId, selectedSection.current_session, period.end_date, period.start_date]);
+            const analytics = require('../../services/attendanceAnalyticsService');
+            for (const student of roster) {
+                const result = await analytics.calculate({
+                    schoolId, sectionId: selectedSectionId, classId: Number(student.class_id),
+                    studentId: Number(student.id), session: selectedSection.current_session,
+                    term: selectedSection.current_term, startDate: String(period.start_date).slice(0,10),
+                    endDate: String(period.end_date).slice(0,10), lowAttendanceThreshold: activeThreshold
+                });
+                if (result.lowAttendance) students.push({
+                    ...student, expected_days: result.counts.expected, recorded_days: result.counts.recorded,
+                    present_days: result.counts.present, late_days: result.counts.late,
+                    leave_days: result.counts.approvedLeave, absent_days: result.counts.absent,
+                    missing_registers: result.counts.missingRegister, draft_registers: result.counts.draftRegister,
+                    attendance_rate: result.attendanceRate
+                });
+            }
+            reportContext = { session: selectedSection.current_session, term: selectedSection.current_term,
+                start_date: String(period.start_date).slice(0,10), end_date: String(period.end_date).slice(0,10) };
+        }
+        return res.render('reports/attendance/low', {
+            title: 'Low Attendance Alerts', students, user, sections, selectedSection,
+            selectedSectionId, threshold: activeThreshold, reportContext, reportError
         });
     } catch (err) {
         console.error('Low Attendance Report Error:', err);
-        res.status(500).send('Database Error');
+        reportError = err.message || 'Unable to generate low-attendance report.';
+        return res.status(400).render('reports/attendance/low', {
+            title: 'Low Attendance Alerts', students: [], user, sections, selectedSection,
+            selectedSectionId, threshold: activeThreshold, reportContext, reportError
+        });
     }
 };
 

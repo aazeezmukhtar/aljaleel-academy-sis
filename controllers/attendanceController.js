@@ -243,6 +243,10 @@ const getTakeAttendance = async (req, res) => {
         }
 
         const locked = !!register && ['submitted', 'closed'].includes(register.status);
+        const canManageRegister = register
+            ? await hasRegisterAttendanceAuthority(user, register, schoolId)
+            : true;
+        const readOnly = !!register && (locked || !canManageRegister);
         res.render('attendance/take', {
             title: 'Mark Attendance',
             clazz,
@@ -254,8 +258,8 @@ const getTakeAttendance = async (req, res) => {
             register,
             registerFeatureAvailable,
             registerSkipReason,
-            readOnly: locked,
-            canEdit: !locked,
+            readOnly,
+            canEdit: !locked && canManageRegister,
             hasRecords: true
         });
     } catch (err) {
@@ -362,7 +366,7 @@ const getPreviousDayAttendance = async (req, res) => {
             registerFeatureAvailable,
             registerSkipReason,
             readOnly: true,
-            canEdit: !locked,
+            canEdit: !locked && (register ? await hasRegisterAttendanceAuthority(user, register, schoolId) : true),
             hasRecords
         });
     } catch (err) {
@@ -406,6 +410,12 @@ const saveAttendance = async (req, res) => {
                 schoolId, classId: Number(class_id), registerDate: date
             });
             if (registerContext) {
+                if (!(await hasRegisterAttendanceAuthority(user, registerContext.register, schoolId))) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Only an administrator or the responsible class teacher may record this register.'
+                    });
+                }
                 const saved = await attendanceRegisterWorkflow.saveRegisterProgress({
                     schoolId,
                     classId: Number(class_id),
@@ -567,6 +577,16 @@ const submitAttendanceRegister = async (req, res) => {
             return res.status(409).json({
                 success: false,
                 message: 'The attendance register foundation is not installed. The register cannot be submitted yet.'
+            });
+        }
+
+        const registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+            schoolId, classId: Number(class_id), registerDate: date
+        });
+        if (registerContext && !(await hasRegisterAttendanceAuthority(user, registerContext.register, schoolId))) {
+            return res.status(403).json({
+                success: false,
+                message: 'Only an administrator or the responsible class teacher may submit this register.'
             });
         }
 

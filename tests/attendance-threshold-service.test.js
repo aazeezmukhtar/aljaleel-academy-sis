@@ -1,6 +1,8 @@
 'use strict';
 
-const assert = require('assert');\nconst fs = require('fs');\nconst path = require('path');
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
 
 const settings = new Map([[1, '82'], [2, 'not-a-number'], [3, '0']]);
 const fakeDb = {

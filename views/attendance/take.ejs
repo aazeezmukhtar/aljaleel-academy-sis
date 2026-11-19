@@ -390,6 +390,11 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
         });
+        const registerSubmitBtns = [
+            document.getElementById('submit-attendance-register'),
+            document.getElementById('submit-attendance-register-mobile')
+        ].filter(Boolean);
+        registerSubmitBtns.forEach(btn => { btn.disabled = true; });
 
         const formData = new FormData(e.target);
         const data = {
@@ -453,6 +458,7 @@
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             });
+            registerSubmitBtns.forEach(btn => { btn.disabled = !navigator.onLine; });
         }
     });
 
@@ -485,10 +491,12 @@
             document.getElementById('submit-attendance-register'),
             document.getElementById('submit-attendance-register-mobile')
         ].filter(Boolean);
+        const saveButtons = Array.from(document.querySelectorAll('button[form="attendance-form"]'));
         buttons.forEach(button => {
             button.disabled = true;
             button.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Submitting...';
         });
+        saveButtons.forEach(button => { button.disabled = true; });
 
         try {
             const form = document.getElementById('attendance-form');
@@ -519,6 +527,7 @@
                 button.disabled = !navigator.onLine;
                 button.innerHTML = '<i class="bi bi-send-check"></i> ' + (button.id.endsWith('-mobile') ? 'Submit' : 'Submit Register');
             });
+            saveButtons.forEach(button => { button.disabled = false; });
         }
     }
 

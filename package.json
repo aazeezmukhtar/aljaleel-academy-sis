@@ -3,9 +3,7 @@
   "version": "1.0.0",
   "description": "Premium, Offline-First School Information System",
   "main": "app.js",
-  "engines": {
-    "node": ">=18.0.0"
-  },
+  "engines": { "node": ">=18.0.0" },
   "scripts": {
     "start": "node app.js",
     "test:regression": "node tests/regression.test.js",
@@ -25,7 +23,9 @@
     "test:bulk-import-visibility": "node tests/bulk-import-visibility.test.js",
     "test:attendance-section": "node tests/section-aware-attendance-migration.test.js",
     "test:attendance-postgres": "node tests/section-aware-attendance-postgres.test.js",
-    "test:attendance-sqlite": "node tests/section-aware-attendance-sqlite.test.js"
+    "test:attendance-sqlite": "node tests/section-aware-attendance-sqlite.test.js",
+    "test:attendance-register-sqlite": "node tests/attendance-register-foundation-sqlite.test.js",
+    "test:attendance-register-postgres": "node tests/attendance-register-foundation-postgres.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
@@ -42,7 +42,5 @@
     "pg": "^8.20.0",
     "xlsx": "^0.18.5"
   },
-  "devDependencies": {
-    "nodemon": "^3.1.14"
-  }
+  "devDependencies": { "nodemon": "^3.1.14" }
 }

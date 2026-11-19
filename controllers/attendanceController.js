@@ -6,6 +6,7 @@ const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
 const attendanceRegisterGeneration = require('../services/attendanceRegisterGenerationService');
 const attendanceRegisterWorkflow = require('../services/attendanceRegisterWorkflowService');
 const attendanceRegisterAdministration = require('../services/attendanceRegisterAdministrationService');
+const attendanceClosureService = require('../services/attendanceClosureService');
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user, schoolId) => {
@@ -773,6 +774,99 @@ const reopenAttendanceRegister = async (req, res) => {
     }
 };
 
+// GET /attendance/closures - Request and administer attendance closures
+const getAttendanceClosures = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).render('attendance/closures', {
+                title: 'Attendance Closures', user, isAdmin: user.role === 'Admin',
+                classes: [], sections: [], closures: [],
+                error: 'The attendance register foundation is not installed yet.'
+            });
+        }
+        const classes = await getAssignedClasses(user, schoolId);
+        const sections = user.role === 'Admin'
+            ? await db.all('SELECT id, name FROM sections WHERE school_id = ? ORDER BY name', [schoolId])
+            : [];
+        const closures = await attendanceClosureService.listClosures({ schoolId });
+        return res.render('attendance/closures', {
+            title: 'Attendance Closures', user, isAdmin: user.role === 'Admin',
+            classes, sections, closures, error: null
+        });
+    } catch (err) {
+        console.error('getAttendanceClosures Error:', err);
+        return res.status(500).send('Could not load attendance closures.');
+    }
+};
+
+// POST /attendance/closures/request
+const requestAttendanceClosure = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).json({ success: false, message: 'The attendance register foundation is not installed.' });
+        }
+        const result = await attendanceClosureService.requestClosure({
+            schoolId, actorStaffId: user.id,
+            scopeType: req.body.scope_type,
+            sectionId: req.body.section_id,
+            classId: req.body.class_id,
+            startDate: req.body.start_date,
+            endDate: req.body.end_date,
+            reason: req.body.reason
+        });
+        logAction(user.id, 'REQUEST_ATTENDANCE_CLOSURE', 'ATTENDANCE_CLOSURE', {
+            closure_id: result.closureId, scope_type: result.scope_type,
+            start_date: result.startDate, end_date: result.endDate
+        }, req.ip);
+        return res.json({ success: true, message: 'Closure request submitted for administrator review.', closure: result });
+    } catch (err) {
+        return res.status(409).json({ success: false, message: err.message || 'Closure request failed.' });
+    }
+};
+
+// POST /attendance/closures/decide
+const decideAttendanceClosure = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
+    if (user.role !== 'Admin') return res.status(403).json({ success: false, message: 'Only an administrator may decide closure requests.' });
+    try {
+        const result = await attendanceClosureService.decideClosure({
+            schoolId, closureId: req.body.closure_id, actorStaffId: user.id,
+            decision: req.body.decision, reason: req.body.reason
+        });
+        logAction(user.id, 'DECIDE_ATTENDANCE_CLOSURE', 'ATTENDANCE_CLOSURE', {
+            closure_id: result.closureId, decision: result.status
+        }, req.ip);
+        return res.json({ success: true, message: 'Closure request ' + result.status + '.', closure: result });
+    } catch (err) {
+        return res.status(409).json({ success: false, message: err.message || 'Closure decision failed.' });
+    }
+};
+
+// POST /attendance/closures/cancel
+const cancelAttendanceClosure = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
+    try {
+        const result = await attendanceClosureService.cancelClosure({
+            schoolId, closureId: req.body.closure_id, actorStaffId: user.id
+        });
+        logAction(user.id, 'CANCEL_ATTENDANCE_CLOSURE', 'ATTENDANCE_CLOSURE', {
+            closure_id: result.closureId
+        }, req.ip);
+        return res.json({ success: true, message: 'Closure request cancelled.', closure: result });
+    } catch (err) {
+        return res.status(409).json({ success: false, message: err.message || 'Closure cancellation failed.' });
+    }
+};
+
 // GET /attendance/report - Attendance summary report
 const getReport = async (req, res) => {
     const { class_id, start_date, end_date } = req.query;
@@ -886,5 +980,5 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getReport, getStaffAttendance, saveStaffAttendance };
+module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getStaffAttendance, saveStaffAttendance };
 

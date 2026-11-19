@@ -1223,11 +1223,11 @@ exports.getAttendance = async (req, res) => {
                     const rawRows = await db.all(`
                         SELECT date, status, reason
                         FROM attendance
-                        WHERE student_id = ? AND school_id = ? AND section_id = ?
+                        WHERE student_id = ? AND section_id = ?
                           AND class_id = ? AND session = ? AND term = ?
                           AND date >= ? AND date <= ?
                         ORDER BY date DESC
-                    `, [studentId, schoolId, selectedSectionId, selectedClassId,
+                    `, [studentId, selectedSectionId, selectedClassId,
                         selectedSession, selectedTerm, rangeStart, rangeEnd]);
                     const reasonByDate = new Map(rawRows.map(row => [
                         row.date instanceof Date ? row.date.toISOString().slice(0,10) : String(row.date).slice(0,10),

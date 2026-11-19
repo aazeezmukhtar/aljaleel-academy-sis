@@ -18,6 +18,9 @@ const block = controller.slice(
 
 ejs.compile(view, { filename: viewPath });
 ejs.compile(dashboardView, { filename: dashboardPath });
+assert(block.includes("require('../services/attendanceThresholdService')") &&
+  block.includes('.getThreshold(schoolId)'),
+  'Student portal must use the saved school attendance minimum percentage setting.');
 assert(block.includes("require('../services/attendanceAnalyticsService')"),
   'Student portal must use the same analytics engine as administrative reports.');
 assert(block.includes('schoolId, sectionId: selectedSectionId, classId: selectedClassId') &&

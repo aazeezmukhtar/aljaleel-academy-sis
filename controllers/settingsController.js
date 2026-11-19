@@ -50,9 +50,16 @@ const updateSettings = async (req, res) => {
         current_session, current_term,
         attendance_minimum_percentage,
         attendance_consecutive_absence_limit,
-        attendance_term_absence_limit
+        attendance_term_absence_limit,
+        attendance_low_attendance_threshold
     } = req.body;
     const logoFile = req.file;
+
+    try {
+        require('../services/attendanceThresholdService').validateThreshold(attendance_low_attendance_threshold);
+    } catch (validationError) {
+        return res.redirect('/settings?error=' + encodeURIComponent(validationError.message));
+    }
 
     const updates = [
         { key: 'school_name', value: school_name },
@@ -67,7 +74,8 @@ const updateSettings = async (req, res) => {
         { key: 'current_term', value: current_term },
         { key: 'attendance.minimum_percentage', value: attendance_minimum_percentage },
         { key: 'attendance.consecutive_absence_limit', value: attendance_consecutive_absence_limit },
-        { key: 'attendance.term_absence_limit', value: attendance_term_absence_limit }
+        { key: 'attendance.term_absence_limit', value: attendance_term_absence_limit },
+        { key: 'attendance.low_attendance_threshold', value: attendance_low_attendance_threshold }
     ];
 
     let uploadedLogoPath = null;

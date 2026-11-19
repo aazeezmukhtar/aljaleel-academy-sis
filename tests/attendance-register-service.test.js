@@ -34,10 +34,13 @@ raw.exec(`
 raw.close();
 const enrollmentMigration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261117_student_enrollment_periods.sqlite.sql'), 'utf8');
 const registerMigration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261119_attendance_register_submission.sqlite.sql'), 'utf8');
+const reminderMigration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261119_attendance_register_reminders.sqlite.sql'), 'utf8');
 const migrationDb = new Database(file);
 migrationDb.exec(enrollmentMigration);
 migrationDb.exec(registerMigration);
 migrationDb.exec(registerMigration);
+migrationDb.exec(reminderMigration);
+migrationDb.exec(reminderMigration);
 migrationDb.prepare(`INSERT INTO student_enrollment_periods
   (school_id,student_id,section_id,class_id,session,start_date,end_date,date_status)
   VALUES (1,101,1,10,'2026/2027','2026-09-01','2026-11-09','confirmed'),
@@ -67,9 +70,14 @@ const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-05', session:'
     assert.equal(draft.status, 'open');
     assert.equal(draft.savedCount, 1);
     await assert.rejects(service.submit({ ...base, attendance:{101:'Present',102:''} }), /incomplete/);
+    await db.run(`INSERT INTO attendance_register_reminders
+      (school_id,section_id,class_id,staff_id,attendance_date,session,term)
+      VALUES (1,1,10,1,'2026-11-05','2026/2027','1st Term')`);
     const submitted = await service.submit({ ...base, attendance:{101:'Present',102:'Leave'} });
     assert.equal(submitted.status, 'submitted');
     assert.equal(submitted.version, 1);
+    const reminderState = await db.get('SELECT status FROM attendance_register_reminders WHERE class_id = ? AND attendance_date = ?', [10,'2026-11-05']);
+    assert.equal(reminderState.status, 'resolved', 'Register submission must resolve its reminder in the same transaction.');
     await assert.rejects(service.saveDraft({ ...base, attendance:{101:'Absent'} }), /submitted and locked/);
     await assert.rejects(service.reopen({ ...base, actorRole:'Teacher', reason:'Fix' }), /Only an administrator/);
     await assert.rejects(service.reopen({ ...base, actorRole:'Admin', reason:'   ' }), /correction reason is required/);

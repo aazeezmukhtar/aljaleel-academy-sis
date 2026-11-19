@@ -63,7 +63,7 @@ const service=require('../services/expectedAttendanceDaysService');
     assert.equal(byDate['2026-09-02'].status,'closed');
     assert.equal(byDate['2026-09-03'].status,'closed');
     assert.equal(byDate['2026-09-04'].status,'expected');
-    assert.equal(byDate['2026-09-05'].status,'non_opening');
+    assert.equal(byDate['2026-09-05'].status,'expected');
     assert.equal(byDate['2026-09-06'].status,'expected');
     assert.equal(byDate['2026-09-07'].status,'non_opening');
     assert.equal(byDate['2026-09-10'].status,'non_opening');

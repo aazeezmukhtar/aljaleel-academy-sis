@@ -29,7 +29,7 @@ sqlite.prepare(`INSERT INTO section_academic_periods(school_id,section_id,sessio
          (1,11,'2026/2027','1st Term','2026-09-01','2026-09-10')`).run();
 const schedule = sqlite.prepare(`INSERT INTO class_attendance_schedules
   (school_id,class_id,session,effective_from,effective_to,monday,tuesday,wednesday,thursday,friday,saturday,sunday,created_by)
-  VALUES (1,1000,'2026/2027','2026-09-01','2026-09-04',1,1,1,1,0,0,0,7),
+  VALUES (1,1000,'2026/2027','2026-09-01','2026-09-04',1,1,1,1,1,0,0,7),
          (1,1000,'2026/2027','2026-09-05',NULL,0,0,0,0,0,1,1,7),
          (1,1100,'2026/2027','2026-09-01',NULL,1,1,1,1,1,0,0,7)`).run();
 sqlite.prepare(`INSERT INTO class_attendance_closures(school_id,scope_type,section_id,class_id,closure_date,reason,created_by)

@@ -192,7 +192,7 @@ function createAttendanceRegisterService(db) {
                   AND ep.start_date <= ?
                   AND (ep.end_date IS NULL OR ep.end_date >= ?)
                 ORDER BY ep.student_id, ep.start_date, ep.id
-            `, [schoolId, classId, clazz.section_id, registerDate, registerDate], client);
+            `, [schoolId, classId, clazz.section_id, academicPeriod.session, registerDate, registerDate], client);
 
             if (rosterRows.some(row => row.date_status !== 'confirmed')) {
                 return { created: false, skipped: true, reason: 'enrollment_dates_need_review' };

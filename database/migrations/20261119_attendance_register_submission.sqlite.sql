@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS attendance_register_events (
   action TEXT NOT NULL CHECK(action IN ('submitted','reopened')),
   version INTEGER NOT NULL CHECK(version > 0),
   reason TEXT NOT NULL CHECK(length(trim(reason)) > 0),
+  old_values TEXT,
+  new_values TEXT,
   actor_id INTEGER NOT NULL REFERENCES staff(id),
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

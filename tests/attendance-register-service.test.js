@@ -59,6 +59,10 @@ const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-19', session:'
     assert.equal(record.status, 'submitted');
     assert.deepStrictEqual(record.events.map(event=>event.action), ['submitted','reopened','submitted']);
     assert.equal(record.events[1].reason, 'Correct a wrongly marked status');
+    assert.deepStrictEqual(JSON.parse(record.events[0].new_values).map(row => row.status), ['Present','Leave']);
+    assert.deepStrictEqual(JSON.parse(record.events[1].old_values).map(row => row.status), ['Present','Leave']);
+    assert.deepStrictEqual(JSON.parse(record.events[2].old_values).map(row => row.status), ['Present','Leave']);
+    assert.deepStrictEqual(JSON.parse(record.events[2].new_values).map(row => row.status), ['Late','Leave']);
     await assert.rejects(db.run('UPDATE attendance_register_events SET reason = ? WHERE id = ?', ['tampered', record.events[0].id]), /immutable/);
     console.log('[attendance-register-sqlite] draft, completeness, locking, admin reopen, audited reason, resubmission and history passed.');
   } finally {

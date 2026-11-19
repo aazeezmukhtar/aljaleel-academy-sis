@@ -25,16 +25,35 @@ const getAssignedClasses = async (user, schoolId) => {
         `, [schoolId]);
     }
     const staffId = Number(user.id);
+    const hasRegisterFoundation = await attendanceRegisterWorkflow.isFoundationAvailable();
+    const responsibilityClause = hasRegisterFoundation
+        ? `OR EXISTS (
+            SELECT 1 FROM class_attendance_responsibilities cr
+            WHERE cr.school_id = c.school_id AND cr.class_id = c.id
+              AND cr.section_id = c.section_id AND cr.staff_id = ?
+              AND cr.effective_from <= ? AND (cr.effective_to IS NULL OR cr.effective_to >= ?)
+        )`
+        : '';
+    const todayParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date()).reduce((result, part) => {
+        if (part.type !== 'literal') result[part.type] = part.value;
+        return result;
+    }, {});
+    const schoolDate = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
+    const params = [staffId, staffId, staffId];
+    if (hasRegisterFoundation) params.push(staffId, schoolDate, schoolDate);
+    params.push(schoolId);
     return await db.all(`
         SELECT DISTINCT c.*, s.name AS section_name
         FROM classes c
         LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
         LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
         LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
-        WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
+        WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL ${responsibilityClause})
           AND c.school_id = ?
         ORDER BY s.name ASC, c.name ASC
-    `, [staffId, staffId, staffId, schoolId]);
+    `, params);
 };
 
 // Only an administrator or the responsible teacher snapshotted on the register

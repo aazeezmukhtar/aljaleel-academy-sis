@@ -790,7 +790,7 @@ const getAttendanceClosures = async (req, res) => {
         const sections = user.role === 'Admin'
             ? await db.all('SELECT id, name FROM sections WHERE school_id = ? ORDER BY name', [schoolId])
             : [];
-        const closures = await attendanceClosureService.listClosures({ schoolId });
+        const closures = await attendanceClosureService.listClosures({ schoolId, actorStaffId: user.id });
         return res.render('attendance/closures', {
             title: 'Attendance Closures', user, isAdmin: user.role === 'Admin',
             classes, sections, closures, error: null

@@ -34,9 +34,9 @@ const schedule = sqlite.prepare(`INSERT INTO class_attendance_schedules
          (1,1100,'2026/2027','2026-09-01',NULL,1,1,1,1,1,0,0,7)`).run();
 sqlite.prepare(`INSERT INTO class_attendance_closures(school_id,scope_type,section_id,class_id,closure_date,reason,created_by)
   VALUES (1,'school',NULL,NULL,'2026-09-02','School-wide closure',7),
-         (1,'section',10,NULL,'2026-09-03','Academy closure',7),
-         (1,'class',1000,NULL,'2026-09-04','Class event',7),
-         (1,'class',1000,NULL,'2026-09-05','Cancelled event',7)`).run();
+         (1,'section',10,NULL,'2026-09-02','Academy closure',7),
+         (1,'class',NULL,1000,'2026-09-02','Class event',7),
+         (1,'class',NULL,1000,'2026-09-05','Cancelled event',7)`).run();
 sqlite.prepare("UPDATE class_attendance_closures SET status='cancelled' WHERE closure_date='2026-09-05'").run();
 sqlite.prepare(`INSERT INTO student_enrollment_periods
   (school_id,student_id,section_id,class_id,session,start_date,end_date,date_status)

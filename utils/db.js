@@ -134,7 +134,8 @@ async function transaction(callback, options = {}) {
             client.release();
         }
     }
-    // BEGIN IMMEDIATE serializes SQLite writers before overlap checks run.\n    sqliteDb.prepare(options.immediate ? 'BEGIN IMMEDIATE' : 'BEGIN').run();
+    // BEGIN IMMEDIATE serializes SQLite writers before overlap checks run.
+    sqliteDb.prepare(options.immediate ? 'BEGIN IMMEDIATE' : 'BEGIN').run();
     try {
         const result = await callback(null);
         sqliteDb.prepare('COMMIT').run();

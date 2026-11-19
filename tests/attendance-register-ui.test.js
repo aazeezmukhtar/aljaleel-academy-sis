@@ -12,6 +12,15 @@ const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
 const notificationController = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'notificationController.js'), 'utf8');
 const notificationBar = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'notification_bar.ejs'), 'utf8');
 const schedulerController = require('../controllers/attendanceReminderSchedulerController');
+const analyticsService = fs.readFileSync(path.join(__dirname, '..', 'services', 'attendanceAnalyticsService.js'), 'utf8');
+const portalController = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'portalController.js'), 'utf8');
+const portalAttendanceView = fs.readFileSync(path.join(__dirname, '..', 'views', 'portal', 'attendance.ejs'), 'utf8');
+const attendanceReportView = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'report.ejs'), 'utf8');
+const dashboardService = fs.readFileSync(path.join(__dirname, '..', 'services', 'attendanceAnalyticsDashboardService.js'), 'utf8');
+const analyticsController = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'attendanceController.js'), 'utf8');
+const analyticsView = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'analytics.ejs'), 'utf8');
+
+
 
 assert(view.includes("const STATUS_CYCLE = ['Not recorded', 'Present', 'Late', 'Leave', 'Absent']"));
 assert(view.includes("const currentStatus = student.status || 'Not recorded';"));
@@ -60,6 +69,30 @@ assert.strictEqual(
 assert.strictEqual(schedulerController._test.safeSecretMatch('test-secret', 'test-secret'), true);
 assert.strictEqual(schedulerController._test.safeSecretMatch('test-secret', 'wrong-secret'), false);
 assert.strictEqual(schedulerController._test.safeSecretMatch('test-secret', ''), false);
+assert(controller.includes('attendanceAnalytics.getClassAttendanceReport'));
+assert(analyticsService.includes("record.status === 'Leave'"));
+assert(analyticsService.includes("record.status === 'Late'"));
+assert(analyticsService.includes('attendedDays / totalDays'));
+assert(analyticsService.includes("ar.status = 'submitted'"));
+assert(portalController.includes('attendanceAnalytics.getStudentAttendanceRecords'));
+assert(portalController.includes('selectedSectionId'));
+assert(portalAttendanceView.includes('selectedSectionId'));
+assert(portalAttendanceView.includes('status=leave'));
+assert(portalAttendanceView.includes('attendedDays'));
+assert(attendanceReportView.includes('row.attendanceRate'));
+assert(!attendanceReportView.includes('row.late * 0.5'));
+assert(analyticsController.includes('attendanceAnalyticsDashboard.getDashboard'));
+assert(routes.includes("router.get('/analytics', attendanceController.getAttendanceAnalytics);"));
+assert(view.includes('href="/attendance/analytics"'));
+assert(dashboardService.includes('class_attendance_schedules'));
+assert(dashboardService.includes("status = 'approved'"));
+assert(dashboardService.includes("register.status === 'submitted'"));
+assert(analyticsView.includes('Expected class-days'));
+assert(analyticsView.includes('Missing registers'));
+assert(analyticsView.includes('Students below attendance threshold'));
+assert(analyticsView.includes('Daily attendance trend'));
+
+
 
 
 console.log('[attendance-register-ui] unmarked default, deliberate status cycle, online-only submission, pending-sync guard and responsible-teacher route checks passed.');

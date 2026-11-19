@@ -60,7 +60,7 @@ const db = {
       INSERT INTO student_enrollment_periods
         VALUES (100, 1, 30, 10, 40, '2026/2027', '2026-09-01', NULL, NULL, NULL, 'confirmed'),
                (101, 1, 31, 10, 40, '2026/2027', '2026-11-19', NULL, NULL, NULL, 'confirmed'),
-               (102, 1, 32, 10, 40, '2026/2027', '2026-11-19', NULL, NULL, NULL, 'review_needed');
+               (102, 1, 32, 10, 40, '2026/2027', '2026-11-21', NULL, NULL, NULL, 'review_needed');
     `);
 
     const migration = fs.readFileSync(

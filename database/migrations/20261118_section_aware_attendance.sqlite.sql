@@ -35,6 +35,22 @@ INSERT INTO attendance_migration_guard(ok)
 SELECT CASE WHEN
     (SELECT COUNT(*) FROM attendance) =
     (SELECT COUNT(*) FROM attendance_section_aware_new)
+    AND NOT EXISTS (
+        SELECT 1
+        FROM attendance a
+        JOIN students s ON s.id = a.student_id
+        JOIN classes c ON c.id = a.class_id
+        JOIN sections sec ON sec.id = c.section_id
+        WHERE s.school_id <> c.school_id
+           OR sec.school_id <> c.school_id
+    )
+    AND NOT EXISTS (
+        SELECT 1
+        FROM attendance a
+        JOIN classes c ON c.id = a.class_id
+        GROUP BY a.student_id, c.section_id, a.date, a.session, a.term
+        HAVING COUNT(*) > 1
+    )
 THEN 1 ELSE 0 END;
 
 DROP TABLE attendance;

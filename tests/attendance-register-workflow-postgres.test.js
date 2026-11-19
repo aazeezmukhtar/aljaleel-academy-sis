@@ -191,6 +191,12 @@ if (!url) {
       schoolId: 1, classId: 40, registerDate: '2026-11-19'
     });
     assert.strictEqual(closedContext.blockedReason, 'approved_closure');
+    await assert.rejects(
+      () => workflow.submitRegister({
+        schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20
+      }),
+      /approved closure prevents register submission/
+    );
 
     console.log('[attendance-register-workflow-postgres] PostgreSQL progress save, unmarked guard, transactional submission, submitted count and responsible-teacher authorization passed.');
   } finally {

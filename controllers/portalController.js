@@ -121,25 +121,33 @@ exports.getDashboard = async (req, res) => {
         current_term: ec.section_term || school.current_term || '1st Term'
     }));
 
-    // Calculate attendance percentage across enrolled sessions/terms
-    const activeSessions = [...new Set(sectionInfo.map(s => s.current_session))];
-    const activeTerms = [...new Set(sectionInfo.map(s => s.current_term))];
-    
-    let attRows = [];
-    if (activeSessions.length > 0 && activeTerms.length > 0) {
-        const sessPh = activeSessions.map(() => '?').join(',');
-        const termPh = activeTerms.map(() => '?').join(',');
-        attRows = await db.all(`
-            SELECT status 
-            FROM attendance 
-            WHERE student_id = ? AND session IN (${sessPh}) AND term IN (${termPh})
-        `, [studentId, ...activeSessions, ...activeTerms]);
+    // Use the same submitted-register eligibility and status-credit rules as the
+    // dedicated attendance page. Keep each section separate: Academy and Tahfeez
+    // must never be blended into one dashboard percentage.
+    const attendanceContexts = new Map();
+    for (const section of sectionInfo) {
+        const key = [section.section_id, section.current_session, section.current_term].join('|');
+        if (!attendanceContexts.has(key)) attendanceContexts.set(key, section);
     }
-
-    let attendancePercentage = null;
-    if (attRows && attRows.length > 0) {
-        const presentCount = attRows.filter(r => r.status === 'Present' || r.status === 'Late').length;
-        attendancePercentage = Math.round((presentCount / attRows.length) * 100);
+    const attendanceSummaries = [];
+    for (const section of attendanceContexts.values()) {
+        const records = await attendanceAnalytics.getStudentAttendanceRecords({
+            schoolId,
+            studentId,
+            sectionId: Number(section.section_id),
+            session: section.current_session,
+            term: section.current_term
+        });
+        const summary = attendanceAnalytics.calculateAttendanceSummary(records);
+        attendanceSummaries.push({
+            sectionId: Number(section.section_id),
+            sectionName: section.section_name,
+            session: section.current_session,
+            term: section.current_term,
+            attendanceRate: summary.attendanceRate,
+            attendedDays: summary.attendedDays,
+            totalDays: summary.totalDays
+        });
     }
 
     res.render('portal/index', {
@@ -157,7 +165,7 @@ exports.getDashboard = async (req, res) => {
         feeBalance,
         sectionInfo,
         enrolledClasses,
-        attendancePercentage,
+        attendanceSummaries,
         currentTerm: activeTerm,
         currentSession: activeSession,
         error: req.query.error

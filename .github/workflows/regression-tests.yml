@@ -2,7 +2,7 @@ name: Recovery Baseline Checks
 
 on:
   pull_request:
-    branches: [master, feat/attendance-register-generation, feat/attendance-register-submission, feat/attendance-register-administration, feat/attendance-closure-approval, feat/attendance-reminder-scheduling, feat/attendance-analytics-engine, feat/attendance-analytics-dashboard]
+    branches: [master, feat/attendance-register-generation, feat/attendance-register-submission, feat/attendance-register-administration, feat/attendance-closure-approval, feat/attendance-reminder-scheduling, feat/attendance-analytics-engine, feat/attendance-analytics-dashboard, feat/attendance-offline-register-sync, feat/student-portal-attendance-consistency]
   push:
     branches: [audit/recovery-test-alignment]
 
@@ -63,6 +63,10 @@ jobs:
         run: npm run test:regression
       - name: Run offline cache policy and entry-context tests
         run: node tests/offline-cache-policy.test.js
+      - name: Run offline sync recovery tests
+        run: node tests/offline-sync-recovery.test.js
+      - name: Run attendance offline register sync safety tests
+        run: node tests/attendance-offline-register-sync.test.js
       - name: Run section-owned academic-records regression tests
         run: npm run test:section-owned
       - name: Run UI shell accessibility regression checks

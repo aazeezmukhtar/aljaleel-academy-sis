@@ -17,9 +17,11 @@
                         <i class="bi bi-pencil-square"></i> Edit
                     </button>
                     <% } %>
-                    <button type="submit" form="attendance-form" class="btn btn-primary attendance-save-action" <%= readOnly ? 'hidden' : '' %>>
+                    <button type="submit" form="attendance-form" class="btn btn-outline attendance-save-action" data-attendance-operation="draft" <%= (readOnly || registerStatus === 'submitted') ? 'hidden' : '' %>>
                         <i class="bi bi-cloud-check-fill"></i> Save Records
                     </button>
+                    <button type="submit" form="attendance-form" data-attendance-operation="submit" class="btn btn-primary attendance-submit-action" <%= (readOnly || registerStatus === 'submitted') ? 'hidden' : '' %>><i class="bi bi-lock-fill"></i> Submit Register</button>
+                    <% if (!readOnly && registerStatus === 'submitted' && isAttendanceAdmin) { %><button type="button" id="reopen-register-btn" class="btn btn-outline">Reopen for correction</button><% } %>
                 </div>
             </div>
             <div class="header-meta">
@@ -27,13 +29,14 @@
                     <span class="meta-pill"><i class="bi bi-door-open"></i> <%= clazz.name %></span>
                     <span class="meta-pill" id="attendance-date-label"><i class="bi bi-calendar-event"></i> <%= new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %></span>
                 </div>
-                <button type="button" class="btn btn-outline btn-xs mark-all-present-action" onclick="markAllPresent()" <%= readOnly ? 'hidden' : '' %>>
+                <button type="button" class="btn btn-outline btn-xs mark-all-present-action" onclick="markAllPresent()" <%= (readOnly || registerStatus === 'submitted') ? 'hidden' : '' %>>
                     Mark All Present
                 </button>
             </div>
         </div>
 
         <section class="attendance-container" style="margin-top: 15px;">
+            <% if (registerStatus === 'submitted') { %><div class="alert alert-success" role="status"><strong>Register submitted and locked</strong><div>Submission version <%= registerVersion %>. Ordinary edits are disabled. <% if (isAttendanceAdmin) { %>An administrator may reopen it with a recorded reason.<% } %></div></div><% } else if (!readOnly) { %><div class="alert alert-info" role="status"><strong>Register is a draft</strong><div>Save Records keeps a draft editable. Submit Register validates every student and locks the register.</div></div><% } %>
             <% if (readOnly) { %>
                 <div class="alert <%= hasRecords ? 'alert-info' : 'alert-warning' %>" role="status">
                     <strong><%= hasRecords ? 'Read-only attendance record' : 'No attendance recorded' %></strong>
@@ -80,7 +83,7 @@
                                         data-state="<%= currentStatus %>"
                                         aria-label="Attendance status for <%= student.first_name %> <%= student.last_name %>: <%= currentStatus %>. Activate to change status."
                                         title="Tap to change attendance status"
-                                        <%= readOnly ? 'disabled' : '' %>
+                                        <%= (readOnly || registerStatus === 'submitted') ? 'disabled' : '' %>
                                         onclick="cycleStatus('<%= student.id %>')">
                                     <i class="bi <%= currentStatus === 'Present' ? 'bi-check-circle-fill' : currentStatus === 'Late' ? 'bi-clock-fill' : currentStatus === 'Leave' ? 'bi-journal-text' : currentStatus === 'Not recorded' ? 'bi-dash-circle' : 'bi-x-circle-fill' %>"></i>
                                     <span class="status-label"><%= currentStatus %></span>
@@ -104,13 +107,14 @@
         </div>
 
         <!-- Sticky Save Bar (mobile only) -->
-        <div class="sticky-save-bar attendance-mobile-save" <%= readOnly ? 'hidden' : '' %>>
+        <div class="sticky-save-bar attendance-mobile-save" <%= (readOnly || registerStatus === 'submitted') ? 'hidden' : '' %>>
             <a href="/attendance" class="btn btn-outline" style="flex:0; padding: 12px 16px;">
                 <i class="bi bi-arrow-left"></i>
             </a>
-            <button type="submit" form="attendance-form" class="btn btn-primary">
+            <button type="submit" form="attendance-form" data-attendance-operation="draft" class="btn btn-outline">
                 <i class="bi bi-cloud-check-fill"></i> Save Records
             </button>
+            <button type="submit" form="attendance-form" data-attendance-operation="submit" class="btn btn-primary attendance-submit-action">Submit Register</button>
         </div>
     </main>
 </div>
@@ -368,15 +372,30 @@
 
     updateAttendanceSummary();
 
+    const reopenButton = document.getElementById('reopen-register-btn');
+    if (reopenButton) reopenButton.addEventListener('click', async () => {
+        const reason = window.prompt('Explain why this submitted register must be corrected:');
+        if (!reason || !reason.trim()) return;
+        reopenButton.disabled = true;
+        try {
+            const form = document.getElementById('attendance-form');
+            const payload = Object.fromEntries(new FormData(form).entries());
+            payload.reason = reason.trim();
+            const response = await fetch('/attendance/reopen', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify(payload) });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Could not reopen register.');
+            window.location.reload();
+        } catch (error) { alert(error.message); reopenButton.disabled = false; }
+    });
+
     document.getElementById('attendance-form').addEventListener('submit', async (e) => {
         e.preventDefault();
+        const operation = e.submitter && e.submitter.dataset.attendanceOperation === 'submit' ? 'submit' : 'draft';
         const submitBtns = document.querySelectorAll('button[form="attendance-form"]');
-        const originalText = submitBtns[0] ? submitBtns[0].innerHTML : '<i class="bi bi-cloud-check-fill"></i> Save Records';
+        const originalTexts = Array.from(submitBtns).map(btn => btn.innerHTML);
 
-        submitBtns.forEach(btn => {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
-        });
+        submitBtns.forEach(btn => { btn.disabled = true; });
+        if (e.submitter) e.submitter.innerHTML = operation === 'submit' ? 'Submitting...' : 'Saving...';
 
         const formData = new FormData(e.target);
         const data = {
@@ -384,6 +403,7 @@
             date: formData.get('date'),
             session: formData.get('session'),
             term: formData.get('term'),
+            operation,
             attendance: {},
             reasons: {},
             custom_reasons: {}
@@ -395,7 +415,8 @@
         }
 
         try {
-            const res = await fetch('/attendance/save', {
+            const endpoint = operation === 'submit' ? '/attendance/submit' : '/attendance/save';
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify(data)
@@ -419,6 +440,7 @@
             }
 
             if (result.success) {
+                if (operation === 'submit') { alert('Attendance register submitted successfully and is now locked.'); window.location.reload(); return; }
                 document.getElementById('feedbackModal').style.display = 'flex';
             } else {
                 alert('Server Error: ' + (result.message || 'Unknown error occurred'));
@@ -431,15 +453,12 @@
                     throw new Error('Offline storage is unavailable. Reconnect before leaving this page.');
                 }
                 await offline.saveAttendanceOffline(data);
-                alert('Attendance saved on this device. It is pending sync and has not yet been saved to the school database.');
+                alert(operation === 'submit' ? 'Submission request saved on this device. It remains pending and is NOT submitted until the server confirms it.' : 'Attendance draft saved on this device. It is pending sync and has not yet been saved to the school database.');
             } catch (queueError) {
                 alert('Could not save attendance offline: ' + queueError.message + '. Keep this page open and reconnect before leaving.');
             }
         } finally {
-            submitBtns.forEach(btn => {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-            });
+            submitBtns.forEach((btn, index) => { btn.disabled = false; btn.innerHTML = originalTexts[index]; });
         }
     });
 </script>

@@ -77,7 +77,7 @@ async function calculate(input) {
     [schoolId, studentId, sectionId, classId, session, requestedEnd, requestedStart]);
   }
 
-  const scheduleFor = day => schedules.find(row =>
+  const schedulesFor = day => schedules.filter(row =>
     dbDate(row.effective_from) <= day && (row.effective_to == null || dbDate(row.effective_to) >= day));
   const closuresFor = day => closures.filter(row => dbDate(row.closure_date) === day);
   const enrollmentFor = day => enrollmentPeriods.filter(row =>
@@ -111,12 +111,15 @@ async function calculate(input) {
       }
     }
 
-    const schedule = scheduleFor(day);
-    if (!schedule) {
+    const matchingSchedules = schedulesFor(day);
+    if (matchingSchedules.length !== 1) {
       result.status = 'unknown_schedule';
-      result.reason = 'No class opening schedule is configured for this date.';
+      result.reason = matchingSchedules.length === 0
+        ? 'No class opening schedule is configured for this date.'
+        : 'Multiple overlapping class schedules make this date ambiguous.';
       return result;
     }
+    const schedule = matchingSchedules[0];
     const weekday = WEEKDAYS[new Date(day + 'T00:00:00.000Z').getUTCDay()];
     if (!bool(schedule[weekday])) {
       result.status = 'non_opening';
@@ -141,7 +144,7 @@ async function calculate(input) {
   if (!period) warnings.push('Academic period is not configured; all requested dates are unknown.');
   if (period && schedules.length === 0) warnings.push('No class schedule overlaps the requested date range.');
   if (studentId != null && enrollmentPeriods.length === 0) warnings.push('No confirmed or review-needed dated enrollment period overlaps the requested range; no historical dates were inferred.');
-  if (studentId == null && days.some(day => day.status === 'unknown_schedule')) warnings.push('Some dates have no configured class schedule and are unknown, not closures.');
+  if (studentId == null && days.some(day => day.status === 'unknown_schedule')) warnings.push('Some dates have no configured class schedule or have conflicting schedule records; they are unknown, not closures.');
   if (studentId != null && days.some(day => day.status === 'unknown_enrollment')) warnings.push('Some student dates have unconfirmed or missing enrollment history and are unknown, not assumed eligible.');
   return {
     schoolId: Number(schoolId), sectionId: Number(sectionId), classId: Number(classId),

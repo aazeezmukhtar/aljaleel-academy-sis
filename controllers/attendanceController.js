@@ -251,7 +251,7 @@ const getTakeAttendance = async (req, res) => {
             );
         }
 
-        const registerBlocked = ['approved_closure', 'not_a_scheduled_day'].includes(registerSkipReason);
+        const registerBlocked = ['approved_closure', 'not_a_scheduled_day', 'register_preparation_unavailable'].includes(registerSkipReason);
         const locked = !!register && ['submitted', 'closed'].includes(register.status);
         const canManageRegister = register
             ? await hasRegisterAttendanceAuthority(user, register, schoolId)

@@ -72,7 +72,8 @@ async function ensureNoOverlap(type, schoolId, parentId, session, from, to, exce
 async function createPeriod(input, client) {
   const { schoolId, sectionId, session, term, startDate, endDate, createdBy } = input || {};
   if (!String(session || '').trim() || !String(term || '').trim()) throw new Error('Session and term are required.');
-  const span = interval(startDate, endDate, 'startDate', 'endDate');\n  if (!span.end) throw new Error('An academic period must have a defined end date.');
+  const span = interval(startDate, endDate, 'startDate', 'endDate');
+  if (!span.end) throw new Error('An academic period must have a defined end date.');
   await actorCheck(schoolId, createdBy, client);
   await lockParent('section', schoolId, sectionId, client);
   // Serialize the whole section/session timeline, including gaps with no existing term rows.
@@ -193,7 +194,8 @@ async function correct(type, id, changes, reason, actorId, schoolId) {
     const allowed = type === 'academic_period' ? ['term','start_date','end_date']
       : type === 'attendance_schedule' ? [...WEEKDAYS,'effective_from','effective_to']
       : ['staff_id','effective_from','effective_to'];
-    const set = []; const params = [];\n    if (type === 'academic_period' && !span.end) throw new Error('An academic period must have a defined end date.');
+    const set = []; const params = [];
+    if (type === 'academic_period' && !span.end) throw new Error('An academic period must have a defined end date.');
     for (const key of allowed) if (Object.prototype.hasOwnProperty.call(changes,key)) {
       set.push(key + ' = ?'); params.push(key === 'effective_from' || key === 'effective_to' || key === 'start_date' || key === 'end_date'
         ? (changes[key] == null ? null : date(changes[key],key))

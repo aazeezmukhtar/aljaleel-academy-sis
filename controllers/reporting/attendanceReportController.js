@@ -111,43 +111,33 @@ const getRegister = async (req, res) => {
             const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
             const endDate = `${year}-${String(month).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
 
-            // Build the historical class roster from dated placement periods.
-            // Also retain students with actual attendance in the requested month,
-            // including legacy rows whose original placement dates are unknown.
+            const clazz = await db.get(`SELECT c.name, c.section_id
+                FROM classes c WHERE c.id = ? AND c.school_id = ?`, [class_id, schoolId]);
+            if (!clazz || !clazz.section_id) throw new Error('Select a valid class linked to a section.');
+
+            // A monthly register includes only dated placements and rows from formally submitted registers.
             const students = await db.all(`
                 SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number
                 FROM students s
-                WHERE s.school_id = ?
-                  AND (
-                    EXISTS (
-                      SELECT 1
-                      FROM student_enrollment_periods ep
-                      WHERE ep.student_id = s.id
-                        AND ep.school_id = s.school_id
-                        AND ep.class_id = ?
-                        AND ep.start_date <= ?
-                        AND (ep.end_date IS NULL OR ep.end_date >= ?)
-                    )
-                    OR EXISTS (
-                      SELECT 1
-                      FROM attendance a_legacy
-                      WHERE a_legacy.student_id = s.id
-                        AND a_legacy.class_id = ?
-                        AND a_legacy.date BETWEEN ? AND ?
-                    )
-                  )
+                JOIN student_enrollment_periods ep
+                  ON ep.student_id = s.id AND ep.school_id = s.school_id
+                WHERE s.school_id = ? AND ep.section_id = ? AND ep.class_id = ?
+                  AND ep.start_date <= ? AND (ep.end_date IS NULL OR ep.end_date >= ?)
                 ORDER BY s.last_name, s.first_name
-            `, [schoolId, class_id, endDate, startDate, class_id, startDate, endDate]);
+            `, [schoolId, clazz.section_id, class_id, endDate, startDate]);
 
             const attendance = await db.all(`
                 SELECT a.student_id, a.date, a.status
                 FROM attendance a
-                JOIN students s ON a.student_id = s.id
-                WHERE a.class_id = ? AND a.date BETWEEN ? AND ?
-                  AND s.school_id = ?
-            `, [class_id, startDate, endDate, schoolId]);
-
-            const clazz = await db.get('SELECT name FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+                JOIN students s ON s.id = a.student_id AND s.school_id = ?
+                JOIN attendance_registers ar
+                  ON ar.school_id = s.school_id AND ar.section_id = a.section_id
+                 AND ar.class_id = a.class_id AND ar.attendance_date = a.date
+                 AND ar.session = a.session AND ar.term = a.term
+                 AND ar.status = 'submitted'
+                WHERE a.class_id = ? AND a.section_id = ?
+                  AND a.date BETWEEN ? AND ?
+            `, [schoolId, class_id, clazz.section_id, startDate, endDate]);
 
             const attendanceByStudent = new Map();
             (attendance || []).forEach(row => {

@@ -167,6 +167,70 @@ const schoolInfo = await db.get('SELECT name, phone FROM schools WHERE id = ?', 
     }
 };
 
+// Admin management for explicit, effective-dated register holders.
+const getAttendanceResponsibilities = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user || user.role !== 'Admin') return res.status(403).send('Access denied');
+    try {
+        const [classes, staff, responsibilities] = await Promise.all([
+            db.all('SELECT c.id, c.name, c.section_id, s.name AS section_name FROM classes c LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id WHERE c.school_id = ? ORDER BY s.name, c.name', [schoolId]),
+            db.all("SELECT id, first_name, last_name FROM staff WHERE school_id = ? AND (status = 'active' OR status = 'Active' OR status IS NULL) ORDER BY last_name, first_name", [schoolId]),
+            db.all(`SELECT r.*, c.name AS class_name, s.name AS section_name, st.first_name, st.last_name
+                FROM class_attendance_responsibilities r
+                JOIN classes c ON c.id = r.class_id AND c.school_id = r.school_id
+                LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
+                JOIN staff st ON st.id = r.staff_id AND st.school_id = r.school_id
+                WHERE r.school_id = ? ORDER BY r.effective_from DESC, r.id DESC`, [schoolId])
+        ]);
+        res.render('attendance/responsibilities', { title: 'Attendance Register Responsibilities', classes, staff, responsibilities, user });
+    } catch (err) {
+        console.error('Attendance responsibilities load error:', err);
+        res.status(500).send('Could not load attendance register responsibilities.');
+    }
+};
+
+const createAttendanceResponsibility = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user || user.role !== 'Admin') return res.status(403).json({ success: false, message: 'Admin access is required.' });
+    try {
+        const result = await require('../services/attendanceFoundationService').create('attendance_responsibility', {
+            schoolId, classId: Number(req.body.class_id), staffId: Number(req.body.staff_id),
+            session: req.body.session, effectiveFrom: req.body.effective_from,
+            effectiveTo: req.body.effective_to || null, createdBy: Number(user.id)
+        });
+        logAction(user.id, 'CREATE_ATTENDANCE_RESPONSIBILITY', 'ATTENDANCE', {
+            class_id: Number(req.body.class_id), staff_id: Number(req.body.staff_id),
+            session: req.body.session, effective_from: req.body.effective_from,
+            effective_to: req.body.effective_to || null
+        }, req.ip);
+        return res.redirect('/attendance/responsibilities?success=created');
+    } catch (err) {
+        console.error('Attendance responsibility create error:', err);
+        return res.status(400).send(err.message || 'Could not assign register responsibility.');
+    }
+};
+
+const endAttendanceResponsibility = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user || user.role !== 'Admin') return res.status(403).send('Access denied');
+    try {
+        await require('../services/attendanceFoundationService').correct(
+            'attendance_responsibility', Number(req.params.id),
+            { effective_to: req.body.effective_to },
+            req.body.reason, Number(user.id), schoolId
+        );
+        logAction(user.id, 'END_ATTENDANCE_RESPONSIBILITY', 'ATTENDANCE', {
+            responsibility_id: Number(req.params.id), effective_to: req.body.effective_to, reason: req.body.reason
+        }, req.ip);
+        return res.redirect('/attendance/responsibilities?success=ended');
+    } catch (err) {
+        return res.status(400).send(err.message || 'Could not end register responsibility.');
+    }
+};
+
 // GET /attendance/take - Show attendance marking form
 const getTakeAttendance = async (req, res) => {
     const { class_id, date } = req.query;
@@ -503,5 +567,5 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getReport, getStaffAttendance, saveStaffAttendance };
+module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceResponsibilities, createAttendanceResponsibility, endAttendanceResponsibility, getReport, getStaffAttendance, saveStaffAttendance };
 

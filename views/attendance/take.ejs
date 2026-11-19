@@ -36,7 +36,13 @@
         </div>
 
         <section class="attendance-container" style="margin-top: 15px;">
-            <% if (registerStatus === 'submitted') { %><div class="alert alert-success" role="status"><strong>Register submitted and locked</strong><div>Submission version <%= registerVersion %>. Ordinary edits are disabled. <% if (isAttendanceAdmin) { %>An administrator may reopen it with a recorded reason.<% } %></div></div><% } else if (!readOnly) { %><div class="alert alert-info" role="status"><strong>Register is a draft</strong><div>Save Records keeps a draft editable. Submit Register validates every student and locks the register.</div></div><% } %>
+            <% if (registerStatus === 'submitted') { %><div class="alert alert-success" role="status"><strong>Register submitted and locked</strong><div>Submission version <%= registerVersion %>. Ordinary edits are disabled. <% if (isAttendanceAdmin) { %>An administrator may reopen it with a recorded reason.<% } %></div></div><% } else if (!readOnly) { %><div class="alert alert-info" role="status"><strong>Register is a draft</strong><div>Save Records keeps a draft editable. Submit Register requires an explicit status for every confirmed enrolled student and locks the register.</div></div><% } %>
+            <% if (Number(unknownEnrollmentCount || 0) > 0) { %>
+                <div class="alert alert-warning" role="alert">
+                    <strong>Enrollment dates need review</strong>
+                    <div><%= unknownEnrollmentCount %> active class member(s) have missing or review-needed dated enrollment history. They are not assumed to belong to this class on this date. An administrator must resolve the dates before this register can be submitted.</div>
+                </div>
+            <% } %>
             <% if (readOnly) { %>
                 <div class="alert <%= hasRecords ? 'alert-info' : 'alert-warning' %>" role="status">
                     <strong><%= hasRecords ? 'Read-only attendance record' : 'No attendance recorded' %></strong>
@@ -56,10 +62,10 @@
 
                 <div class="student-grid">
                     <% students.forEach((student, index) => { 
-                        const currentStatus = student.status || (readOnly ? 'Not recorded' : 'Absent');
+                        const currentStatus = student.status || 'Not recorded';
                     %>
                         <div class="student-row-card" data-student-id="<%= student.id %>">
-                            <input type="hidden" class="status-input" name="attendance[<%= student.id %>]" value="<%= currentStatus %>">
+                            <input type="hidden" class="status-input" name="attendance[<%= student.id %>]" value="<%= currentStatus === 'Not recorded' ? '' : currentStatus %>">
                             
                             <div class="row-info">
                                 <div style="width: 46px; height: 54px; flex-shrink: 0; background: #f3f4f6; border-radius: 6px; overflow: hidden; display: flex; align-items: center; justify-content: center; border: 1px solid #cbd5e1;">
@@ -280,25 +286,17 @@
 </style>
 
 <script>
-    const STATUS_CYCLE = ['Absent', 'Present', 'Leave', 'Late'];
+    const STATUS_CYCLE = ['Present', 'Absent', 'Leave', 'Late', 'Not recorded'];
     const STATUS_ICONS = {
         'Absent': 'bi-x-circle-fill',
         'Present': 'bi-check-circle-fill',
         'Leave': 'bi-journal-text',
-        'Late': 'bi-clock-fill'
+        'Late': 'bi-clock-fill',
+        'Not recorded': 'bi-dash-circle'
     };
 
     function enableAttendanceEditing() {
-        document.querySelectorAll('.student-row-card').forEach(card => {
-            const btn = card.querySelector('.cycle-btn');
-            const input = card.querySelector('.status-input');
-            if (btn.dataset.state === 'Not recorded') {
-                btn.dataset.state = 'Absent';
-                input.value = 'Absent';
-                btn.className = 'cycle-btn btn-status-absent';
-                btn.querySelector('i').className = 'bi ' + STATUS_ICONS.Absent;
-                btn.querySelector('.status-label').textContent = 'Absent';
-            }
+        document.querySelectorAll('.student-row-card .cycle-btn').forEach(btn => {
             btn.disabled = false;
         });
 
@@ -338,7 +336,7 @@
     }
 
     function updateAttendanceSummary() {
-        const counts = { Present: 0, Absent: 0, Late: 0, Leave: 0 };
+        const counts = { Present: 0, Absent: 0, Late: 0, Leave: 0, 'Not recorded': 0 };
         document.querySelectorAll('.student-row-card .cycle-btn').forEach(btn => {
             const state = btn.dataset.state;
             if (Object.prototype.hasOwnProperty.call(counts, state)) counts[state] += 1;

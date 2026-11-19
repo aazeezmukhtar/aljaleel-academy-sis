@@ -29,11 +29,11 @@ sqlite.prepare(`INSERT INTO section_academic_periods
   (school_id,section_id,session,term,start_date,end_date)
   VALUES(1,10,'2026/2027','1st Term','2026-11-16','2026-11-30')`).run();
 sqlite.prepare(`INSERT INTO class_attendance_schedules
-  (school_id,class_id,session,effective_from,monday,wednesday,created_by)
-  VALUES(1,100,'2026/2027','2026-11-01',1,1,7),
-        (1,101,'2026/2027','2026-11-01',0,0,7),
-        (1,103,'2026/2027','2026-11-01',1,1,7),
-        (1,104,'2026/2027','2026-11-01',1,1,7)`).run();
+  (school_id,class_id,session,effective_from,monday,tuesday,wednesday,created_by)
+  VALUES(1,100,'2026/2027','2026-11-01',1,0,1,7),
+        (1,101,'2026/2027','2026-11-01',0,1,0,7),
+        (1,103,'2026/2027','2026-11-01',1,0,1,7),
+        (1,104,'2026/2027','2026-11-01',1,0,1,7)`).run();
 sqlite.prepare(`INSERT INTO class_attendance_responsibilities
   (school_id,class_id,staff_id,session,effective_from,created_by)
   VALUES(1,100,7,'2026/2027','2026-11-01',7),

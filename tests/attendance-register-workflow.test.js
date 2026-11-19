@@ -12,6 +12,8 @@ const { createAttendanceRegisterAdministrationService } =
   require('../services/attendanceRegisterAdministrationService');
 const { createAttendanceClosureService } =
   require('../services/attendanceClosureService');
+const { createAttendanceRegisterReminderService } =
+  require('../services/attendanceRegisterReminderService');
 
 const sqlite = new Database(':memory:');
 sqlite.pragma('foreign_keys = ON');
@@ -320,6 +322,91 @@ const db = {
       schoolId: 1, closureId: cancelRequest.closureId, actorStaffId: 20
     });
     assert.strictEqual(cancelledClosure.status, 'cancelled');
+    const reminderService = createAttendanceRegisterReminderService(db);
+    const registerTemplate = await db.get(
+      'SELECT academic_period_id, schedule_id, responsibility_id FROM attendance_registers WHERE school_id = ? AND class_id = ? ORDER BY id LIMIT 1',
+      [1, 40]
+    );
+    const reminderRegister = await db.get(`
+      INSERT INTO attendance_registers
+        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+         register_date, timezone, submission_deadline_at, expected_student_count,
+         submitted_student_count, status)
+      VALUES (1, 40, 10, ?, ?, ?, '2026-11-25', 'Africa/Lagos',
+              '2026-11-25T13:00:00.000Z', 2, 0, 'expected')
+      RETURNING id
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    const firstReminderRun = await reminderService.scheduleDueReminders({
+      now: '2026-11-25T13:00:00.000Z'
+    });
+    assert.strictEqual(firstReminderRun.scheduledCount, 1,
+      'stage one should be scheduled immediately after the deadline');
+    const firstReminderRows = await db.all(
+      'SELECT recipient_staff_id, reminder_stage, reminder_type, status FROM attendance_register_reminders WHERE register_id = ?',
+      [reminderRegister.id]
+    );
+    assert.strictEqual(firstReminderRows.length, 1);
+    assert.strictEqual(String(firstReminderRows[0].recipient_staff_id), '20');
+    assert.strictEqual(Number(firstReminderRows[0].reminder_stage), 1);
+    assert.strictEqual(firstReminderRows[0].reminder_type, 'responsible_teacher');
+    assert.strictEqual(firstReminderRows[0].status, 'pending');
+    const duplicateReminderRun = await reminderService.scheduleDueReminders({
+      now: '2026-11-25T13:00:00.000Z'
+    });
+    assert.strictEqual(duplicateReminderRun.scheduledCount, 0,
+      'repeated scheduler runs must not duplicate a reminder stage');
+    const teacherDelivery = await reminderService.deliverDueRemindersForStaff({
+      staffId: 20, now: '2026-11-25T13:00:00.000Z'
+    });
+    assert.strictEqual(teacherDelivery.length, 1);
+    const escalationRun = await reminderService.scheduleDueReminders({
+      now: '2026-11-25T14:00:00.000Z'
+    });
+    assert.strictEqual(escalationRun.scheduledCount, 1,
+      'the configured 60-minute interval should escalate to administrators');
+    const adminDelivery = await reminderService.deliverDueRemindersForStaff({
+      staffId: 21, now: '2026-11-25T14:00:00.000Z'
+    });
+    assert.strictEqual(adminDelivery.length, 1);
+    const teacherReminder = await db.get(
+      'SELECT id FROM attendance_register_reminders WHERE register_id = ? AND recipient_staff_id = ? AND reminder_stage = 1',
+      [reminderRegister.id, 20]
+    );
+    assert.strictEqual(await reminderService.acknowledgeReminder({
+      staffId: 20, reminderId: teacherReminder.id
+    }), true);
+    const acknowledged = await db.get(
+      'SELECT status, acknowledged_at FROM attendance_register_reminders WHERE id = ?',
+      [teacherReminder.id]
+    );
+    assert.strictEqual(acknowledged.status, 'acknowledged');
+    assert(acknowledged.acknowledged_at);
+
+    const pendingRegister = await db.get(`
+      INSERT INTO attendance_registers
+        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+         register_date, timezone, submission_deadline_at, expected_student_count,
+         submitted_student_count, status)
+      VALUES (1, 40, 10, ?, ?, ?, '2026-11-26', 'Africa/Lagos',
+              '2026-11-26T13:00:00.000Z', 2, 0, 'expected')
+      RETURNING id
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    await reminderService.scheduleDueReminders({ now: '2026-11-26T13:00:00.000Z' });
+    await db.run(`
+      UPDATE attendance_registers
+      SET status = 'submitted', submitted_student_count = expected_student_count,
+          first_submitted_at = '2026-11-26T13:10:00.000Z',
+          last_submitted_at = '2026-11-26T13:10:00.000Z', submitted_by = 20
+      WHERE id = ?
+    `, [pendingRegister.id]);
+    await reminderService.scheduleDueReminders({ now: '2026-11-26T14:00:00.000Z' });
+    const cancelledPendingReminder = await db.get(
+      'SELECT status FROM attendance_register_reminders WHERE register_id = ?',
+      [pendingRegister.id]
+    );
+    assert.strictEqual(cancelledPendingReminder.status, 'cancelled',
+      'pending reminders must be cancelled after server-confirmed submission');
+
     const closureAudit = await db.get(
       "SELECT COUNT(*) AS count FROM attendance_foundation_audit_logs WHERE entity_type = 'attendance_closure'",
       []

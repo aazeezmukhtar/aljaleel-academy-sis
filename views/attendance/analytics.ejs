@@ -16,7 +16,7 @@
             <form action="/attendance/analytics" method="GET" class="grid-2" style="gap:14px;align-items:end;">
                 <div class="form-group">
                     <label for="analytics-section">Section</label>
-                    <select id="analytics-section" name="section_id" class="form-control" required>
+                    <select id="analytics-section" name="section_id" class="form-control" required onchange="this.form.class_id.value='';this.form.session.value='';this.form.term.value='';this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
                         <% sections.forEach(section => { %>
                         <option value="<%= section.id %>" <%= String(filters.section_id) === String(section.id) ? 'selected' : '' %>><%= section.name %></option>
                         <% }); %>
@@ -24,7 +24,7 @@
                 </div>
                 <div class="form-group">
                     <label for="analytics-class">Class</label>
-                    <select id="analytics-class" name="class_id" class="form-control">
+                    <select id="analytics-class" name="class_id" class="form-control" onchange="this.form.submit()">
                         <option value="">All accessible classes</option>
                         <% classes.forEach(clazz => { %>
                         <option value="<%= clazz.id %>" <%= String(filters.class_id) === String(clazz.id) ? 'selected' : '' %>><%= clazz.name %></option>
@@ -33,7 +33,7 @@
                 </div>
                 <div class="form-group">
                     <label for="analytics-session">Session</label>
-                    <select id="analytics-session" name="session" class="form-control" required>
+                    <select id="analytics-session" name="session" class="form-control" required onchange="this.form.term.value='';this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
                         <% periods.forEach(period => { %>
                         <option value="<%= period.session %>" <%= filters.session === period.session ? 'selected' : '' %>><%= period.session %></option>
                         <% }); %>
@@ -41,7 +41,7 @@
                 </div>
                 <div class="form-group">
                     <label for="analytics-term">Term</label>
-                    <select id="analytics-term" name="term" class="form-control" required>
+                    <select id="analytics-term" name="term" class="form-control" required onchange="this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
                         <% periods.filter(period => period.session === filters.session).forEach(period => { %>
                         <option value="<%= period.term %>" <%= filters.term === period.term ? 'selected' : '' %>><%= period.term %></option>
                         <% }); %>

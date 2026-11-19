@@ -119,25 +119,50 @@ exports.getDashboard = async (req, res) => {
         current_term: ec.section_term || school.current_term || '1st Term'
     }));
 
-    // Calculate attendance percentage across enrolled sessions/terms
-    const activeSessions = [...new Set(sectionInfo.map(s => s.current_session))];
-    const activeTerms = [...new Set(sectionInfo.map(s => s.current_term))];
-    
-    let attRows = [];
-    if (activeSessions.length > 0 && activeTerms.length > 0) {
-        const sessPh = activeSessions.map(() => '?').join(',');
-        const termPh = activeTerms.map(() => '?').join(',');
-        attRows = await db.all(`
-            SELECT status 
-            FROM attendance 
-            WHERE student_id = ? AND session IN (${sessPh}) AND term IN (${termPh})
-        `, [studentId, ...activeSessions, ...activeTerms]);
-    }
-
-    let attendancePercentage = null;
-    if (attRows && attRows.length > 0) {
-        const presentCount = attRows.filter(r => r.status === 'Present' || r.status === 'Late').length;
-        attendancePercentage = Math.round((presentCount / attRows.length) * 100);
+    // Dashboard summaries use the same engine, kept separate for every enrolled section.
+    const attendanceAnalytics = require('../services/attendanceAnalyticsService');
+    const attendanceThresholdValue = school['attendance.low_attendance_threshold'] == null
+        ? 75 : Number(school['attendance.low_attendance_threshold']);
+    const attendanceThreshold = Number.isFinite(attendanceThresholdValue) &&
+        attendanceThresholdValue >= 0 && attendanceThresholdValue <= 100
+        ? attendanceThresholdValue : 75;
+    const attendanceSummaries = [];
+    for (const enrolled of sectionInfo) {
+        if (!enrolled.section_id || !enrolled.class_id) continue;
+        const academicPeriod = await db.get(`
+            SELECT start_date, end_date
+            FROM section_academic_periods
+            WHERE school_id = ? AND section_id = ? AND session = ? AND term = ?
+            LIMIT 1
+        `, [schoolId, enrolled.section_id, enrolled.current_session, enrolled.current_term]);
+        if (!academicPeriod) {
+            attendanceSummaries.push({
+                section_id: enrolled.section_id, section_name: enrolled.section_name,
+                class_id: enrolled.class_id, class_name: enrolled.class_name,
+                session: enrolled.current_session, term: enrolled.current_term,
+                attendanceRate: null, unavailable: true
+            });
+            continue;
+        }
+        const summary = await attendanceAnalytics.calculate({
+            schoolId, sectionId: enrolled.section_id, classId: enrolled.class_id,
+            studentId, session: enrolled.current_session, term: enrolled.current_term,
+            startDate: academicPeriod.start_date instanceof Date
+                ? academicPeriod.start_date.toISOString().slice(0,10) : String(academicPeriod.start_date).slice(0,10),
+            endDate: academicPeriod.end_date instanceof Date
+                ? academicPeriod.end_date.toISOString().slice(0,10) : String(academicPeriod.end_date).slice(0,10),
+            lowAttendanceThreshold: attendanceThreshold
+        });
+        attendanceSummaries.push({
+            section_id: enrolled.section_id, section_name: enrolled.section_name,
+            class_id: enrolled.class_id, class_name: enrolled.class_name,
+            session: enrolled.current_session, term: enrolled.current_term,
+            attendanceRate: summary.attendanceRate,
+            recordedDays: summary.counts.recorded,
+            missingRegisters: summary.counts.missingRegister,
+            draftRegisters: summary.counts.draftRegister,
+            unavailable: false
+        });
     }
 
     res.render('portal/index', {
@@ -155,7 +180,7 @@ exports.getDashboard = async (req, res) => {
         feeBalance,
         sectionInfo,
         enrolledClasses,
-        attendancePercentage,
+        attendanceSummaries,
         currentTerm: activeTerm,
         currentSession: activeSession,
         error: req.query.error

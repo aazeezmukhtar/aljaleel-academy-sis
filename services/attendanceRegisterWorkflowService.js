@@ -122,6 +122,18 @@ function createAttendanceRegisterWorkflowService(db) {
                 ${lock}
             `, [schoolId, classId, registerDate], client);
             if (!register) throw new Error('No expected attendance register exists for this class and date.');
+            const approvedClosure = await db.get(`
+                SELECT id FROM class_attendance_closures
+                WHERE school_id = ? AND status = 'approved'
+                  AND start_date <= ? AND end_date >= ?
+                  AND (
+                    scope_type = 'school'
+                    OR (scope_type = 'section' AND section_id = ?)
+                    OR (scope_type = 'class' AND section_id = ? AND class_id = ?)
+                  )
+                LIMIT 1
+            `, [schoolId, registerDate, registerDate, register.section_id, register.section_id, classId], client);
+            if (approvedClosure) throw new Error('An approved closure prevents attendance changes for this date.');
             if (register.status === 'submitted' || register.status === 'closed') {
                 throw new Error('This attendance register is locked. An administrator must reopen it before changes can be saved.');
             }
@@ -348,6 +360,18 @@ function createAttendanceRegisterWorkflowService(db) {
                 ${lock}
             `, [schoolId, classId, registerDate], client);
             if (!register) throw new Error('No expected attendance register exists for this class and date.');
+            const approvedClosure = await db.get(`
+                SELECT id FROM class_attendance_closures
+                WHERE school_id = ? AND status = 'approved'
+                  AND start_date <= ? AND end_date >= ?
+                  AND (
+                    scope_type = 'school'
+                    OR (scope_type = 'section' AND section_id = ?)
+                    OR (scope_type = 'class' AND section_id = ? AND class_id = ?)
+                  )
+                LIMIT 1
+            `, [schoolId, registerDate, registerDate, register.section_id, register.section_id, classId], client);
+            if (approvedClosure) throw new Error('An approved closure prevents register submission for this date.');
             if (!['expected', 'in_progress', 'reopened'].includes(register.status)) {
                 throw new Error('This attendance register cannot be submitted in its current state.');
             }

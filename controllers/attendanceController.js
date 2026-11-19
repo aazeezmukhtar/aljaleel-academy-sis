@@ -1,6 +1,6 @@
 const db = require('../utils/db');
 const { logAction } = require('../utils/logger');
-const { getAttendanceStudents } = require('../utils/attendanceStudentHelper');
+const { getAttendanceRoster } = require('../utils/attendanceStudentHelper');
 const sessionHelper = require('../utils/sessionHelper');
 const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
 
@@ -254,12 +254,10 @@ const getTakeAttendance = async (req, res) => {
 
         const settings = await getAcademicSettings(Number(class_id), schoolId);
 
-        const students = await getAttendanceStudents(
-            Number(class_id),
-            settings.session,
-            schoolId,
-            date
+        const attendanceRoster = await getAttendanceRoster(
+            Number(class_id), settings.session, schoolId, date, settings.term
         );
+        const students = attendanceRoster.students;
 
         const register = settings.session && settings.term ? await require('../services/attendanceRegisterService').getRegister({
             schoolId, classId: Number(class_id), sectionId: Number(clazz.section_id),
@@ -272,6 +270,7 @@ const getTakeAttendance = async (req, res) => {
             class_id,
             date,
             students,
+            unknownEnrollmentCount: attendanceRoster.unknownEnrollmentCount,
             currentTerm: settings.term,
             currentSession: settings.session,
             registerStatus: register ? register.status : 'open',
@@ -344,9 +343,10 @@ const getPreviousDayAttendance = async (req, res) => {
             ? { session: rows[0].session, term: rows[0].term }
             : await getAcademicSettings(Number(class_id), schoolId);
 
-        const students = await getAttendanceStudents(
-            Number(class_id), settings.session, schoolId, date
+        const attendanceRoster = await getAttendanceRoster(
+            Number(class_id), settings.session, schoolId, date, settings.term
         );
+        const students = attendanceRoster.students;
         const statusByStudent = new Map(rows.map(row => [String(row.student_id), row.status]));
         students.forEach(student => {
             student.status = statusByStudent.get(String(student.id)) || null;
@@ -362,6 +362,7 @@ const getPreviousDayAttendance = async (req, res) => {
             class_id,
             date,
             students,
+            unknownEnrollmentCount: attendanceRoster.unknownEnrollmentCount,
             currentTerm: settings.term,
             currentSession: settings.session,
             registerStatus: register ? register.status : 'open',

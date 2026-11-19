@@ -99,3 +99,28 @@ Review the dedicated migration note for ownership checks, inclusive date convent
 - PostgreSQL: `PG_TEST_URL=<disposable-postgres-url> node tests/attendance-calendar-foundation-postgres.test.js`
 
 The PostgreSQL test refuses to fall back to the application's `DATABASE_URL`. Use only a disposable database.
+
+
+## Formal attendance register submission (2026-11-19)
+
+Files:
+
+- `20261119_attendance_register_submission.sqlite.sql`
+- `20261119_attendance_register_submission.postgres.sql`
+- `20261119_attendance_register_submission.md`
+
+This explicit/manual migration creates formal open/submitted register state and immutable submission/reopen history. It depends on section-aware attendance, dated student enrollment periods, and attendance calendar responsibilities. Submission validates the dated roster and refuses missing/review-needed enrollment history; unmarked students cannot be submitted as absent.
+
+## Missing attendance register reminders (2026-11-19)
+
+Files:
+
+- `20261119_attendance_register_reminders.sqlite.sql`
+- `20261119_attendance_register_reminders.postgres.sql`
+- `20261119_attendance_register_reminders.md`
+
+This explicit/manual additive migration creates idempotent reminder records for expected, unsubmitted class registers. The staff notification feed performs a current-term catch-up for the explicit register holder. Reminders are in-app only and are resolved atomically when the register is submitted. It does not add a cron job or external message sender.
+
+## Full attendance foundation rollout
+
+See `20261119_attendance_foundation_rollout.md` for the exact five-migration order, read-only preflight checks, stop conditions, recovery strategy, and application rollout sequence. None of these attendance foundation migrations are run automatically.

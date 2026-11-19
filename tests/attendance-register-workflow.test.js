@@ -14,6 +14,8 @@ const { createAttendanceClosureService } =
   require('../services/attendanceClosureService');
 const { createAttendanceRegisterReminderService } =
   require('../services/attendanceRegisterReminderService');
+const { createAttendanceAnalyticsService, calculateAttendanceSummary } =
+  require('../services/attendanceAnalyticsService');
 
 const sqlite = new Database(':memory:');
 sqlite.pragma('foreign_keys = ON');
@@ -410,6 +412,82 @@ const db = {
     assert.strictEqual(cancelledPendingReminder.status, 'cancelled',
       'pending reminders must be cancelled after server-confirmed submission');
 
+    const analytics = createAttendanceAnalyticsService(db);
+    await db.run("INSERT INTO sections(id, school_id, name) VALUES (11, 1, 'Tahfeez')");
+    await db.run("INSERT INTO classes(id, school_id, section_id, name) VALUES (41, 1, 11, 'Tahfeez 1')");
+    const analyticsRegister = await db.get(`
+      INSERT INTO attendance_registers
+        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+         register_date, timezone, submission_deadline_at, status, expected_student_count,
+         submitted_student_count, first_submitted_at, last_submitted_at, submitted_by)
+      VALUES (1, 40, 10, ?, ?, ?, '2026-11-30', 'Africa/Lagos',
+              '2026-11-30T13:00:00.000Z', 'submitted', 2, 2,
+              '2026-11-30T13:10:00.000Z', '2026-11-30T13:10:00.000Z', 20)
+      RETURNING id
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    await db.run(`
+      INSERT INTO attendance_register_students (register_id, student_id, enrollment_period_id)
+      VALUES (?, 30, 100)
+    `, [analyticsRegister.id]);
+    await db.run(`
+      INSERT INTO attendance_register_students (register_id, student_id, enrollment_period_id)
+      VALUES (?, 31, 101)
+    `, [analyticsRegister.id]);
+    await db.run(`
+      INSERT INTO attendance
+        (student_id, class_id, section_id, date, status, session, term)
+      VALUES (30, 40, 10, '2026-11-29', 'Late', '2026/2027', '1st Term'),
+             (31, 40, 10, '2026-11-29', 'Absent', '2026/2027', '1st Term'),
+             (30, 40, 10, '2026-11-30', 'Present', '2026/2027', '1st Term'),
+             (31, 40, 10, '2026-11-30', 'Leave', '2026/2027', '1st Term'),
+             (30, 41, 11, '2026-11-30', 'Absent', '2026/2027', '1st Term')
+    `);
+    const incompleteAnalyticsRegister = await db.get(`
+      INSERT INTO attendance_registers
+        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+         register_date, timezone, submission_deadline_at, status, expected_student_count, submitted_student_count)
+      VALUES (1, 40, 10, ?, ?, ?, '2026-12-01', 'Africa/Lagos',
+              '2026-12-01T13:00:00.000Z', 'in_progress', 2, 0)
+      RETURNING id
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    await db.run(`
+      INSERT INTO attendance
+        (student_id, class_id, section_id, date, status, session, term)
+      VALUES (30, 40, 10, '2026-12-01', 'Absent', '2026/2027', '1st Term')
+    `);
+
+    const studentAnalyticsRows = await analytics.getStudentAttendanceRecords({
+      schoolId: 1, studentId: 30, sectionId: 10,
+      startDate: '2026-11-29', endDate: '2026-12-01'
+    });
+    assert.strictEqual(studentAnalyticsRows.length, 2,
+      'student analytics must exclude partial register saves and other sections');
+    assert.deepStrictEqual(studentAnalyticsRows.map(row => row.status).sort(), ['Late', 'Present']);
+    const leaveAnalyticsRows = await analytics.getStudentAttendanceRecords({
+      schoolId: 1, studentId: 31, sectionId: 10,
+      startDate: '2026-11-29', endDate: '2026-12-01'
+    });
+    const leaveSummary = calculateAttendanceSummary(leaveAnalyticsRows, 80);
+    assert.strictEqual(leaveSummary.attendanceRate, 50,
+      'approved Leave receives full attendance credit while Absent receives none');
+    assert.strictEqual(leaveSummary.belowThreshold, true);
+    const classAnalytics = await analytics.getClassAttendanceReport({
+      schoolId: 1, classId: 40, sectionId: 10,
+      startDate: '2026-11-29', endDate: '2026-12-01'
+    });
+    assert.strictEqual(classAnalytics.threshold, 80);
+    assert.strictEqual(classAnalytics.rows.length, 2);
+    const student30Report = classAnalytics.rows.find(row => String(row.student_id) === '30');
+    const student31Report = classAnalytics.rows.find(row => String(row.student_id) === '31');
+    assert.strictEqual(student30Report.attendanceRate, 100);
+    assert.strictEqual(student30Report.totalDays, 2);
+    assert.strictEqual(student31Report.attendanceRate, 50);
+    assert.strictEqual(student31Report.leave, 1);
+    assert.strictEqual(student31Report.belowThreshold, true);
+    assert.strictEqual(classAnalytics.registerCompletion.generatedRegisters, 2);
+    assert.strictEqual(classAnalytics.registerCompletion.submittedRegisters, 1);
+    assert.strictEqual(classAnalytics.registerCompletion.pendingRegisters, 1);
+    assert.strictEqual(classAnalytics.registerCompletion.completionRate, 50);
     const closureAudit = await db.get(
       "SELECT COUNT(*) AS count FROM attendance_foundation_audit_logs WHERE entity_type = 'attendance_closure'",
       []

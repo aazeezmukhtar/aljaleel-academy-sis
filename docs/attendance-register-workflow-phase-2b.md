@@ -20,7 +20,7 @@ This phase connects a generated attendance register to the existing attendance-e
 - Submitted/closed registers reject ordinary saves.
 - A partial save moves an expected/reopened register to `in_progress`.
 - Corrections and unmarking are recorded as register events and per-attendance audit-log rows, including actor and before/after data.
-- Legacy sheets without a generated register continue through the established save path, with explicit status validation and unmarking support.
+- Legacy sheets without a generated register continue through the established save path, with explicit status validation and unmarking support. When the audit foundation exists, these changes are also written to the attendance audit log in the same transaction.
 
 ## Submission
 
@@ -38,6 +38,7 @@ Only then does the transaction set the register to `submitted`, set submitter an
 
 - Offline Save Progress stores the payload in the existing owner-scoped IndexedDB queue.
 - Local queueing is not server submission and does not mark the register submitted.
+- Approved closures and unscheduled class days block attendance entry and submission.
 - The Submit Register action is unavailable offline.
 - Submission is blocked while any attendance items remain pending synchronization for the current offline principal.
 - After sync, the user can submit while online; the server revalidates every student and status.
@@ -50,7 +51,7 @@ Run:
 npm run test:attendance-register-workflow
 ```
 
-SQLite and PostgreSQL workflow-service tests run against isolated databases/schemas and the attendance foundation migration. CI also runs a static UI/offline guard test and the existing regression suite. Full browser-level and end-to-end user-flow tests remain follow-up work.
+SQLite and PostgreSQL workflow-service tests run against isolated databases/schemas and the attendance foundation migration. They cover partial save, unmarked submission rejection, responsible-teacher authorization, audit history, submission and approved-closure blocking. CI also runs a static UI/offline guard test and the existing regression suite. Full browser-level and end-to-end user-flow tests remain follow-up work.
 
 ## Explicit non-goals
 

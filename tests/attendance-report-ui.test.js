@@ -54,6 +54,12 @@ assert(dashboardView.includes('selectedSectionId') && dashboardView.includes('Ac
   'Administrative dashboard must require one section and explain section isolation.');
 assert(dashboardView.includes('stats.submitted_registers'), 'Dashboard must surface formal register submissions.');
 assert(attendanceReportController.includes("require('../../services/attendanceAnalyticsService')"), 'Administrative attendance reports must use the shared analytics engine.');
+assert(attendanceReportController.includes("require('../../services/expectedAttendanceDaysService')") &&
+  attendanceReportController.includes("day.status === 'expected'") &&
+  attendanceReportController.includes('expectedClassIds.size'),
+  'Dashboard expected-register totals must include only classes scheduled to open and not closed on the selected date.');
+assert(attendanceReportController.includes('date_status = \'confirmed\''),
+  'Dashboard roster must exclude enrollment dates that have not been confirmed.');
 assert(lowView.includes('student.attendance_rate') && lowView.includes('student.missing_registers'), 'Low-attendance alerts must display shared-engine rates and missing registers.');
 assert(attendanceReportController.includes("ar.status = 'submitted'"), 'Daily and monthly register views must exclude unsubmitted drafts.');
 assert(dailyView.includes('name="section_id"'), 'Daily register view must require a section selection.');

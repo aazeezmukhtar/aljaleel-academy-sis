@@ -38,6 +38,8 @@ jobs:
           node-version: 22
       - name: Install project dependencies
         run: npm install --no-audit --no-fund
+      - name: Syntax-check attendance foundation services and tests
+        run: node --check services/attendanceFoundationService.js && node --check tests/attendance-calendar-foundation-service.test.js && node --check tests/attendance-calendar-foundation-postgres-service.test.js
       - name: Test SQLite foundation migration in memory
         run: node tests/attendance-calendar-foundation-migration.test.js
       - name: Test PostgreSQL foundation migration in disposable service

@@ -75,8 +75,25 @@ function createAttendanceRegisterWorkflowService(db) {
             WHERE rs.register_id = ?
             ORDER BY s.last_name, s.first_name, s.id
         `, [register.session, register.term, register.id]);
+        const closures = await db.all(`
+            SELECT id
+            FROM class_attendance_closures
+            WHERE school_id = ? AND status = 'approved'
+              AND start_date <= ? AND end_date >= ?
+              AND (
+                scope_type = 'school'
+                OR (scope_type = 'section' AND section_id = ?)
+                OR (scope_type = 'class' AND section_id = ? AND class_id = ?)
+              )
+            ORDER BY id
+        `, [schoolId, registerDate, registerDate, register.section_id, register.section_id, classId]);
 
-        return { register, students };
+        return {
+            register,
+            students,
+            blockedReason: closures.length > 0 ? 'approved_closure' : null,
+            closureIds: closures.map(row => row.id)
+        };
     }
 
     async function saveRegisterProgress(input) {

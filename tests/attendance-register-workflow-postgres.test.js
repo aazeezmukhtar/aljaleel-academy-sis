@@ -234,7 +234,7 @@ if (!url) {
       reason: 'Class closure requested due to an urgent maintenance issue.'
     });
     assert.strictEqual(closureRequest.status, 'pending');
-    const pendingClosures = await closures.listClosures({ schoolId: 1, status: 'pending' });
+    const pendingClosures = await closures.listClosures({ schoolId: 1, actorStaffId: 20, status: 'pending' });
     assert(pendingClosures.some(item => String(item.id) === String(closureRequest.closureId)));
     await assert.rejects(
       () => closures.decideClosure({
@@ -248,6 +248,18 @@ if (!url) {
       decision: 'approved'
     });
     assert.strictEqual(approvedClosure.status, 'approved');
+    const adminOnlyClosure = await closures.requestClosure({
+      schoolId: 1, actorStaffId: 21, scopeType: 'school',
+      startDate: '2026-11-24', endDate: '2026-11-24',
+      reason: 'School-wide closure for a scheduled maintenance day.'
+    });
+    const teacherVisibleClosures = await closures.listClosures({ schoolId: 1, actorStaffId: 20 });
+    assert(!teacherVisibleClosures.some(item => String(item.id) === String(adminOnlyClosure.closureId)),
+      'class teachers must not see unrelated school-wide closure requests');
+    const adminVisibleClosures = await closures.listClosures({ schoolId: 1, actorStaffId: 21 });
+    assert(adminVisibleClosures.some(item => String(item.id) === String(adminOnlyClosure.closureId)),
+      'administrators must be able to review school-wide closure requests');
+
 
     await assert.rejects(
       () => closures.requestClosure({

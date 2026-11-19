@@ -17,21 +17,32 @@ raw.exec(`
   CREATE TABLE classes(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id), section_id INTEGER NOT NULL REFERENCES sections(id));
   CREATE TABLE students(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL, status TEXT, current_class_id INTEGER);
   CREATE TABLE student_enrollments(id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, class_id INTEGER NOT NULL, session TEXT NOT NULL);
+  CREATE TABLE student_enrollment_history(id INTEGER PRIMARY KEY);
   CREATE TABLE class_attendance_responsibilities(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL, class_id INTEGER NOT NULL, staff_id INTEGER NOT NULL, session TEXT NOT NULL, effective_from DATE NOT NULL, effective_to DATE);
-  INSERT INTO class_attendance_responsibilities VALUES(1,1,10,1,'2026/2027','2026-09-01',NULL);
+  INSERT INTO class_attendance_responsibilities VALUES
+    (1,1,10,1,'2026/2027','2026-09-01',NULL),
+    (2,1,11,1,'2026/2027','2026-09-01',NULL);
   CREATE TABLE attendance(id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, class_id INTEGER NOT NULL, section_id INTEGER NOT NULL, date DATE NOT NULL, status TEXT NOT NULL, session TEXT NOT NULL, term TEXT NOT NULL, reason TEXT, reason_type TEXT, custom_reason TEXT, UNIQUE(student_id,section_id,date,session,term));
   INSERT INTO schools VALUES(1);
   INSERT INTO sections VALUES(1,1);
   INSERT INTO staff VALUES(1,1),(2,1);
-  INSERT INTO classes VALUES(10,1,1);
-  INSERT INTO students VALUES(101,1,'active',10),(102,1,'active',10);
-  INSERT INTO student_enrollments VALUES(1,101,10,'2026/2027'),(2,102,10,'2026/2027');
+  INSERT INTO classes VALUES(10,1,1),(11,1,1);
+  INSERT INTO students VALUES(101,1,'active',11),(102,1,'active',10);
+  INSERT INTO student_enrollments VALUES
+    (1,101,10,'2026/2027'),(2,102,10,'2026/2027'),(3,101,11,'2026/2027');
 `);
 raw.close();
-const migration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261119_attendance_register_submission.sqlite.sql'), 'utf8');
+const enrollmentMigration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261117_student_enrollment_periods.sqlite.sql'), 'utf8');
+const registerMigration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261119_attendance_register_submission.sqlite.sql'), 'utf8');
 const migrationDb = new Database(file);
-migrationDb.exec(migration);
-migrationDb.exec(migration);
+migrationDb.exec(enrollmentMigration);
+migrationDb.exec(registerMigration);
+migrationDb.exec(registerMigration);
+migrationDb.prepare(`INSERT INTO student_enrollment_periods
+  (school_id,student_id,section_id,class_id,session,start_date,end_date,date_status)
+  VALUES (1,101,1,10,'2026/2027','2026-09-01','2026-11-09','confirmed'),
+         (1,101,1,11,'2026/2027','2026-11-10',NULL,'confirmed'),
+         (1,102,1,10,'2026/2027','2026-09-01',NULL,'confirmed')`).run();
 migrationDb.close();
 
 const db = require('../utils/db');
@@ -44,7 +55,7 @@ const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-19', session:'
     const draft = await service.saveDraft({ ...base, attendance:{101:'Present'} });
     assert.equal(draft.status, 'open');
     assert.equal(draft.savedCount, 1);
-    await assert.rejects(service.submit({ ...base, attendance:{101:'Present'} }), /incomplete/);
+    await assert.rejects(service.submit({ ...base, attendance:{101:'Present',102:''} }), /incomplete/);
     const submitted = await service.submit({ ...base, attendance:{101:'Present',102:'Leave'} });
     assert.equal(submitted.status, 'submitted');
     assert.equal(submitted.version, 1);
@@ -65,7 +76,22 @@ const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-19', session:'
     assert.deepStrictEqual(JSON.parse(record.events[2].old_values).map(row => row.status), ['Present','Leave']);
     assert.deepStrictEqual(JSON.parse(record.events[2].new_values).map(row => row.status), ['Late','Leave']);
     await assert.rejects(db.run('UPDATE attendance_register_events SET reason = ? WHERE id = ?', ['tampered', record.events[0].id]), /immutable/);
-    console.log('[attendance-register-sqlite] draft, completeness, locking, admin reopen, audited reason, resubmission and history passed.');
+
+    const oldClass = await service.saveDraft({ ...base, date:'2026-11-05', attendance:{101:'Present'} });
+    assert.equal(oldClass.rosterCount, 2, 'The source class roster must include the student before the dated transfer.');
+    const newClass = await service.saveDraft({ ...base, classId:11, date:'2026-11-19', attendance:{101:'Present'} });
+    assert.equal(newClass.rosterCount, 1, 'The destination class roster must include the student after the dated transfer.');
+    const currentSource = await service.saveDraft({ ...base, date:'2026-11-19', attendance:{102:'Present'} });
+    assert.equal(currentSource.rosterCount, 1, 'A transferred student must not remain in the source-class roster after the transfer date.');
+
+    const migrationDb2 = new Database(file);
+    migrationDb2.prepare(`INSERT INTO students VALUES(103,1,'active',10)`).run();
+    migrationDb2.prepare(`INSERT INTO student_enrollments VALUES(4,103,10,'2026/2027')`).run();
+    migrationDb2.close();
+    const unresolved = await service.saveDraft({ ...base, date:'2026-11-20', attendance:{102:'Present'} });
+    assert.equal(unresolved.unknownEnrollmentCount, 1, 'Missing dated placement history must be surfaced, not inferred.');
+    await assert.rejects(service.submit({ ...base, date:'2026-11-20', attendance:{102:'Present'} }), /missing or review-needed dated enrollment history/);
+    console.log('[attendance-register-sqlite] explicit statuses, transfer-date roster, unresolved enrollment guard, locking, reopen and audit passed.');
   } finally {
     try { fs.unlinkSync(file); } catch {}
   }

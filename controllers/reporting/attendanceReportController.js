@@ -5,9 +5,10 @@ const getAttendanceDashboard = async (req, res) => {
     const schoolId = req.schoolId || (user ? user.school_id : 1);
     const selectedSectionId = req.query.section_id ? Number(req.query.section_id) : null;
     const stats = { present_today: 0, absent_today: 0, late_today: 0, leave_today: 0, submitted_registers: 0, expected_registers: 0 };
-    const attendanceThreshold = await require('../../services/attendanceThresholdService').getSchoolThreshold(schoolId);
+    let attendanceThreshold = 75;
     let selectedSection = null;
     try {
+        attendanceThreshold = await require('../../services/attendanceThresholdService').getSchoolThreshold(schoolId);
         const sections = await db.all('SELECT id, name, current_session, current_term FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
         if (selectedSectionId) {
             selectedSection = sections.find(section => Number(section.id) === selectedSectionId) || null;

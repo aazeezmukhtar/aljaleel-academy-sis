@@ -220,6 +220,11 @@ async function submit(input) {
       (register_id, school_id, action, version, reason, old_values, new_values, actor_id)
       VALUES (?, ?, 'submitted', ?, ?, ?, ?, ?)`,
     [register.id, ctx.schoolId, version, reason, oldValues, newValues, ctx.actorId], client);
+    await db.run(`UPDATE attendance_register_reminders
+      SET status = 'resolved', resolved_at = CURRENT_TIMESTAMP
+      WHERE school_id = ? AND section_id = ? AND class_id = ?
+        AND attendance_date = ? AND session = ? AND term = ? AND status = 'active'`,
+    [ctx.schoolId, ctx.sectionId, ctx.classId, ctx.date, ctx.session, ctx.term], client);
     return { registerId: Number(register.id), status: 'submitted', version, ...result };
   });
 }

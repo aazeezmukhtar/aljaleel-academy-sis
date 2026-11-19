@@ -223,11 +223,11 @@ function createAttendanceAnalyticsService(db) {
         const submittedRegisters = Number(row && row.submitted_registers || 0);
         const pendingRegisters = Number(row && row.pending_registers || 0);
         return {
-            expectedRegisters,
+            generatedRegisters,
             submittedRegisters,
             pendingRegisters,
-            completionRate: expectedRegisters > 0
-                ? Math.round((submittedRegisters / expectedRegisters) * 1000) / 10 : null
+            completionRate: generatedRegisters > 0
+                ? Math.round((submittedRegisters / generatedRegisters) * 1000) / 10 : null
         };
     }
 

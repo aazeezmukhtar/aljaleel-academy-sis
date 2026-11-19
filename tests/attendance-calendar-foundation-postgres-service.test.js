@@ -32,7 +32,7 @@ if (!connectionString) {
     const migration=fs.readFileSync(path.join(__dirname,'..','database','migrations','20261119_attendance_calendar_foundation.postgres.sql'),'utf8');
     await client.query(migration);
 
-    const adapt=sql=>{let n=0;return sql.replace(/\\?/g,()=>'$'+(++n));};
+    const adapt=sql=>{let n=0;return sql.replace(/\?/g,()=>'$'+(++n));};
     const fakeDb={
       DB_TYPE:'postgres',
       get:async(sql,params=[],tx=null)=>{const r=await (tx||client).query(adapt(sql),params.map(v=>v===undefined?null:v));return r.rows[0];},

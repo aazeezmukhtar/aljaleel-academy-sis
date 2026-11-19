@@ -145,14 +145,37 @@ function createAttendanceClosureService(db) {
 
     async function listClosures(input) {
         const schoolId = Number(input && input.schoolId);
+        const actorStaffId = Number(input && input.actorStaffId);
         const status = input && input.status ? String(input.status) : null;
-        if (!Number.isSafeInteger(schoolId) || schoolId <= 0) throw new Error('A valid school is required.');
+        if (!Number.isSafeInteger(schoolId) || schoolId <= 0 ||
+            !Number.isSafeInteger(actorStaffId) || actorStaffId <= 0) {
+            throw new Error('A valid school and staff member are required.');
+        }
         if (status && !['pending', 'approved', 'rejected', 'cancelled'].includes(status)) {
             throw new Error('Invalid closure status filter.');
         }
+        const actor = await getActor(actorStaffId, schoolId);
         const statusClause = status ? ' AND cl.status = ?' : '';
+        const visibilityClause = actor.role === 'Admin' ? '' : `
+            AND (
+                cl.requested_by = ?
+                OR (
+                    cl.scope_type = 'class'
+                    AND EXISTS (
+                        SELECT 1 FROM class_attendance_responsibilities resp
+                        WHERE resp.school_id = cl.school_id
+                          AND resp.class_id = cl.class_id
+                          AND resp.section_id = cl.section_id
+                          AND resp.staff_id = ?
+                          AND resp.responsibility_type IN ('primary', 'substitute')
+                          AND resp.effective_from <= cl.start_date
+                          AND (resp.effective_to IS NULL OR resp.effective_to >= cl.end_date)
+                    )
+                )
+            )`;
         const params = [schoolId];
         if (status) params.push(status);
+        if (actor.role !== 'Admin') params.push(actorStaffId, actorStaffId);
         const rows = await db.all(`
             SELECT cl.*, req.first_name AS requester_first_name, req.last_name AS requester_last_name,
                    approver.first_name AS approver_first_name, approver.last_name AS approver_last_name,
@@ -162,7 +185,7 @@ function createAttendanceClosureService(db) {
             LEFT JOIN staff approver ON approver.id = cl.approved_by AND approver.school_id = cl.school_id
             LEFT JOIN sections sec ON sec.id = cl.section_id AND sec.school_id = cl.school_id
             LEFT JOIN classes c ON c.id = cl.class_id AND c.school_id = cl.school_id
-            WHERE cl.school_id = ?${statusClause}
+            WHERE cl.school_id = ?${statusClause}${visibilityClause}
             ORDER BY CASE cl.status WHEN 'pending' THEN 0 ELSE 1 END, cl.start_date DESC, cl.id DESC
             LIMIT 200
         `, params);

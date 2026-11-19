@@ -17,11 +17,11 @@ if (!connectionString) {
     await client.query(`CREATE SCHEMA "${schema}"`);
     await client.query(`SET search_path TO "${schema}"`);
     await client.query(`
-      CREATE TABLE schools(id INTEGER PRIMARY KEY);
-      CREATE TABLE sections(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id));
-      CREATE TABLE staff(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id));
-      CREATE TABLE classes(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id), section_id INTEGER NOT NULL REFERENCES sections(id));
-      CREATE TABLE term_events(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id), section_id INTEGER, event_date DATE NOT NULL);
+      CREATE TABLE schools(id BIGINT PRIMARY KEY);
+      CREATE TABLE sections(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
+      CREATE TABLE staff(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
+      CREATE TABLE classes(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id), section_id BIGINT NOT NULL REFERENCES sections(id));
+      CREATE TABLE term_events(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id), section_id BIGINT, event_date DATE NOT NULL);
       INSERT INTO schools VALUES(1);
       INSERT INTO sections VALUES(1,1),(2,1);
       INSERT INTO staff VALUES(1,1);

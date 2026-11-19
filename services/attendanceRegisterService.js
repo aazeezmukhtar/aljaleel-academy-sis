@@ -94,6 +94,12 @@ async function ensureRegister(ctx, client) {
   if (!row) throw new Error('Attendance register could not be initialized.');
   return row;
 }
+async function attendanceSnapshot(ctx, client) {
+  return db.all(`SELECT student_id, status, reason, reason_type, custom_reason
+    FROM attendance WHERE class_id = ? AND section_id = ? AND date = ?
+      AND session = ? AND term = ? ORDER BY student_id`,
+  [ctx.classId, ctx.sectionId, ctx.date, ctx.session, ctx.term], client);
+}
 async function saveRows(ctx, input, client) {
   const attendance = input.attendance && typeof input.attendance === 'object' ? input.attendance : {};
   const reasons = input.reasons && typeof input.reasons === 'object' ? input.reasons : {};
@@ -146,21 +152,28 @@ async function submit(input) {
     await lockClass(ctx, client);
     const register = await ensureRegister(ctx, client);
     if (register.status === 'submitted') throw conflict('This register has already been submitted.');
+    const before = await attendanceSnapshot(ctx, client);
+    const reopenedEvent = register.submission_version > 0 ? await db.get(`SELECT old_values FROM attendance_register_events
+      WHERE register_id = ? AND action = 'reopened' AND version = ? ORDER BY id DESC LIMIT 1`,
+    [register.id, register.submission_version], client) : null;
     const result = await saveRows(ctx, input, client);
     if (result.rosterCount === 0) throw new Error('An empty class roster cannot be submitted.');
     if (result.savedCount !== result.rosterCount ||
         result.rosterIds.some(id => !Object.prototype.hasOwnProperty.call(input.attendance || {}, id))) {
       throw conflict('The register is incomplete. Every student on the current class roster must have a status before submission.');
     }
+    const after = await attendanceSnapshot(ctx, client);
+    const oldValues = reopenedEvent && reopenedEvent.old_values ? reopenedEvent.old_values : JSON.stringify(before);
+    const newValues = JSON.stringify(after);
     const version = Number(register.submission_version || 0) + 1;
     await db.run(`UPDATE attendance_registers SET status = 'submitted',
       submission_version = ?, submitted_at = CURRENT_TIMESTAMP, submitted_by = ?,
       reopened_at = NULL, reopened_by = NULL, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND status = 'open'`, [version, ctx.actorId, register.id], client);
     await db.run(`INSERT INTO attendance_register_events
-      (register_id, school_id, action, version, reason, actor_id)
-      VALUES (?, ?, 'submitted', ?, ?, ?)`,
-    [register.id, ctx.schoolId, version, reason, ctx.actorId], client);
+      (register_id, school_id, action, version, reason, old_values, new_values, actor_id)
+      VALUES (?, ?, 'submitted', ?, ?, ?, ?, ?)`,
+    [register.id, ctx.schoolId, version, reason, oldValues, newValues, ctx.actorId], client);
     return { registerId: Number(register.id), status: 'submitted', version, ...result };
   });
 }
@@ -179,13 +192,14 @@ async function reopen(input) {
     const register = await ensureRegister(ctx, client);
     if (register.status !== 'submitted') throw conflict('Only a submitted register can be reopened.');
     const version = Number(register.submission_version || 0);
+    const oldValues = JSON.stringify(await attendanceSnapshot(ctx, client));
     await db.run(`UPDATE attendance_registers SET status = 'open',
       reopened_at = CURRENT_TIMESTAMP, reopened_by = ?, updated_at = CURRENT_TIMESTAMP
       WHERE id = ? AND status = 'submitted'`, [ctx.actorId, register.id], client);
     await db.run(`INSERT INTO attendance_register_events
-      (register_id, school_id, action, version, reason, actor_id)
-      VALUES (?, ?, 'reopened', ?, ?, ?)`,
-    [register.id, ctx.schoolId, version, reason, ctx.actorId], client);
+      (register_id, school_id, action, version, reason, old_values, actor_id)
+      VALUES (?, ?, 'reopened', ?, ?, ?, ?)`,
+    [register.id, ctx.schoolId, version, reason, oldValues, ctx.actorId], client);
     return { registerId: Number(register.id), status: 'open', version };
   });
 }
@@ -197,7 +211,7 @@ async function getRegister(input) {
       AND attendance_date = ? AND session = ? AND term = ?`,
   [ctx.schoolId, ctx.classId, ctx.sectionId, ctx.date, ctx.session, ctx.term]);
   if (!register) return null;
-  const events = await db.all(`SELECT id, action, version, reason, actor_id, created_at
+  const events = await db.all(`SELECT id, action, version, reason, old_values, new_values, actor_id, created_at
     FROM attendance_register_events WHERE school_id = ? AND register_id = ?
     ORDER BY id ASC`, [ctx.schoolId, register.id]);
   return { ...register, events };

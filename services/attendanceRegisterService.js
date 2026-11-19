@@ -141,7 +141,9 @@ async function saveRows(ctx, input, client) {
   const rosterResult = await roster(ctx, client);
   const students = rosterResult.students;
   const allowed = new Set(students.map(row => String(row.id)));
-  const submittedIds = Object.keys(attendance);
+  const submittedIds = Object.keys(attendance).filter(studentId =>
+    attendance[studentId] !== '' && attendance[studentId] != null
+  );
   for (const studentId of submittedIds) {
     if (!/^\d+$/.test(studentId) || !allowed.has(studentId)) {
       throw new Error('The attendance payload contains a student outside the selected class roster.');

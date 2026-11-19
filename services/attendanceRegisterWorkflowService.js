@@ -98,7 +98,7 @@ function createAttendanceRegisterWorkflowService(db) {
             const lock = db.DB_TYPE === 'postgres' ? ' FOR UPDATE' : '';
             const register = await db.get(`
                 SELECT ar.id, ar.section_id, ar.status, ar.expected_student_count,
-                       ap.session, ap.term
+                       ar.responsibility_id, ap.session, ap.term
                 FROM attendance_registers ar
                 JOIN section_academic_periods ap ON ap.id = ar.academic_period_id
                 WHERE ar.school_id = ? AND ar.class_id = ? AND ar.register_date = ?
@@ -117,6 +117,17 @@ function createAttendanceRegisterWorkflowService(db) {
                 [actorStaffId, schoolId], client
             );
             if (!actor) throw new Error('The staff member saving this register does not belong to this school.');
+            if (!(input && input.isAdministrator === true)) {
+                const responsibility = register.responsibility_id
+                    ? await db.get(
+                        'SELECT staff_id FROM class_attendance_responsibilities WHERE id = ? AND school_id = ?',
+                        [register.responsibility_id, schoolId], client
+                    )
+                    : null;
+                if (!responsibility || String(responsibility.staff_id) !== String(actorStaffId)) {
+                    throw new Error('Only the responsible class teacher or an administrator may save this register.');
+                }
+            }
 
             const roster = await db.all(
                 'SELECT student_id FROM attendance_register_students WHERE register_id = ?',
@@ -294,6 +305,17 @@ function createAttendanceRegisterWorkflowService(db) {
                 [actorStaffId, schoolId], client
             );
             if (!actor) throw new Error('The staff member submitting this register does not belong to this school.');
+            if (!(input && input.isAdministrator === true)) {
+                const responsibility = register.responsibility_id
+                    ? await db.get(
+                        'SELECT staff_id FROM class_attendance_responsibilities WHERE id = ? AND school_id = ?',
+                        [register.responsibility_id, schoolId], client
+                    )
+                    : null;
+                if (!responsibility || String(responsibility.staff_id) !== String(actorStaffId)) {
+                    throw new Error('Only the responsible class teacher or an administrator may submit this register.');
+                }
+            }
 
             const roster = await db.get(`
                 SELECT COUNT(*) AS count

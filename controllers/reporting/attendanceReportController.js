@@ -63,31 +63,41 @@ const getAttendanceDashboard = async (req, res) => {
 const getDailyAttendance = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (user ? user.school_id : 1);
-    const { class_id, date } = req.query;
+    const { class_id, date, type = 'Absent' } = req.query;
+    const selectedSectionId = req.query.section_id ? Number(req.query.section_id) : null;
     try {
-        const classes = await db.all('SELECT * FROM classes WHERE school_id = ? ORDER BY name ASC', [schoolId]);
-        let records = [];
-        if (class_id && date) {
-            records = await db.all(`
-                SELECT s.first_name, s.last_name, s.admission_number,
-                       a.status, a.date, a.section_id
-                FROM students s
-                JOIN attendance a ON s.id = a.student_id
-                WHERE a.class_id = ? AND a.date = ?
-                  AND s.school_id = ?
-                ORDER BY s.last_name, s.first_name
-            `, [class_id, date, schoolId]);
+        const sections = await db.all('SELECT id, name FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
+        const selectedSection = selectedSectionId
+            ? sections.find(section => Number(section.id) === selectedSectionId) || null : null;
+        if (selectedSectionId && !selectedSection) return res.status(400).send('The selected section does not belong to this school.');
+        const classes = selectedSection
+            ? await db.all('SELECT id, name FROM classes WHERE school_id = ? AND section_id = ? ORDER BY name', [schoolId, selectedSectionId])
+            : [];
+        let students = [];
+        if (selectedSection && date) {
+            if (!['Present', 'Absent', 'Late', 'Leave'].includes(type)) throw new Error('Select a valid attendance status.');
+            const params = [schoolId, selectedSectionId, date, type];
+            let classFilter = '';
+            if (class_id) { classFilter = ' AND a.class_id = ?'; params.push(Number(class_id)); }
+            students = await db.all(`SELECT s.first_name, s.last_name, s.admission_number, s.parent_phone,
+                    c.name AS class_name, a.status, a.date, a.created_at AS time_marked
+                FROM attendance a
+                JOIN students s ON s.id = a.student_id AND s.school_id = ?
+                JOIN classes c ON c.id = a.class_id AND c.school_id = s.school_id AND c.section_id = a.section_id
+                JOIN attendance_registers ar
+                  ON ar.school_id = s.school_id AND ar.section_id = a.section_id
+                 AND ar.class_id = a.class_id AND ar.attendance_date = a.date
+                 AND ar.session = a.session AND ar.term = a.term AND ar.status = 'submitted'
+                WHERE a.section_id = ? AND a.date = ? AND a.status = ?${classFilter}
+                ORDER BY c.name, s.last_name, s.first_name`, params);
         }
-        res.render('reports/attendance/daily', {
-            title: 'Daily Attendance',
-            classes,
-            records,
-            user,
-            query: { class_id, date }
+        return res.render('reports/attendance/daily', {
+            title: 'Daily Attendance', classes, sections, selectedSection, selectedSectionId,
+            students, user, query: { class_id, date, type }
         });
     } catch (err) {
         console.error('Daily Attendance Error:', err);
-        res.status(500).send('Database Error');
+        return res.status(400).send(err.message || 'Unable to generate daily attendance report.');
     }
 };
 

@@ -210,20 +210,29 @@ const getTakeAttendance = async (req, res) => {
         try {
             registerFeatureAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
             if (registerFeatureAvailable) {
-                const generated = await attendanceRegisterGeneration.generateExpectedRegister({
-                    schoolId,
-                    classId: Number(class_id),
-                    registerDate: date,
-                    generatedBy: user.id
-                });
-                if (generated.skipped) registerSkipReason = generated.reason;
-
-                const context = await attendanceRegisterWorkflow.getRegisterContext({
+                let context = await attendanceRegisterWorkflow.getRegisterContext({
                     schoolId, classId: Number(class_id), registerDate: date
                 });
                 if (context) {
                     register = context.register;
                     students = context.students;
+                    registerSkipReason = context.blockedReason;
+                } else {
+                    const generated = await attendanceRegisterGeneration.generateExpectedRegister({
+                        schoolId,
+                        classId: Number(class_id),
+                        registerDate: date,
+                        generatedBy: user.id
+                    });
+                    if (generated.skipped) registerSkipReason = generated.reason;
+                    context = await attendanceRegisterWorkflow.getRegisterContext({
+                        schoolId, classId: Number(class_id), registerDate: date
+                    });
+                    if (context) {
+                        register = context.register;
+                        students = context.students;
+                        registerSkipReason = context.blockedReason;
+                    }
                 }
             }
         } catch (registerError) {
@@ -367,7 +376,7 @@ const getPreviousDayAttendance = async (req, res) => {
             registerFeatureAvailable,
             registerSkipReason,
             readOnly: true,
-            canEdit: !locked && (register ? await hasRegisterAttendanceAuthority(user, register, schoolId) : true),
+            canEdit: !locked && !(registerContext && registerContext.blockedReason) && (register ? await hasRegisterAttendanceAuthority(user, register, schoolId) : true),
             hasRecords
         });
     } catch (err) {
@@ -407,23 +416,34 @@ const saveAttendance = async (req, res) => {
 
         const registerFoundationAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
         if (registerFoundationAvailable) {
-            const generated = await attendanceRegisterGeneration.generateExpectedRegister({
-                schoolId,
-                classId: Number(class_id),
-                registerDate: date,
-                generatedBy: user.id
-            });
-            if (generated.skipped && ['approved_closure', 'not_a_scheduled_day'].includes(generated.reason)) {
-                return res.status(409).json({
-                    success: false,
-                    message: generated.reason === 'approved_closure'
-                        ? 'Attendance cannot be recorded because an approved closure covers this date.'
-                        : 'Attendance cannot be recorded because this class is not scheduled to open on this date.'
-                });
-            }
-            const registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+            let registerContext = await attendanceRegisterWorkflow.getRegisterContext({
                 schoolId, classId: Number(class_id), registerDate: date
             });
+            if (registerContext && registerContext.blockedReason === 'approved_closure') {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Attendance cannot be recorded because an approved closure covers this date.'
+                });
+            }
+            if (!registerContext) {
+                const generated = await attendanceRegisterGeneration.generateExpectedRegister({
+                    schoolId,
+                    classId: Number(class_id),
+                    registerDate: date,
+                    generatedBy: user.id
+                });
+                if (generated.skipped && ['approved_closure', 'not_a_scheduled_day'].includes(generated.reason)) {
+                    return res.status(409).json({
+                        success: false,
+                        message: generated.reason === 'approved_closure'
+                            ? 'Attendance cannot be recorded because an approved closure covers this date.'
+                            : 'Attendance cannot be recorded because this class is not scheduled to open on this date.'
+                    });
+                }
+                registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+                    schoolId, classId: Number(class_id), registerDate: date
+                });
+            }
             if (registerContext) {
                 if (!(await hasRegisterAttendanceAuthority(user, registerContext.register, schoolId))) {
                     return res.status(403).json({
@@ -646,24 +666,34 @@ const submitAttendanceRegister = async (req, res) => {
             });
         }
 
-        const generated = await attendanceRegisterGeneration.generateExpectedRegister({
-            schoolId,
-            classId: Number(class_id),
-            registerDate: date,
-            generatedBy: user.id
-        });
-        if (generated.skipped && ['approved_closure', 'not_a_scheduled_day'].includes(generated.reason)) {
-            return res.status(409).json({
-                success: false,
-                message: generated.reason === 'approved_closure'
-                    ? 'This date is covered by an approved closure; the register cannot be submitted.'
-                    : 'This class is not scheduled to open on this date; the register cannot be submitted.'
-            });
-        }
-
-        const registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+        let registerContext = await attendanceRegisterWorkflow.getRegisterContext({
             schoolId, classId: Number(class_id), registerDate: date
         });
+        if (registerContext && registerContext.blockedReason === 'approved_closure') {
+            return res.status(409).json({
+                success: false,
+                message: 'This date is covered by an approved closure; the register cannot be submitted.'
+            });
+        }
+        if (!registerContext) {
+            const generated = await attendanceRegisterGeneration.generateExpectedRegister({
+                schoolId,
+                classId: Number(class_id),
+                registerDate: date,
+                generatedBy: user.id
+            });
+            if (generated.skipped && ['approved_closure', 'not_a_scheduled_day'].includes(generated.reason)) {
+                return res.status(409).json({
+                    success: false,
+                    message: generated.reason === 'approved_closure'
+                        ? 'This date is covered by an approved closure; the register cannot be submitted.'
+                        : 'This class is not scheduled to open on this date; the register cannot be submitted.'
+                });
+            }
+            registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+                schoolId, classId: Number(class_id), registerDate: date
+            });
+        }
         if (registerContext && !(await hasRegisterAttendanceAuthority(user, registerContext.register, schoolId))) {
             return res.status(403).json({
                 success: false,

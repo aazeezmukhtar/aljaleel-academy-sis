@@ -70,15 +70,20 @@ exports.getLatestNotifications = async (req, res) => {
             attendanceReminders = await require('../services/attendanceRegisterReminderService')
                 .collectForStaff({ schoolId, staffId: userId, today });
         }
-        const reminderNotifications = attendanceReminders.map(reminder => ({
-            id: reminder.id,
-            title: `Attendance register pending — ${reminder.section_name} / ${reminder.class_name}`,
-            type: 'Attendance reminder',
-            date: reminder.attendance_date,
-            created_at: reminder.created_at,
-            source_type: 'attendance_register_reminder',
-            url: `/attendance/take?class_id=${reminder.class_id}&date=${encodeURIComponent(String(reminder.attendance_date).slice(0,10))}`
-        }));
+        const reminderNotifications = attendanceReminders.map(reminder => {
+            const reminderDate = reminder.attendance_date instanceof Date
+                ? reminder.attendance_date.toISOString().slice(0,10)
+                : String(reminder.attendance_date).slice(0,10);
+            return {
+                id: reminder.id,
+                title: `Attendance register pending — ${reminder.section_name} / ${reminder.class_name}`,
+                type: 'Attendance reminder',
+                date: reminderDate,
+                created_at: reminder.created_at,
+                source_type: 'attendance_register_reminder',
+                url: `/attendance/take?class_id=${reminder.class_id}&date=${encodeURIComponent(reminderDate)}`
+            };
+        });
 
         // 2. Merge and Sort
         let rawNotifications = [...announcements, ...assignments, ...reminderNotifications]

@@ -150,6 +150,7 @@ module.exports = {
     get,
     run,
     transaction,
+    transactionImmediate: callback => transaction(callback, { immediate: true }),
     DB_TYPE,
     pool
 };

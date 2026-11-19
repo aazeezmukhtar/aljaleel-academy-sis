@@ -1,4 +1,6 @@
 const db = require('../utils/db');
+const attendanceRegisterWorkflow = require('../services/attendanceRegisterWorkflowService');
+const attendanceRegisterReminders = require('../services/attendanceRegisterReminderService');
 
 exports.getLatestNotifications = async (req, res) => {
     try {
@@ -62,8 +64,34 @@ exports.getLatestNotifications = async (req, res) => {
             `, [userId, schoolId]);
         }
 
+        // Attendance-register reminders are staff-only and remain compatible
+        // with installations where the additive attendance foundation is absent.
+        let reminderNotifications = [];
+        if (req.session.staff && await attendanceRegisterWorkflow.isFoundationAvailable()) {
+            await attendanceRegisterReminders.deliverDueRemindersForStaff({ staffId: userId });
+            reminderNotifications = await db.all(`
+                SELECT r.id, ar.class_id, ar.register_date, r.sent_at AS created_at
+                FROM attendance_register_reminders r
+                JOIN attendance_registers ar ON ar.id = r.register_id
+                WHERE r.recipient_staff_id = ? AND r.status IN ('sent', 'acknowledged')
+                ORDER BY r.sent_at DESC, r.id DESC
+                LIMIT 15
+            `, [userId]);
+            reminderNotifications = reminderNotifications.map(reminder => ({
+                ...reminder,
+                title: 'Attendance register overdue',
+                type: 'Attendance Reminder',
+                source_type: 'attendance_register_reminder',
+                date: reminder.register_date,
+                url: '/attendance/take?class_id=' + encodeURIComponent(reminder.class_id) +
+                    '&date=' + encodeURIComponent(reminder.register_date instanceof Date
+                        ? reminder.register_date.toISOString().slice(0, 10)
+                        : String(reminder.register_date).slice(0, 10))
+            }));
+        }
+
         // 2. Merge and Sort
-        let rawNotifications = [...announcements, ...assignments]
+        let rawNotifications = [...announcements, ...assignments, ...reminderNotifications]
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
             .slice(0, 15);
 
@@ -142,9 +170,16 @@ exports.markAsRead = async (req, res) => {
 
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
+        if (req.session.staff && source_type === 'attendance_register_reminder') {
+            await attendanceRegisterReminders.acknowledgeReminder({
+                staffId: userId, reminderId: source_id
+            });
+        }
+
         await db.run(`
-            INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
+            INSERT INTO notification_reads (user_id, user_type, source_id, source_type)
             VALUES (?, ?, ?, ?)
+            ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING
         `, [userId, userType, source_id, source_type]);
 
         res.json({ success: true });

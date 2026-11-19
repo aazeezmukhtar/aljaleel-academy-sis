@@ -89,8 +89,20 @@
                         <!-- Attendance -->
                         <a href="/portal/attendance" class="acm-quick-card acm-card-link">
                             <h3 class="acm-quick-title">Attendance</h3>
-                            <% if (attendancePercentage !== null) { %>
-                                <div class="acm-quick-value"><%= attendancePercentage %>%</div>
+                            <% if (attendanceSummaries && attendanceSummaries.length) { %>
+                                <% if (attendanceSummaries.length === 1) { %>
+                                    <div class="acm-quick-value"><%= attendanceSummaries[0].attendanceRate === null ? '--' : attendanceSummaries[0].attendanceRate + '%' %></div>
+                                    <div class="acm-quick-meta"><%= attendanceSummaries[0].sectionName %> · <%= attendanceSummaries[0].attendedDays %> of <%= attendanceSummaries[0].totalDays %> days</div>
+                                <% } else { %>
+                                    <div style="display:flex;flex-direction:column;gap:8px;margin:8px 0;">
+                                        <% attendanceSummaries.forEach(summary => { %>
+                                            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+                                                <span style="font-size:.82rem;color:var(--acm-text-muted);"><%= summary.sectionName %></span>
+                                                <strong style="font-size:1.1rem;"><%= summary.attendanceRate === null ? '--' : summary.attendanceRate + '%' %></strong>
+                                            </div>
+                                        <% }); %>
+                                    </div>
+                                <% } %>
                             <% } else { %>
                                 <div class="acm-quick-value">--</div>
                             <% } %>

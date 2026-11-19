@@ -6,6 +6,8 @@ const { createAttendanceRegisterService, isoWeekday } =
   require('../services/attendanceRegisterGenerationService');
 const { createAttendanceRegisterWorkflowService } =
   require('../services/attendanceRegisterWorkflowService');
+const { createAttendanceRegisterAdministrationService } =
+  require('../services/attendanceRegisterAdministrationService');
 
 const url = process.env.PG_TEST_URL;
 if (!url) {
@@ -164,11 +166,36 @@ if (!url) {
     assert.strictEqual(stored.rows[0].status, 'submitted');
     assert.strictEqual(Number(stored.rows[0].submitted_student_count), 2);
 
-    await client.query(`
-      UPDATE attendance_registers
-      SET status = 'reopened', submitted_student_count = 0, submitted_by = NULL
-      WHERE id = $1
-    `, [generated.registerId]);
+    const administration = createAttendanceRegisterAdministrationService(db);
+    await assert.rejects(
+      () => administration.reopenRegister({
+        schoolId: 1, classId: 40, registerDate: '2026-11-19',
+        actorStaffId: 20, reason: 'Correction requested by the school administrator.'
+      }),
+      /Only an administrator may reopen/
+    );
+    const reopened = await administration.reopenRegister({
+      schoolId: 1, classId: 40, registerDate: '2026-11-19',
+      actorStaffId: 21, reason: 'Correction requested by the school administrator.'
+    });
+    assert.strictEqual(reopened.status, 'reopened');
+    assert.strictEqual(reopened.submittedStudentCount, 0);
+    const reopenAudit = await client.query(`
+      SELECT COUNT(*) AS count
+      FROM attendance_foundation_audit_logs
+      WHERE entity_type = 'attendance_register'
+        AND action = 'register_reopened'
+        AND actor_staff_id = 21
+        AND reason = 'Correction requested by the school administrator.'
+    `);
+    assert.strictEqual(Number(reopenAudit.rows[0].count), 1);
+    await assert.rejects(
+      () => administration.reopenRegister({
+        schoolId: 1, classId: 40, registerDate: '2026-11-19',
+        actorStaffId: 21, reason: 'Duplicate reopen attempt.'
+      }),
+      /Only a submitted attendance register can be reopened/
+    );
     await workflow.saveRegisterProgress({
       schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20,
       attendance: { 31: 'Not recorded' }

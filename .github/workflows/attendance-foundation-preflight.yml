@@ -40,7 +40,9 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Syntax-check attendance foundation services and tests
         run: node --check services/attendanceRegisterService.js && node --check tests/attendance-register-service.test.js && node --check services/attendanceFoundationService.js && node --check services/expectedAttendanceDaysService.js && node --check tests/attendance-calendar-foundation-service.test.js && node --check tests/attendance-calendar-foundation-postgres-service.test.js && node --check tests/expected-attendance-days-service.test.js && node --check tests/expected-attendance-days-postgres.test.js
-      - name: Test attendance register lifecycle with disposable SQLite database\n        run: node tests/attendance-register-service.test.js\n      - name: Test SQLite foundation migration in memory
+      - name: Test attendance register lifecycle with disposable SQLite database
+        run: node tests/attendance-register-service.test.js
+      - name: Test SQLite foundation migration in memory
         run: node tests/attendance-calendar-foundation-migration.test.js
       - name: Test PostgreSQL foundation migration in disposable service
         run: node tests/attendance-calendar-foundation-postgres.test.js

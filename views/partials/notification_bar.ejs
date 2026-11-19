@@ -138,6 +138,9 @@
                     } else if (n.type === 'Assignment') {
                         iconClass = 'bi-journal-check';
                         badgeStyle = 'background: #dcfce7; color: #16a34a;';
+                    } else if (n.type === 'Attendance reminder') {
+                        iconClass = 'bi-clipboard-check';
+                        badgeStyle = 'background: #fee2e2; color: #b91c1c;';
                     }
 
                     item.onclick = (e) => {

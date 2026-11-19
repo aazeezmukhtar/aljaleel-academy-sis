@@ -102,6 +102,7 @@ app.use('/fees', isAuthenticated, feeRoutes);
 app.use('/settings', isAuthenticated, settingsRoutes);
 app.use('/reports', isAuthenticated, reportRoutes);
 app.use('/announcements', isAuthenticated, require('./routes/announcementRoutes'));
+app.get('/api/cron/attendance-reminders', require('./controllers/attendanceReminderSchedulerController').runAttendanceReminderScheduler);
 app.use('/api/notifications', isAnyAuthenticated, require('./routes/notificationRoutes'));
 app.use('/calendar', require('./routes/calendarRoutes'));
 

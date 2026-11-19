@@ -24,6 +24,7 @@
     "test:attendance-section": "node tests/section-aware-attendance-migration.test.js",
     "test:attendance-postgres": "node tests/section-aware-attendance-postgres.test.js",
     "test:attendance-sqlite": "node tests/section-aware-attendance-sqlite.test.js",
+    "test:attendance-register-generation": "node tests/attendance-register-generation.test.js",
     "test:attendance-register-sqlite": "node tests/attendance-register-foundation-sqlite.test.js",
     "test:attendance-register-postgres": "node tests/attendance-register-foundation-postgres.test.js"
   },

@@ -460,13 +460,14 @@ const getReport = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
     const isAdmin = user && user.role === 'Admin';
-    const activeThreshold = threshold === undefined || threshold === '' ? 75 : Number(threshold);
+    let activeThreshold = 75;
     let classes = [];
     let reportData = null;
     let reportContext = null;
     let reportError = null;
 
     try {
+        activeThreshold = await require('../services/attendanceThresholdService').getThreshold(schoolId, threshold);
         if (!Number.isFinite(activeThreshold) || activeThreshold < 0 || activeThreshold > 100) {
             throw new Error('Attendance threshold must be between 0 and 100.');
         }

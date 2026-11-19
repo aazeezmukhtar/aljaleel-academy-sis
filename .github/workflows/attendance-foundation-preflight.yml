@@ -5,6 +5,7 @@ on:
     branches:
       - phase2/attendance-foundation-preflight
       - phase6/student-portal-attendance-consistency
+      - phase7/final-attendance-verification
   workflow_dispatch:
 
 permissions:

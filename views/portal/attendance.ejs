@@ -14,264 +14,167 @@
         <div class="acm-desktop-header">
             <div class="acm-header-greeting">
                 <h1 class="acm-greeting-title">Attendance</h1>
-                <p class="acm-greeting-meta"><%= student.class_name %> &middot; <%= selectedTerm %> &middot; <%= selectedSession %></p>
+                <p class="acm-greeting-meta"><%= student.class_name %><% if (selectedSection) { %> · <%= selectedSection.section_name %><% } %></p>
             </div>
             <div class="acm-header-actions">
                 <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
                     <i class="bi bi-bell" aria-hidden="true"></i>
-                    <% if (individualMessagesCount > 0) { %>
-                        <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
-                    <% } %>
+                    <% if (individualMessagesCount > 0) { %><span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span><% } %>
                 </a>
             </div>
         </div>
 
-        <!-- Academic Context Bar -->
-        <div class="acm-academic-ctx">
-            <strong><%= selectedSession %></strong>
-            <span class="acm-dot">&middot;</span>
-            <span><%= selectedTerm %></span>
-            <span class="acm-dot">&middot;</span>
-            <strong><%= student.class_name %></strong>
-        </div>
+        <% if (sectionOptions.length > 0) { %>
+        <form method="GET" action="/portal/attendance" class="acm-academic-ctx" style="display:flex; flex-wrap:wrap; align-items:end; gap:12px;">
+            <% if (sectionOptions.length > 1) { %>
+            <label>
+                <span>Section</span>
+                <select name="section_id" onchange="this.form.submit()">
+                    <% sectionOptions.forEach(section => { %>
+                    <option value="<%= section.section_id %>" <%= Number(section.section_id) === selectedSectionId ? 'selected' : '' %>><%= section.section_name %></option>
+                    <% }) %>
+                </select>
+            </label>
+            <% } else { %>
+            <input type="hidden" name="section_id" value="<%= selectedSectionId %>">
+            <% } %>
+            <% if (selectedSession && selectedTerm) { %>
+            <input type="hidden" name="session" value="<%= selectedSession %>">
+            <input type="hidden" name="term" value="<%= selectedTerm %>">
+            <% } %>
+            <% if (classOptions.length > 1) { %>
+            <label>
+                <span>Class</span>
+                <select name="class_id" onchange="this.form.submit()">
+                    <% classOptions.forEach(item => { %>
+                    <option value="<%= item.class_id %>" <%= Number(item.class_id) === selectedClassId ? 'selected' : '' %>><%= item.class_name %></option>
+                    <% }) %>
+                </select>
+            </label>
+            <% } %>
+            <noscript><button type="submit">Apply</button></noscript>
+        </form>
 
-        <!-- Term Selector (if multiple periods recorded) -->
-        <% if (periods && periods.length > 1) { %>
-        <div class="acm-term-selector" role="group" aria-label="Select term">
-            <% periods.forEach(p => { 
-                const isActive = p.session === selectedSession && p.term === selectedTerm;
-            %>
-            <a href="?session=<%= encodeURIComponent(p.session) %>&term=<%= encodeURIComponent(p.term) %>&view=<%= activeView %>&status=<%= selectedFilter %>"
-               class="acm-term-btn <%= isActive ? 'is-active' : '' %>"
-               aria-current="<%= isActive ? 'true' : 'false' %>">
-                <%= p.term %> · <%= p.session %>
+        <% if (periods.length > 1) { %>
+        <div class="acm-term-selector" role="group" aria-label="Select academic term">
+            <% periods.forEach(period => { const active = period.session === selectedSession && period.term === selectedTerm; %>
+            <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(period.session) %>&term=<%= encodeURIComponent(period.term) %>"
+               class="acm-term-btn <%= active ? 'is-active' : '' %>" aria-current="<%= active ? 'true' : 'false' %>">
+                <%= period.term %> · <%= period.session %>
             </a>
             <% }) %>
         </div>
         <% } %>
 
-        <% if (totalDays > 0) { %>
+        <% if (analytics) { %>
+        <div class="acm-academic-ctx">
+            <strong><%= selectedSession %></strong><span class="acm-dot">·</span>
+            <span><%= selectedTerm %></span><span class="acm-dot">·</span>
+            <strong><%= student.class_name %></strong>
+        </div>
 
-        <!-- Attendance Rate Hero -->
         <div class="acm-att-hero-card">
             <div class="acm-att-rate-row">
                 <div>
                     <div class="acm-att-rate-number"><%= attendanceRate !== null ? attendanceRate + '%' : '—' %></div>
-                    <div class="acm-att-rate-sub">Attendance Rate &middot; <%= selectedTerm %></div>
+                    <div class="acm-att-rate-sub">Attendance Rate · <%= selectedTerm %></div>
                 </div>
                 <div class="acm-att-rate-total">
-                    <div class="acm-att-rate-count"><%= presentCount + lateCount %> of <%= totalDays %></div>
-                    <div class="acm-att-rate-days">Days Attended</div>
+                    <div class="acm-att-rate-count"><%= presentCount + lateCount + leaveCount %> of <%= totalDays %></div>
+                    <div class="acm-att-rate-days">Attendance credits / recorded days</div>
                 </div>
             </div>
         </div>
 
-        <!-- Status Breakdown Metrics Grid -->
-        <div class="acm-perf-summary" style="margin-bottom: var(--acm-sp-20);">
-            <div class="acm-metric">
-                <span class="acm-metric-value" style="color: var(--acm-success);"><%= presentCount %></span>
-                <span class="acm-metric-label"><i class="bi bi-check-circle-fill" style="color: var(--acm-success);"></i> Present</span>
-            </div>
-            <div class="acm-metric">
-                <span class="acm-metric-value" style="color: #d97706;"><%= lateCount %></span>
-                <span class="acm-metric-label"><i class="bi bi-clock-fill" style="color: #d97706;"></i> Late</span>
-            </div>
-            <div class="acm-metric">
-                <span class="acm-metric-value" style="color: var(--acm-error);"><%= absentCount %></span>
-                <span class="acm-metric-label"><i class="bi bi-x-circle-fill" style="color: var(--acm-error);"></i> Absent</span>
-            </div>
-            <% if (leaveCount > 0) { %>
-            <div class="acm-metric">
-                <span class="acm-metric-value" style="color: #0284c7;"><%= leaveCount %></span>
-                <span class="acm-metric-label"><i class="bi bi-info-circle-fill" style="color: #0284c7;"></i> Leave</span>
-            </div>
-            <% } %>
+        <div class="acm-perf-summary" style="margin-bottom:var(--acm-sp-20);">
+            <div class="acm-metric"><span class="acm-metric-value" style="color:var(--acm-success);"><%= presentCount %></span><span class="acm-metric-label">Present</span></div>
+            <div class="acm-metric"><span class="acm-metric-value" style="color:#d97706;"><%= lateCount %></span><span class="acm-metric-label">Late</span></div>
+            <div class="acm-metric"><span class="acm-metric-value" style="color:var(--acm-error);"><%= absentCount %></span><span class="acm-metric-label">Absent</span></div>
+            <div class="acm-metric"><span class="acm-metric-value" style="color:#0284c7;"><%= leaveCount %></span><span class="acm-metric-label">Approved Leave</span></div>
         </div>
 
-        <!-- Factual Insights -->
-        <% if (recentAbsence || recentLate) { %>
-        <div style="display: flex; flex-direction: column; gap: var(--acm-sp-8); margin-bottom: var(--acm-sp-24);">
-            <% if (recentAbsence) { %>
-            <div class="acm-attention-block acm-attention-block--warning">
-                <i class="bi bi-calendar-x acm-attention-icon" aria-hidden="true"></i>
-                <div class="acm-attention-content">
-                    <p class="acm-attention-text">Most recent absence was on <strong><%= new Date(recentAbsence.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) %></strong><%= recentAbsence.reason ? ' (' + recentAbsence.reason + ')' : '' %>.</p>
-                </div>
+        <% if (counts.missingRegister || counts.draftRegister || counts.missingStudentRecord || counts.unknownAttendanceStatus || analytics.warnings.length) { %>
+        <div class="acm-attention-block acm-attention-block--info" style="margin-bottom:var(--acm-sp-20);">
+            <div class="acm-attention-content">
+                <strong>Some attendance days need attention</strong>
+                <p class="acm-attention-text">
+                    Missing registers: <%= counts.missingRegister || 0 %> ·
+                    Draft registers: <%= counts.draftRegister || 0 %> ·
+                    Incomplete student records: <%= counts.missingStudentRecord || 0 %> ·
+                    Unrecognized statuses: <%= counts.unknownAttendanceStatus || 0 %>
+                </p>
+                <% analytics.warnings.forEach(warning => { %><p class="acm-attention-text"><%= warning %></p><% }) %>
             </div>
-            <% } %>
-            <% if (recentLate) { %>
-            <div class="acm-attention-block acm-attention-block--info">
-                <i class="bi bi-clock-history acm-attention-icon" aria-hidden="true"></i>
-                <div class="acm-attention-content">
-                    <p class="acm-attention-text">Most recent late arrival was on <strong><%= new Date(recentLate.date).toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' }) %></strong>.</p>
-                </div>
-            </div>
-            <% } %>
         </div>
         <% } %>
 
-        <!-- Records Section -->
+        <% if (recentAbsence || recentLate) { %>
+        <div style="display:flex;flex-direction:column;gap:var(--acm-sp-8);margin-bottom:var(--acm-sp-24);">
+            <% if (recentAbsence) { %><div class="acm-attention-block acm-attention-block--warning"><div class="acm-attention-content"><p class="acm-attention-text">Most recent absence: <strong><%= new Date(recentAbsence.date + 'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) %></strong>.</p></div></div><% } %>
+            <% if (recentLate) { %><div class="acm-attention-block acm-attention-block--info"><div class="acm-attention-content"><p class="acm-attention-text">Most recent late arrival: <strong><%= new Date(recentLate.date + 'T00:00:00').toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) %></strong>.</p></div></div><% } %>
+        </div>
+        <% } %>
+
         <section class="acm-section">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--acm-sp-12); margin-bottom: var(--acm-sp-16);">
-                <h2 class="acm-section-title" style="margin: 0;">Attendance Records</h2>
-                
-                <!-- View Switcher -->
-                <div class="acm-board-filters" style="margin: 0;" role="tablist" aria-label="Attendance view">
-                    <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=<%= selectedFilter %>"
-                       class="acm-filter-btn <%= activeView === 'history' ? 'is-active' : '' %>" role="tab">
-                        <i class="bi bi-list-ul"></i> History
-                    </a>
-                    <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.monthStr %>&status=<%= selectedFilter %>"
-                       class="acm-filter-btn <%= activeView === 'calendar' ? 'is-active' : '' %>" role="tab">
-                        <i class="bi bi-calendar3"></i> Calendar
-                    </a>
+            <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--acm-sp-12);margin-bottom:var(--acm-sp-16);">
+                <h2 class="acm-section-title" style="margin:0;">Attendance Records</h2>
+                <div class="acm-board-filters" style="margin:0;" role="tablist" aria-label="Attendance view">
+                    <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&class_id=<%= selectedClassId %>&view=history" class="acm-filter-btn <%= activeView === 'history' ? 'is-active' : '' %>" role="tab">History</a>
+                    <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&class_id=<%= selectedClassId %>&view=calendar&month=<%= calendar.monthStr %>" class="acm-filter-btn <%= activeView === 'calendar' ? 'is-active' : '' %>" role="tab">Calendar</a>
                 </div>
             </div>
 
-            <!-- Status Filters (History View) -->
             <% if (activeView === 'history') { %>
-            <div class="acm-board-filters" style="margin-bottom: var(--acm-sp-16);" role="group" aria-label="Filter status">
-                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=all"
-                   class="acm-filter-btn <%= selectedFilter === 'all' ? 'is-active' : '' %>">
-                    All (<%= totalDays %>)
-                </a>
-                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=present"
-                   class="acm-filter-btn <%= selectedFilter === 'present' ? 'is-active' : '' %>">
-                    Present (<%= presentCount %>)
-                </a>
-                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=late"
-                   class="acm-filter-btn <%= selectedFilter === 'late' ? 'is-active' : '' %>">
-                    Late (<%= lateCount %>)
-                </a>
-                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=absent"
-                   class="acm-filter-btn <%= selectedFilter === 'absent' ? 'is-active' : '' %>">
-                    Absent (<%= absentCount %>)
-                </a>
+            <div class="acm-board-filters" style="margin-bottom:var(--acm-sp-16);" role="group" aria-label="Filter attendance status">
+                <% ['all','present','late','absent','leave'].forEach(status => { %>
+                <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&class_id=<%= selectedClassId %>&view=history&status=<%= status %>"
+                   class="acm-filter-btn <%= selectedFilter === status ? 'is-active' : '' %>"><%= status.charAt(0).toUpperCase() + status.slice(1) %></a>
+                <% }) %>
             </div>
-
-            <!-- History List -->
-            <% if (filteredRecords.length > 0) { %>
+            <% if (filteredRecords.length) { %>
             <div class="acm-att-history-list" role="list">
-                <% filteredRecords.forEach(rec => { 
-                    const d = new Date(rec.date);
-                    const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
-                    const dateFormatted = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
-                    const statusLower = rec.status.toLowerCase();
-                    const icon = statusLower === 'present' ? 'bi-check-circle-fill' : 
-                                 statusLower === 'late' ? 'bi-clock-fill' : 
-                                 statusLower === 'absent' ? 'bi-x-circle-fill' : 'bi-info-circle-fill';
-                %>
+                <% filteredRecords.forEach(record => { const lower = record.status.toLowerCase(); const d = new Date(record.date + 'T00:00:00'); %>
                 <div class="acm-att-history-row" role="listitem">
                     <div class="acm-att-date-group">
-                        <span class="acm-att-date-title"><%= dateFormatted %></span>
-                        <span class="acm-att-date-sub"><%= dayName %></span>
-                        <% if (rec.reason && rec.reason.trim()) { %>
-                            <span class="acm-att-reason-text">Reason: <%= rec.reason %></span>
-                        <% } %>
+                        <span class="acm-att-date-title"><%= d.toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) %></span>
+                        <span class="acm-att-date-sub"><%= d.toLocaleDateString('en-US',{weekday:'long'}) %></span>
+                        <% if (record.reason) { %><span class="acm-att-reason-text">Reason: <%= record.reason %></span><% } %>
                     </div>
-                    <div>
-                        <span class="acm-att-badge acm-att-badge--<%= statusLower %>" aria-label="Status <%= rec.status %>">
-                            <i class="bi <%= icon %>" aria-hidden="true"></i>
-                            <span><%= rec.status %></span>
-                        </span>
-                    </div>
+                    <span class="acm-att-badge acm-att-badge--<%= lower %>"><%= record.status %></span>
                 </div>
                 <% }) %>
             </div>
+            <% } else { %><div class="acm-empty"><p class="acm-empty-title">No recorded attendance</p><p class="acm-empty-desc">There are no submitted attendance records matching this filter.</p></div><% } %>
             <% } else { %>
-            <div class="acm-empty">
-                <i class="bi bi-calendar-x acm-empty-icon"></i>
-                <p class="acm-empty-title">No records</p>
-                <p class="acm-empty-desc">No records found for status "<%= selectedFilter %>".</p>
-            </div>
-            <% } %>
-
-            <% } else { %>
-
-            <!-- Calendar View -->
             <div class="acm-cal-wrapper">
                 <div class="acm-cal-top">
                     <h3 class="acm-cal-heading"><%= calendar.monthName %></h3>
                     <div class="acm-cal-actions">
-                        <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.prevMonthStr %>"
-                           class="acm-cal-btn" aria-label="Previous Month">
-                            <i class="bi bi-chevron-left" aria-hidden="true"></i>
-                        </a>
-                        <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.nextMonthStr %>"
-                           class="acm-cal-btn" aria-label="Next Month">
-                            <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                        </a>
+                        <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&class_id=<%= selectedClassId %>&view=calendar&month=<%= calendar.prevMonthStr %>" class="acm-cal-btn" aria-label="Previous month">‹</a>
+                        <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&class_id=<%= selectedClassId %>&view=calendar&month=<%= calendar.nextMonthStr %>" class="acm-cal-btn" aria-label="Next month">›</a>
                     </div>
                 </div>
-
                 <div class="acm-cal-table-grid">
-                    <div class="acm-cal-day-label">Sun</div>
-                    <div class="acm-cal-day-label">Mon</div>
-                    <div class="acm-cal-day-label">Tue</div>
-                    <div class="acm-cal-day-label">Wed</div>
-                    <div class="acm-cal-day-label">Thu</div>
-                    <div class="acm-cal-day-label">Fri</div>
-                    <div class="acm-cal-day-label">Sat</div>
-
-                    <% for (let i = 0; i < calendar.startDayOfWeek; i++) { %>
-                        <div class="acm-cal-cell acm-cal-cell--empty"></div>
-                    <% } %>
-
-                    <% for (let day = 1; day <= calendar.daysInMonth; day++) { 
-                        const dayStr = String(day).padStart(2, '0');
-                        const fullDateStr = `${calendar.monthStr}-${dayStr}`;
-                        const dayOfWeek = (calendar.startDayOfWeek + day - 1) % 7;
-                        const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
-                        const record = calendar.recordsByDate[fullDateStr];
-
-                        let statusClass = '';
-                        if (record) {
-                            statusClass = 'acm-cal-cell--' + record.status.toLowerCase();
-                        } else if (isWeekend) {
-                            statusClass = 'acm-cal-cell--weekend';
-                        }
-                    %>
-                    <div class="acm-cal-cell <%= statusClass %>" title="<%= record ? record.status + (record.reason ? ': ' + record.reason : '') : (isWeekend ? 'Weekend' : 'No Record') %>">
-                        <span><%= day %></span>
-                    </div>
+                    <% ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(day => { %><div class="acm-cal-day-label"><%= day %></div><% }) %>
+                    <% for (let i=0;i<calendar.startDayOfWeek;i++) { %><div class="acm-cal-cell acm-cal-cell--empty"></div><% } %>
+                    <% for (let day=1;day<=calendar.daysInMonth;day++) { const key = calendar.monthStr + '-' + String(day).padStart(2,'0'); const record = calendar.recordsByDate[key]; const status = record ? record.status : ''; %>
+                    <div class="acm-cal-cell <%= status ? 'acm-cal-cell--' + status.replace(/_/g,'-') : '' %>" title="<%= record ? record.status.replace(/_/g,' ') : 'No classified day' %>"><span><%= day %></span></div>
                     <% } %>
                 </div>
-
-                <div class="acm-cal-footer-legend">
-                    <div class="acm-legend-chip">
-                        <span class="acm-legend-circle acm-legend-circle--present"></span>
-                        <span>Present</span>
-                    </div>
-                    <div class="acm-legend-chip">
-                        <span class="acm-legend-circle acm-legend-circle--late"></span>
-                        <span>Late</span>
-                    </div>
-                    <div class="acm-legend-chip">
-                        <span class="acm-legend-circle acm-legend-circle--absent"></span>
-                        <span>Absent</span>
-                    </div>
-                    <div class="acm-legend-chip">
-                        <span class="acm-legend-circle acm-legend-circle--leave"></span>
-                        <span>Leave</span>
-                    </div>
-                    <div class="acm-legend-chip">
-                        <span class="acm-legend-circle acm-legend-circle--weekend"></span>
-                        <span>Weekend</span>
-                    </div>
-                </div>
+                <p class="acm-attention-text" style="margin-top:12px;">Calendar days distinguish recorded attendance, missing or draft registers, closures, non-opening days and dates with unknown information. An unrecorded day is never labelled absent.</p>
             </div>
             <% } %>
         </section>
-
+        <% } else if (periods.length === 0) { %>
+        <div class="acm-empty"><p class="acm-empty-title">Attendance calendar not available</p><p class="acm-empty-desc">No dated academic period and enrollment history are available for this section yet.</p></div>
+        <% } else if (!selectedClassId) { %>
+        <div class="acm-empty"><p class="acm-empty-title">Class enrollment not found</p><p class="acm-empty-desc">There is no dated class enrollment for the selected academic period.</p></div>
         <% } else { %>
-        <!-- Empty State -->
-        <div class="acm-empty" style="padding: var(--acm-sp-48) var(--acm-sp-16);">
-            <i class="bi bi-calendar-check acm-empty-icon"></i>
-            <p class="acm-empty-title">No attendance records</p>
-            <p class="acm-empty-desc">Attendance has not been recorded for <%= selectedTerm %> (<%= selectedSession %>) yet.</p>
-        </div>
+        <div class="acm-empty"><p class="acm-empty-title">No attendance summary available</p><p class="acm-empty-desc">Attendance analytics could not be calculated for this selection.</p></div>
         <% } %>
-
+        <% } else { %>
+        <div class="acm-empty"><p class="acm-empty-title">No section enrollment found</p><p class="acm-empty-desc">Your attendance will appear here when your section enrollment and academic dates are available.</p></div>
+        <% } %>
     </main>
 </div>
 <%- include('../partials/student_shell_footer') %>

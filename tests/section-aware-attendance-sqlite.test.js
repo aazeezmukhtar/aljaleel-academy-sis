@@ -10,7 +10,7 @@ try {
   db.pragma('foreign_keys = ON');
   db.exec(`
     CREATE TABLE schools(id INTEGER PRIMARY KEY);
-    CREATE TABLE sections(id INTEGER PRIMARY KEY);
+    CREATE TABLE sections(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id));
     CREATE TABLE students(id INTEGER PRIMARY KEY, school_id INTEGER);
     CREATE TABLE classes(id INTEGER PRIMARY KEY, school_id INTEGER, section_id INTEGER REFERENCES sections(id));
     CREATE TABLE arms(id INTEGER PRIMARY KEY);
@@ -25,7 +25,7 @@ try {
       UNIQUE(student_id, date, session, term)
     );
     INSERT INTO schools VALUES(1);
-    INSERT INTO sections VALUES(1),(2);
+    INSERT INTO sections VALUES(1,1),(2,1);
     INSERT INTO students VALUES(10,1);
     INSERT INTO classes VALUES(100,1,1),(200,1,2);
     INSERT INTO arms VALUES(7);

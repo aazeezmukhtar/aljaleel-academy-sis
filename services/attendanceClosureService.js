@@ -89,6 +89,7 @@ function createAttendanceClosureService(db) {
         if (!reason || reason.length > 500) throw new Error('A closure reason is required and must not exceed 500 characters.');
 
         return db.transaction(async client => {
+            if (db.DB_TYPE === 'postgres') await db.get('SELECT id FROM schools WHERE id = ? FOR UPDATE', [schoolId], client);
             const actor = await getActor(actorStaffId, schoolId, client);
             const scope = await validateScope({ ...input, schoolId }, client);
             if (actor.role !== 'Admin') {
@@ -171,6 +172,7 @@ function createAttendanceClosureService(db) {
         }
 
         return db.transaction(async client => {
+            if (db.DB_TYPE === 'postgres') await db.get('SELECT id FROM schools WHERE id = ? FOR UPDATE', [schoolId], client);
             const actor = await getActor(actorStaffId, schoolId, client);
             if (actor.role !== 'Admin') throw new Error('Only an administrator may approve or reject a closure request.');
             const lock = db.DB_TYPE === 'postgres' ? ' FOR UPDATE' : '';
@@ -191,9 +193,11 @@ function createAttendanceClosureService(db) {
             const nextStatus = decision;
             await db.run(`
                 UPDATE class_attendance_closures
-                SET status = ?, approved_by = ?, approved_at = CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END
+                SET status = ?,
+                    approved_by = CASE WHEN ? = 'approved' THEN ? ELSE NULL END,
+                    approved_at = CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END
                 WHERE id = ? AND school_id = ? AND status = 'pending'
-            `, [nextStatus, actorStaffId, nextStatus, closureId, schoolId], client);
+            `, [nextStatus, nextStatus, actorStaffId, nextStatus, closureId, schoolId], client);
             const after = {
                 status: nextStatus, approved_by: decision === 'approved' ? actorStaffId : null,
                 approved_at: decision === 'approved' ? 'CURRENT_TIMESTAMP' : null

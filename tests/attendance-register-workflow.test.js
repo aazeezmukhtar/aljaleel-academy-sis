@@ -210,6 +210,13 @@ const db = {
       schoolId: 1, classId: 40, registerDate: '2026-11-19'
     });
     assert.strictEqual(closedContext.blockedReason, 'approved_closure');
+    await assert.rejects(
+      () => workflow.saveRegisterProgress({
+        schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20,
+        attendance: { 30: 'Present' }
+      }),
+      /approved closure prevents attendance changes/
+    );
 
     console.log('[attendance-register-workflow] roster retrieval, partial save, deliberate submission, locked state, unmarking and correction audit checks passed.');
   } finally {

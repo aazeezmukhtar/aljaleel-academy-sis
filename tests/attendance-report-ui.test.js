@@ -12,9 +12,13 @@ const reportViewPath = path.join(root, 'views/attendance/report.ejs');
 const reportView = fs.readFileSync(reportViewPath, 'utf8');
 const dashboardViewPath = path.join(root, 'views/reports/attendance/index.ejs');
 const dashboardView = fs.readFileSync(dashboardViewPath, 'utf8');
+const lowViewPath = path.join(root, 'views/reports/attendance/low.ejs');
+const lowView = fs.readFileSync(lowViewPath, 'utf8');
+const attendanceReportController = fs.readFileSync(path.join(root, 'controllers/reporting/attendanceReportController.js'), 'utf8');
 
 ejs.compile(reportView, { filename: reportViewPath });
 ejs.compile(dashboardView, { filename: dashboardViewPath });
+ejs.compile(lowView, { filename: lowViewPath });
 
 const reportBlock = controller.slice(
   controller.indexOf('// GET /attendance/report - section-safe report'),
@@ -43,5 +47,7 @@ assert(reportView.includes('row.draft_register') && reportView.includes('row.att
 assert(dashboardView.includes('selectedSectionId') && dashboardView.includes('Academy and Tahfeez are never combined'),
   'Administrative dashboard must require one section and explain section isolation.');
 assert(dashboardView.includes('stats.submitted_registers'), 'Dashboard must surface formal register submissions.');
+assert(attendanceReportController.includes("require('../../services/attendanceAnalyticsService')"), 'Administrative attendance reports must use the shared analytics engine.');
+assert(lowView.includes('student.attendance_rate') && lowView.includes('student.missing_registers'), 'Low-attendance alerts must display shared-engine rates and missing registers.');
 
 console.log('[attendance-report-ui] EJS compilation, form-master-only access, shared analytics integration, dated roster, section isolation and Admin-only school-wide routes passed.');

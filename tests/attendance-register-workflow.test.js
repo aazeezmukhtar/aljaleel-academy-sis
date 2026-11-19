@@ -138,6 +138,12 @@ const db = {
       attendance: { 30: 'Present', 31: 'Leave' }
     });
     assert.strictEqual(secondSave.savedStudentCount, 2);
+    assert.strictEqual(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM attendance_foundation_audit_logs WHERE action = 'attendance_status_created' AND actor_staff_id = 20")
+        .get().count,
+      2,
+      'initial attendance marks must record actor and after-state in the audit log'
+    );
 
     const submitted = await workflow.submitRegister({
       schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20
@@ -177,6 +183,12 @@ const db = {
     assert(
       sqlite.prepare("SELECT COUNT(*) AS count FROM attendance_register_events WHERE register_id = ? AND event_type = 'corrected'")
         .get(generated.registerId).count >= 1
+    );
+    assert.strictEqual(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM attendance_foundation_audit_logs WHERE action = 'attendance_status_cleared' AND actor_staff_id = 20")
+        .get().count,
+      1,
+      'clearing a status must preserve its before-state and actor'
     );
 
     await assert.rejects(

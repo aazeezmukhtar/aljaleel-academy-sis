@@ -8,6 +8,8 @@ const { createAttendanceRegisterWorkflowService } =
   require('../services/attendanceRegisterWorkflowService');
 const { createAttendanceRegisterAdministrationService } =
   require('../services/attendanceRegisterAdministrationService');
+const { createAttendanceClosureService } =
+  require('../services/attendanceClosureService');
 
 const url = process.env.PG_TEST_URL;
 if (!url) {
@@ -224,6 +226,67 @@ if (!url) {
       }),
       /approved closure prevents register submission/
     );
+
+    const closures = createAttendanceClosureService(db);
+    const closureRequest = await closures.requestClosure({
+      schoolId: 1, actorStaffId: 20, scopeType: 'class', classId: 40,
+      startDate: '2026-11-20', endDate: '2026-11-20',
+      reason: 'Class closure requested due to an urgent maintenance issue.'
+    });
+    assert.strictEqual(closureRequest.status, 'pending');
+    const pendingClosures = await closures.listClosures({ schoolId: 1, status: 'pending' });
+    assert(pendingClosures.some(item => String(item.id) === String(closureRequest.closureId)));
+    await assert.rejects(
+      () => closures.decideClosure({
+        schoolId: 1, closureId: closureRequest.closureId, actorStaffId: 20,
+        decision: 'approved'
+      }),
+      /Only an administrator may approve or reject/
+    );
+    const approvedClosure = await closures.decideClosure({
+      schoolId: 1, closureId: closureRequest.closureId, actorStaffId: 21,
+      decision: 'approved'
+    });
+    assert.strictEqual(approvedClosure.status, 'approved');
+    await assert.rejects(
+      () => closures.requestClosure({
+        schoolId: 1, actorStaffId: 21, scopeType: 'section', sectionId: 10,
+        startDate: '2026-11-20', endDate: '2026-11-20',
+        reason: 'Conflicting section closure.'
+      }),
+      /overlapping pending or approved closure/
+    );
+    const rejectionRequest = await closures.requestClosure({
+      schoolId: 1, actorStaffId: 20, scopeType: 'class', classId: 40,
+      startDate: '2026-11-22', endDate: '2026-11-22',
+      reason: 'Request for a one-day class closure.'
+    });
+    await assert.rejects(
+      () => closures.decideClosure({
+        schoolId: 1, closureId: rejectionRequest.closureId, actorStaffId: 21,
+        decision: 'rejected'
+      }),
+      /rejection reason is required/
+    );
+    const rejectedClosure = await closures.decideClosure({
+      schoolId: 1, closureId: rejectionRequest.closureId, actorStaffId: 21,
+      decision: 'rejected', reason: 'The request conflicts with the academic calendar.'
+    });
+    assert.strictEqual(rejectedClosure.status, 'rejected');
+    const cancelRequest = await closures.requestClosure({
+      schoolId: 1, actorStaffId: 20, scopeType: 'class', classId: 40,
+      startDate: '2026-11-23', endDate: '2026-11-23',
+      reason: 'Temporary classroom repair.'
+    });
+    const cancelledClosure = await closures.cancelClosure({
+      schoolId: 1, closureId: cancelRequest.closureId, actorStaffId: 20
+    });
+    assert.strictEqual(cancelledClosure.status, 'cancelled');
+    const closureAudit = await db.get(
+      "SELECT COUNT(*) AS count FROM attendance_foundation_audit_logs WHERE entity_type = 'attendance_closure'",
+      []
+    );
+    assert(Number(closureAudit.count) >= 5);
 
     console.log('[attendance-register-workflow-postgres] PostgreSQL progress save, unmarked guard, transactional submission, submitted count and responsible-teacher authorization passed.');
   } finally {

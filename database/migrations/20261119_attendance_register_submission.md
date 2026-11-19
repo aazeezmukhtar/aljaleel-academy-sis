@@ -34,3 +34,8 @@ Apply only after the target database already has:
 - Do not execute this migration from `migrate.js`, application startup, a deploy hook, or an automatic migration runner.
 - Do not apply to production without a separate, explicit approval.
 - SQLite and PostgreSQL migrations are alternatives; execute only the one matching the target database.
+
+
+## Missing-register reminder integration
+
+The follow-on migration `20261119_attendance_register_reminders` adds idempotent in-app reminders for expected class dates with no submitted register. It must be applied after this register migration. The notification-feed request performs a current-term catch-up for the explicitly assigned register holder. Register submission resolves the matching reminder inside the same transaction. No background scheduler or external message sender is included.

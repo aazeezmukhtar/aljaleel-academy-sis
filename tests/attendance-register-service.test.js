@@ -88,7 +88,7 @@ const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-05', session:'
     assert.deepStrictEqual(JSON.parse(record.events[2].new_values).map(row => row.status), ['Late','Leave']);
     await assert.rejects(db.run('UPDATE attendance_register_events SET reason = ? WHERE id = ?', ['tampered', record.events[0].id]), /immutable/);
 
-    const oldClass = await service.saveDraft({ ...base, date:'2026-11-05', attendance:{101:'Present'} });
+    const oldClass = await service.saveDraft({ ...base, date:'2026-11-06', attendance:{101:'Present'} });
     assert.equal(oldClass.rosterCount, 2, 'The source class roster must include the student before the dated transfer.');
     const newClass = await service.saveDraft({ ...base, classId:11, date:'2026-11-19', attendance:{101:'Present'} });
     assert.equal(newClass.rosterCount, 1, 'The destination class roster must include the student after the dated transfer.');

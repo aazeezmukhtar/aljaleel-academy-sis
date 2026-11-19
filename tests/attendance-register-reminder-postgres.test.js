@@ -68,7 +68,7 @@ if(!connectionString){console.error('[attendance-register-reminders-postgres] PG
   const first=await service.collectForStaff({schoolId:1,staffId:7,today:'2026-11-19'});
   assert.equal(first.length,1);
   assert.equal(Number(first[0].class_id),100);
-  assert.equal(String(first[0].attendance_date).slice(0,10),'2026-11-18');
+  assert.equal(first[0].attendance_date instanceof Date ? first[0].attendance_date.toISOString().slice(0,10) : String(first[0].attendance_date).slice(0,10),'2026-11-18');
   const second=await service.collectForStaff({schoolId:1,staffId:7,today:'2026-11-19'});
   assert.equal(second.length,1);
   const count=await client.query('SELECT COUNT(*)::int AS n FROM attendance_register_reminders');

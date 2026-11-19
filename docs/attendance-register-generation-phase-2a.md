@@ -62,13 +62,14 @@ The module also exports `createAttendanceRegisterService(dbAdapter)` for isolate
 
 ## Validation
 
-Run:
+Run both disposable-database tests:
 
 ```sh
 npm run test:attendance-register-generation
+PG_TEST_URL='postgres://...disposable-test-db...' npm run test:attendance-register-generation-postgres
 ```
 
-The test uses an in-memory SQLite database and the attendance-register foundation migration. CI also runs the existing migration and regression suites. PostgreSQL execution of this service and end-to-end workflow coverage remain future work.
+The SQLite test uses an in-memory database. The PostgreSQL test uses a disposable schema and a production-shaped mixed ID-width fixture. CI runs both alongside the existing migration and regression suites. These tests validate the service's database behaviour in both engines, but do not provide end-to-end workflow coverage.
 
 ## Next phase
 

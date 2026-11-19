@@ -8,6 +8,10 @@ const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', '
 const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'attendanceController.js'), 'utf8');
 const routes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'attendanceRoutes.js'), 'utf8');
 const offline = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
+const app = fs.readFileSync(path.join(__dirname, '..', 'app.js'), 'utf8');
+const notificationController = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'notificationController.js'), 'utf8');
+const notificationBar = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'notification_bar.ejs'), 'utf8');
+const schedulerController = require('../controllers/attendanceReminderSchedulerController');
 
 assert(view.includes("const STATUS_CYCLE = ['Not recorded', 'Present', 'Late', 'Leave', 'Absent']"));
 assert(view.includes("const currentStatus = student.status || 'Not recorded';"));
@@ -42,6 +46,20 @@ assert(closureRoutes, 'closure management routes must be registered');
 assert(closureView.includes('Submit closure request'));
 assert(closureView.includes('data-closure-action="approved"') || closureView.includes('data-closure-action="<%= item.status'));
 assert(view.includes('href="/attendance/closures"'));
+assert(app.includes("app.get('/api/cron/attendance-reminders'"));
+assert(app.includes('attendanceReminderSchedulerController'));
+assert(notificationController.includes('deliverDueRemindersForStaff'));
+assert(notificationController.includes('acknowledgeReminder'));
+assert(notificationController.includes("ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING"));
+assert(notificationBar.includes("n.type === 'Attendance Reminder'"));
+assert(notificationBar.includes('bi-calendar-check'));
+assert.strictEqual(
+    schedulerController._test.readCronToken({ headers: { authorization: 'Bearer test-secret' } }),
+    'test-secret'
+);
+assert.strictEqual(schedulerController._test.safeSecretMatch('test-secret', 'test-secret'), true);
+assert.strictEqual(schedulerController._test.safeSecretMatch('test-secret', 'wrong-secret'), false);
+assert.strictEqual(schedulerController._test.safeSecretMatch('test-secret', ''), false);
 
 
 console.log('[attendance-register-ui] unmarked default, deliberate status cycle, online-only submission, pending-sync guard and responsible-teacher route checks passed.');

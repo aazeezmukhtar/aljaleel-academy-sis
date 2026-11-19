@@ -20,7 +20,7 @@ const result = await require('../services/attendanceAnalyticsService').calculate
 });
 ```
 
-The threshold is supplied by the caller and must be a number from 0 to 100. Later report and portal integration must obtain the same configured threshold from the school's settings and pass it to this shared engine; do not duplicate calculation logic or hard-code separate portal/report thresholds.
+The threshold is supplied by the caller and must be a number from 0 to 100. All integrated surfaces resolve the saved school setting `attendance.minimum_percentage` through `services/attendanceThresholdService.js` (default 75). A report may accept a temporary explicit threshold override; the portal and dashboard use the saved setting. Do not duplicate calculation logic or hard-code separate portal/report thresholds.
 
 ## Calculation rules
 

@@ -308,13 +308,13 @@ const saveAttendance = async (req, res) => {
         const result = await require('../services/attendanceRegisterService').saveDraft({
             schoolId, classId, sectionId: Number(cls.section_id), date: req.body.date,
             session: req.body.session || settings.session, term: req.body.term || settings.term,
-            actorId: Number(user.id), attendance: req.body.attendance, reasons: req.body.reasons,
+            actorId: Number(user.id), actorRole: user.role, attendance: req.body.attendance, reasons: req.body.reasons,
             custom_reasons: req.body.custom_reasons
         });
         logAction(user.id, 'SAVE_ATTENDANCE_DRAFT', 'ATTENDANCE', { class_id: classId, date: req.body.date, count: result.savedCount }, req.ip);
         return res.json({ success: true, message: 'Attendance draft saved successfully.', register: result });
     } catch (err) {
-        const status = err.code === 'ATTENDANCE_REGISTER_CONFLICT' ? 409 : /required|valid|roster|status|belong|configured/i.test(err.message || '') ? 400 : 500;
+        const status = err.code === 'ATTENDANCE_REGISTER_FORBIDDEN' ? 403 : err.code === 'ATTENDANCE_REGISTER_CONFLICT' ? 409 : /required|valid|roster|status|belong|configured/i.test(err.message || '') ? 400 : 500;
         return res.status(status).json({ success: false, message: err.message || 'Database Error' });
     }
 };
@@ -335,13 +335,13 @@ const submitAttendanceRegister = async (req, res) => {
         const result = await require('../services/attendanceRegisterService').submit({
             schoolId, classId, sectionId: Number(cls.section_id), date: req.body.date,
             session: req.body.session || settings.session, term: req.body.term || settings.term,
-            actorId: Number(user.id), attendance: req.body.attendance, reasons: req.body.reasons,
+            actorId: Number(user.id), actorRole: user.role, attendance: req.body.attendance, reasons: req.body.reasons,
             custom_reasons: req.body.custom_reasons
         });
         logAction(user.id, 'SUBMIT_ATTENDANCE_REGISTER', 'ATTENDANCE', { class_id: classId, date: req.body.date, version: result.version }, req.ip);
         return res.json({ success: true, message: 'Attendance register submitted successfully.', register: result });
     } catch (err) {
-        const status = err.code === 'ATTENDANCE_REGISTER_CONFLICT' ? 409 : /required|valid|roster|status|belong|configured|empty/i.test(err.message || '') ? 400 : 500;
+        const status = err.code === 'ATTENDANCE_REGISTER_FORBIDDEN' ? 403 : err.code === 'ATTENDANCE_REGISTER_CONFLICT' ? 409 : /required|valid|roster|status|belong|configured|empty/i.test(err.message || '') ? 400 : 500;
         return res.status(status).json({ success: false, message: err.message || 'Database Error' });
     }
 };

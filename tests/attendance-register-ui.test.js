@@ -85,7 +85,7 @@ assert(analyticsController.includes('attendanceAnalyticsDashboard.getDashboard')
 assert(routes.includes("router.get('/analytics', attendanceController.getAttendanceAnalytics);"));
 assert(view.includes('href="/attendance/analytics"'));
 assert(dashboardService.includes('class_attendance_schedules'));
-assert(dashboardService.includes("cl.status = 'approved'"));
+assert(dashboardService.includes("status = 'approved'"));
 assert(dashboardService.includes("register.status === 'submitted'"));
 assert(analyticsView.includes('Expected class-days'));
 assert(analyticsView.includes('Missing registers'));

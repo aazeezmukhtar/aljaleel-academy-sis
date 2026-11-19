@@ -80,3 +80,22 @@ placement dates overlap the selected month, and include students with recorded
 attendance in that month to preserve legacy evidence. Legacy enrollment dates
 are not inferred. The dated-period migration must exist before this report
 query is deployed.
+
+## Attendance calendar foundation (2026-11-19)
+
+Files:
+
+- `20261119_attendance_calendar_foundation.sqlite.sql`
+- `20261119_attendance_calendar_foundation.postgres.sql`
+- `20261119_attendance_calendar_foundation.md`
+
+This explicit/manual additive migration creates section academic periods, effective-dated class opening schedules, scoped class attendance closures, explicit register-responsibility periods, and immutable foundation audit logs. It does not alter attendance rows or infer historical dates, schedules, closures, or teacher assignments. It must not be added to startup migrations.
+
+Review the dedicated migration note for ownership checks, inclusive date conventions, closure precedence, overlap validation, audit requirements, and production safeguards.
+
+### Disposable tests
+
+- SQLite: `node tests/attendance-calendar-foundation-migration.test.js`
+- PostgreSQL: `PG_TEST_URL=<disposable-postgres-url> node tests/attendance-calendar-foundation-postgres.test.js`
+
+The PostgreSQL test refuses to fall back to the application's `DATABASE_URL`. Use only a disposable database.

@@ -199,6 +199,18 @@ const db = {
       /not on this register roster/
     );
 
+    sqlite.prepare(`
+      INSERT INTO class_attendance_closures
+        (school_id, scope_type, section_id, class_id, start_date, end_date, reason,
+         status, requested_by, approved_by, approved_at)
+      VALUES (1, 'class', 10, 40, '2026-11-19', '2026-11-19', 'Approved closure',
+              'approved', 20, 20, '2026-11-18T10:00:00Z')
+    `).run();
+    const closedContext = await workflow.getRegisterContext({
+      schoolId: 1, classId: 40, registerDate: '2026-11-19'
+    });
+    assert.strictEqual(closedContext.blockedReason, 'approved_closure');
+
     console.log('[attendance-register-workflow] roster retrieval, partial save, deliberate submission, locked state, unmarking and correction audit checks passed.');
   } finally {
     sqlite.close();

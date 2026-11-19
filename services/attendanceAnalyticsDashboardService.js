@@ -132,6 +132,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
         }));
 
         const expectedDays = [];
+        const expectedKeys = new Set();
         const daily = new Map();
         const classExpected = new Map(classes.map(item => [String(item.id), {
             classId: item.id, className: item.name,
@@ -147,7 +148,8 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
                     !dateCovers(schedule.effective_from, schedule.effective_to, date)) continue;
                 if (closures.some(closure => closureCovers(closure, schedule.class_id, sectionId, date))) continue;
                 const key = String(schedule.class_id) + '|' + date;
-                if (expectedDays.some(day => day.key === key)) continue;
+                if (expectedKeys.has(key)) continue;
+                expectedKeys.add(key);
                 const register = registersByKey.get(key);
                 const status = !register ? 'missing' :
                     register.status === 'submitted' ? 'submitted' : 'incomplete';

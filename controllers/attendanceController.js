@@ -496,25 +496,40 @@ const saveAttendance = async (req, res) => {
                     Number(class_id), effectiveSession]);
                 if (!studentCheck) continue;
 
+                const existing = await db.get(`
+                    SELECT id, status, reason, reason_type, custom_reason
+                    FROM attendance
+                    WHERE student_id = ? AND section_id = ? AND date = ? AND session = ? AND term = ?
+                `, [student_id, Number(classCheck.section_id), date, effectiveSession, effectiveTerm]);
+
                 if (status === 'Not recorded') {
-                    await db.run(`
-                        DELETE FROM attendance
-                        WHERE student_id = ? AND class_id = ? AND section_id = ?
-                          AND date = ? AND session = ? AND term = ?
-                    `, [student_id, Number(class_id), Number(classCheck.section_id),
-                        date, effectiveSession, effectiveTerm]);
+                    if (existing) {
+                        await db.run('DELETE FROM attendance WHERE id = ?', [existing.id]);
+                        if (registerFoundationAvailable) {
+                            await db.run(`
+                                INSERT INTO attendance_foundation_audit_logs
+                                    (entity_type, entity_id, action, actor_staff_id, before_data, after_data, reason)
+                                VALUES ('attendance', ?, 'attendance_status_cleared', ?, ?, NULL,
+                                        'Attendance status cleared to unmarked.')
+                            `, [existing.id, user.id, JSON.stringify({
+                                status: existing.status,
+                                reason: existing.reason,
+                                reason_type: existing.reason_type,
+                                custom_reason: existing.custom_reason
+                            })]);
+                        }
+                    }
                     continue;
                 }
-                
+
                 const rawReason = reasons[studentIdStr] || null;
                 const customReason = custom_reasons[studentIdStr] || null;
-                
+
                 let reason = rawReason;
                 if (rawReason === 'Other' && customReason) {
-
                     reason = customReason;
                 }
-                
+
                 await db.run(sql, [
                     student_id,
                     Number(class_id),
@@ -527,6 +542,37 @@ const saveAttendance = async (req, res) => {
                     rawReason,
                     customReason
                 ]);
+
+                const changed = !existing || existing.status !== status ||
+                    existing.reason !== reason || existing.reason_type !== rawReason ||
+                    existing.custom_reason !== customReason;
+                if (registerFoundationAvailable && changed) {
+                    const stored = await db.get(`
+                        SELECT id FROM attendance
+                        WHERE student_id = ? AND class_id = ? AND section_id = ?
+                          AND date = ? AND session = ? AND term = ?
+                    `, [student_id, Number(class_id), Number(classCheck.section_id),
+                        date, effectiveSession, effectiveTerm]);
+                    await db.run(`
+                        INSERT INTO attendance_foundation_audit_logs
+                            (entity_type, entity_id, action, actor_staff_id, before_data, after_data, reason)
+                        VALUES ('attendance', ?, ?, ?, ?, ?, ?)
+                    `, [
+                        stored.id,
+                        existing ? 'attendance_status_updated' : 'attendance_status_created',
+                        user.id,
+                        existing ? JSON.stringify({
+                            status: existing.status,
+                            reason: existing.reason,
+                            reason_type: existing.reason_type,
+                            custom_reason: existing.custom_reason
+                        }) : null,
+                        JSON.stringify({
+                            status, reason, reason_type: rawReason, custom_reason: customReason
+                        }),
+                        existing ? 'Attendance status or reason corrected.' : 'Attendance status recorded.'
+                    ]);
+                }
             }
         });
 

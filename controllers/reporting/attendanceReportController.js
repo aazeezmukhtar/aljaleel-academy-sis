@@ -80,7 +80,7 @@ const getDailyAttendance = async (req, res) => {
             let classFilter = '';
             if (class_id) { classFilter = ' AND a.class_id = ?'; params.push(Number(class_id)); }
             students = await db.all(`SELECT s.first_name, s.last_name, s.admission_number, s.parent_phone,
-                    c.name AS class_name, a.status, a.date, a.created_at AS time_marked
+                    c.name AS class_name, a.status, a.date, NULL AS time_marked
                 FROM attendance a
                 JOIN students s ON s.id = a.student_id AND s.school_id = ?
                 JOIN classes c ON c.id = a.class_id AND c.school_id = s.school_id AND c.section_id = a.section_id

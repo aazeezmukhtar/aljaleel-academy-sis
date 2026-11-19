@@ -102,7 +102,9 @@ exports.getLatestNotifications = async (req, res) => {
             if (!isRead) unreadCount++;
 
             let countdown = null;
-            if ((n.type === 'Event' || n.type === 'Assignment') && n.date) {
+            if (n.type === 'Attendance reminder' && n.date) {
+                countdown = 'Register date ' + new Date(n.date).toLocaleDateString();
+            } else if ((n.type === 'Event' || n.type === 'Assignment') && n.date) {
                 const targetDate = new Date(n.date);
                 const diffTime = targetDate - now;
                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));

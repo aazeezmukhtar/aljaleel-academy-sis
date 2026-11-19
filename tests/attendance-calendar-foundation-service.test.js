@@ -22,6 +22,7 @@ sqlite.exec(`
 const migration = fs.readFileSync(path.join(__dirname,'..','database','migrations','20261119_attendance_calendar_foundation.sqlite.sql'),'utf8');
 sqlite.exec(migration);
 
+let immediateQueue = Promise.resolve();
 const fakeDb = {
   DB_TYPE: 'sqlite',
   get: async (sql, params = []) => sqlite.prepare(sql).get(params),
@@ -32,10 +33,14 @@ const fakeDb = {
     try { const value=await callback(null); sqlite.exec('COMMIT'); return value; }
     catch(e) { sqlite.exec('ROLLBACK'); throw e; }
   },
-  transactionImmediate: async callback => {
-    sqlite.exec('BEGIN IMMEDIATE');
-    try { const value=await callback(null); sqlite.exec('COMMIT'); return value; }
-    catch(e) { sqlite.exec('ROLLBACK'); throw e; }
+  transactionImmediate: callback => {
+    const pending = immediateQueue.then(async () => {
+      sqlite.exec('BEGIN IMMEDIATE');
+      try { const value=await callback(null); sqlite.exec('COMMIT'); return value; }
+      catch(e) { sqlite.exec('ROLLBACK'); throw e; }
+    });
+    immediateQueue = pending.catch(() => undefined);
+    return pending;
   }
 };
 const dbPath=require.resolve('../utils/db');
@@ -96,6 +101,14 @@ const service=require('../services/attendanceFoundationService');
       schoolId:1,classId:101,staffId:8,session:'2026/2027',
       effectiveFrom:'2026-09-01',effectiveTo:null,createdBy:7
     }),/does not belong to this school/,'Cross-school responsible staff must fail');
+
+    const concurrentSchedules = await Promise.allSettled([
+      service.create('attendance_schedule',{schoolId:1,classId:101,session:'2026/2027',effectiveFrom:'2026-09-01',effectiveTo:null,weekdays:{monday:true},createdBy:7}),
+      service.create('attendance_schedule',{schoolId:1,classId:101,session:'2026/2027',effectiveFrom:'2026-09-15',effectiveTo:null,weekdays:{tuesday:true},createdBy:7})
+    ]);
+    assert.equal(concurrentSchedules.filter(x=>x.status==='fulfilled').length,1,'Only one concurrent overlapping writer may commit');
+    assert.equal(concurrentSchedules.filter(x=>x.status==='rejected' && x.reason.code==='ATTENDANCE_FOUNDATION_CONFLICT').length,1,
+      'The losing concurrent writer must receive a conflict');
 
     const closure=await service.create('attendance_closure',{
       schoolId:1,scopeType:'section',sectionId:10,closureDate:'2026-12-25',

@@ -59,8 +59,23 @@ async function lockClass(ctx, client) {
   }
 }
 async function roster(ctx, client) {
-  return db.all(`
-    SELECT s.id
+  // Dated placement history is authoritative for the register date. Current
+  // session assignments are used only to detect unresolved legacy candidates;
+  // they never establish historical attendance eligibility.
+  const students = await db.all(`
+    SELECT DISTINCT s.id
+    FROM students s
+    JOIN student_enrollment_periods ep
+      ON ep.student_id = s.id AND ep.school_id = s.school_id
+    WHERE s.school_id = ? AND ep.section_id = ? AND ep.class_id = ?
+      AND ep.session = ? AND ep.date_status = 'confirmed'
+      AND ep.start_date <= ? AND (ep.end_date IS NULL OR ep.end_date >= ?)
+      AND (s.status = 'active' OR s.status = 'Active' OR s.status IS NULL)
+    ORDER BY s.id
+  `, [ctx.schoolId, ctx.sectionId, ctx.classId, ctx.session, ctx.date, ctx.date], client);
+
+  const unresolved = await db.get(`
+    SELECT COUNT(DISTINCT s.id) AS count
     FROM students s
     WHERE s.school_id = ?
       AND (s.status = 'active' OR s.status = 'Active' OR s.status IS NULL)
@@ -77,8 +92,27 @@ async function roster(ctx, client) {
           )
         )
       )
-    ORDER BY s.id
-  `, [ctx.schoolId, ctx.classId, ctx.session, ctx.classId, ctx.session], client);
+      AND (
+        NOT EXISTS (
+          SELECT 1 FROM student_enrollment_periods ep
+          WHERE ep.school_id = s.school_id AND ep.student_id = s.id
+            AND ep.section_id = ? AND ep.class_id = ? AND ep.session = ?
+        )
+        OR EXISTS (
+          SELECT 1 FROM student_enrollment_periods ep
+          WHERE ep.school_id = s.school_id AND ep.student_id = s.id
+            AND ep.section_id = ? AND ep.class_id = ? AND ep.session = ?
+            AND ep.date_status = 'review_needed'
+            AND ep.start_date <= ? AND (ep.end_date IS NULL OR ep.end_date >= ?)
+        )
+      )
+    `, [
+      ctx.schoolId, ctx.classId, ctx.session, ctx.classId, ctx.session,
+      ctx.sectionId, ctx.classId, ctx.session,
+      ctx.sectionId, ctx.classId, ctx.session, ctx.date, ctx.date
+    ], client);
+
+  return { students, unknownEnrollmentCount: Number(unresolved?.count || 0) };
 }
 async function ensureRegister(ctx, client) {
   await db.run(`INSERT INTO attendance_registers
@@ -104,7 +138,8 @@ async function saveRows(ctx, input, client) {
   const attendance = input.attendance && typeof input.attendance === 'object' ? input.attendance : {};
   const reasons = input.reasons && typeof input.reasons === 'object' ? input.reasons : {};
   const customReasons = input.custom_reasons && typeof input.custom_reasons === 'object' ? input.custom_reasons : {};
-  const students = await roster(ctx, client);
+  const rosterResult = await roster(ctx, client);
+  const students = rosterResult.students;
   const allowed = new Set(students.map(row => String(row.id)));
   const submittedIds = Object.keys(attendance);
   for (const studentId of submittedIds) {
@@ -129,7 +164,12 @@ async function saveRows(ctx, input, client) {
     await db.run(sql, [Number(studentId), ctx.classId, ctx.sectionId, ctx.date,
       attendance[studentId], ctx.session, ctx.term, reason, rawReason, customReason], client);
   }
-  return { rosterCount: students.length, savedCount: submittedIds.length, rosterIds: students.map(x => String(x.id)) };
+  return {
+    rosterCount: students.length,
+    savedCount: submittedIds.length,
+    rosterIds: students.map(x => String(x.id)),
+    unknownEnrollmentCount: rosterResult.unknownEnrollmentCount
+  };
 }
 
 async function saveDraft(input) {
@@ -157,6 +197,10 @@ async function submit(input) {
       WHERE register_id = ? AND action = 'reopened' AND version = ? ORDER BY id DESC LIMIT 1`,
     [register.id, register.submission_version], client) : null;
     const result = await saveRows(ctx, input, client);
+    if (result.unknownEnrollmentCount > 0) {
+      throw conflict('The register cannot be submitted because ' + result.unknownEnrollmentCount +
+        ' active class member(s) have missing or review-needed dated enrollment history for this date. Resolve the enrollment dates before submission.');
+    }
     if (result.rosterCount === 0) throw new Error('An empty class roster cannot be submitted.');
     if (result.savedCount !== result.rosterCount ||
         result.rosterIds.some(id => !Object.prototype.hasOwnProperty.call(input.attendance || {}, id))) {

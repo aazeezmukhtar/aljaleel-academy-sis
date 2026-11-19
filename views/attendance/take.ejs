@@ -25,6 +25,11 @@
                         <i class="bi bi-send-check"></i> Submit Register
                     </button>
                     <% } %>
+                    <% if (register && register.status === 'submitted' && isAdmin) { %>
+                    <button type="button" id="reopen-attendance-register" class="btn btn-outline" aria-label="Reopen register for correction">
+                        <i class="bi bi-unlock"></i> Reopen for Correction
+                    </button>
+                    <% } %>
                 </div>
             </div>
             <div class="header-meta">
@@ -529,6 +534,44 @@
             });
             saveButtons.forEach(button => { button.disabled = false; });
         }
+    }
+
+    const reopenButton = document.getElementById('reopen-attendance-register');
+    if (reopenButton) {
+        reopenButton.addEventListener('click', async () => {
+            const reason = window.prompt('Why does this submitted register need correction?');
+            if (reason === null) return;
+            if (!reason.trim()) {
+                alert('Enter a reason before reopening the register.');
+                return;
+            }
+            reopenButton.disabled = true;
+            reopenButton.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Reopening...';
+            try {
+                const form = document.getElementById('attendance-form');
+                const response = await fetch('/attendance/reopen', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        class_id: form.querySelector('[name="class_id"]').value,
+                        date: form.querySelector('[name="date"]').value,
+                        reason: reason.trim()
+                    })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.success) {
+                    alert(result.message || 'The register could not be reopened.');
+                    return;
+                }
+                alert('Register reopened. You can now make and save the required corrections.');
+                window.location.reload();
+            } catch (error) {
+                alert('Could not reopen the register. Check your connection and try again.');
+            } finally {
+                reopenButton.disabled = false;
+                reopenButton.innerHTML = '<i class="bi bi-unlock"></i> Reopen for Correction';
+            }
+        });
     }
 
     ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {

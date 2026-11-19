@@ -194,13 +194,17 @@ function createAttendanceClosureService(db) {
             }
 
             const nextStatus = decision;
+            const approvalFields = decision === 'approved'
+                ? 'approved_by = CAST(? AS BIGINT), approved_at = CURRENT_TIMESTAMP'
+                : 'approved_by = NULL, approved_at = NULL';
+            const decisionParams = decision === 'approved'
+                ? [nextStatus, actorStaffId, closureId, schoolId]
+                : [nextStatus, closureId, schoolId];
             await db.run(`
                 UPDATE class_attendance_closures
-                SET status = ?,
-                    approved_by = CASE WHEN ? THEN CAST(? AS BIGINT) ELSE NULL END,
-                    approved_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END
+                SET status = ?, ${approvalFields}
                 WHERE id = ? AND school_id = ? AND status = 'pending'
-            `, [nextStatus, decision === 'approved', actorStaffId, decision === 'approved', closureId, schoolId], client);
+            `, decisionParams, client);
             const updatedClosure = await db.get(
                 'SELECT status, approved_by, approved_at FROM class_attendance_closures WHERE id = ? AND school_id = ?',
                 [closureId, schoolId], client

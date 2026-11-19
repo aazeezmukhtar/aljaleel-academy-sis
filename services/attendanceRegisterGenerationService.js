@@ -1,7 +1,5 @@
 'use strict';
 
-const defaultDb = require('../utils/db');
-
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_RE = /^(?:[01]\d|2[0-3]):[0-5]\d$/;
 
@@ -63,12 +61,14 @@ function localDateTimeToUtc(date, time, timezone) {
     return resolved.toISOString();
 }
 
-function createAttendanceRegisterService(db = defaultDb) {
+function createAttendanceRegisterService(db) { 
+    if (!db) throw new Error('An attendance register database adapter is required.');
     async function generateExpectedRegister(input) {
         const schoolId = Number(input && input.schoolId);
         const classId = Number(input && input.classId);
         const registerDate = normalizeDate(input && input.registerDate);
-        const generatedBy = input && input.generatedBy ? Number(input.generatedBy) : null;
+        const generatedBy = input && input.generatedBy !== undefined && input.generatedBy !== null && input.generatedBy !== ''
+            ? Number(input.generatedBy) : null;
 
         if (!Number.isSafeInteger(schoolId) || schoolId <= 0 ||
             !Number.isSafeInteger(classId) || classId <= 0) {
@@ -79,6 +79,14 @@ function createAttendanceRegisterService(db = defaultDb) {
         }
 
         return db.transaction(async client => {
+            if (generatedBy !== null) {
+                const actor = await db.get(
+                    'SELECT id FROM staff WHERE id = ? AND school_id = ?',
+                    [generatedBy, schoolId], client
+                );
+                if (!actor) throw new Error('Register generator is not a staff member of this school.');
+            }
+
             const clazz = await db.get(`
                 SELECT c.id, c.school_id, c.section_id, s.school_id AS section_school_id
                 FROM classes c
@@ -143,7 +151,7 @@ function createAttendanceRegisterService(db = defaultDb) {
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to >= ?)
                 ORDER BY effective_from DESC, id DESC
-            `, [schoolId, classId, clazz.section_id, registerDate, registerDate], client);
+            `, [schoolId, classId, clazz.section_id, academicPeriod.session, registerDate, registerDate], client);
             if (settingsRows.length === 0) {
                 return { created: false, skipped: true, reason: 'attendance_settings_missing' };
             }
@@ -153,14 +161,18 @@ function createAttendanceRegisterService(db = defaultDb) {
             const settings = settingsRows[0];
 
             const responsibilityRows = await db.all(`
-                SELECT id, staff_id, responsibility_type
-                FROM class_attendance_responsibilities
-                WHERE school_id = ? AND class_id = ? AND section_id = ?
-                  AND effective_from <= ?
-                  AND (effective_to IS NULL OR effective_to >= ?)
-                  AND responsibility_type IN ('primary', 'substitute')
-                ORDER BY effective_from DESC, id DESC
+                SELECT r.id, r.staff_id, r.responsibility_type, st.school_id AS staff_school_id
+                FROM class_attendance_responsibilities r
+                LEFT JOIN staff st ON st.id = r.staff_id
+                WHERE r.school_id = ? AND r.class_id = ? AND r.section_id = ?
+                  AND r.effective_from <= ?
+                  AND (r.effective_to IS NULL OR r.effective_to >= ?)
+                  AND r.responsibility_type IN ('primary', 'substitute')
+                ORDER BY r.effective_from DESC, r.id DESC
             `, [schoolId, classId, clazz.section_id, registerDate, registerDate], client);
+            if (responsibilityRows.some(row => Number(row.staff_school_id) !== schoolId)) {
+                throw new Error('An active attendance responsibility points to staff outside this school.');
+            }
             const substitutes = responsibilityRows.filter(row => row.responsibility_type === 'substitute');
             const primaries = responsibilityRows.filter(row => row.responsibility_type === 'primary');
             if (substitutes.length > 1 || primaries.length > 1) {
@@ -176,6 +188,7 @@ function createAttendanceRegisterService(db = defaultDb) {
                 JOIN sections sec ON sec.id = ep.section_id AND sec.school_id = ep.school_id
                 WHERE ep.school_id = ? AND ep.class_id = ? AND ep.section_id = ?
                   AND c.section_id = ep.section_id
+                  AND ep.session = ?
                   AND ep.start_date <= ?
                   AND (ep.end_date IS NULL OR ep.end_date >= ?)
                 ORDER BY ep.student_id, ep.start_date, ep.id
@@ -293,9 +306,15 @@ function createAttendanceRegisterService(db = defaultDb) {
     return { generateExpectedRegister, generateExpectedRegistersForDate };
 }
 
-const service = createAttendanceRegisterService();
+let defaultService = null;
+function getDefaultService() {
+    if (!defaultService) defaultService = createAttendanceRegisterService(require('../utils/db'));
+    return defaultService;
+}
+
 module.exports = {
-    ...service,
+    generateExpectedRegister: (...args) => getDefaultService().generateExpectedRegister(...args),
+    generateExpectedRegistersForDate: (...args) => getDefaultService().generateExpectedRegistersForDate(...args),
     createAttendanceRegisterService,
     normalizeDate,
     isoWeekday,

@@ -61,7 +61,7 @@ const service=require('../services/attendanceFoundationService');
 
     const schedule=await service.create('attendance_schedule',{
       schoolId:1,classId:100,session:'2026/2027',
-      effectiveFrom:'2026-09-01',effectiveTo:null,
+      effectiveFrom:'2026-09-01',effectiveTo:'2026-12-31',
       weekdays:{monday:true,tuesday:true,wednesday:true,thursday:true,friday:true},createdBy:7
     });
     assert.ok(schedule.id>0);

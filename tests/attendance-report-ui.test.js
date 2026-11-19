@@ -17,6 +17,8 @@ const lowView = fs.readFileSync(lowViewPath, 'utf8');
 const dailyViewPath = path.join(root, 'views/reports/attendance/daily.ejs');
 const dailyView = fs.readFileSync(dailyViewPath, 'utf8');
 const monthlyViewPath = path.join(root, 'views/reports/attendance/register.ejs');
+const settingsViewPath = path.join(root, 'views/settings.ejs');
+const settingsView = fs.readFileSync(settingsViewPath, 'utf8');
 const monthlyView = fs.readFileSync(monthlyViewPath, 'utf8');
 const attendanceReportController = fs.readFileSync(path.join(root, 'controllers/reporting/attendanceReportController.js'), 'utf8');
 
@@ -54,6 +56,8 @@ assert(dashboardView.includes('selectedSectionId') && dashboardView.includes('Ac
   'Administrative dashboard must require one section and explain section isolation.');
 assert(dashboardView.includes('stats.submitted_registers'), 'Dashboard must surface formal register submissions.');
 assert(attendanceReportController.includes("require('../../services/attendanceAnalyticsService')"), 'Administrative attendance reports must use the shared analytics engine.');
+assert(attendanceReportController.includes('attendanceThresholdService') && controller.includes('attendanceThresholdService'), 'Administrative and class reports must use the shared school threshold service.');
+assert(settingsView.includes('attendance_low_attendance_threshold') && settingsView.includes('attendance.low_attendance_threshold'), 'School settings must expose the shared low-attendance threshold.');
 assert(lowView.includes('student.attendance_rate') && lowView.includes('student.missing_registers'), 'Low-attendance alerts must display shared-engine rates and missing registers.');
 assert(attendanceReportController.includes("ar.status = 'submitted'"), 'Daily and monthly register views must exclude unsubmitted drafts.');
 assert(dailyView.includes('name="section_id"'), 'Daily register view must require a section selection.');

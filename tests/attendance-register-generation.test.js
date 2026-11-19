@@ -150,6 +150,11 @@ const db = {
     assert.strictEqual(outsidePeriod.skipped, true);
     assert.strictEqual(outsidePeriod.reason, 'no_academic_period');
 
+    assert.strictEqual(
+      localDateTimeToUtc('2026-11-19', '14:00:00', 'Africa/Lagos'),
+      '2026-11-19T13:00:00.000Z',
+      'PostgreSQL TIME values include seconds even when the configured time is minute-based'
+    );
     assert.throws(
       () => localDateTimeToUtc('2026-11-19', '25:00', 'Africa/Lagos'),
       /HH:MM/

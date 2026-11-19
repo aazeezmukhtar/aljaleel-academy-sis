@@ -38,11 +38,12 @@ SELECT CASE WHEN
     AND NOT EXISTS (
         SELECT 1
         FROM attendance a
-        JOIN students s ON s.id = a.student_id
-        JOIN classes c ON c.id = a.class_id
-        JOIN sections sec ON sec.id = c.section_id
-        WHERE s.school_id <> c.school_id
-           OR sec.school_id <> c.school_id
+        LEFT JOIN students s ON s.id = a.student_id
+        LEFT JOIN classes c ON c.id = a.class_id
+        LEFT JOIN sections sec ON sec.id = c.section_id
+        WHERE s.id IS NULL OR c.id IS NULL OR c.section_id IS NULL OR sec.id IS NULL
+           OR s.school_id IS NOT c.school_id
+           OR sec.school_id IS NOT c.school_id
     )
     AND NOT EXISTS (
         SELECT 1

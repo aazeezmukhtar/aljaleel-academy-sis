@@ -1,0 +1,82 @@
+<%- include('../partials/header') %>
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+    <main class="main-content">
+        <header class="content-header">
+            <div>
+                <h1>Attendance Register Responsibilities</h1>
+                <p>Assign the staff member authorised to complete each class register for a defined period.</p>
+            </div>
+            <a href="/attendance" class="btn btn-outline">Back to Attendance</a>
+        </header>
+
+        <% if (typeof success !== 'undefined') { %><div class="alert alert-success" role="status"><%= success %></div><% } %>
+
+        <section class="card" style="margin-bottom:24px;">
+            <h2>Assign a register holder</h2>
+            <p class="text-muted">Assignments are class-specific and date-effective. They are not inferred from form-teacher or subject assignments.</p>
+            <form method="POST" action="/attendance/responsibilities" class="enroll-form">
+                <div class="form-group">
+                    <label for="class_id">Class</label>
+                    <select id="class_id" name="class_id" class="form-control" required>
+                        <option value="">Choose class</option>
+                        <% classes.forEach(item => { %><option value="<%= item.id %>"><%= item.section_name || 'Section not set' %> — <%= item.name %></option><% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="staff_id">Responsible staff member</label>
+                    <select id="staff_id" name="staff_id" class="form-control" required>
+                        <option value="">Choose staff</option>
+                        <% staff.forEach(item => { %><option value="<%= item.id %>"><%= item.first_name %> <%= item.last_name %></option><% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="session">Academic session</label>
+                    <input id="session" name="session" class="form-control" placeholder="e.g. 2026/2027" required>
+                </div>
+                <div class="form-group">
+                    <label for="effective_from">Effective from</label>
+                    <input id="effective_from" name="effective_from" type="date" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label for="effective_to">Effective until (optional)</label>
+                    <input id="effective_to" name="effective_to" type="date" class="form-control">
+                </div>
+                <button type="submit" class="btn btn-primary">Assign Register Holder</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Assignment history</h2>
+            <% if (!responsibilities.length) { %>
+                <p class="text-muted">No register responsibilities have been assigned yet.</p>
+            <% } else { %>
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead><tr><th>Class</th><th>Staff</th><th>Session</th><th>Effective period</th><th>Action</th></tr></thead>
+                        <tbody>
+                        <% responsibilities.forEach(item => { %>
+                            <tr>
+                                <td><strong><%= item.class_name %></strong><br><small><%= item.section_name || 'Section not set' %></small></td>
+                                <td><%= item.first_name %> <%= item.last_name %></td>
+                                <td><%= item.session %></td>
+                                <td><%= String(item.effective_from).slice(0,10) %> — <%= item.effective_to ? String(item.effective_to).slice(0,10) : 'No end date' %></td>
+                                <td>
+                                    <% if (!item.effective_to) { %>
+                                    <form method="POST" action="/attendance/responsibilities/<%= item.id %>/end" class="responsibility-end-form">
+                                        <input type="date" name="effective_to" required aria-label="Last responsibility date">
+                                        <input type="text" name="reason" required maxlength="500" placeholder="Reason for ending" aria-label="Reason for ending">
+                                        <button type="submit" class="btn btn-outline btn-xs">End assignment</button>
+                                    </form>
+                                    <% } else { %><span class="text-muted">Historical</span><% } %>
+                                </td>
+                            </tr>
+                        <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        </section>
+    </main>
+</div>
+<%- include('../partials/footer') %>

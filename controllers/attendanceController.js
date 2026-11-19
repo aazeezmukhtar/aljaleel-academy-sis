@@ -183,7 +183,7 @@ const getAttendanceResponsibilities = async (req, res) => {
                 JOIN staff st ON st.id = r.staff_id AND st.school_id = r.school_id
                 WHERE r.school_id = ? ORDER BY r.effective_from DESC, r.id DESC`, [schoolId])
         ]);
-        res.render('attendance/responsibilities', { title: 'Attendance Register Responsibilities', classes, staff, responsibilities, user });
+        res.render('attendance/responsibilities', { title: 'Attendance Register Responsibilities', classes, staff, responsibilities, user, success: req.query.success === 'created' ? 'Register holder assigned successfully.' : req.query.success === 'ended' ? 'Register holder assignment ended successfully.' : null });
     } catch (err) {
         console.error('Attendance responsibilities load error:', err);
         res.status(500).send('Could not load attendance register responsibilities.');

@@ -57,7 +57,15 @@ if (!connectionString) {
     const db = require('../utils/db');
     appPool = db.pool;
     const service = require('../services/attendanceRegisterService');
+    const { getAttendanceRoster } = require('../utils/attendanceStudentHelper');
     const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-05', session:'2026/2027', term:'1st Term', actorId:1, actorRole:'Teacher' };
+
+    const historicalRoster = await getAttendanceRoster(10, '2026/2027', 1, '2026-11-05', '1st Term');
+    assert.deepStrictEqual(historicalRoster.students.map(row => Number(row.id)), [101,102]);
+    const sourceAfterTransfer = await getAttendanceRoster(10, '2026/2027', 1, '2026-11-19', '1st Term');
+    assert.deepStrictEqual(sourceAfterTransfer.students.map(row => Number(row.id)), [102]);
+    const destinationAfterTransfer = await getAttendanceRoster(11, '2026/2027', 1, '2026-11-19', '1st Term');
+    assert.deepStrictEqual(destinationAfterTransfer.students.map(row => Number(row.id)), [101]);
 
     const draft = await service.saveDraft({ ...base, attendance:{101:'Present'} });
     assert.equal(draft.status, 'open');

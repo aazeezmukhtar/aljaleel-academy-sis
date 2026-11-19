@@ -7,6 +7,8 @@ const attendanceRegisterGeneration = require('../services/attendanceRegisterGene
 const attendanceRegisterWorkflow = require('../services/attendanceRegisterWorkflowService');
 const attendanceRegisterAdministration = require('../services/attendanceRegisterAdministrationService');
 const attendanceClosureService = require('../services/attendanceClosureService');
+const { createAttendanceAnalyticsService } = require('../services/attendanceAnalyticsService');
+const attendanceAnalytics = createAttendanceAnalyticsService(db);
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user, schoolId) => {
@@ -876,30 +878,32 @@ const getReport = async (req, res) => {
         const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
         const classes = await getAssignedClasses(user, schoolId);
         let reportData = null;
+        let reportMeta = null;
 
         if (class_id && start_date && end_date) {
-            if (user.role !== 'Admin') {
-                const hasAccess = classes.some(c => String(c.id) === String(class_id));
-                if (!hasAccess) {
+            if (user.role !== 'Admin' && !classes.some(c => String(c.id) === String(class_id))) {
+                reportData = [];
+            } else {
+                const selectedClass = await db.get(
+                    'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
+                    [Number(class_id), schoolId]
+                );
+                if (!selectedClass || !selectedClass.section_id) {
                     reportData = [];
+                } else {
+                    const report = await attendanceAnalytics.getClassAttendanceReport({
+                        schoolId,
+                        classId: Number(class_id),
+                        sectionId: Number(selectedClass.section_id),
+                        startDate: start_date,
+                        endDate: end_date
+                    });
+                    reportData = report.rows;
+                    reportMeta = {
+                        threshold: report.threshold,
+                        registerCompletion: report.registerCompletion
+                    };
                 }
-            }
-
-            if (reportData === null) {
-                reportData = await db.all(`
-                    SELECT s.first_name, s.last_name,
-                    SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present,
-                    SUM(CASE WHEN a.status = 'Absent' THEN 1 ELSE 0 END) as absent,
-                    SUM(CASE WHEN a.status = 'Late' THEN 1 ELSE 0 END) as late,
-                    SUM(CASE WHEN a.status = 'Leave' THEN 1 ELSE 0 END) as leave,
-                    COUNT(a.id) as total_days
-                    FROM students s
-                    JOIN attendance a ON s.id = a.student_id
-                    JOIN classes c ON c.id = a.class_id AND c.school_id = s.school_id
-                    WHERE a.class_id = ? AND a.date BETWEEN ? AND ? AND s.school_id = ?
-                    GROUP BY s.id
-                    ORDER BY s.last_name, s.first_name
-                `, [Number(class_id), start_date, end_date, schoolId]);
             }
         }
 
@@ -908,6 +912,7 @@ const getReport = async (req, res) => {
             classes,
             user,
             reportData,
+            reportMeta,
             filters: { class_id, start_date, end_date }
         });
     } catch (err) {

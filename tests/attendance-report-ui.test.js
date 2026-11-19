@@ -10,8 +10,11 @@ const controller = fs.readFileSync(path.join(root, 'controllers/attendanceContro
 const routes = fs.readFileSync(path.join(root, 'routes/reportRoutes.js'), 'utf8');
 const reportViewPath = path.join(root, 'views/attendance/report.ejs');
 const reportView = fs.readFileSync(reportViewPath, 'utf8');
+const dashboardViewPath = path.join(root, 'views/reports/attendance/index.ejs');
+const dashboardView = fs.readFileSync(dashboardViewPath, 'utf8');
 
 ejs.compile(reportView, { filename: reportViewPath });
+ejs.compile(dashboardView, { filename: dashboardViewPath });
 
 const reportBlock = controller.slice(
   controller.indexOf('// GET /attendance/report - section-safe report'),
@@ -36,5 +39,9 @@ assert(reportView.includes('missing_register') === false && reportView.includes(
   'Report must display missing registers separately.');
 assert(reportView.includes('row.draft_register') && reportView.includes('row.attendance_rate'),
   'Report must display draft registers and shared-engine attendance rate.');
+
+assert(dashboardView.includes('selectedSectionId') && dashboardView.includes('Academy and Tahfeez are never combined'),
+  'Administrative dashboard must require one section and explain section isolation.');
+assert(dashboardView.includes('stats.submitted_registers'), 'Dashboard must surface formal register submissions.');
 
 console.log('[attendance-report-ui] EJS compilation, form-master-only access, shared analytics integration, dated roster, section isolation and Admin-only school-wide routes passed.');

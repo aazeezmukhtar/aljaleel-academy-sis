@@ -41,13 +41,13 @@ const db = {
   try {
     sqlite.exec(`
       CREATE TABLE schools(id INTEGER PRIMARY KEY);
-      CREATE TABLE sections(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id));
+      CREATE TABLE sections(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id), name TEXT);
       CREATE TABLE staff(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id), role TEXT, first_name TEXT, last_name TEXT);
       CREATE TABLE students(
         id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id),
         status TEXT, first_name TEXT, last_name TEXT, admission_number TEXT, passport_photo_path TEXT
       );
-      CREATE TABLE classes(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id), section_id INTEGER REFERENCES sections(id));
+      CREATE TABLE classes(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id), section_id INTEGER REFERENCES sections(id), name TEXT);
       CREATE TABLE student_enrollment_history(id INTEGER PRIMARY KEY);
       CREATE TABLE student_enrollment_periods(
         id INTEGER PRIMARY KEY,
@@ -70,12 +70,12 @@ const db = {
         UNIQUE(student_id, section_id, date, session, term)
       );
       INSERT INTO schools VALUES (1);
-      INSERT INTO sections VALUES (10, 1);
+      INSERT INTO sections VALUES (10, 1, 'Academy');
       INSERT INTO staff(id, school_id, role, first_name, last_name) VALUES (20, 1, 'Teacher', 'Amina', 'Teacher'), (21, 1, 'Admin', 'School', 'Admin');
       INSERT INTO students VALUES
         (30, 1, 'active', 'Amina', 'Adamu', 'A001', NULL),
         (31, 1, 'active', 'Bello', 'Musa', 'A002', NULL);
-      INSERT INTO classes VALUES (40, 1, 10);
+      INSERT INTO classes VALUES (40, 1, 10, 'Primary 1');
       INSERT INTO student_enrollment_periods
         VALUES (100, 1, 30, 10, 40, '2026/2027', '2026-09-01', NULL, NULL, NULL, 'confirmed'),
                (101, 1, 31, 10, 40, '2026/2027', '2026-09-01', NULL, NULL, NULL, 'confirmed');

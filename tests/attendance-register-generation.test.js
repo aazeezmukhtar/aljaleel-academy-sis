@@ -4,7 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
-const { createAttendanceRegisterService, isoWeekday, localDateTimeToUtc } =
+const { createAttendanceRegisterService, isoWeekday, localDateTimeToUtc, normalizeDate } =
   require('../services/attendanceRegisterGenerationService');
 
 const sqlite = new Database(':memory:');
@@ -155,7 +155,7 @@ const db = {
       /HH:MM/
     );
     assert.throws(
-      () => normalizeDateForTest('2026-02-30'),
+      () => normalizeDate('2026-02-30'),
       /valid calendar date/
     );
 

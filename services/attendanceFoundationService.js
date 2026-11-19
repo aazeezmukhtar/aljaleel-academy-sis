@@ -65,10 +65,10 @@ async function ensureNoOverlap(type, schoolId, parentId, session, from, to, exce
   const exclusion = exceptId ? ' AND id <> ?' : '';
   const params = [schoolId, parentId, session, end, from];
   if (exceptId) params.push(exceptId);
-  const sql = \`SELECT id FROM \${spec.table}
-    WHERE school_id = ? AND \${parentColumn} = ? AND session = ?
-      AND \${spec.dateFrom} <= ? AND COALESCE(\${spec.dateTo}, '9999-12-31') >= ?\${exclusion}
-    LIMIT 1\`;
+  const sql = `SELECT id FROM ${spec.table}
+    WHERE school_id = ? AND ${parentColumn} = ? AND session = ?
+      AND ${spec.dateFrom} <= ? AND COALESCE(${spec.dateTo}, '9999-12-31') >= ?${exclusion}
+    LIMIT 1`;
   const found = await db.get(sql, params, client);
   if (found) throw conflict('This effective date range overlaps an existing ' + type.replaceAll('_',' ') + ' record.');
 }

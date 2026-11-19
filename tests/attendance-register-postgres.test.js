@@ -25,16 +25,16 @@ if (!connectionString) {
         CREATE TABLE staff(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
         CREATE TABLE classes(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id), section_id BIGINT NOT NULL REFERENCES sections(id));
         CREATE TABLE students(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL, status TEXT, current_class_id BIGINT);
-        CREATE TABLE student_enrollments(id BIGINT PRIMARY KEY, student_id BIGINT NOT NULL, class_id BIGINT NOT NULL, session TEXT NOT NULL);
+        CREATE TABLE student_enrollments(id BIGINT PRIMARY KEY, student_id BIGINT NOT NULL, class_id BIGINT NOT NULL, session TEXT NOT NULL);\n        CREATE TABLE student_enrollment_periods(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL, student_id BIGINT NOT NULL, section_id BIGINT NOT NULL, class_id BIGINT NOT NULL, session TEXT NOT NULL, start_date DATE NOT NULL, end_date DATE, date_status TEXT NOT NULL);
         CREATE TABLE class_attendance_responsibilities(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL, class_id BIGINT NOT NULL, staff_id BIGINT NOT NULL, session TEXT NOT NULL, effective_from DATE NOT NULL, effective_to DATE);
         CREATE TABLE attendance(id BIGSERIAL PRIMARY KEY, student_id BIGINT NOT NULL, class_id BIGINT NOT NULL, section_id BIGINT NOT NULL, date DATE NOT NULL, status TEXT NOT NULL, session TEXT NOT NULL, term TEXT NOT NULL, reason TEXT, reason_type TEXT, custom_reason TEXT, UNIQUE(student_id,section_id,date,session,term));
         INSERT INTO schools VALUES(1);
         INSERT INTO sections VALUES(1,1);
         INSERT INTO staff VALUES(1,1),(2,1);
-        INSERT INTO classes VALUES(10,1,1);
-        INSERT INTO students VALUES(101,1,'active',10),(102,1,'active',10);
-        INSERT INTO student_enrollments VALUES(1,101,10,'2026/2027'),(2,102,10,'2026/2027');
-        INSERT INTO class_attendance_responsibilities VALUES(1,1,10,1,'2026/2027','2026-09-01',NULL);
+        INSERT INTO classes VALUES(10,1,1),(11,1,1);
+        INSERT INTO students VALUES(101,1,'active',10),(102,1,'active',10),(103,1,'active',11);
+        INSERT INTO student_enrollments VALUES(1,101,10,'2026/2027'),(2,102,10,'2026/2027'),(3,103,10,'2026/2027'),(4,103,11,'2026/2027');\n        INSERT INTO student_enrollment_periods VALUES(1,1,101,1,10,'2026/2027','2026-09-01','2027-08-31','confirmed'),(2,1,102,1,10,'2026/2027','2026-09-01','2027-08-31','confirmed'),(3,1,103,1,10,'2026/2027','2026-09-01','2026-09-09','confirmed'),(4,1,103,1,11,'2026/2027','2026-09-10',NULL,'confirmed');
+        INSERT INTO class_attendance_responsibilities VALUES(1,1,10,1,'2026/2027','2026-09-01',NULL),(2,1,11,1,'2026/2027','2026-09-01',NULL);
       `);
       const migration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261119_attendance_register_submission.postgres.sql'), 'utf8');
       await client.query(migration);
@@ -49,7 +49,7 @@ if (!connectionString) {
     const service = require('../services/attendanceRegisterService');
     const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-19', session:'2026/2027', term:'1st Term', actorId:1, actorRole:'Teacher' };
 
-    const draft = await service.saveDraft({ ...base, attendance:{101:'Present'} });
+    await assert.rejects(service.saveDraft({ ...base, date:'2026-09-10', attendance:{103:'Present'} }), /outside the selected class roster/);\n    const oldClassTransferDay = await service.saveDraft({ ...base, date:'2026-09-09', attendance:{101:'Present',102:'Present',103:'Late'} });\n    assert.equal(oldClassTransferDay.rosterCount, 3);\n    const newClassTransferDay = await service.saveDraft({ ...base, classId:11, date:'2026-09-10', attendance:{103:'Present'} });\n    assert.equal(newClassTransferDay.rosterCount, 1);\n    const draft = await service.saveDraft({ ...base, attendance:{101:'Present'} });
     assert.equal(draft.status, 'open');
     await assert.rejects(service.submit({ ...base, attendance:{101:'Present'} }), /incomplete/);
     const submitted = await service.submit({ ...base, attendance:{101:'Present',102:'Leave'} });

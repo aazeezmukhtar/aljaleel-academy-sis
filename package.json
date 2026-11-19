@@ -26,6 +26,10 @@
     "test:attendance-sqlite": "node tests/section-aware-attendance-sqlite.test.js",
     "test:attendance-register-generation": "node tests/attendance-register-generation.test.js",
     "test:attendance-register-generation-postgres": "node tests/attendance-register-generation-postgres.test.js",
+    "test:attendance-register-workflow": "node tests/attendance-register-workflow.test.js",
+    "test:attendance-register-workflow-postgres": "node tests/attendance-register-workflow-postgres.test.js",
+    "test:attendance-register-ui": "node tests/attendance-register-ui.test.js",
+    "test:attendance-register-workflow-postgres": "node tests/attendance-register-workflow-postgres.test.js",
     "test:attendance-register-sqlite": "node tests/attendance-register-foundation-sqlite.test.js",
     "test:attendance-register-postgres": "node tests/attendance-register-foundation-postgres.test.js"
   },

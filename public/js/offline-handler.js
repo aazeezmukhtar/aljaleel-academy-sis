@@ -268,15 +268,25 @@ async function deleteQueued(storeName, id) {
 }
 
 async function getPendingCount() {
+    const ownerKey = getOfflineOwnerKey();
+    if (!ownerKey) return 0;
+    const att = await getAllQueued('attendance_sync');
+    const res = await getAllQueued('results_sync');
+    return att.filter(item => item._ownerKey === ownerKey).length +
+        res.filter(item => item._ownerKey === ownerKey).length;
+}
+
+async function getPendingAttendanceCount() {
     try {
         const ownerKey = getOfflineOwnerKey();
-        if (!ownerKey) return 0;
-        const att = await getAllQueued('attendance_sync');
-        const res = await getAllQueued('results_sync');
-        return att.filter(item => item._ownerKey === ownerKey).length +
-            res.filter(item => item._ownerKey === ownerKey).length;
+        const attendanceItems = await getAllQueued('attendance_sync');
+        // If account ownership cannot be resolved, fail closed: queued records
+        // must not be ignored when deciding whether a register can be submitted.
+        if (!ownerKey) return attendanceItems.length;
+        return attendanceItems.filter(item => item._ownerKey === ownerKey).length;
     } catch {
-        return 0;
+        // An unreadable queue cannot prove that attendance is fully synchronized.
+        return Number.MAX_SAFE_INTEGER;
     }
 }
 
@@ -411,7 +421,7 @@ async function updateSyncUI(state, successCount, failCount) {
     const indicators = document.querySelectorAll('.sync-indicator');
     if (!indicators.length) return;
 
-    const pending = await getPendingCount().catch(() => 0);
+    const pending = await getPendingCount().catch(() => null);
     const quarantined = await getQuarantinedQueueCount().catch(() => 0);
     const quarantineNote = quarantined > 0 ? ' • ' + quarantined + ' older unassigned record(s) held safely' : '';
     const storage = await getOfflineStorageStatus().catch(() => ({ supported: false }));
@@ -435,9 +445,16 @@ async function updateSyncUI(state, successCount, failCount) {
     } else if (state === 'syncing') {
         cls += ' syncing';
         html = `<span class="sync-dot"></span> Syncing ${pending} record(s)...`;
+    } else if (pending === null) {
+        cls += ' warning';
+        html = '<span class="sync-dot"></span> Offline queue could not be checked; register submission is blocked until storage is readable' +
+            (navigator.onLine ? ' <button type="button" data-sync-retry style="border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer;">Retry sync</button>' : '');
     } else if (state === 'partial') {
         cls += ' warning';
         html = `<span class="sync-dot"></span> ${successCount} synced, ${failCount} failed`;
+        if (pending > 0 && navigator.onLine) {
+            html += ' <button type="button" data-sync-retry style="border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer;">Retry sync</button>';
+        }
     } else if (state === 'done' && pending === 0) {
         cls += ' synced';
         html = `<span class="sync-dot"></span> Synced ✓`;
@@ -445,6 +462,9 @@ async function updateSyncUI(state, successCount, failCount) {
     } else if (pending > 0) {
         cls += ' pending';
         html = `<span class="sync-dot"></span> ${pending} unsynced record(s)`;
+        if (navigator.onLine) {
+            html += ' <button type="button" data-sync-retry style="border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer;">Retry sync</button>';
+        }
     } else {
         cls += ' online';
         html = `<span class="sync-dot"></span> Online`;
@@ -453,6 +473,14 @@ async function updateSyncUI(state, successCount, failCount) {
     indicators.forEach(el => {
         el.className = cls;
         el.innerHTML = html + quarantineNote + storageNote;
+        const retryButton = el.querySelector('[data-sync-retry]');
+        if (retryButton) {
+            retryButton.addEventListener('click', event => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (navigator.onLine) syncData();
+            });
+        }
     });
 }
 
@@ -500,6 +528,7 @@ window.AcadMeOffline = window.NexusOffline = {
     saveResultOffline,
     syncData,
     getPendingCount,
+    getPendingAttendanceCount,
     getQuarantinedQueueCount,
     getPreparedDatasetStatus,
     recordPreparedDataset,

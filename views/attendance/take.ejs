@@ -9,17 +9,29 @@
             <div class="header-main">
                 <div class="breadcrumb-container">
                     <a href="/attendance" class="back-link"><i class="bi bi-arrow-left"></i> Directory</a>
-                    <h1 style="font-size: 1.25rem; margin: 0;"><%= readOnly ? 'Previous Day Attendance' : 'Mark Attendance' %></h1>
+                    <h1 style="font-size: 1.25rem; margin: 0;"><%= register ? 'Attendance Register' : readOnly ? 'Previous Day Attendance' : 'Mark Attendance' %></h1>
                 </div>
                 <div class="action-buttons">
-                    <% if (readOnly) { %>
+                    <a href="/attendance/analytics" class="btn btn-outline btn-xs"><i class="bi bi-graph-up"></i> Analytics</a>
+                    <a href="/attendance/closures" class="btn btn-outline btn-xs"><i class="bi bi-calendar-x"></i> Closures</a>
+                    <% if (readOnly && canEdit !== false) { %>
                     <button type="button" id="edit-attendance-btn" class="btn btn-outline" onclick="enableAttendanceEditing()">
                         <i class="bi bi-pencil-square"></i> Edit
                     </button>
                     <% } %>
                     <button type="submit" form="attendance-form" class="btn btn-primary attendance-save-action" <%= readOnly ? 'hidden' : '' %>>
-                        <i class="bi bi-cloud-check-fill"></i> Save Records
+                        <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Records' %>
                     </button>
+                    <% if (register && canEdit !== false) { %>
+                    <button type="button" id="submit-attendance-register" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
+                        <i class="bi bi-send-check"></i> Submit Register
+                    </button>
+                    <% } %>
+                    <% if (register && register.status === 'submitted' && isAdmin) { %>
+                    <button type="button" id="reopen-attendance-register" class="btn btn-outline" aria-label="Reopen register for correction">
+                        <i class="bi bi-unlock"></i> Reopen for Correction
+                    </button>
+                    <% } %>
                 </div>
             </div>
             <div class="header-meta">
@@ -36,11 +48,21 @@
         <section class="attendance-container" style="margin-top: 15px;">
             <% if (readOnly) { %>
                 <div class="alert <%= hasRecords ? 'alert-info' : 'alert-warning' %>" role="status">
-                    <strong><%= hasRecords ? 'Read-only attendance record' : 'No attendance recorded' %></strong>
-                    <div><%= hasRecords ? 'You are viewing the saved attendance for this class and date.' : 'There are no saved attendance records for this class on this date. You can still enter them using Edit.' %></div>
+                    <strong><%= register && register.status === 'submitted' ? 'Register submitted' : register && register.status === 'closed' ? 'Register closed' : registerSkipReason === 'approved_closure' ? 'Approved closure' : registerSkipReason === 'not_a_scheduled_day' ? 'No register scheduled' : registerSkipReason === 'register_preparation_unavailable' ? 'Register setup needs review' : register && !canEdit ? 'Register assigned to another teacher' : hasRecords ? 'Read-only attendance record' : 'No attendance recorded' %></strong>
+                    <div><%= register && register.status === 'submitted' ? 'This register has been submitted and is locked. An administrator must reopen it before corrections can be made.' : register && register.status === 'closed' ? 'This register is administratively closed.' : registerSkipReason === 'approved_closure' ? 'An approved closure covers this date. Attendance entry and submission are disabled.' : registerSkipReason === 'not_a_scheduled_day' ? 'This class is not scheduled to open on this date. Attendance entry and submission are disabled.' : registerSkipReason === 'register_preparation_unavailable' ? 'Register setup could not be verified. An administrator must review the schedule, responsibility and class settings before attendance can be saved.' : register && !canEdit ? 'Only the administrator or the responsible class teacher can edit or submit this register.' : hasRecords ? 'You are viewing the saved attendance for this class and date.' : 'There are no saved attendance records for this class on this date.' %></div>
                 </div>
             <% } else { %>
-                <p class="text-muted" style="margin-bottom: 15px; font-size: 0.85rem;"><%= students.length %> Students enrolled in this class.</p>
+                <p class="text-muted" style="margin-bottom: 15px; font-size: 0.85rem;">
+                    <%= students.length %> expected students
+                    <% if (register) { %> · Register <%= register.status.replace('_', ' ') %><% } else { %> · Standard attendance sheet<% } %>
+                </p>
+                <% if (register) { %>
+                    <p class="text-muted" style="margin-top: -8px; font-size: 0.78rem;">
+                        Submission deadline: <%= new Date(register.submission_deadline_at).toLocaleString('en-NG', { timeZone: register.timezone || 'Africa/Lagos', dateStyle: 'medium', timeStyle: 'short' }) %>
+                    </p>
+                <% } else if (registerFeatureAvailable && registerSkipReason) { %>
+                    <div class="alert alert-warning" role="status">Register generation was skipped: <%= registerSkipReason.replace(/_/g, ' ') %>. You can still save attendance, but it cannot be submitted as a register.</div>
+                <% } %>
             <% } %>
 
             <div id="attendance-status-summary" class="attendance-status-summary" role="status" aria-live="polite" aria-atomic="true"></div>
@@ -53,7 +75,7 @@
 
                 <div class="student-grid">
                     <% students.forEach((student, index) => { 
-                        const currentStatus = student.status || (readOnly ? 'Not recorded' : 'Absent');
+                        const currentStatus = student.status || 'Not recorded';
                     %>
                         <div class="student-row-card" data-student-id="<%= student.id %>">
                             <input type="hidden" class="status-input" name="attendance[<%= student.id %>]" value="<%= currentStatus %>">
@@ -98,8 +120,8 @@
             <div class="modal-content">
                 <div class="success-icon"><i class="bi bi-check-lg"></i></div>
                 <h2>Success!</h2>
-                <p>Attendance records have been updated successfully.</p>
-                <button class="btn btn-primary btn-block" onclick="window.location.href='/attendance'">Back to Dashboard</button>
+                <p><%= register ? 'Attendance progress has been saved. Submit the register only when every student has a deliberate status.' : 'Attendance records have been updated successfully.' %></p>
+                <button class="btn btn-primary btn-block" onclick="<%= register ? "document.getElementById('feedbackModal').style.display='none'" : "window.location.href='/attendance'" %>"><%= register ? 'Continue marking' : 'Back to Dashboard' %></button>
             </div>
         </div>
 
@@ -109,8 +131,13 @@
                 <i class="bi bi-arrow-left"></i>
             </a>
             <button type="submit" form="attendance-form" class="btn btn-primary">
-                <i class="bi bi-cloud-check-fill"></i> Save Records
+                <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Records' %>
             </button>
+            <% if (register && canEdit !== false) { %>
+            <button type="button" id="submit-attendance-register-mobile" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
+                <i class="bi bi-send-check"></i> Submit
+            </button>
+            <% } %>
         </div>
     </main>
 </div>
@@ -276,30 +303,23 @@
 </style>
 
 <script>
-    const STATUS_CYCLE = ['Absent', 'Present', 'Leave', 'Late'];
+    const STATUS_CYCLE = ['Not recorded', 'Present', 'Late', 'Leave', 'Absent'];
     const STATUS_ICONS = {
         'Absent': 'bi-x-circle-fill',
         'Present': 'bi-check-circle-fill',
         'Leave': 'bi-journal-text',
-        'Late': 'bi-clock-fill'
+        'Late': 'bi-clock-fill',
+        'Not recorded': 'bi-dash-circle'
     };
 
     function enableAttendanceEditing() {
-        document.querySelectorAll('.student-row-card').forEach(card => {
-            const btn = card.querySelector('.cycle-btn');
-            const input = card.querySelector('.status-input');
-            if (btn.dataset.state === 'Not recorded') {
-                btn.dataset.state = 'Absent';
-                input.value = 'Absent';
-                btn.className = 'cycle-btn btn-status-absent';
-                btn.querySelector('i').className = 'bi ' + STATUS_ICONS.Absent;
-                btn.querySelector('.status-label').textContent = 'Absent';
-            }
+        document.querySelectorAll('.student-row-card .cycle-btn').forEach(btn => {
             btn.disabled = false;
         });
 
-        document.getElementById('edit-attendance-btn').hidden = true;
-        document.querySelectorAll('.attendance-save-action, .attendance-mobile-save, .mark-all-present-action')
+        const editButton = document.getElementById('edit-attendance-btn');
+        if (editButton) editButton.hidden = true;
+        document.querySelectorAll('.attendance-save-action, .attendance-mobile-save, .mark-all-present-action, #submit-attendance-register, #submit-attendance-register-mobile')
             .forEach(element => { element.hidden = false; });
 
         const notice = document.querySelector('.attendance-container .alert');
@@ -326,7 +346,7 @@
         input.value = nextState;
 
         // Update UI
-        btn.className = `cycle-btn btn-status-${nextState.toLowerCase()}`;
+        btn.className = `cycle-btn btn-status-${nextState === 'Not recorded' ? 'unrecorded' : nextState.toLowerCase()}`;
         btn.querySelector('i').className = `bi ${STATUS_ICONS[nextState]}`;
         btn.querySelector('.status-label').textContent = nextState;
         btn.setAttribute('aria-label', 'Attendance status for ' + card.querySelector('.row-name').textContent.trim() + ': ' + nextState + '. Activate to change status.');
@@ -334,7 +354,7 @@
     }
 
     function updateAttendanceSummary() {
-        const counts = { Present: 0, Absent: 0, Late: 0, Leave: 0 };
+        const counts = { Present: 0, Absent: 0, Late: 0, Leave: 0, 'Not recorded': 0 };
         document.querySelectorAll('.student-row-card .cycle-btn').forEach(btn => {
             const state = btn.dataset.state;
             if (Object.prototype.hasOwnProperty.call(counts, state)) counts[state] += 1;
@@ -358,7 +378,7 @@
             const nextState = 'Present';
             btn.dataset.state = nextState;
             input.value = nextState;
-            btn.className = `cycle-btn btn-status-${nextState.toLowerCase()}`;
+            btn.className = `cycle-btn btn-status-${nextState === 'Not recorded' ? 'unrecorded' : nextState.toLowerCase()}`;
             btn.querySelector('i').className = `bi ${STATUS_ICONS[nextState]}`;
             btn.querySelector('.status-label').textContent = nextState;
             btn.setAttribute('aria-label', 'Attendance status for ' + card.querySelector('.row-name').textContent.trim() + ': Present. Activate to change status.');
@@ -377,6 +397,11 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
         });
+        const registerSubmitBtns = [
+            document.getElementById('submit-attendance-register'),
+            document.getElementById('submit-attendance-register-mobile')
+        ].filter(Boolean);
+        registerSubmitBtns.forEach(btn => { btn.disabled = true; });
 
         const formData = new FormData(e.target);
         const data = {
@@ -440,7 +465,135 @@
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             });
+            registerSubmitBtns.forEach(btn => { btn.disabled = !navigator.onLine; });
         }
+    });
+
+    async function submitAttendanceRegister() {
+        if (!navigator.onLine) {
+            alert('Reconnect before submitting. Offline attendance is saved locally and is not yet a server-submitted register.');
+            return;
+        }
+
+        const offline = window.AcadMeOffline || window.NexusOffline;
+        if (!offline || typeof offline.getPendingAttendanceCount !== 'function') {
+            alert('The offline attendance queue could not be verified. Wait until synchronization status is available before submitting.');
+            return;
+        }
+        const pending = await offline.getPendingAttendanceCount();
+        if (pending === Number.MAX_SAFE_INTEGER) {
+            alert('The offline attendance queue could not be verified. Wait until synchronization status is available before submitting.');
+            return;
+        }
+        if (pending > 0) {
+            alert('There are ' + pending + ' attendance item(s) waiting to sync. Wait for synchronization to finish, then submit the register.');
+            return;
+        }
+
+        if (!window.confirm('Submit this attendance register? Every expected student must have a deliberate status. Once submitted, the register is locked until an administrator reopens it.')) {
+            return;
+        }
+
+        const buttons = [
+            document.getElementById('submit-attendance-register'),
+            document.getElementById('submit-attendance-register-mobile')
+        ].filter(Boolean);
+        const saveButtons = Array.from(document.querySelectorAll('button[form="attendance-form"]'));
+        buttons.forEach(button => {
+            button.disabled = true;
+            button.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Submitting...';
+        });
+        saveButtons.forEach(button => { button.disabled = true; });
+
+        try {
+            const form = document.getElementById('attendance-form');
+            const response = await fetch('/attendance/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    class_id: form.querySelector('[name="class_id"]').value,
+                    date: form.querySelector('[name="date"]').value
+                })
+            });
+            if (response.redirected || response.url.includes('/auth/login')) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/auth/login';
+                return;
+            }
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) {
+                alert(result.message || 'The register could not be submitted.');
+                return;
+            }
+            alert('Attendance register submitted successfully.');
+            window.location.reload();
+        } catch (error) {
+            alert('Submission failed. Reconnect and try again. The register has not been submitted.');
+        } finally {
+            buttons.forEach(button => {
+                button.disabled = !navigator.onLine;
+                button.innerHTML = '<i class="bi bi-send-check"></i> ' + (button.id.endsWith('-mobile') ? 'Submit' : 'Submit Register');
+            });
+            saveButtons.forEach(button => { button.disabled = false; });
+        }
+    }
+
+    const reopenButton = document.getElementById('reopen-attendance-register');
+    if (reopenButton) {
+        reopenButton.addEventListener('click', async () => {
+            const reason = window.prompt('Why does this submitted register need correction?');
+            if (reason === null) return;
+            if (!reason.trim()) {
+                alert('Enter a reason before reopening the register.');
+                return;
+            }
+            reopenButton.disabled = true;
+            reopenButton.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Reopening...';
+            try {
+                const form = document.getElementById('attendance-form');
+                const response = await fetch('/attendance/reopen', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({
+                        class_id: form.querySelector('[name="class_id"]').value,
+                        date: form.querySelector('[name="date"]').value,
+                        reason: reason.trim()
+                    })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.success) {
+                    alert(result.message || 'The register could not be reopened.');
+                    return;
+                }
+                alert('Register reopened. You can now make and save the required corrections.');
+                window.location.reload();
+            } catch (error) {
+                alert('Could not reopen the register. Check your connection and try again.');
+            } finally {
+                reopenButton.disabled = false;
+                reopenButton.innerHTML = '<i class="bi bi-unlock"></i> Reopen for Correction';
+            }
+        });
+    }
+
+    ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
+        const button = document.getElementById(id);
+        if (button) {
+            button.disabled = !navigator.onLine;
+            button.addEventListener('click', submitAttendanceRegister);
+        }
+    });
+    window.addEventListener('online', () => {
+        ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
+            const button = document.getElementById(id);
+            if (button) button.disabled = false;
+        });
+    });
+    window.addEventListener('offline', () => {
+        ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
+            const button = document.getElementById(id);
+            if (button) button.disabled = true;
+        });
     });
 </script>
 

@@ -25,10 +25,10 @@ router.get('/academic/analysis', academicReportController.getSubjectAnalysis);
 router.get('/academic/top', academicReportController.getTopPerformers);
 
 // Attendance Reports
-router.get('/attendance', attendanceReportController.getAttendanceDashboard);
-router.get('/attendance/register', attendanceReportController.getRegister);
-router.get('/attendance/low', attendanceReportController.getLowAttendance);
-router.get('/attendance/daily', attendanceReportController.getDailyAttendance);
+router.get('/attendance', isAdmin, attendanceReportController.getAttendanceDashboard);
+router.get('/attendance/register', isAdmin, attendanceReportController.getRegister);
+router.get('/attendance/low', isAdmin, attendanceReportController.getLowAttendance);
+router.get('/attendance/daily', isAdmin, attendanceReportController.getDailyAttendance);
 
 // Staff Reports
 router.get('/staff', staffReportController.getStaffDashboard);

@@ -153,7 +153,7 @@ async function createClosure(input, client) {
   if (sourceEventId != null) {
     const event = await db.get('SELECT id, school_id, event_date, section_id FROM term_events WHERE id = ? AND school_id = ?', [sourceEventId, schoolId], client);
     if (!event) throw new Error('The linked calendar event does not belong to this school.');
-    if (String(event.event_date).slice(0,10) !== day) throw new Error('The linked calendar event date must match the closure date.');
+    const linkedEventDate = event.event_date instanceof Date ? event.event_date.toISOString().slice(0,10) : String(event.event_date).slice(0,10);\n    if (linkedEventDate !== day) throw new Error('The linked calendar event date must match the closure date.');
     const expectedSection = scopeType === 'section' ? Number(sectionId) : scopeType === 'class' ? Number(classSection.section_id) : null;
     if (expectedSection != null && event.section_id != null && Number(event.section_id) !== expectedSection)
       throw new Error('The linked calendar event section does not match the closure scope.');

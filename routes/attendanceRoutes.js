@@ -6,6 +6,7 @@ router.get('/', attendanceController.getIndex);
 router.get('/take', attendanceController.getTakeAttendance);
 router.get('/yesterday', attendanceController.getPreviousDayAttendance);
 router.post('/save', attendanceController.saveAttendance);
+router.post('/submit', attendanceController.submitAttendanceRegister);
 router.get('/report', attendanceController.getReport);
 
 // Staff Attendance

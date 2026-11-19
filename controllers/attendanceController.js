@@ -1008,8 +1008,8 @@ const getAttendanceAnalytics = async (req, res) => {
                 class_id: requestedClassId && selectedClasses.length ? requestedClassId : '',
                 session: selectedPeriod.session,
                 term: selectedPeriod.term,
-                start_date: startDate,
-                end_date: endDate
+                start_date: dashboard.filters.startDate,
+                end_date: dashboard.filters.endDate
             },
             dashboard,
             error: requestedClassId && !selectedClasses.length

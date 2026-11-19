@@ -34,8 +34,8 @@
                 <div class="form-group">
                     <label for="analytics-session">Session</label>
                     <select id="analytics-session" name="session" class="form-control" required onchange="this.form.term.value='';this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
-                        <% periods.forEach(period => { %>
-                        <option value="<%= period.session %>" <%= filters.session === period.session ? 'selected' : '' %>><%= period.session %></option>
+                        <% Array.from(new Set(periods.map(period => period.session))).forEach(session => { %>
+                        <option value="<%= session %>" <%= filters.session === session ? 'selected' : '' %>><%= session %></option>
                         <% }); %>
                     </select>
                 </div>

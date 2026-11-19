@@ -2,7 +2,7 @@ name: Recovery Baseline Checks
 
 on:
   pull_request:
-    branches: [master, feat/attendance-register-generation, feat/attendance-register-submission]
+    branches: [master, feat/attendance-register-generation, feat/attendance-register-submission, feat/attendance-register-administration]
   push:
     branches: [audit/recovery-test-alignment]
 

@@ -151,7 +151,7 @@ function createAttendanceRegisterService(db) {
                   AND effective_from <= ?
                   AND (effective_to IS NULL OR effective_to >= ?)
                 ORDER BY effective_from DESC, id DESC
-            `, [schoolId, classId, clazz.section_id, academicPeriod.session, registerDate, registerDate], client);
+            `, [schoolId, classId, clazz.section_id, registerDate, registerDate], client);
             if (settingsRows.length === 0) {
                 return { created: false, skipped: true, reason: 'attendance_settings_missing' };
             }

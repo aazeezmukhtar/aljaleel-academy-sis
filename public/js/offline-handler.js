@@ -328,8 +328,9 @@ async function syncData() {
 
         for (const item of attendanceItems) {
             try {
-                const { id, _savedAt, _ownerKey, ...payload } = item;
-                const res = await fetch('/attendance/save', {
+                const { id, _savedAt, _ownerKey, operation, ...payload } = item;
+                const endpoint = operation === 'submit' ? '/attendance/submit' : '/attendance/save';
+                const res = await fetch(endpoint, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                     body: JSON.stringify(payload)

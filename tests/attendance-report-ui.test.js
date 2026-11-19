@@ -14,11 +14,17 @@ const dashboardViewPath = path.join(root, 'views/reports/attendance/index.ejs');
 const dashboardView = fs.readFileSync(dashboardViewPath, 'utf8');
 const lowViewPath = path.join(root, 'views/reports/attendance/low.ejs');
 const lowView = fs.readFileSync(lowViewPath, 'utf8');
+const dailyViewPath = path.join(root, 'views/reports/attendance/daily.ejs');
+const dailyView = fs.readFileSync(dailyViewPath, 'utf8');
+const monthlyViewPath = path.join(root, 'views/reports/attendance/register.ejs');
+const monthlyView = fs.readFileSync(monthlyViewPath, 'utf8');
 const attendanceReportController = fs.readFileSync(path.join(root, 'controllers/reporting/attendanceReportController.js'), 'utf8');
 
 ejs.compile(reportView, { filename: reportViewPath });
 ejs.compile(dashboardView, { filename: dashboardViewPath });
 ejs.compile(lowView, { filename: lowViewPath });
+ejs.compile(dailyView, { filename: dailyViewPath });
+ejs.compile(monthlyView, { filename: monthlyViewPath });
 
 const reportBlock = controller.slice(
   controller.indexOf('// GET /attendance/report - section-safe report'),
@@ -49,5 +55,7 @@ assert(dashboardView.includes('selectedSectionId') && dashboardView.includes('Ac
 assert(dashboardView.includes('stats.submitted_registers'), 'Dashboard must surface formal register submissions.');
 assert(attendanceReportController.includes("require('../../services/attendanceAnalyticsService')"), 'Administrative attendance reports must use the shared analytics engine.');
 assert(lowView.includes('student.attendance_rate') && lowView.includes('student.missing_registers'), 'Low-attendance alerts must display shared-engine rates and missing registers.');
+assert(attendanceReportController.includes("ar.status = 'submitted'"), 'Daily and monthly register views must exclude unsubmitted drafts.');
+assert(dailyView.includes('name="section_id"'), 'Daily register view must require a section selection.');
 
 console.log('[attendance-report-ui] EJS compilation, form-master-only access, shared analytics integration, dated roster, section isolation and Admin-only school-wide routes passed.');

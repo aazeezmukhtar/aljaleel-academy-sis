@@ -1,6 +1,8 @@
 const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 const { uploadFile } = require('../utils/storageHelper');
+const { createAttendanceAnalyticsService } = require('../services/attendanceAnalyticsService');
+const attendanceAnalytics = createAttendanceAnalyticsService(db);
 
 const getStudentSchoolId = async (req) => {
     if (req.session && req.session.student) {
@@ -119,25 +121,33 @@ exports.getDashboard = async (req, res) => {
         current_term: ec.section_term || school.current_term || '1st Term'
     }));
 
-    // Calculate attendance percentage across enrolled sessions/terms
-    const activeSessions = [...new Set(sectionInfo.map(s => s.current_session))];
-    const activeTerms = [...new Set(sectionInfo.map(s => s.current_term))];
-    
-    let attRows = [];
-    if (activeSessions.length > 0 && activeTerms.length > 0) {
-        const sessPh = activeSessions.map(() => '?').join(',');
-        const termPh = activeTerms.map(() => '?').join(',');
-        attRows = await db.all(`
-            SELECT status 
-            FROM attendance 
-            WHERE student_id = ? AND session IN (${sessPh}) AND term IN (${termPh})
-        `, [studentId, ...activeSessions, ...activeTerms]);
+    // Use the same submitted-register eligibility and status-credit rules as the
+    // dedicated attendance page. Keep each section separate: Academy and Tahfeez
+    // must never be blended into one dashboard percentage.
+    const attendanceContexts = new Map();
+    for (const section of sectionInfo) {
+        const key = [section.section_id, section.current_session, section.current_term].join('|');
+        if (!attendanceContexts.has(key)) attendanceContexts.set(key, section);
     }
-
-    let attendancePercentage = null;
-    if (attRows && attRows.length > 0) {
-        const presentCount = attRows.filter(r => r.status === 'Present' || r.status === 'Late').length;
-        attendancePercentage = Math.round((presentCount / attRows.length) * 100);
+    const attendanceSummaries = [];
+    for (const section of attendanceContexts.values()) {
+        const records = await attendanceAnalytics.getStudentAttendanceRecords({
+            schoolId,
+            studentId,
+            sectionId: Number(section.section_id),
+            session: section.current_session,
+            term: section.current_term
+        });
+        const summary = attendanceAnalytics.calculateAttendanceSummary(records);
+        attendanceSummaries.push({
+            sectionId: Number(section.section_id),
+            sectionName: section.section_name,
+            session: section.current_session,
+            term: section.current_term,
+            attendanceRate: summary.attendanceRate,
+            attendedDays: summary.attendedDays,
+            totalDays: summary.totalDays
+        });
     }
 
     res.render('portal/index', {
@@ -155,7 +165,7 @@ exports.getDashboard = async (req, res) => {
         feeBalance,
         sectionInfo,
         enrolledClasses,
-        attendancePercentage,
+        attendanceSummaries,
         currentTerm: activeTerm,
         currentSession: activeSession,
         error: req.query.error
@@ -1126,96 +1136,132 @@ exports.getAttendance = async (req, res) => {
         const ctx = await getStudentContext(studentId, school, schoolId);
         const { studentObj, activeSession, activeTerm, individualMessagesCount } = ctx;
 
-        // Fetch distinct session & term periods with attendance records
-        const periods = await db.all(`
-            SELECT DISTINCT session, term 
-            FROM attendance 
-            WHERE student_id = ? 
-            ORDER BY session DESC, term DESC
-        `, [studentId]);
+        const sectionChoices = await db.all(`
+            SELECT DISTINCT sec.id AS section_id, sec.name AS section_name
+            FROM sections sec
+            WHERE sec.school_id = ?
+              AND (
+                EXISTS (
+                    SELECT 1 FROM student_enrollments se
+                    JOIN classes c ON c.id = se.class_id AND c.school_id = sec.school_id
+                    WHERE se.student_id = ? AND c.section_id = sec.id
+                )
+                OR EXISTS (
+                    SELECT 1 FROM attendance a
+                    JOIN classes c ON c.id = a.class_id AND c.school_id = sec.school_id
+                    WHERE a.student_id = ? AND a.section_id = sec.id AND c.section_id = sec.id
+                )
+              )
+            ORDER BY sec.name, sec.id
+        `, [schoolId, studentId, studentId]);
 
-        const selectedSession = req.query.session || (periods[0] ? periods[0].session : activeSession);
-        const selectedTerm = req.query.term || (periods[0] ? periods[0].term : activeTerm);
-        const selectedFilter = (req.query.status || 'all').toLowerCase();
-        const activeView = req.query.view === 'calendar' ? 'calendar' : 'history';
+        const requestedSectionId = req.query.section_id ? Number(req.query.section_id) : null;
+        const selectedSection = sectionChoices.find(section =>
+            requestedSectionId && Number(section.section_id) === requestedSectionId
+        ) || sectionChoices[0] || null;
+        const selectedSectionId = selectedSection ? Number(selectedSection.section_id) : null;
+        const selectedSectionName = selectedSection ? selectedSection.section_name : 'No section selected';
 
-        // Fetch all attendance records for the selected term & session
-        const rawRecords = await db.all(`
-            SELECT id, date, status, reason, reason_type, custom_reason
-            FROM attendance
-            WHERE student_id = ? AND session = ? AND term = ?
-            ORDER BY date DESC
-        `, [studentId, selectedSession, selectedTerm]);
+        const allSectionRecords = selectedSectionId
+            ? await attendanceAnalytics.getStudentAttendanceRecords({
+                schoolId, studentId, sectionId: selectedSectionId
+            })
+            : [];
 
-        // Normalize date field to 'YYYY-MM-DD' string for consistent handling across SQLite/Postgres
-        const allTermRecords = (rawRecords || []).map(r => {
-            let dateStr = '';
-            if (r.date instanceof Date) {
-                dateStr = r.date.toISOString().slice(0, 10);
-            } else if (typeof r.date === 'string') {
-                dateStr = r.date.slice(0, 10);
-            } else if (r.date) {
-                dateStr = new Date(r.date).toISOString().slice(0, 10);
+        const periods = [];
+        const periodKeys = new Set();
+        for (const record of allSectionRecords) {
+            const key = String(record.session) + '\u0000' + String(record.term);
+            if (!periodKeys.has(key)) {
+                periodKeys.add(key);
+                periods.push({ session: record.session, term: record.term });
             }
-            return {
-                ...r,
-                date: dateStr
-            };
-        });
-
-        // Summary calculations
-        const totalDays = allTermRecords.length;
-        const presentCount = allTermRecords.filter(r => r.status === 'Present').length;
-        const lateCount = allTermRecords.filter(r => r.status === 'Late').length;
-        const absentCount = allTermRecords.filter(r => r.status === 'Absent').length;
-        const leaveCount = allTermRecords.filter(r => r.status === 'Leave').length;
-        
-        const attendanceRate = totalDays > 0 
-            ? Math.round(((presentCount + lateCount) / totalDays) * 100) 
-            : null;
-
-        // Factual insights
-        const recentAbsence = allTermRecords.find(r => r.status === 'Absent');
-        const recentLate = allTermRecords.find(r => r.status === 'Late');
-
-        // Check for school term absence limit
-        const limitRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.term_absence_limit'");
-        const termAbsenceLimit = Number(limitRow ? limitRow.value : 10);
-
-        // Filtered records for History view
-        let filteredRecords = allTermRecords;
-        if (selectedFilter !== 'all') {
-            filteredRecords = allTermRecords.filter(r => r.status.toLowerCase() === selectedFilter);
         }
 
-        // Calendar computation
+        const validSession = periods.some(period => period.session === req.query.session);
+        const validTerm = periods.some(period =>
+            period.session === (req.query.session || (periods[0] && periods[0].session)) &&
+            period.term === req.query.term
+        );
+        const selectedSession = validSession
+            ? req.query.session : (periods[0] ? periods[0].session : activeSession);
+        const selectedTerm = validTerm
+            ? req.query.term : (periods.find(period => period.session === selectedSession)?.term || activeTerm);
+        const selectedFilterCandidate = String(req.query.status || 'all').toLowerCase();
+        const selectedFilter = ['all', 'present', 'late', 'absent', 'leave'].includes(selectedFilterCandidate)
+            ? selectedFilterCandidate : 'all';
+        const activeView = req.query.view === 'calendar' ? 'calendar' : 'history';
+
+        const allTermRecords = allSectionRecords.filter(record =>
+            record.session === selectedSession && record.term === selectedTerm
+        );
+        const summary = attendanceAnalytics.calculateAttendanceSummary(allTermRecords);
+        const totalDays = summary.totalDays;
+        const presentCount = summary.present;
+        const lateCount = summary.late;
+        const absentCount = summary.absent;
+        const leaveCount = summary.leave;
+        const attendedDays = summary.attendedDays;
+        const attendanceRate = summary.attendanceRate;
+
+        const thresholdClassId = allTermRecords[0]?.class_id ||
+            (ctx.enrolledClasses || []).find(item =>
+                Number(item.section_id) === selectedSectionId
+            )?.class_id;
+        let attendanceThreshold = null;
+        if (thresholdClassId && allTermRecords[0]?.date) {
+            attendanceThreshold = await attendanceAnalytics.getAttendanceThreshold({
+                schoolId, classId: Number(thresholdClassId),
+                sectionId: selectedSectionId, referenceDate: allTermRecords[0].date
+            }).catch(() => null);
+        }
+        const belowThreshold = attendanceRate !== null && attendanceThreshold !== null &&
+            attendanceRate < attendanceThreshold;
+
+        const recentAbsence = allTermRecords.find(record => record.status === 'Absent');
+        const recentLate = allTermRecords.find(record => record.status === 'Late');
+
+        const limitRow = await db.get(
+            "SELECT value FROM settings WHERE school_id = ? AND key = 'attendance.term_absence_limit'",
+            [schoolId]
+        );
+        const termAbsenceLimit = Number(limitRow ? limitRow.value : 10);
+
+        let filteredRecords = allTermRecords;
+        if (selectedFilter !== 'all') {
+            filteredRecords = allTermRecords.filter(record =>
+                record.status.toLowerCase() === selectedFilter
+            );
+        }
+
         let calMonthStr = req.query.month;
-        if (!calMonthStr) {
+        if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(calMonthStr || ''))) {
             if (allTermRecords.length > 0) {
-                calMonthStr = allTermRecords[0].date.substring(0, 7); // 'YYYY-MM'
+                calMonthStr = allTermRecords[0].date.substring(0, 7);
             } else {
-                const now = new Date();
-                calMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                const todayParts = new Intl.DateTimeFormat('en-CA', {
+                    timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit'
+                }).formatToParts(new Date()).reduce((result, part) => {
+                    if (part.type !== 'literal') result[part.type] = part.value;
+                    return result;
+                }, {});
+                calMonthStr = todayParts.year + '-' + todayParts.month;
             }
         }
 
         const [calYear, calMonth] = calMonthStr.split('-').map(Number);
-        const firstDayOfMonth = new Date(calYear, calMonth - 1, 1);
-        const lastDayOfMonth = new Date(calYear, calMonth, 0);
-        const daysInMonth = lastDayOfMonth.getDate();
-        const startDayOfWeek = firstDayOfMonth.getDay(); // 0 = Sun, 1 = Mon...
+        const firstDayOfMonth = new Date(Date.UTC(calYear, calMonth - 1, 1));
+        const lastDayOfMonth = new Date(Date.UTC(calYear, calMonth, 0));
+        const daysInMonth = lastDayOfMonth.getUTCDate();
+        const startDayOfWeek = firstDayOfMonth.getUTCDay();
 
-        // Map date -> status for quick lookup in calendar
         const recordsByDate = {};
-        allTermRecords.forEach(r => {
-            recordsByDate[r.date] = r;
-        });
+        allTermRecords.forEach(record => { recordsByDate[record.date] = record; });
 
-        // Prev and Next month navigation strings
-        const prevMonthDate = new Date(calYear, calMonth - 2, 1);
-        const nextMonthDate = new Date(calYear, calMonth, 1);
-        const prevMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
-        const nextMonthStr = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        const prevMonthDate = new Date(Date.UTC(calYear, calMonth - 2, 1));
+        const nextMonthDate = new Date(Date.UTC(calYear, calMonth, 1));
+        const prevMonthStr = prevMonthDate.toISOString().slice(0, 7);
+        const nextMonthStr = nextMonthDate.toISOString().slice(0, 7);
 
         res.render('portal/attendance', {
             title: 'Attendance',
@@ -1226,6 +1272,9 @@ exports.getAttendance = async (req, res) => {
             currentSession: activeSession,
             selectedTerm,
             selectedSession,
+            selectedSectionId,
+            selectedSectionName,
+            sectionChoices,
             selectedFilter,
             activeView,
             periods,
@@ -1234,7 +1283,10 @@ exports.getAttendance = async (req, res) => {
             lateCount,
             absentCount,
             leaveCount,
+            attendedDays,
             attendanceRate,
+            attendanceThreshold,
+            belowThreshold,
             filteredRecords,
             allTermRecords,
             recentAbsence,
@@ -1243,7 +1295,9 @@ exports.getAttendance = async (req, res) => {
             calendar: {
                 year: calYear,
                 month: calMonth,
-                monthName: firstDayOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+                monthName: firstDayOfMonth.toLocaleDateString('en-US', {
+                    month: 'long', year: 'numeric', timeZone: 'UTC'
+                }),
                 monthStr: calMonthStr,
                 prevMonthStr,
                 nextMonthStr,

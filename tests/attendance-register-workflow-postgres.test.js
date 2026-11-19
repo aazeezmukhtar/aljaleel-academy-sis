@@ -180,6 +180,18 @@ if (!url) {
     `);
     assert.strictEqual(Number(clearedAudit.rows[0].count), 1);
 
+    await client.query(`
+      INSERT INTO class_attendance_closures
+        (school_id, scope_type, section_id, class_id, start_date, end_date, reason,
+         status, requested_by, approved_by, approved_at)
+      VALUES (1, 'class', 10, 40, '2026-11-19', '2026-11-19', 'Approved closure',
+              'approved', 20, 20, '2026-11-18T10:00:00Z')
+    `);
+    const closedContext = await workflow.getRegisterContext({
+      schoolId: 1, classId: 40, registerDate: '2026-11-19'
+    });
+    assert.strictEqual(closedContext.blockedReason, 'approved_closure');
+
     console.log('[attendance-register-workflow-postgres] PostgreSQL progress save, unmarked guard, transactional submission, submitted count and responsible-teacher authorization passed.');
   } finally {
     await client.query('SET search_path TO public');

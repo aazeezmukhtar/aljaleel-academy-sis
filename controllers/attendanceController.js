@@ -497,10 +497,14 @@ const saveAttendance = async (req, res) => {
                 if (!studentCheck) continue;
 
                 const existing = await db.get(`
-                    SELECT id, status, reason, reason_type, custom_reason
+                    SELECT id, class_id, status, reason, reason_type, custom_reason
                     FROM attendance
                     WHERE student_id = ? AND section_id = ? AND date = ? AND session = ? AND term = ?
                 `, [student_id, Number(classCheck.section_id), date, effectiveSession, effectiveTerm]);
+
+                if (existing && Number(existing.class_id) !== Number(class_id)) {
+                    throw new Error('An attendance record for this student already belongs to another class in this section and period.');
+                }
 
                 if (status === 'Not recorded') {
                     if (existing) {

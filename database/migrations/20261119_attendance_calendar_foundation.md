@@ -58,3 +58,52 @@ PostgreSQL:
 The PostgreSQL test refuses to fall back to `DATABASE_URL`. It creates and drops an isolated schema in the supplied disposable database. Never point `PG_TEST_URL` at production.
 
 Before any future production migration: inspect the live schema read-only, confirm all referenced key types and ownership, take and verify a restorable backup, run the exact migration against a production-shaped disposable copy, and obtain separate explicit approval.
+
+## Required overlap and ownership service test matrix
+
+The migration deliberately does not attempt to enforce date-range overlap with engine-specific exclusion constraints. The application service must run the overlap check and write inside the same transaction.
+
+Inclusive interval overlap predicate:
+
+`existing.effective_from <= COALESCE(new.effective_to, '9999-12-31') AND COALESCE(existing.effective_to, '9999-12-31') >= new.effective_from`
+
+Apply the equivalent predicate to:
+- academic periods, keyed by school + section + session;
+- class schedules, keyed by school + class + session;
+- register responsibilities, keyed by school + class + session.
+
+Required tests for each interval type:
+- exact duplicate is rejected;
+- partial overlap from the left and right is rejected;
+- a new interval contained by an existing interval is rejected;
+- an existing interval contained by the new interval is rejected;
+- same-day overlap is rejected (inclusive endpoints);
+- adjacent intervals are accepted only when the previous end is the day before the next start;
+- an open-ended existing interval blocks later intervals;
+- an open-ended new interval blocks later existing intervals;
+- different sections/classes/sessions do not conflict;
+- correction that creates an overlap is rejected and leaves both the original row and audit history unchanged;
+- two concurrent writers attempting overlapping intervals cannot both commit.
+
+Concurrency requirements:
+- PostgreSQL: lock a stable parent row (class for schedules/responsibilities, section for academic periods) with `SELECT ... FOR UPDATE` before checking overlap and writing. A row-level lock on only the candidate record is insufficient when no candidate exists yet.
+- SQLite: perform the check and write inside a serialized `BEGIN IMMEDIATE` transaction.
+- Retry/serialization errors must not be converted into success; callers should receive a conflict result.
+
+Required ownership tests:
+- valid same-school class/section/staff/event links succeed;
+- class from another school is rejected;
+- section from another school is rejected;
+- staff actor or assigned responsible teacher from another school is rejected;
+- linked term event from another school is rejected;
+- class whose `section_id` does not match the selected section is rejected;
+- linked event date or scope inconsistent with the closure is rejected;
+- every rejected operation leaves no business row and no audit row.
+
+Audit atomicity tests:
+- force the audit insert to fail (for example, invalid actor FK) after the business write has been attempted;
+- assert the transaction rolls back the business write;
+- assert correction/cancellation and audit append either both commit or neither commits;
+- assert audit rows cannot be updated or deleted.
+
+These are service-level acceptance tests, not claims that the current migration alone enforces the rules. The matching service implementation and its tests are a later implementation phase. The present preflight migration test exercises DDL constraints and transaction rollback only.

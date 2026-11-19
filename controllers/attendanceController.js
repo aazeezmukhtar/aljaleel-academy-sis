@@ -3,6 +3,8 @@ const { logAction } = require('../utils/logger');
 const { getAttendanceStudents } = require('../utils/attendanceStudentHelper');
 const sessionHelper = require('../utils/sessionHelper');
 const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
+const attendanceRegisterGeneration = require('../services/attendanceRegisterGenerationService');
+const attendanceRegisterWorkflow = require('../services/attendanceRegisterWorkflowService');
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user, schoolId) => {
@@ -184,23 +186,62 @@ const getTakeAttendance = async (req, res) => {
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
         const settings = await getAcademicSettings(Number(class_id), schoolId);
+        let register = null;
+        let registerFeatureAvailable = false;
+        let registerSkipReason = null;
+        let students = null;
 
-        const students = await getAttendanceStudents(
-            Number(class_id),
-            settings.session,
-            schoolId,
-            date
-        );
+        // The application remains compatible with databases where the additive
+        // attendance-register migration has not yet been applied.
+        try {
+            registerFeatureAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
+            if (registerFeatureAvailable) {
+                const generated = await attendanceRegisterGeneration.generateExpectedRegister({
+                    schoolId,
+                    classId: Number(class_id),
+                    registerDate: date,
+                    generatedBy: user.id
+                });
+                if (generated.skipped) registerSkipReason = generated.reason;
 
+                const context = await attendanceRegisterWorkflow.getRegisterContext({
+                    schoolId, classId: Number(class_id), registerDate: date
+                });
+                if (context) {
+                    register = context.register;
+                    students = context.students;
+                }
+            }
+        } catch (registerError) {
+            // Fail closed to the established attendance sheet. Do not prevent
+            // ordinary attendance entry if register setup is incomplete.
+            console.error('Attendance register preparation unavailable:', registerError);
+            registerSkipReason = 'register_preparation_unavailable';
+        }
+
+        if (!students) {
+            students = await getAttendanceStudents(
+                Number(class_id),
+                settings.session,
+                schoolId,
+                date
+            );
+        }
+
+        const locked = !!register && ['submitted', 'closed'].includes(register.status);
         res.render('attendance/take', {
             title: 'Mark Attendance',
             clazz,
             class_id,
             date,
             students,
-            currentTerm: settings.term,
-            currentSession: settings.session,
-            readOnly: false,
+            currentTerm: register ? register.term : settings.term,
+            currentSession: register ? register.session : settings.session,
+            register,
+            registerFeatureAvailable,
+            registerSkipReason,
+            readOnly: locked,
+            canEdit: !locked,
             hasRecords: true
         });
     } catch (err) {

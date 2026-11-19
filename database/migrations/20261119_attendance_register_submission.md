@@ -22,10 +22,10 @@ Apply only after the target database already has:
 3. Submission rechecks that dated roster inside the same transaction, rejects empty or incomplete registers, and refuses submission when active legacy class members have missing or review-needed dates. Such members are surfaced for administrator review rather than assigned invented dates.
 4. Unmarked students remain unrecorded; blank statuses may remain in a draft but cannot satisfy submission completeness. The interface must never default an unmarked student to Absent.
 5. Submission persists attendance, records the snapshot and locks the register.
-3. Ordinary draft saves and duplicate submissions are rejected while locked.
-4. An Admin may reopen a submitted register only with a non-empty correction reason.
-5. Reopening records the complete submitted attendance snapshot. The next submission records both the pre-correction and corrected snapshots under a new submission version.
-6. Event history is protected against update and delete at database level.
+6. Ordinary draft saves and duplicate submissions are rejected while locked.
+7. An Admin may reopen a submitted register only with a non-empty correction reason.
+8. Reopening records the complete submitted attendance snapshot. The next submission records both the pre-correction and corrected snapshots under a new submission version.
+9. Event history is protected against update and delete at database level.
 
 ## Manual rollout safeguards
 

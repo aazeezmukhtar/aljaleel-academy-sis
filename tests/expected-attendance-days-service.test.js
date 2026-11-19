@@ -60,13 +60,13 @@ const service=require('../services/expectedAttendanceDaysService');
     assert.equal(byDate['2026-08-31'].status,'outside_term');
     assert.equal(byDate['2026-09-01'].status,'expected');
     assert.equal(byDate['2026-09-02'].status,'closed');
-    assert.equal(byDate['2026-09-03'].status,'closed');
-    assert.equal(byDate['2026-09-04'].status,'closed');
+    assert.equal(byDate['2026-09-03'].status,'expected');
+    assert.equal(byDate['2026-09-04'].status,'expected');
     assert.equal(byDate['2026-09-05'].status,'non_opening');
     assert.equal(byDate['2026-09-06'].status,'expected');
     assert.equal(byDate['2026-09-07'].status,'non_opening');
     assert.equal(byDate['2026-09-10'].status,'non_opening');
-    assert.deepEqual(byDate['2026-09-02'].closureIds.length,1,'Applicable school and narrower closures are deduplicated by date; school closure is reported once.');
+    assert.deepEqual(byDate['2026-09-02'].closureIds.length,3,'School, section and class closures apply together but the date is counted only once.');
 
     const student=await service.calculate({schoolId:1,sectionId:10,classId:1000,studentId:100,session:'2026/2027',term:'1st Term',startDate:'2026-09-01',endDate:'2026-09-10'});
     const studentDays=Object.fromEntries(student.days.map(d=>[d.date,d]));

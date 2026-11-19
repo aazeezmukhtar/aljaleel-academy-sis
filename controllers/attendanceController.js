@@ -461,7 +461,7 @@ const saveAttendance = async (req, res) => {
             });
         }
 
-        await db.transaction(async () => {
+        await db.transaction(async (client) => {
             for (const [studentIdStr, status] of Object.entries(attendance || {})) {
                 const student_id = Number(studentIdStr);
                 if (!Number.isSafeInteger(student_id) || student_id <= 0) continue;
@@ -493,14 +493,14 @@ const saveAttendance = async (req, res) => {
                         )
                       )
                 `, [student_id, schoolId, Number(class_id), effectiveSession,
-                    Number(class_id), effectiveSession]);
+                    Number(class_id), effectiveSession], client);
                 if (!studentCheck) continue;
 
                 const existing = await db.get(`
                     SELECT id, class_id, status, reason, reason_type, custom_reason
                     FROM attendance
                     WHERE student_id = ? AND section_id = ? AND date = ? AND session = ? AND term = ?
-                `, [student_id, Number(classCheck.section_id), date, effectiveSession, effectiveTerm]);
+                `, [student_id, Number(classCheck.section_id), date, effectiveSession, effectiveTerm], client);
 
                 if (existing && Number(existing.class_id) !== Number(class_id)) {
                     throw new Error('An attendance record for this student already belongs to another class in this section and period.');
@@ -508,7 +508,7 @@ const saveAttendance = async (req, res) => {
 
                 if (status === 'Not recorded') {
                     if (existing) {
-                        await db.run('DELETE FROM attendance WHERE id = ?', [existing.id]);
+                        await db.run('DELETE FROM attendance WHERE id = ?', [existing.id], client);
                         if (registerFoundationAvailable) {
                             await db.run(`
                                 INSERT INTO attendance_foundation_audit_logs
@@ -520,7 +520,7 @@ const saveAttendance = async (req, res) => {
                                 reason: existing.reason,
                                 reason_type: existing.reason_type,
                                 custom_reason: existing.custom_reason
-                            })]);
+                            })], client);
                         }
                     }
                     continue;
@@ -545,7 +545,7 @@ const saveAttendance = async (req, res) => {
                     reason,
                     rawReason,
                     customReason
-                ]);
+                ], client);
 
                 const changed = !existing || existing.status !== status ||
                     existing.reason !== reason || existing.reason_type !== rawReason ||
@@ -556,7 +556,7 @@ const saveAttendance = async (req, res) => {
                         WHERE student_id = ? AND class_id = ? AND section_id = ?
                           AND date = ? AND session = ? AND term = ?
                     `, [student_id, Number(class_id), Number(classCheck.section_id),
-                        date, effectiveSession, effectiveTerm]);
+                        date, effectiveSession, effectiveTerm], client);
                     await db.run(`
                         INSERT INTO attendance_foundation_audit_logs
                             (entity_type, entity_id, action, actor_staff_id, before_data, after_data, reason)
@@ -575,7 +575,7 @@ const saveAttendance = async (req, res) => {
                             status, reason, reason_type: rawReason, custom_reason: customReason
                         }),
                         existing ? 'Attendance status or reason corrected.' : 'Attendance status recorded.'
-                    ]);
+                    ], client);
                 }
             }
         });

@@ -62,6 +62,8 @@ if (!connectionString) {
     const register = await service.getRegister(base);
     assert.deepStrictEqual(register.events.map(event=>event.action), ['submitted','reopened','submitted']);
     assert.equal(register.events[1].reason, 'Correction approved by administrator');
+    assert.deepStrictEqual(JSON.parse(register.events[1].old_values).map(row => row.status), ['Present','Leave']);
+    assert.deepStrictEqual(JSON.parse(register.events[2].new_values).map(row => row.status), ['Late','Leave']);
     console.log('[attendance-register-postgres] draft, complete submission, locking, admin reopen, audit and versioned resubmission passed.');
   } finally {
     if (appPool) await appPool.end();

@@ -414,7 +414,10 @@ const saveAttendance = async (req, res) => {
         await db.transaction(async () => {
             for (const [studentIdStr, status] of Object.entries(attendance || {})) {
                 const student_id = Number(studentIdStr);
-                if (isNaN(student_id)) continue;
+                if (!Number.isSafeInteger(student_id) || student_id <= 0) continue;
+                if (status !== 'Not recorded' && !['Present', 'Absent', 'Late', 'Leave'].includes(status)) {
+                    throw new Error('Unsupported attendance status for student ' + student_id + '.');
+                }
 
                 // Validate tenant ownership and membership in the selected class/session.
                 // Preserve the legacy current_class_id fallback only when the student has
@@ -442,6 +445,16 @@ const saveAttendance = async (req, res) => {
                 `, [student_id, schoolId, Number(class_id), effectiveSession,
                     Number(class_id), effectiveSession]);
                 if (!studentCheck) continue;
+
+                if (status === 'Not recorded') {
+                    await db.run(`
+                        DELETE FROM attendance
+                        WHERE student_id = ? AND class_id = ? AND section_id = ?
+                          AND date = ? AND session = ? AND term = ?
+                    `, [student_id, Number(class_id), Number(classCheck.section_id),
+                        date, effectiveSession, effectiveTerm]);
+                    continue;
+                }
                 
                 const rawReason = reasons[studentIdStr] || null;
                 const customReason = custom_reasons[studentIdStr] || null;

@@ -964,7 +964,7 @@ const getAttendanceAnalytics = async (req, res) => {
         `, [schoolId, selectedSection.id]);
         const requestedPeriod = periods.find(item =>
             item.session === req.query.session && item.term === req.query.term
-        );
+        ) || periods.find(item => item.session === req.query.session);
         const selectedPeriod = requestedPeriod || periods[0] || null;
         if (!selectedPeriod) {
             return res.render('attendance/analytics', {
@@ -985,7 +985,8 @@ const getAttendanceAnalytics = async (req, res) => {
         const periodEnd = selectedPeriod.end_date instanceof Date
             ? selectedPeriod.end_date.toISOString().slice(0, 10) : String(selectedPeriod.end_date).slice(0, 10);
         const startDate = req.query.start_date || periodStart;
-        const endDate = req.query.end_date || (today < periodEnd ? today : periodEnd);
+        const defaultEndDate = today < periodStart ? periodStart : (today < periodEnd ? today : periodEnd);
+        const endDate = req.query.end_date || defaultEndDate;
         const requestedClassId = req.query.class_id ? Number(req.query.class_id) : null;
         const selectedClasses = requestedClassId
             ? sectionClasses.filter(item => Number(item.id) === requestedClassId)

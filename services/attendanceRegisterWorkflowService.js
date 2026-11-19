@@ -289,7 +289,7 @@ function createAttendanceRegisterWorkflowService(db) {
             const register = await db.get(`
                 SELECT ar.id, ar.section_id, ar.status, ar.expected_student_count,
                        ar.submitted_student_count, ar.first_submitted_at,
-                       ap.session, ap.term
+                       ar.responsibility_id, ap.session, ap.term
                 FROM attendance_registers ar
                 JOIN section_academic_periods ap ON ap.id = ar.academic_period_id
                 WHERE ar.school_id = ? AND ar.class_id = ? AND ar.register_date = ?

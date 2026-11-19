@@ -447,7 +447,8 @@ async function updateSyncUI(state, successCount, failCount) {
         html = `<span class="sync-dot"></span> Syncing ${pending} record(s)...`;
     } else if (pending === null) {
         cls += ' warning';
-        html = '<span class="sync-dot"></span> Offline queue could not be checked; register submission is blocked until storage is readable';
+        html = '<span class="sync-dot"></span> Offline queue could not be checked; register submission is blocked until storage is readable' +
+            (navigator.onLine ? ' <button type="button" data-sync-retry style="border:0;background:transparent;color:inherit;text-decoration:underline;cursor:pointer;">Retry sync</button>' : '');
     } else if (state === 'partial') {
         cls += ' warning';
         html = `<span class="sync-dot"></span> ${successCount} synced, ${failCount} failed`;

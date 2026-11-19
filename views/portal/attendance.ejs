@@ -14,7 +14,7 @@
         <div class="acm-desktop-header">
             <div class="acm-header-greeting">
                 <h1 class="acm-greeting-title">Attendance</h1>
-                <p class="acm-greeting-meta"><%= student.class_name %> &middot; <%= selectedTerm %> &middot; <%= selectedSession %></p>
+                <p class="acm-greeting-meta"><%= selectedSectionName %> &middot; <%= selectedTerm %> &middot; <%= selectedSession %></p>
             </div>
             <div class="acm-header-actions">
                 <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications">
@@ -26,13 +26,28 @@
             </div>
         </div>
 
+        <% if (sectionChoices && sectionChoices.length > 1) { %>
+        <form method="GET" action="/portal/attendance" class="acm-academic-ctx" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <label for="attendance-section-select" style="margin:0;">Section</label>
+            <select id="attendance-section-select" name="section_id" class="form-select" style="max-width:260px;" onchange="this.form.submit()">
+                <% sectionChoices.forEach(section => { %>
+                <option value="<%= section.section_id %>" <%= Number(section.section_id) === Number(selectedSectionId) ? 'selected' : '' %>><%= section.section_name %></option>
+                <% }); %>
+            </select>
+            <input type="hidden" name="session" value="<%= selectedSession %>">
+            <input type="hidden" name="term" value="<%= selectedTerm %>">
+            <input type="hidden" name="view" value="<%= activeView %>">
+            <input type="hidden" name="status" value="<%= selectedFilter %>">
+        </form>
+        <% } %>
+
         <!-- Academic Context Bar -->
         <div class="acm-academic-ctx">
             <strong><%= selectedSession %></strong>
             <span class="acm-dot">&middot;</span>
             <span><%= selectedTerm %></span>
             <span class="acm-dot">&middot;</span>
-            <strong><%= student.class_name %></strong>
+            <strong><%= selectedSectionName %></strong>
         </div>
 
         <!-- Term Selector (if multiple periods recorded) -->
@@ -41,7 +56,7 @@
             <% periods.forEach(p => { 
                 const isActive = p.session === selectedSession && p.term === selectedTerm;
             %>
-            <a href="?session=<%= encodeURIComponent(p.session) %>&term=<%= encodeURIComponent(p.term) %>&view=<%= activeView %>&status=<%= selectedFilter %>"
+            <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(p.session) %>&term=<%= encodeURIComponent(p.term) %>&view=<%= activeView %>&status=<%= selectedFilter %>"
                class="acm-term-btn <%= isActive ? 'is-active' : '' %>"
                aria-current="<%= isActive ? 'true' : 'false' %>">
                 <%= p.term %> · <%= p.session %>
@@ -60,9 +75,15 @@
                     <div class="acm-att-rate-sub">Attendance Rate &middot; <%= selectedTerm %></div>
                 </div>
                 <div class="acm-att-rate-total">
-                    <div class="acm-att-rate-count"><%= presentCount + lateCount %> of <%= totalDays %></div>
+                    <div class="acm-att-rate-count"><%= attendedDays %> of <%= totalDays %></div>
                     <div class="acm-att-rate-days">Days Attended</div>
                 </div>
+                <% if (attendanceThreshold !== null) { %>
+                <div style="margin-top:10px;font-size:.8rem;color:var(--acm-text-muted);">
+                    Low-attendance threshold: <strong><%= attendanceThreshold %>%</strong>
+                    <% if (belowThreshold) { %><span class="acm-status-chip acm-status-chip--overdue">Below threshold</span><% } %>
+                </div>
+                <% } %>
             </div>
         </div>
 
@@ -117,11 +138,11 @@
                 
                 <!-- View Switcher -->
                 <div class="acm-board-filters" style="margin: 0;" role="tablist" aria-label="Attendance view">
-                    <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=<%= selectedFilter %>"
+                    <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=<%= selectedFilter %>"
                        class="acm-filter-btn <%= activeView === 'history' ? 'is-active' : '' %>" role="tab">
                         <i class="bi bi-list-ul"></i> History
                     </a>
-                    <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.monthStr %>&status=<%= selectedFilter %>"
+                    <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.monthStr %>&status=<%= selectedFilter %>"
                        class="acm-filter-btn <%= activeView === 'calendar' ? 'is-active' : '' %>" role="tab">
                         <i class="bi bi-calendar3"></i> Calendar
                     </a>
@@ -131,21 +152,25 @@
             <!-- Status Filters (History View) -->
             <% if (activeView === 'history') { %>
             <div class="acm-board-filters" style="margin-bottom: var(--acm-sp-16);" role="group" aria-label="Filter status">
-                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=all"
+                <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=all"
                    class="acm-filter-btn <%= selectedFilter === 'all' ? 'is-active' : '' %>">
                     All (<%= totalDays %>)
                 </a>
-                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=present"
+                <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=present"
                    class="acm-filter-btn <%= selectedFilter === 'present' ? 'is-active' : '' %>">
                     Present (<%= presentCount %>)
                 </a>
-                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=late"
+                <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=late"
                    class="acm-filter-btn <%= selectedFilter === 'late' ? 'is-active' : '' %>">
                     Late (<%= lateCount %>)
                 </a>
-                <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=absent"
+                <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=absent"
                    class="acm-filter-btn <%= selectedFilter === 'absent' ? 'is-active' : '' %>">
                     Absent (<%= absentCount %>)
+                </a>
+                <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=history&status=leave"
+                   class="acm-filter-btn <%= selectedFilter === 'leave' ? 'is-active' : '' %>">
+                    Leave (<%= leaveCount %>)
                 </a>
             </div>
 
@@ -193,11 +218,11 @@
                 <div class="acm-cal-top">
                     <h3 class="acm-cal-heading"><%= calendar.monthName %></h3>
                     <div class="acm-cal-actions">
-                        <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.prevMonthStr %>"
+                        <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.prevMonthStr %>"
                            class="acm-cal-btn" aria-label="Previous Month">
                             <i class="bi bi-chevron-left" aria-hidden="true"></i>
                         </a>
-                        <a href="?session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.nextMonthStr %>"
+                        <a href="?section_id=<%= selectedSectionId %>&session=<%= encodeURIComponent(selectedSession) %>&term=<%= encodeURIComponent(selectedTerm) %>&view=calendar&month=<%= calendar.nextMonthStr %>"
                            class="acm-cal-btn" aria-label="Next Month">
                             <i class="bi bi-chevron-right" aria-hidden="true"></i>
                         </a>

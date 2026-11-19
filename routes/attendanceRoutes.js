@@ -8,6 +8,11 @@ router.get('/yesterday', attendanceController.getPreviousDayAttendance);
 router.post('/save', attendanceController.saveAttendance);
 router.post('/submit', attendanceController.submitAttendanceRegister);
 router.post('/reopen', attendanceController.reopenAttendanceRegister);
+router.get('/analytics', attendanceController.getAttendanceAnalytics);
+router.get('/closures', attendanceController.getAttendanceClosures);
+router.post('/closures/request', attendanceController.requestAttendanceClosure);
+router.post('/closures/decide', attendanceController.decideAttendanceClosure);
+router.post('/closures/cancel', attendanceController.cancelAttendanceClosure);
 router.get('/report', attendanceController.getReport);
 
 // Staff Attendance

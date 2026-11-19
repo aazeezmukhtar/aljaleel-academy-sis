@@ -12,6 +12,8 @@
                     <h1 style="font-size: 1.25rem; margin: 0;"><%= register ? 'Attendance Register' : readOnly ? 'Previous Day Attendance' : 'Mark Attendance' %></h1>
                 </div>
                 <div class="action-buttons">
+                    <a href="/attendance/analytics" class="btn btn-outline btn-xs"><i class="bi bi-graph-up"></i> Analytics</a>
+                    <a href="/attendance/closures" class="btn btn-outline btn-xs"><i class="bi bi-calendar-x"></i> Closures</a>
                     <% if (readOnly && canEdit !== false) { %>
                     <button type="button" id="edit-attendance-btn" class="btn btn-outline" onclick="enableAttendanceEditing()">
                         <i class="bi bi-pencil-square"></i> Edit

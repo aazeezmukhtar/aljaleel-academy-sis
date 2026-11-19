@@ -1,0 +1,194 @@
+<%- include('../partials/header') %>
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+    <main class="main-content">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <div>
+                <a href="/attendance" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Attendance</a>
+                <h1 class="h3 mt-2">Attendance closures</h1>
+                <p class="text-muted mb-0">Request a closure or review requests before they affect attendance registers.</p>
+            </div>
+        </div>
+
+        <% if (error) { %><div class="alert alert-warning" role="alert"><%= error %></div><% } %>
+
+        <section class="card p-3 mb-4">
+            <h2 class="h5">Request a closure</h2>
+            <p class="text-muted small">Requests remain pending until an administrator approves them. Pending requests do not stop attendance register generation.</p>
+            <form id="closure-request-form" class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label" for="closure-scope">Scope</label>
+                    <select class="form-select" id="closure-scope" name="scope_type" required>
+                        <% if (isAdmin) { %>
+                        <option value="school">Entire school</option>
+                        <option value="section">Section</option>
+                        <% } %>
+                        <option value="class" selected>Class</option>
+                    </select>
+                </div>
+                <div class="col-md-4" id="closure-section-wrap" <%= isAdmin ? 'hidden' : 'hidden' %>>
+                    <label class="form-label" for="closure-section">Section</label>
+                    <select class="form-select" id="closure-section" name="section_id">
+                        <option value="">Select section</option>
+                        <% sections.forEach(section => { %>
+                        <option value="<%= section.id %>"><%= section.name %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-md-4" id="closure-class-wrap">
+                    <label class="form-label" for="closure-class">Class</label>
+                    <select class="form-select" id="closure-class" name="class_id" required>
+                        <option value="">Select class</option>
+                        <% classes.forEach(clazz => { %>
+                        <option value="<%= clazz.id %>"><%= clazz.name %><%= clazz.section_name ? ' · ' + clazz.section_name : '' %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="closure-start">Start date</label>
+                    <input class="form-control" type="date" id="closure-start" name="start_date" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label" for="closure-end">End date</label>
+                    <input class="form-control" type="date" id="closure-end" name="end_date" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="closure-reason">Reason</label>
+                    <textarea class="form-control" id="closure-reason" name="reason" rows="2" maxlength="500" required placeholder="Explain why attendance should be suspended for this period"></textarea>
+                </div>
+                <div class="col-12">
+                    <button class="btn btn-primary" type="submit">Submit closure request</button>
+                    <span id="closure-request-feedback" class="small ms-2" role="status" aria-live="polite"></span>
+                </div>
+            </form>
+        </section>
+
+        <section class="card p-3">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <h2 class="h5 mb-0">Closure requests</h2>
+                <span class="text-muted small"><%= closures.length %> request(s)</span>
+            </div>
+            <% if (!closures.length) { %>
+                <p class="text-muted mb-0">There are no closure requests yet.</p>
+            <% } else { %>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead><tr><th>Scope</th><th>Dates</th><th>Reason</th><th>Requested by</th><th>Status</th><th>Action</th></tr></thead>
+                        <tbody>
+                        <% closures.forEach(item => {
+                            const scopeLabel = item.scope_type === 'school' ? 'Entire school' : item.scope_type === 'section' ? 'Section: ' + (item.section_name || item.section_id) : 'Class: ' + (item.class_name || item.class_id);
+                            const canCancel = item.status === 'pending' && (isAdmin || String(item.requested_by) === String(user.id));
+                        %>
+                            <tr>
+                                <td><strong><%= scopeLabel %></strong></td>
+                                <td><%= item.start_date %><% if (item.end_date !== item.start_date) { %> – <%= item.end_date %><% } %></td>
+                                <td style="min-width:180px"><%= item.reason %></td>
+                                <td><%= item.requester_first_name %> <%= item.requester_last_name %></td>
+                                <td><span class="badge <%= item.status === 'approved' ? 'bg-success' : item.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary' %>"><%= item.status %></span></td>
+                                <td>
+                                    <% if (isAdmin && item.status === 'pending') { %>
+                                    <div class="d-flex gap-1 flex-wrap">
+                                        <button class="btn btn-sm btn-success" type="button" data-closure-action="approved" data-closure-id="<%= item.id %>">Approve</button>
+                                        <button class="btn btn-sm btn-outline-danger" type="button" data-closure-action="rejected" data-closure-id="<%= item.id %>">Reject</button>
+                                    </div>
+                                    <% } else if (canCancel) { %>
+                                    <button class="btn btn-sm btn-outline-secondary" type="button" data-cancel-closure="<%= item.id %>">Cancel</button>
+                                    <% } else { %><span class="text-muted small">—</span><% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } %>
+        </section>
+    </main>
+</div>
+<script>
+(() => {
+    const form = document.getElementById('closure-request-form');
+    const scope = document.getElementById('closure-scope');
+    const sectionWrap = document.getElementById('closure-section-wrap');
+    const classWrap = document.getElementById('closure-class-wrap');
+    const sectionSelect = document.getElementById('closure-section');
+    const classSelect = document.getElementById('closure-class');
+    function updateScope() {
+        const value = scope.value;
+        sectionWrap.hidden = value !== 'section';
+        classWrap.hidden = value !== 'class';
+        if (sectionSelect) sectionSelect.required = value === 'section';
+        classSelect.required = value === 'class';
+    }
+    scope.addEventListener('change', updateScope);
+    updateScope();
+
+    async function post(url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) throw new Error(result.message || 'The request failed.');
+        return result;
+    }
+
+    form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        if (data.scope_type !== 'section') delete data.section_id;
+        if (data.scope_type !== 'class') delete data.class_id;
+        const feedback = document.getElementById('closure-request-feedback');
+        const button = form.querySelector('button[type="submit"]');
+        button.disabled = true;
+        feedback.textContent = 'Submitting...';
+        try {
+            const result = await post('/attendance/closures/request', data);
+            feedback.textContent = result.message;
+            window.location.reload();
+        } catch (error) {
+            feedback.textContent = error.message;
+        } finally {
+            button.disabled = false;
+        }
+    });
+
+    document.querySelectorAll('[data-closure-action]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const decision = button.dataset.closureAction;
+            let reason = '';
+            if (decision === 'rejected') {
+                reason = window.prompt('Why is this closure request being rejected?') || '';
+                if (!reason.trim()) return;
+            } else if (!window.confirm('Approve this closure? Approved dates will block attendance register generation and submission.')) {
+                return;
+            }
+            button.disabled = true;
+            try {
+                await post('/attendance/closures/decide', {
+                    closure_id: button.dataset.closureId, decision, reason: reason.trim()
+                });
+                window.location.reload();
+            } catch (error) {
+                alert(error.message);
+                button.disabled = false;
+            }
+        });
+    });
+
+    document.querySelectorAll('[data-cancel-closure]').forEach(button => {
+        button.addEventListener('click', async () => {
+            if (!window.confirm('Cancel this pending closure request?')) return;
+            button.disabled = true;
+            try {
+                await post('/attendance/closures/cancel', { closure_id: button.dataset.cancelClosure });
+                window.location.reload();
+            } catch (error) {
+                alert(error.message);
+                button.disabled = false;
+            }
+        });
+    });
+})();
+</script>
+<%- include('../partials/footer') %>

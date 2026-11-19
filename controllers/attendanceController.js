@@ -421,6 +421,7 @@ const saveAttendance = async (req, res) => {
                     classId: Number(class_id),
                     registerDate: date,
                     actorStaffId: user.id,
+                    isAdministrator: user.role === 'Admin',
                     attendance: attendance || {},
                     reasons: reasons || {},
                     customReasons: custom_reasons || {}
@@ -594,7 +595,8 @@ const submitAttendanceRegister = async (req, res) => {
             schoolId,
             classId: Number(class_id),
             registerDate: date,
-            actorStaffId: user.id
+            actorStaffId: user.id,
+            isAdministrator: user.role === 'Admin'
         });
         logAction(user.id, 'SUBMIT_ATTENDANCE_REGISTER', 'ATTENDANCE_REGISTER', {
             class_id, date, submitted_student_count: submitted.submittedStudentCount

@@ -361,6 +361,33 @@ const saveAttendance = async (req, res) => {
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Access Denied to this class' });
         }
 
+        const registerFoundationAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
+        if (registerFoundationAvailable) {
+            const registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+                schoolId, classId: Number(class_id), registerDate: date
+            });
+            if (registerContext) {
+                const saved = await attendanceRegisterWorkflow.saveRegisterProgress({
+                    schoolId,
+                    classId: Number(class_id),
+                    registerDate: date,
+                    actorStaffId: user.id,
+                    attendance: attendance || {},
+                    reasons: reasons || {},
+                    customReasons: custom_reasons || {}
+                });
+                logAction(user.id, 'SAVE_ATTENDANCE_PROGRESS', 'ATTENDANCE_REGISTER', {
+                    class_id, date, changed_count: saved.changedStudentCount,
+                    saved_student_count: saved.savedStudentCount
+                }, req.ip);
+                return res.json({
+                    success: true,
+                    message: 'Attendance progress saved. Submit the register when every student has a deliberate status.',
+                    register: saved
+                });
+            }
+        }
+
         const sql = `
             INSERT INTO attendance
                 (student_id, class_id, section_id, date, status, session, term, reason, reason_type, custom_reason)

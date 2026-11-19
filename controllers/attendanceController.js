@@ -379,6 +379,7 @@ const getPreviousDayAttendance = async (req, res) => {
             registerSkipReason,
             readOnly: true,
             canEdit: !locked && !(registerContext && registerContext.blockedReason) && (register ? await hasRegisterAttendanceAuthority(user, register, schoolId) : true),
+            isAdmin: user.role === 'Admin',
             hasRecords
         });
     } catch (err) {

@@ -10,7 +10,7 @@
             <a href="/attendance" class="btn btn-outline">Back to Attendance</a>
         </header>
 
-        <% if (typeof success !== 'undefined') { %><div class="alert alert-success" role="status"><%= success %></div><% } %>
+        <% if (success) { %><div class="alert alert-success" role="status"><%= success %></div><% } %>
 
         <section class="card" style="margin-bottom:24px;">
             <h2>Assign a register holder</h2>

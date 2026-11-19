@@ -141,6 +141,9 @@ function createAttendanceClosureService(db) {
         if (status && !['pending', 'approved', 'rejected', 'cancelled'].includes(status)) {
             throw new Error('Invalid closure status filter.');
         }
+        const statusClause = status ? ' AND cl.status = ?' : '';
+        const params = [schoolId];
+        if (status) params.push(status);
         const rows = await db.all(`
             SELECT cl.*, req.first_name AS requester_first_name, req.last_name AS requester_last_name,
                    approver.first_name AS approver_first_name, approver.last_name AS approver_last_name,
@@ -150,10 +153,10 @@ function createAttendanceClosureService(db) {
             LEFT JOIN staff approver ON approver.id = cl.approved_by AND approver.school_id = cl.school_id
             LEFT JOIN sections sec ON sec.id = cl.section_id AND sec.school_id = cl.school_id
             LEFT JOIN classes c ON c.id = cl.class_id AND c.school_id = cl.school_id
-            WHERE cl.school_id = ? AND (? IS NULL OR cl.status = ?)
+            WHERE cl.school_id = ?${statusClause}
             ORDER BY CASE cl.status WHEN 'pending' THEN 0 ELSE 1 END, cl.start_date DESC, cl.id DESC
             LIMIT 200
-        `, [schoolId, status, status]);
+        `, params);
         return rows;
     }
 
@@ -198,9 +201,14 @@ function createAttendanceClosureService(db) {
                     approved_at = CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END
                 WHERE id = ? AND school_id = ? AND status = 'pending'
             `, [nextStatus, nextStatus, actorStaffId, nextStatus, closureId, schoolId], client);
+            const updatedClosure = await db.get(
+                'SELECT status, approved_by, approved_at FROM class_attendance_closures WHERE id = ? AND school_id = ?',
+                [closureId, schoolId], client
+            );
             const after = {
-                status: nextStatus, approved_by: decision === 'approved' ? actorStaffId : null,
-                approved_at: decision === 'approved' ? 'CURRENT_TIMESTAMP' : null
+                status: updatedClosure.status,
+                approved_by: updatedClosure.approved_by,
+                approved_at: updatedClosure.approved_at
             };
             await db.run(`
                 INSERT INTO attendance_foundation_audit_logs

@@ -104,7 +104,7 @@ async function createSchedule(input, client) {
   const id = await insertReturning(`INSERT INTO class_attendance_schedules
     (school_id, class_id, session, effective_from, effective_to, ${cols}, created_by)
     VALUES (?, ?, ?, ?, ?, ${marks}, ?)`,
-  [schoolId, classId, session, span.start, span.end, ...WEEKDAYS.map(d => flags[d] ? 1 : 0), createdBy], client);
+  [schoolId, classId, session, span.start, span.end, ...WEEKDAYS.map(d => db.DB_TYPE === 'postgres' ? flags[d] : (flags[d] ? 1 : 0)), createdBy], client);
   await audit(schoolId, 'attendance_schedule', id, 'created', null,
     { classId, session, effectiveFrom: span.start, effectiveTo: span.end, weekdays: flags },
     'Attendance schedule configured', createdBy, client);
@@ -197,7 +197,7 @@ async function correct(type, id, changes, reason, actorId, schoolId) {
     for (const key of allowed) if (Object.prototype.hasOwnProperty.call(changes,key)) {
       set.push(key + ' = ?'); params.push(key === 'effective_from' || key === 'effective_to' || key === 'start_date' || key === 'end_date'
         ? (changes[key] == null ? null : date(changes[key],key))
-        : (type === 'attendance_schedule' && WEEKDAYS.includes(key) ? (changes[key] ? 1 : 0) : changes[key]));
+        : (type === 'attendance_schedule' && WEEKDAYS.includes(key) ? (db.DB_TYPE === 'postgres' ? !!changes[key] : (changes[key] ? 1 : 0)) : changes[key]));
     }
     if (!set.length) throw new Error('No supported correction fields were supplied.');
     if (type === 'attendance_responsibility' && Object.prototype.hasOwnProperty.call(changes,'staff_id')) {

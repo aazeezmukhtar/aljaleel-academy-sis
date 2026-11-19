@@ -62,14 +62,16 @@ function createAttendanceClosureService(db) {
     }
 
     async function findConflicts(scope, startDate, endDate, schoolId, client, excludeId) {
+        const excludeClause = excludeId ? ' AND id <> ?' : '';
+        const params = [schoolId, endDate, startDate];
+        if (excludeId) params.push(excludeId);
         const rows = await db.all(`
             SELECT id, scope_type, section_id, class_id, start_date, end_date, status
             FROM class_attendance_closures
             WHERE school_id = ? AND status IN ('pending', 'approved')
-              AND start_date <= ? AND end_date >= ?
-              AND (? IS NULL OR id <> ?)
+              AND start_date <= ? AND end_date >= ?${excludeClause}
             ORDER BY id
-        `, [schoolId, endDate, startDate, excludeId || null, excludeId || null], client);
+        `, params, client);
         return rows.filter(row => scopesIntersect(scope, row) &&
             overlaps(startDate, endDate, row.start_date, row.end_date));
     }
@@ -111,14 +113,15 @@ function createAttendanceClosureService(db) {
                 throw new Error('An overlapping pending or approved closure already exists for this scope and date range.');
             }
 
-            const inserted = await db.run(`
+            const inserted = await db.get(`
                 INSERT INTO class_attendance_closures
                     (school_id, scope_type, section_id, class_id, start_date, end_date,
                      reason, status, requested_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+                RETURNING id
             `, [schoolId, scope.scope_type, scope.section_id, scope.class_id,
                 startDate, endDate, reason, actorStaffId], client);
-            const closureId = inserted.lastInsertRowid;
+            const closureId = inserted.id;
             await db.run(`
                 INSERT INTO attendance_foundation_audit_logs
                     (entity_type, entity_id, action, actor_staff_id, after_data, reason)

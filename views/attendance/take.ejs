@@ -465,6 +465,10 @@
         const offline = window.AcadMeOffline || window.NexusOffline;
         if (offline && typeof offline.getPendingAttendanceCount === 'function') {
             const pending = await offline.getPendingAttendanceCount();
+            if (pending === Number.MAX_SAFE_INTEGER) {
+                alert('The offline attendance queue could not be verified. Wait until synchronization status is available before submitting.');
+                return;
+            }
             if (pending > 0) {
                 alert('There are ' + pending + ' attendance item(s) waiting to sync. Wait for synchronization to finish, then submit the register.');
                 return;

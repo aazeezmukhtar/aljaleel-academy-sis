@@ -68,6 +68,7 @@ if (!connectionString) {
     assert.ok(responsibility.id>0);
     const closure=await service.create('attendance_closure',{schoolId:1,scopeType:'section',sectionId:10,closureDate:'2026-12-25',reason:'Public holiday',sourceEventId:500,createdBy:7});
     assert.ok(closure.id>0);
+    await service.correct('attendance_closure',closure.id,{reason:'Holiday closure'},'Clarified closure reason',7,1);
     await service.cancelClosure(closure.id,1,7,'Closure entered in error');
     const cancelled=await client.query("SELECT status FROM class_attendance_closures WHERE id=$1",[closure.id]);
     assert.equal(cancelled.rows[0].status,'cancelled');

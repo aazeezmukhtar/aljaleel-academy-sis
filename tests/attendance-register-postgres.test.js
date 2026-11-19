@@ -30,13 +30,13 @@ if (!connectionString) {
         CREATE TABLE class_attendance_responsibilities(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL, class_id BIGINT NOT NULL, staff_id BIGINT NOT NULL, session TEXT NOT NULL, effective_from DATE NOT NULL, effective_to DATE);
         CREATE TABLE attendance(id BIGSERIAL PRIMARY KEY, student_id BIGINT NOT NULL, class_id BIGINT NOT NULL, section_id BIGINT NOT NULL, date DATE NOT NULL, status TEXT NOT NULL, session TEXT NOT NULL, term TEXT NOT NULL, reason TEXT, reason_type TEXT, custom_reason TEXT, UNIQUE(student_id,section_id,date,session,term));
         INSERT INTO schools VALUES(1);
-        INSERT INTO sections VALUES(1,1);
+        INSERT INTO sections VALUES(1,1),(2,1);
         INSERT INTO staff VALUES(1,1),(2,1);
-        INSERT INTO classes VALUES(10,1,1),(11,1,1);
-        INSERT INTO students VALUES(101,1,'active',10),(102,1,'active',10),(103,1,'active',11),(104,1,'active',10),(105,1,'active',11);
-        INSERT INTO student_enrollments VALUES(1,101,10,'2026/2027'),(2,102,10,'2026/2027'),(3,103,10,'2026/2027'),(4,103,11,'2026/2027'),(5,104,10,'2026/2027'),(6,105,11,'2026/2027');
-        INSERT INTO student_enrollment_periods VALUES(1,1,101,1,10,'2026/2027','2026-09-01','2027-08-31','confirmed'),(2,1,102,1,10,'2026/2027','2026-09-01','2027-08-31','confirmed'),(3,1,103,1,10,'2026/2027','2026-09-01','2026-09-09','confirmed'),(4,1,103,1,11,'2026/2027','2026-09-10',NULL,'confirmed'),(5,1,105,1,11,'2026/2027','2026-09-11',NULL,'review_needed');
-        INSERT INTO class_attendance_responsibilities VALUES(1,1,10,1,'2026/2027','2026-09-01',NULL),(2,1,11,1,'2026/2027','2026-09-01',NULL);
+        INSERT INTO classes VALUES(10,1,1),(11,1,1),(20,1,2);
+        INSERT INTO students VALUES(101,1,'active',10),(102,1,'active',10),(103,1,'active',11),(104,1,'active',10),(105,1,'active',11),(106,1,'active',20);
+        INSERT INTO student_enrollments VALUES(1,101,10,'2026/2027'),(2,102,10,'2026/2027'),(3,103,10,'2026/2027'),(4,103,11,'2026/2027'),(5,104,10,'2026/2027'),(6,105,11,'2026/2027'),(7,106,20,'2026/2027');
+        INSERT INTO student_enrollment_periods VALUES(1,1,101,1,10,'2026/2027','2026-09-01','2027-08-31','confirmed'),(2,1,102,1,10,'2026/2027','2026-09-01','2027-08-31','confirmed'),(3,1,103,1,10,'2026/2027','2026-09-01','2026-09-09','confirmed'),(4,1,103,1,11,'2026/2027','2026-09-10',NULL,'confirmed'),(5,1,105,1,11,'2026/2027','2026-09-11',NULL,'review_needed'),(6,1,106,2,20,'2026/2027','2026-09-01','2027-08-31','confirmed');
+        INSERT INTO class_attendance_responsibilities VALUES(1,1,10,1,'2026/2027','2026-09-01',NULL),(2,1,11,1,'2026/2027','2026-09-01',NULL),(3,1,20,1,'2026/2027','2026-09-01',NULL);
       `);
       const migration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261119_attendance_register_submission.postgres.sql'), 'utf8');
       await client.query(migration);
@@ -53,6 +53,9 @@ if (!connectionString) {
 
     await assert.rejects(service.saveDraft({ ...base, date:'2026-09-10', attendance:{103:'Present'} }), /outside the selected class roster/);
     await assert.rejects(service.saveDraft({ ...base, attendance:{104:'Present'} }), /outside the selected class roster/);
+    await assert.rejects(service.saveDraft({ ...base, attendance:{106:'Present'} }), /outside the selected class roster/);
+    const secondSection = await service.saveDraft({ ...base, classId:20, sectionId:2, attendance:{106:'Present'} });
+    assert.equal(secondSection.rosterCount, 1);
     await assert.rejects(service.saveDraft({ ...base, classId:11, date:'2026-09-11', attendance:{105:'Present'} }), /requiring review/);
     const oldClassTransferDay = await service.saveDraft({ ...base, date:'2026-09-09', attendance:{101:'Present',102:'Present',103:'Late'} });
     assert.equal(oldClassTransferDay.rosterCount, 3);

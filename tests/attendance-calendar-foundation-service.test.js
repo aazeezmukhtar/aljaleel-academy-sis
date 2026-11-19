@@ -76,7 +76,13 @@ const service=require('../services/attendanceFoundationService');
       weekdays:{monday:true},createdBy:7
     }),/does not belong to this school/,'Cross-school class must fail');
 
-    const nextSchedule=await service.create('attendance_schedule',{\n      schoolId:1,classId:100,session:'2026/2027',\n      effectiveFrom:'2027-01-01',effectiveTo:null,weekdays:{saturday:true},createdBy:7\n    });\n    assert.ok(nextSchedule.id>0);\n\n    const responsibility=await service.create('attendance_responsibility',{
+    const nextSchedule=await service.create('attendance_schedule',{
+      schoolId:1,classId:100,session:'2026/2027',
+      effectiveFrom:'2027-01-01',effectiveTo:null,weekdays:{saturday:true},createdBy:7
+    });
+    assert.ok(nextSchedule.id>0);
+
+    const responsibility=await service.create('attendance_responsibility',{
       schoolId:1,classId:100,staffId:7,session:'2026/2027',
       effectiveFrom:'2026-09-01',effectiveTo:null,createdBy:7
     });

@@ -9,7 +9,7 @@
             <div class="header-main">
                 <div class="breadcrumb-container">
                     <a href="/attendance" class="back-link"><i class="bi bi-arrow-left"></i> Directory</a>
-                    <h1 style="font-size: 1.25rem; margin: 0;"><%= readOnly ? 'Previous Day Attendance' : 'Mark Attendance' %></h1>
+                    <h1 style="font-size: 1.25rem; margin: 0;"><%= register ? 'Attendance Register' : readOnly ? 'Previous Day Attendance' : 'Mark Attendance' %></h1>
                 </div>
                 <div class="action-buttons">
                     <% if (readOnly && canEdit !== false) { %>
@@ -494,6 +494,11 @@
                     date: form.querySelector('[name="date"]').value
                 })
             });
+            if (response.redirected || response.url.includes('/auth/login')) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/auth/login';
+                return;
+            }
             const result = await response.json().catch(() => ({}));
             if (!response.ok || !result.success) {
                 alert(result.message || 'The register could not be submitted.');

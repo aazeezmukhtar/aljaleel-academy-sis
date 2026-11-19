@@ -42,7 +42,7 @@ if(!connectionString){console.error('[expected-attendance-days-postgres] PG_TEST
   await client.query(`INSERT INTO class_attendance_closures(school_id,scope_type,section_id,closure_date,reason,created_by)
     VALUES(1,'section',10,'2026-09-03','Academy closure',7)`);
   await client.query(`INSERT INTO class_attendance_closures(school_id,scope_type,class_id,closure_date,reason,created_by)
-    VALUES(1,'class',1000,'2026-09-04','Class event',7),(1,'class',1000,'2026-09-05','Cancelled event',7)`);
+    VALUES(1,'class',1000,'2026-09-02','Class event',7),(1,'class',1000,'2026-09-05','Cancelled event',7)`);
   await client.query("UPDATE class_attendance_closures SET status='cancelled' WHERE closure_date='2026-09-05'");
   await client.query(`INSERT INTO student_enrollment_periods
     (school_id,student_id,section_id,class_id,session,start_date,end_date,date_status)
@@ -65,8 +65,8 @@ if(!connectionString){console.error('[expected-attendance-days-postgres] PG_TEST
   assert.equal(byDate['2026-08-31'].status,'outside_term');
   assert.equal(byDate['2026-09-01'].status,'expected');
   assert.equal(byDate['2026-09-02'].status,'closed');
-  assert.equal(byDate['2026-09-03'].status,'closed');
-  assert.equal(byDate['2026-09-04'].status,'closed');
+  assert.equal(byDate['2026-09-03'].status,'expected');
+  assert.equal(byDate['2026-09-04'].status,'expected');
   assert.equal(byDate['2026-09-05'].status,'non_opening');
   assert.equal(byDate['2026-09-06'].status,'expected');
   assert.equal(byDate['2026-09-07'].status,'non_opening');

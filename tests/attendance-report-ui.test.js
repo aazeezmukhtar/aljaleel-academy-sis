@@ -1,0 +1,40 @@
+'use strict';
+
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const ejs = require('ejs');
+
+const root = path.join(__dirname, '..');
+const controller = fs.readFileSync(path.join(root, 'controllers/attendanceController.js'), 'utf8');
+const routes = fs.readFileSync(path.join(root, 'routes/reportRoutes.js'), 'utf8');
+const reportViewPath = path.join(root, 'views/attendance/report.ejs');
+const reportView = fs.readFileSync(reportViewPath, 'utf8');
+
+ejs.compile(reportView, { filename: reportViewPath });
+
+const reportBlock = controller.slice(
+  controller.indexOf('// GET /attendance/report - section-safe report'),
+  controller.indexOf('// GET /attendance/staff')
+);
+assert(reportBlock.includes('c.form_teacher_id = ?'), 'Teacher report class list must be restricted to current form-master assignment.');
+assert(!reportBlock.includes('class_assignments') && !reportBlock.includes('subject_assignments') &&
+  !reportBlock.includes('class_attendance_responsibilities'),
+  'Subject, general class and register responsibility assignments must not grant report access.');
+assert(reportBlock.includes("require('../services/attendanceAnalyticsService')"),
+  'Class reports must use the shared attendance analytics engine.');
+assert(reportBlock.includes('student_enrollment_periods') && reportBlock.includes('date_status'),
+  'Roster must use dated enrollment records and must not infer historical eligibility.');
+assert(reportBlock.includes('section_id') && reportBlock.includes('school_id'),
+  'Report data must remain school and section scoped.');
+assert(routes.includes("router.get('/attendance', isAdmin,") &&
+  routes.includes("router.get('/attendance/register', isAdmin,") &&
+  routes.includes("router.get('/attendance/low', isAdmin,") &&
+  routes.includes("router.get('/attendance/daily', isAdmin,"),
+  'School-wide legacy attendance reports must be Admin-only.');
+assert(reportView.includes('missing_register') === false && reportView.includes('row.missing_register'),
+  'Report must display missing registers separately.');
+assert(reportView.includes('row.draft_register') && reportView.includes('row.attendance_rate'),
+  'Report must display draft registers and shared-engine attendance rate.');
+
+console.log('[attendance-report-ui] EJS compilation, form-master-only access, shared analytics integration, dated roster, section isolation and Admin-only school-wide routes passed.');

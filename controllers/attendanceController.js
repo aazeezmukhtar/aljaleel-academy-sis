@@ -454,52 +454,104 @@ const reopenAttendanceRegister = async (req, res) => {
         return res.status(status).json({ success: false, message: err.message || 'Database Error' });
     }
 };
-// GET /attendance/report - Attendance summary report
+// GET /attendance/report - section-safe report powered by the shared analytics engine.
 const getReport = async (req, res) => {
-    const { class_id, start_date, end_date } = req.query;
+    const { class_id, start_date, end_date, threshold } = req.query;
     const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
+    const isAdmin = user && user.role === 'Admin';
+    const activeThreshold = threshold === undefined || threshold === '' ? 75 : Number(threshold);
+    let classes = [];
+    let reportData = null;
+    let reportContext = null;
+    let reportError = null;
 
     try {
-        const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
-        const classes = await getAssignedClasses(user, schoolId);
-        let reportData = null;
-
-        if (class_id && start_date && end_date) {
-            if (user.role !== 'Admin') {
-                const hasAccess = classes.some(c => String(c.id) === String(class_id));
-                if (!hasAccess) {
-                    reportData = [];
-                }
-            }
-
-            if (reportData === null) {
-                reportData = await db.all(`
-                    SELECT s.first_name, s.last_name,
-                    SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present,
-                    SUM(CASE WHEN a.status = 'Absent' THEN 1 ELSE 0 END) as absent,
-                    SUM(CASE WHEN a.status = 'Late' THEN 1 ELSE 0 END) as late,
-                    SUM(CASE WHEN a.status = 'Leave' THEN 1 ELSE 0 END) as leave,
-                    COUNT(a.id) as total_days
-                    FROM students s
-                    JOIN attendance a ON s.id = a.student_id
-                    JOIN classes c ON c.id = a.class_id AND c.school_id = s.school_id
-                    WHERE a.class_id = ? AND a.date BETWEEN ? AND ? AND s.school_id = ?
-                    GROUP BY s.id
-                    ORDER BY s.last_name, s.first_name
-                `, [Number(class_id), start_date, end_date, schoolId]);
-            }
+        if (!Number.isFinite(activeThreshold) || activeThreshold < 0 || activeThreshold > 100) {
+            throw new Error('Attendance threshold must be between 0 and 100.');
         }
 
-        res.render('attendance/report', {
-            title: 'Attendance Report',
-            classes,
-            user,
-            reportData,
-            filters: { class_id, start_date, end_date }
+        // A form master may report only on classes where they are the current form teacher.
+        // Subject, general class, and register-responsibility assignments do not grant report access.
+        classes = isAdmin
+            ? await db.all(`SELECT c.id, c.name, c.section_id, s.name AS section_name
+                FROM classes c
+                LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
+                WHERE c.school_id = ? ORDER BY s.name, c.name`, [schoolId])
+            : await db.all(`SELECT c.id, c.name, c.section_id, s.name AS section_name
+                FROM classes c
+                LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
+                WHERE c.school_id = ? AND c.form_teacher_id = ?
+                ORDER BY s.name, c.name`, [schoolId, Number(user.id)]);
+
+        if (class_id && start_date && end_date) {
+            if (end_date < start_date) throw new Error('End date cannot be before start date.');
+            const selectedClass = classes.find(item => String(item.id) === String(class_id));
+            if (!selectedClass) {
+                return res.status(403).send('Access denied: attendance reports are available only to administrators and the form master of the selected class.');
+            }
+            if (!selectedClass.section_id) {
+                throw new Error('This class is not linked to a section, so section-safe attendance analytics cannot be calculated.');
+            }
+
+            const academic = await db.get(`SELECT current_session, current_term
+                FROM sections WHERE id = ? AND school_id = ?`, [selectedClass.section_id, schoolId]);
+            const session = academic && academic.current_session;
+            const term = academic && academic.current_term;
+            if (!session || !term) {
+                throw new Error('Configure the selected section’s current session and term before generating this report.');
+            }
+
+            const students = await db.all(`SELECT DISTINCT st.id, st.first_name, st.last_name, st.admission_number
+                FROM students st
+                JOIN student_enrollment_periods ep
+                  ON ep.student_id = st.id AND ep.school_id = st.school_id
+                WHERE st.school_id = ? AND ep.section_id = ? AND ep.class_id = ?
+                  AND ep.session = ? AND ep.start_date <= ?
+                  AND (ep.end_date IS NULL OR ep.end_date >= ?)
+                ORDER BY st.last_name, st.first_name`,
+            [schoolId, selectedClass.section_id, selectedClass.id, session, end_date, start_date]);
+
+            const analytics = require('../services/attendanceAnalyticsService');
+            reportData = [];
+            for (const student of students) {
+                const result = await analytics.calculate({
+                    schoolId, sectionId: Number(selectedClass.section_id),
+                    classId: Number(selectedClass.id), studentId: Number(student.id),
+                    session, term, startDate: start_date, endDate: end_date,
+                    lowAttendanceThreshold: activeThreshold
+                });
+                reportData.push({
+                    ...student,
+                    expected: result.counts.expected,
+                    recorded: result.counts.recorded,
+                    present: result.counts.present,
+                    late: result.counts.late,
+                    absent: result.counts.absent,
+                    leave: result.counts.approvedLeave,
+                    missing_register: result.counts.missingRegister,
+                    draft_register: result.counts.draftRegister,
+                    missing_student_record: result.counts.missingStudentRecord,
+                    unknown_days: result.counts.unknownSchedule + result.counts.unknownEnrollment + result.counts.unknownPeriod,
+                    attendance_rate: result.attendanceRate,
+                    low_attendance: result.lowAttendance
+                });
+            }
+            reportContext = { session, term, section_name: selectedClass.section_name,
+                class_name: selectedClass.name, threshold: activeThreshold };
+        }
+
+        return res.render('attendance/report', {
+            title: 'Attendance Report', classes, user, reportData, reportContext,
+            reportError, filters: { class_id, start_date, end_date, threshold: activeThreshold }
         });
     } catch (err) {
         console.error('Attendance Report Error:', err);
-        res.status(500).send('Database Error');
+        reportError = err.message || 'Unable to generate attendance report.';
+        return res.status(400).render('attendance/report', {
+            title: 'Attendance Report', classes, user, reportData: null, reportContext,
+            reportError, filters: { class_id, start_date, end_date, threshold: activeThreshold }
+        });
     }
 };
 

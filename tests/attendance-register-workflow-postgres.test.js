@@ -248,6 +248,12 @@ if (!url) {
       decision: 'approved'
     });
     assert.strictEqual(approvedClosure.status, 'approved');
+    const approvedClosureRows = await db.all(
+      "SELECT id, scope_type, section_id, class_id, start_date, end_date, status FROM class_attendance_closures WHERE school_id = ? AND status IN ('pending', 'approved')",
+      [1]
+    );
+    console.log('[attendance-closure-debug] approved closure rows:', JSON.stringify(approvedClosureRows));
+
     await assert.rejects(
       () => closures.requestClosure({
         schoolId: 1, actorStaffId: 21, scopeType: 'section', sectionId: 10,

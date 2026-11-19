@@ -9,7 +9,7 @@
                         <h1>Attendance Management</h1>
                         <p>Track daily student attendance and regularity.</p>
                     </div>
-                    <a href="/attendance/report" class="btn btn-outline">View Reports</a>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;"><% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %><a href="/attendance/responsibilities" class="btn btn-outline">Register Responsibilities</a><% } %><a href="/attendance/report" class="btn btn-outline">View Reports</a></div>
                 </header>
 
                 <section class="<%= (typeof user !== 'undefined' && user && user.role === 'Admin') ? 'grid-2' : '' %>" style="margin-bottom: 25px;">

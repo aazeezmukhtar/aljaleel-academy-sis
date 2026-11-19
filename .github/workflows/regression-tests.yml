@@ -45,6 +45,10 @@ jobs:
         run: node tests/fixtures/prepare-sqlite.js
       - name: Run PostgreSQL section-aware attendance migration test
         run: npm run test:attendance-postgres
+      - name: Run SQLite attendance register foundation migration test
+        run: npm run test:attendance-register-sqlite
+      - name: Run PostgreSQL attendance register foundation migration test
+        run: npm run test:attendance-register-postgres
       - name: Run recovery and schema smoke checks
         run: npm run test:regression
       - name: Run offline cache policy and entry-context tests

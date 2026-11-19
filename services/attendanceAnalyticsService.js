@@ -104,8 +104,8 @@ async function calculate(input) {
   };
   let attendanceCredits = 0;
   for (const day of days) {
+    if (['recorded', 'missing_register', 'draft_register', 'missing_student_record', 'unknown_attendance_status'].includes(day.status)) counts.expected += 1;
     if (day.status === 'recorded') {
-      counts.expected += 1;
       counts.recorded += 1;
       attendanceCredits += day.credit;
       if (day.attendanceStatus === 'Present') counts.present += 1;
@@ -124,8 +124,8 @@ async function calculate(input) {
     else if (day.status === 'unknown_enrollment') counts.unknownEnrollment += 1;
     else if (day.status === 'unknown_period') counts.unknownPeriod += 1;
   }
-  const attendanceRate = counts.expected > 0
-    ? Math.round((attendanceCredits / counts.expected) * 10000) / 100
+  const attendanceRate = counts.recorded > 0
+    ? Math.round((attendanceCredits / counts.recorded) * 10000) / 100
     : null;
   const warnings = [...expected.warnings];
   if (counts.missingRegister) warnings.push('Some expected class days have no formal register; they are excluded from the attendance rate.');

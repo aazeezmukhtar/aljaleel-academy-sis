@@ -38,6 +38,7 @@ if (!connectionString) {
       `);
       const migration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261119_attendance_register_submission.postgres.sql'), 'utf8');
       await client.query(migration);
+      await client.query(migration);
     } finally { client.release(); }
 
     process.env.DB_TYPE = 'postgres';

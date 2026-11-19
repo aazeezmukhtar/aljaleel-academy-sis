@@ -40,7 +40,7 @@ if(!connectionString){console.error('[expected-attendance-days-postgres] PG_TEST
   await client.query(`INSERT INTO class_attendance_closures(school_id,scope_type,closure_date,reason,created_by)
     VALUES(1,'school','2026-09-02','School-wide closure',7)`);
   await client.query(`INSERT INTO class_attendance_closures(school_id,scope_type,section_id,closure_date,reason,created_by)
-    VALUES(1,'section',10,'2026-09-03','Academy closure',7)`);
+    VALUES(1,'section',10,'2026-09-02','Academy closure',7)`);
   await client.query(`INSERT INTO class_attendance_closures(school_id,scope_type,class_id,closure_date,reason,created_by)
     VALUES(1,'class',1000,'2026-09-02','Class event',7),(1,'class',1000,'2026-09-05','Cancelled event',7)`);
   await client.query("UPDATE class_attendance_closures SET status='cancelled' WHERE closure_date='2026-09-05'");

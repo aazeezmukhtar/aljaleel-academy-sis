@@ -197,10 +197,10 @@ const getTakeAttendance = async (req, res) => {
             date
         );
 
-        const register = await require('../services/attendanceRegisterService').getRegister({
+        const register = settings.session && settings.term ? await require('../services/attendanceRegisterService').getRegister({
             schoolId, classId: Number(class_id), sectionId: Number(clazz.section_id),
             date, session: settings.session, term: settings.term, actorId: Number(user.id)
-        });
+        }) : null;
 
         res.render('attendance/take', {
             title: 'Mark Attendance',

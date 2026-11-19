@@ -42,6 +42,19 @@
                 </section>
 
                 <% if (reportData) { %>
+                    <% if (reportMeta) { %>
+                    <section class="card" style="margin-bottom: 16px;">
+                        <div style="display:flex;gap:18px;flex-wrap:wrap;">
+                            <% if (reportMeta.threshold !== null) { %>
+                            <span>Low-attendance threshold: <strong><%= reportMeta.threshold %>%</strong></span>
+                            <% } %>
+                            <% if (reportMeta.registerCompletion && reportMeta.registerCompletion.generatedRegisters !== null) { %>
+                            <span>Registers submitted: <strong><%= reportMeta.registerCompletion.submittedRegisters %> / <%= reportMeta.registerCompletion.generatedRegisters %></strong></span>
+                            <% } %>
+                        </div>
+                        <p class="text-muted" style="margin:8px 0 0;font-size:.85rem;">Present, Late and Leave count as attended days. Incomplete registers are excluded until submitted.</p>
+                    </section>
+                    <% } %>
                     <section class="card">
                         <div class="table-container mobile-cards">
                             <table class="data-table">
@@ -58,14 +71,13 @@
                                 </thead>
                                 <tbody>
                                     <% reportData.forEach(row=> { %>
-                                        <% const index=((row.present + (row.leave || 0) + (row.late * 0.5)) /
-                                            row.total_days * 100).toFixed(1); %>
+                                        <% const index = row.attendanceRate === null ? '—' : row.attendanceRate.toFixed(1); %>
                                             <tr>
                                                 <td data-label="Student"><strong>
                                                         <%= row.first_name %> <%= row.last_name %>
                                                     </strong></td>
                                                 <td data-label="Total Days" style="text-align: center;">
-                                                    <%= row.total_days %>
+                                                    <%= row.totalDays %>
                                                 </td>
                                                 <td data-label="Present" style="text-align: center; color: #2e7d32;">
                                                     <%= row.present %>
@@ -81,7 +93,7 @@
                                                 </td>
                                                 <td data-label="Reg. Index" style="text-align: center;">
                                                     <div
-                                                        style="font-weight: bold; color: <%= index > 80 ? '#2e7d32' : index > 60 ? '#f57c00' : '#d32f2f' %>">
+                                                        style="font-weight: bold; color: <%= row.belowThreshold ? '#d32f2f' : '#2e7d32' %>">
                                                         <%= index %>%
                                                     </div>
                                                 </td>

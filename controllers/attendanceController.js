@@ -234,13 +234,6 @@ const getPreviousDayAttendance = async (req, res) => {
     }
 
     try {
-        if (user.role !== 'Admin') {
-            const assignedClasses = await getAssignedClasses(user, schoolId);
-            if (!assignedClasses.some(c => String(c.id) === String(class_id))) {
-                return res.redirect('/attendance?error=Access Denied');
-            }
-        }
-
         const clazz = await db.get(
             'SELECT * FROM classes WHERE id = ? AND school_id = ?',
             [Number(class_id), schoolId]
@@ -269,6 +262,13 @@ const getPreviousDayAttendance = async (req, res) => {
             String(today.getUTCDate()).padStart(2, '0')
         ].join('-');
 
+        if (user.role !== 'Admin') {
+            const assignedClasses = await getAssignedClasses(user, schoolId, date);
+            if (!assignedClasses.some(c => String(c.id) === String(class_id))) {
+                return res.redirect('/attendance?error=Access Denied');
+            }
+        }
+
         // Find records by class and calendar date first. This also handles
         // yesterday falling across an academic session/term boundary.
         const rows = await db.all(
@@ -287,10 +287,10 @@ const getPreviousDayAttendance = async (req, res) => {
         students.forEach(student => {
             student.status = statusByStudent.get(String(student.id)) || null;
         });
-        const register = await require('../services/attendanceRegisterService').getRegister({
+        const register = settings.session && settings.term ? await require('../services/attendanceRegisterService').getRegister({
             schoolId, classId: Number(class_id), sectionId: Number(clazz.section_id),
             date, session: settings.session, term: settings.term, actorId: Number(user.id)
-        });
+        }) : null;
 
         res.render('attendance/take', {
             title: "Yesterday's Attendance",

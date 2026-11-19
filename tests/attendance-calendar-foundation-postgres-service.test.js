@@ -11,7 +11,7 @@ if (!connectionString) {
   process.exit(1);
 }
 (async()=>{
-  const pool=new Pool({connectionString,max:1});
+  const pool=new Pool({connectionString,max:5});
   const client=await pool.connect();
   const schema='attendance_foundation_service_'+process.pid;
   try {
@@ -26,7 +26,7 @@ if (!connectionString) {
       INSERT INTO schools VALUES(1),(2);
       INSERT INTO sections VALUES(10,1),(20,2);
       INSERT INTO staff VALUES(7,1),(8,2);
-      INSERT INTO classes VALUES(100,1,10),(200,2,20);
+      INSERT INTO classes VALUES(100,1,10),(101,1,10),(200,2,20);
       INSERT INTO term_events VALUES(500,1,10,'2026-12-25');
     `);
     const migration=fs.readFileSync(path.join(__dirname,'..','database','migrations','20261119_attendance_calendar_foundation.postgres.sql'),'utf8');
@@ -38,7 +38,7 @@ if (!connectionString) {
       get:async(sql,params=[],tx=null)=>{const r=await (tx||client).query(adapt(sql),params.map(v=>v===undefined?null:v));return r.rows[0];},
       all:async(sql,params=[],tx=null)=>{const r=await (tx||client).query(adapt(sql),params.map(v=>v===undefined?null:v));return r.rows;},
       run:async(sql,params=[],tx=null)=>{const r=await (tx||client).query(adapt(sql),params.map(v=>v===undefined?null:v));return {changes:r.rowCount,lastInsertRowid:null};},
-      transaction:async callback=>{await client.query('BEGIN');try{const v=await callback(client);await client.query('COMMIT');return v;}catch(e){await client.query('ROLLBACK');throw e;}}
+      transaction:async callback=>{const tx=await pool.connect();try{await tx.query(`SET search_path TO "${schema}"`);await tx.query('BEGIN');const v=await callback(tx);await tx.query('COMMIT');return v;}catch(e){await tx.query('ROLLBACK');throw e;}finally{tx.release();}}
     };
     fakeDb.transactionImmediate=fakeDb.transaction;
     const dbPath=require.resolve('../utils/db');
@@ -55,6 +55,14 @@ if (!connectionString) {
     assert.deepStrictEqual(stored.rows[0],{monday:true,wednesday:true,friday:true});
     await assert.rejects(()=>service.create('attendance_schedule',{schoolId:1,classId:100,session:'2026/2027',effectiveFrom:'2026-10-01',weekdays:{saturday:true},createdBy:7}),e=>e.code==='ATTENDANCE_FOUNDATION_CONFLICT');
     await assert.rejects(()=>service.create('attendance_schedule',{schoolId:1,classId:200,session:'2026/2027',effectiveFrom:'2026-09-01',weekdays:{monday:true},createdBy:7}),/does not belong to this school/);
+
+    const concurrentSchedules=await Promise.allSettled([
+      service.create('attendance_schedule',{schoolId:1,classId:101,session:'2026/2027',effectiveFrom:'2026-09-01',weekdays:{monday:true},createdBy:7}),
+      service.create('attendance_schedule',{schoolId:1,classId:101,session:'2026/2027',effectiveFrom:'2026-09-15',weekdays:{tuesday:true},createdBy:7})
+    ]);
+    assert.equal(concurrentSchedules.filter(x=>x.status==='fulfilled').length,1,'Only one concurrent PostgreSQL writer may commit');
+    assert.equal(concurrentSchedules.filter(x=>x.status==='rejected' && x.reason.code==='ATTENDANCE_FOUNDATION_CONFLICT').length,1,
+      'The losing concurrent PostgreSQL writer must receive a conflict');
 
     const responsibility=await service.create('attendance_responsibility',{schoolId:1,classId:100,staffId:7,session:'2026/2027',effectiveFrom:'2026-09-01',createdBy:7});
     assert.ok(responsibility.id>0);

@@ -8,6 +8,7 @@ const isVercel = process.env.VERCEL === '1' || process.env.NOW_REGION;
 
 let pool = null;
 let sqliteDb = null;
+let sqliteImmediateQueue = Promise.resolve();
 
 console.log(`[Database] Initializing with type: ${DB_TYPE}`);
 
@@ -146,12 +147,24 @@ async function transaction(callback, options = {}) {
     }
 }
 
+function transactionImmediate(callback) {
+    if (DB_TYPE === 'postgres') return transaction(callback);
+    // A single better-sqlite3 connection cannot host overlapping transactions.
+    // Queue immediate writers so concurrent requests wait rather than nesting BEGINs.
+    const pending = sqliteImmediateQueue.then(
+        () => transaction(callback, { immediate: true }),
+        () => transaction(callback, { immediate: true })
+    );
+    sqliteImmediateQueue = pending.catch(() => undefined);
+    return pending;
+}
+
 module.exports = {
     all,
     get,
     run,
     transaction,
-    transactionImmediate: callback => transaction(callback, { immediate: true }),
+    transactionImmediate,
     DB_TYPE,
     pool
 };

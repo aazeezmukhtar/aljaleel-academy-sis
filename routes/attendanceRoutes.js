@@ -9,6 +9,9 @@ router.post('/save', attendanceController.saveAttendance);
 router.post('/submit', attendanceController.submitAttendanceRegister);
 router.post('/reopen', attendanceController.reopenAttendanceRegister);
 router.get('/report', attendanceController.getReport);
+router.get('/responsibilities', attendanceController.getAttendanceResponsibilities);
+router.post('/responsibilities', attendanceController.createAttendanceResponsibility);
+router.post('/responsibilities/:id/end', attendanceController.endAttendanceResponsibility);
 
 // Staff Attendance
 router.get('/staff', attendanceController.getStaffAttendance);

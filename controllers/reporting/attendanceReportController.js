@@ -93,7 +93,7 @@ const getDailyAttendance = async (req, res) => {
         }
         return res.render('reports/attendance/daily', {
             title: 'Daily Attendance', classes, sections, selectedSection, selectedSectionId,
-            students, user, query: { class_id, date, type }
+            students, user, query: { class_id, date, type, section_id: selectedSectionId }
         });
     } catch (err) {
         console.error('Daily Attendance Error:', err);

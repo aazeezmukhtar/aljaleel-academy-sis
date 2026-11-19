@@ -12,7 +12,7 @@
                     <h1 style="font-size: 1.25rem; margin: 0;"><%= readOnly ? 'Previous Day Attendance' : 'Mark Attendance' %></h1>
                 </div>
                 <div class="action-buttons">
-                    <% if (readOnly) { %>
+                    <% if (readOnly && registerStatus !== 'submitted') { %>
                     <button type="button" id="edit-attendance-btn" class="btn btn-outline" onclick="enableAttendanceEditing()">
                         <i class="bi bi-pencil-square"></i> Edit
                     </button>
@@ -21,7 +21,7 @@
                         <i class="bi bi-cloud-check-fill"></i> Save Records
                     </button>
                     <button type="submit" form="attendance-form" data-attendance-operation="submit" class="btn btn-primary attendance-submit-action" <%= (readOnly || registerStatus === 'submitted') ? 'hidden' : '' %>><i class="bi bi-lock-fill"></i> Submit Register</button>
-                    <% if (!readOnly && registerStatus === 'submitted' && isAttendanceAdmin) { %><button type="button" id="reopen-register-btn" class="btn btn-outline">Reopen for correction</button><% } %>
+                    <% if (registerStatus === 'submitted' && isAttendanceAdmin) { %><button type="button" id="reopen-register-btn" class="btn btn-outline">Reopen for correction</button><% } %>
                 </div>
             </div>
             <div class="header-meta">
@@ -303,7 +303,7 @@
         });
 
         document.getElementById('edit-attendance-btn').hidden = true;
-        document.querySelectorAll('.attendance-save-action, .attendance-mobile-save, .mark-all-present-action')
+        document.querySelectorAll(' .attendance-save-action, .attendance-submit-action, .attendance-mobile-save, .mark-all-present-action')
             .forEach(element => { element.hidden = false; });
 
         const notice = document.querySelector('.attendance-container .alert');

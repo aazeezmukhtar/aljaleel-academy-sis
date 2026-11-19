@@ -24,7 +24,7 @@ if (!connectionString) {
         CREATE TABLE sections(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
         CREATE TABLE staff(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
         CREATE TABLE classes(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id), section_id BIGINT NOT NULL REFERENCES sections(id));
-        CREATE TABLE students(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL, status TEXT, current_class_id BIGINT);
+        CREATE TABLE students(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL, status TEXT, current_class_id BIGINT, first_name TEXT, last_name TEXT, admission_number TEXT, passport_photo_path TEXT);
         CREATE TABLE student_enrollments(id BIGINT PRIMARY KEY, student_id BIGINT NOT NULL, class_id BIGINT NOT NULL, session TEXT NOT NULL);
         CREATE TABLE student_enrollment_history(id BIGINT PRIMARY KEY);
         CREATE TABLE class_attendance_responsibilities(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL, class_id BIGINT NOT NULL, staff_id BIGINT NOT NULL, session TEXT NOT NULL, effective_from DATE NOT NULL, effective_to DATE);
@@ -33,7 +33,7 @@ if (!connectionString) {
         INSERT INTO sections VALUES(1,1);
         INSERT INTO staff VALUES(1,1),(2,1);
         INSERT INTO classes VALUES(10,1,1),(11,1,1);
-        INSERT INTO students VALUES(101,1,'active',11),(102,1,'active',10);
+        INSERT INTO students(id,school_id,status,current_class_id) VALUES(101,1,'active',11),(102,1,'active',10);
         INSERT INTO student_enrollments VALUES(1,101,10,'2026/2027'),(2,102,10,'2026/2027'),(3,101,11,'2026/2027');
         INSERT INTO class_attendance_responsibilities VALUES
           (1,1,10,1,'2026/2027','2026-09-01',NULL),
@@ -93,7 +93,7 @@ if (!connectionString) {
 
     const client2 = await appPool.connect();
     try {
-      await client2.query(`INSERT INTO students VALUES(103,1,'active',10)`);
+      await client2.query(`INSERT INTO students(id,school_id,status,current_class_id) VALUES(103,1,'active',10)`);
       await client2.query(`INSERT INTO student_enrollments VALUES(4,103,10,'2026/2027')`);
     } finally { client2.release(); }
     const unresolved = await service.saveDraft({ ...base, date:'2026-11-20', attendance:{102:'Present'} });

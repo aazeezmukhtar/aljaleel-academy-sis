@@ -133,6 +133,7 @@ function createAttendanceAnalyticsService(db) {
                    a.session, a.term, a.class_id
             FROM attendance a
             JOIN classes c ON c.id = a.class_id
+            JOIN students s ON s.id = a.student_id AND s.school_id = c.school_id
             WHERE ${conditions.join(' AND ')}
             ORDER BY a.date DESC, a.id DESC
         `, params);

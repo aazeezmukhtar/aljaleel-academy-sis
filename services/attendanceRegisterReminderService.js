@@ -32,6 +32,87 @@ function addMinutes(value, minutes) {
 
 function createAttendanceRegisterReminderService(db) {
     if (!db) throw new Error('An attendance reminder database adapter is required.');
+    const { createAttendanceRegisterService, isoWeekday } =
+        require('./attendanceRegisterGenerationService');
+    const registerGenerator = createAttendanceRegisterService(db);
+
+    function localDateKey(timestamp) {
+        const parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+        }).formatToParts(new Date(timestamp)).reduce((result, part) => {
+            if (part.type !== 'literal') result[part.type] = part.value;
+            return result;
+        }, {});
+        return parts.year + '-' + parts.month + '-' + parts.day;
+    }
+
+    function shiftDate(date, offset) {
+        const value = new Date(date + 'T00:00:00Z');
+        value.setUTCDate(value.getUTCDate() + offset);
+        return value.toISOString().slice(0, 10);
+    }
+
+    async function reconcileMissingRegisters(now, limit) {
+        const today = localDateKey(now);
+        let generatedCount = 0;
+        let skippedCount = 0;
+        let errorCount = 0;
+        let remaining = limit;
+        for (let offset = 6; offset >= 0 && remaining > 0; offset -= 1) {
+            const date = shiftDate(today, -offset);
+            const weekday = isoWeekday(date);
+            const candidates = await db.all(`
+                SELECT DISTINCT sch.school_id, sch.class_id
+                FROM class_attendance_schedules sch
+                JOIN section_academic_periods ap
+                  ON ap.school_id = sch.school_id AND ap.section_id = sch.section_id
+                 AND ap.start_date <= ? AND ap.end_date >= ?
+                 AND ap.status IN ('active', 'completed')
+                JOIN class_attendance_settings cfg
+                  ON cfg.school_id = sch.school_id AND cfg.class_id = sch.class_id
+                 AND cfg.section_id = sch.section_id AND cfg.effective_from <= ?
+                 AND (cfg.effective_to IS NULL OR cfg.effective_to >= ?)
+                WHERE sch.weekday = ? AND sch.effective_from <= ?
+                  AND (sch.effective_to IS NULL OR sch.effective_to >= ?)
+                  AND NOT EXISTS (
+                    SELECT 1 FROM attendance_registers ar
+                    WHERE ar.school_id = sch.school_id AND ar.class_id = sch.class_id
+                      AND ar.section_id = sch.section_id AND ar.register_date = ?
+                  )
+                  AND NOT EXISTS (
+                    SELECT 1 FROM class_attendance_closures cl
+                    WHERE cl.school_id = sch.school_id AND cl.status = 'approved'
+                      AND cl.start_date <= ? AND cl.end_date >= ?
+                      AND (
+                        cl.scope_type = 'school'
+                        OR (cl.scope_type = 'section' AND cl.section_id = sch.section_id)
+                        OR (cl.scope_type = 'class' AND cl.section_id = sch.section_id AND cl.class_id = sch.class_id)
+                      )
+                  )
+                ORDER BY sch.school_id, sch.class_id
+                LIMIT ?
+            `, [date, date, date, date, weekday, date, date, date, date, date, remaining]);
+            for (const candidate of candidates) {
+                try {
+                    const result = await registerGenerator.generateExpectedRegister({
+                        schoolId: candidate.school_id,
+                        classId: candidate.class_id,
+                        registerDate: date
+                    });
+                    if (result.created) generatedCount += 1;
+                    else skippedCount += 1;
+                } catch (error) {
+                    errorCount += 1;
+                    console.error('[attendance-reminder-scheduler] Missing register generation failed:', {
+                        schoolId: candidate.school_id, classId: candidate.class_id, date,
+                        message: error.message
+                    });
+                }
+                remaining -= 1;
+            }
+        }
+        return { generatedCount, skippedCount, errorCount };
+    }
 
     async function cancelObsoleteReminders(client) {
         const pending = await db.all(`
@@ -71,6 +152,7 @@ function createAttendanceRegisterReminderService(db) {
             throw new Error('Reminder scheduling limit must be between 1 and 500.');
         }
 
+        const reconciliation = await reconcileMissingRegisters(now, limit);
         const candidates = await db.all(`
             SELECT ar.id
             FROM attendance_registers ar
@@ -229,6 +311,9 @@ function createAttendanceRegisterReminderService(db) {
             processedCount,
             scheduledCount,
             cancelledCount: cancelledCount + staleCancelled,
+            generatedRegisterCount: reconciliation.generatedCount,
+            skippedRegisterCount: reconciliation.skippedCount,
+            registerGenerationErrorCount: reconciliation.errorCount,
             checkedAt: now
         };
     }

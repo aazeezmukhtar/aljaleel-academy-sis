@@ -23,7 +23,7 @@ function localDateTimeToUtc(date, time, timezone) {
         throw new Error('Attendance submission deadline must use HH:MM (24-hour) format.');
     }
     const [year, month, day] = date.split('-').map(Number);
-    const [hour, minute] = time.split(':').map(Number);
+    const [hour, minute] = String(time).split(':').map(Number);
     const target = Date.UTC(year, month - 1, day, hour, minute);
     let candidate = target;
 

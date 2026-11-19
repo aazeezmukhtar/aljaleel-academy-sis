@@ -61,6 +61,19 @@ try {
   assert.throws(()=>db.prepare('UPDATE attendance_foundation_audit_logs SET reason=? WHERE id=1').run('tampered'),
     /immutable/);
   assert.throws(()=>db.prepare('DELETE FROM attendance_foundation_audit_logs WHERE id=1').run(), /immutable/);
+  // A failed audit insert must roll back its corresponding business write.
+  db.exec('BEGIN');
+  db.prepare(`INSERT INTO class_attendance_closures
+    (school_id,scope_type,closure_date,reason,created_by)
+    VALUES(1,'school','2026-12-26','Atomicity probe',1)`).run();
+  assert.throws(()=>db.prepare(`INSERT INTO attendance_foundation_audit_logs
+    (school_id,entity_type,entity_id,action,reason,changed_by)
+    VALUES(1,'attendance_closure',999,'created','Invalid actor',999999)`).run(), /FOREIGN KEY constraint failed/);
+  db.exec('ROLLBACK');
+  assert.equal(db.prepare(`SELECT COUNT(*) AS count FROM class_attendance_closures
+    WHERE closure_date='2026-12-26' AND reason='Atomicity probe'`).get().count, 0,
+    'Business write survived failed audit insert');
+
   assert.deepStrictEqual(db.pragma('foreign_key_check'), []);
-  console.log('[attendance-foundation-sqlite] schema, checks, closure lifecycle, audit immutability, rerun and FK checks passed.');
+  console.log('[attendance-foundation-sqlite] schema, checks, closure lifecycle, audit immutability, atomic rollback, rerun and FK checks passed.');
 } finally { db.close(); }

@@ -53,7 +53,8 @@ assert(reportView.includes('row.draft_register') && reportView.includes('row.att
 assert(dashboardView.includes('selectedSectionId') && dashboardView.includes('Academy and Tahfeez are never combined'),
   'Administrative dashboard must require one section and explain section isolation.');
 assert(dashboardView.includes('stats.submitted_registers'), 'Dashboard must surface formal register submissions.');
-assert(attendanceReportController.includes("require('../../services/attendanceAnalyticsService')"), 'Administrative attendance reports must use the shared analytics engine.');\nassert(attendanceReportController.includes("require('../../services/attendanceThresholdService')") &&
+assert(attendanceReportController.includes("require('../../services/attendanceAnalyticsService')"), 'Administrative attendance reports must use the shared analytics engine.');
+assert(attendanceReportController.includes("require('../../services/attendanceThresholdService')") &&
   attendanceReportController.includes('.getThreshold(schoolId, req.query.threshold)') &&
   attendanceReportController.includes('.getThreshold(schoolId)'),
   'Administrative reports and the dashboard must use the same saved school attendance threshold, with an optional report-only override.');

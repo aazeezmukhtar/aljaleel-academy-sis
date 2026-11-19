@@ -127,6 +127,14 @@ if (!url) {
     assert.strictEqual(firstSave.savedStudentCount, 1);
 
     await assert.rejects(
+      () => workflow.saveRegisterProgress({
+        schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 21,
+        attendance: { 30: 'Absent' }
+      }),
+      /responsible class teacher/
+    );
+
+    await assert.rejects(
       () => workflow.submitRegister({
         schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20
       }),
@@ -149,14 +157,6 @@ if (!url) {
     );
     assert.strictEqual(stored.rows[0].status, 'submitted');
     assert.strictEqual(Number(stored.rows[0].submitted_student_count), 2);
-
-    await assert.rejects(
-      () => workflow.saveRegisterProgress({
-        schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 21,
-        attendance: { 30: 'Absent' }
-      }),
-      /responsible class teacher/
-    );
 
     console.log('[attendance-register-workflow-postgres] PostgreSQL progress save, unmarked guard, transactional submission, submitted count and responsible-teacher authorization passed.');
   } finally {

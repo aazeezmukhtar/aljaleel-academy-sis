@@ -5,7 +5,7 @@ const sessionHelper = require('../utils/sessionHelper');
 const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
 
 // Helper: get classes assigned to a staff member
-const getAssignedClasses = async (user, schoolId) => {
+const getAssignedClasses = async (user, schoolId, onDate = null) => {
     if (!schoolId) return [];
     if (user.role === 'Admin') {
         return await db.all(`
@@ -17,16 +17,21 @@ const getAssignedClasses = async (user, schoolId) => {
         `, [schoolId]);
     }
     const staffId = Number(user.id);
+    const responsibilityDate = onDate || new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
     return await db.all(`
         SELECT DISTINCT c.*, s.name AS section_name
         FROM classes c
         LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
         LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
         LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
-        WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
+        WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL OR EXISTS (
+            SELECT 1 FROM class_attendance_responsibilities car
+            WHERE car.school_id = c.school_id AND car.class_id = c.id AND car.staff_id = ?
+              AND car.effective_from <= ? AND (car.effective_to IS NULL OR car.effective_to >= ?)
+        ))
           AND c.school_id = ?
         ORDER BY s.name ASC, c.name ASC
-    `, [staffId, staffId, staffId, schoolId]);
+    `, [staffId, staffId, staffId, staffId, responsibilityDate, responsibilityDate, schoolId]);
 };
 
 // Resolve academic settings from the class's own section when it belongs to one.
@@ -175,7 +180,7 @@ const getTakeAttendance = async (req, res) => {
 
     try {
         if (user.role !== 'Admin') {
-            const assignedClasses = await getAssignedClasses(user, schoolId);
+            const assignedClasses = await getAssignedClasses(user, schoolId, date);
             const hasAccess = assignedClasses.some(c => String(c.id) === String(class_id));
             if (!hasAccess) return res.redirect('/attendance?error=Access Denied');
         }
@@ -310,7 +315,7 @@ const saveAttendance = async (req, res) => {
         const cls = await db.get('SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?', [classId, schoolId]);
         if (!cls || !cls.section_id) return res.status(403).json({ success: false, message: 'Class not found or section is not configured.' });
         if (user.role !== 'Admin') {
-            const assigned = await getAssignedClasses(user, schoolId);
+            const assigned = await getAssignedClasses(user, schoolId, req.body.date);
             if (!assigned.some(item => Number(item.id) === classId)) return res.status(403).json({ success: false, message: 'Access denied to this class.' });
         }
         const settings = await getAcademicSettings(classId, schoolId);

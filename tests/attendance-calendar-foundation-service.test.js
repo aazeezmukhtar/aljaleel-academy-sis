@@ -119,6 +119,15 @@ const service=require('../services/attendanceFoundationService');
       schoolId:1,scopeType:'section',sectionId:10,closureDate:'2026-12-25',
       reason:'Duplicate closure',createdBy:7
     }),e=>e.code==='ATTENDANCE_FOUNDATION_CONFLICT');
+    const secondClosure=await service.create('attendance_closure',{
+      schoolId:1,scopeType:'section',sectionId:10,closureDate:'2026-12-26',
+      reason:'Additional closure',createdBy:7
+    });
+    await assert.rejects(()=>service.correct('attendance_closure',closure.id,{
+      closure_date:'2026-12-26',source_event_id:null
+    },'Corrected closure date',7,1),e=>e.code==='ATTENDANCE_FOUNDATION_CONFLICT',
+    'Closure correction must reject a duplicate active scope/date');
+    await service.correct('attendance_closure',closure.id,{reason:'Holiday closure'},'Clarified closure reason',7,1);
     await assert.rejects(()=>service.create('attendance_closure',{
       schoolId:1,scopeType:'section',sectionId:20,closureDate:'2026-12-26',
       reason:'Cross-school section',createdBy:7

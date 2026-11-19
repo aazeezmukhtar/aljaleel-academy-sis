@@ -43,5 +43,21 @@ assert.match(profileHistory, /r\.class_id/);
 assert.match(profileView, /&class_id=<%= term\.class_id %>/);
 assert.match(portalView, /&class_id=<%= result\.class_id %>/);
 assert.doesNotMatch(portalView, /class_name=<%= encodeURIComponent\(ec\.class_name\) %>/);
+const dashboardAttendance = portal.slice(
+    portal.indexOf('// Use the same submitted-register eligibility'),
+    portal.indexOf('res.render(\'portal/index\'', portal.indexOf('// Use the same submitted-register eligibility'))
+);
+assert.match(dashboardAttendance, /attendanceAnalytics\.getStudentAttendanceRecords/);
+assert.match(dashboardAttendance, /sectionId: Number\(section\.section_id\)/);
+assert.match(dashboardAttendance, /session: section\.current_session/);
+assert.match(dashboardAttendance, /term: section\.current_term/);
+assert.match(dashboardAttendance, /calculateAttendanceSummary\(records\)/);
+assert.match(dashboardAttendance, /attendanceSummaries\.push/);
+assert.doesNotMatch(dashboardAttendance, /SELECT status\s+FROM attendance/);
+assert.doesNotMatch(portal, /let attendancePercentage/);
+assert.match(portalView, /attendanceSummaries\.forEach\(summary/);
+assert.match(portalView, /summary\.sectionName/);
+assert.doesNotMatch(portalView, /attendancePercentage/);
+
 
 process.stdout.write('PASS: student portal, profile, trait and publication class-isolation guards\\n');

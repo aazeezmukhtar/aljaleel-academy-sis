@@ -14,6 +14,8 @@ const { createAttendanceRegisterReminderService } =
   require('../services/attendanceRegisterReminderService');
 const { createAttendanceAnalyticsService, calculateAttendanceSummary } =
   require('../services/attendanceAnalyticsService');
+const { createAttendanceAnalyticsDashboardService } =
+  require('../services/attendanceAnalyticsDashboardService');
 
 const url = process.env.PG_TEST_URL;
 if (!url) {
@@ -463,6 +465,64 @@ if (!url) {
     assert.strictEqual(classAnalytics.registerCompletion.submittedRegisters, 1);
     assert.strictEqual(classAnalytics.registerCompletion.pendingRegisters, 1);
     assert.strictEqual(classAnalytics.registerCompletion.completionRate, 50);
+    await db.run(`
+      UPDATE class_attendance_schedules SET effective_to = '2026-11-28'
+      WHERE school_id = 1 AND class_id = 40 AND weekday = ?
+        AND effective_from = '2026-09-01'
+    `, [isoWeekday('2026-11-19')]);
+    await db.run(`
+      UPDATE class_attendance_schedules SET effective_to = '2026-11-30'
+      WHERE school_id = 1 AND class_id = 40 AND weekday = ?
+        AND effective_from = '2026-09-01'
+    `, [isoWeekday('2026-11-25')]);
+    await db.run(`
+      INSERT INTO class_attendance_schedules
+        (school_id, class_id, section_id, weekday, effective_from, created_by)
+      VALUES (1, 40, 10, ?, '2026-09-01', 20),
+             (1, 40, 10, ?, '2026-09-01', 20),
+             (1, 40, 10, ?, '2026-09-01', 20),
+             (1, 40, 10, ?, '2026-09-01', 20),
+             (1, 40, 10, ?, '2026-12-01', 20)
+    `, [
+      isoWeekday('2026-11-29'), isoWeekday('2026-11-30'),
+      isoWeekday('2026-12-01'), isoWeekday('2026-12-04'),
+      isoWeekday('2026-12-02')
+    ]);
+    await db.run(`
+      INSERT INTO class_attendance_closures
+        (school_id, scope_type, section_id, start_date, end_date, reason,
+         status, requested_by, approved_by, approved_at)
+      VALUES (1, 'section', 10, '2026-12-04', '2026-12-04',
+              'Approved section-wide closure.', 'approved', 20, 21, '2026-11-28T10:00:00Z')
+    `);
+    await db.run(`
+      INSERT INTO attendance
+        (student_id, class_id, section_id, date, status, session, term)
+      VALUES (31, 40, 10, '2026-12-02', 'Absent', '2026/2027', '1st Term')
+    `);
+
+    const dashboardService = createAttendanceAnalyticsDashboardService(db, analytics);
+    const dashboard = await dashboardService.getDashboard({
+      schoolId: 1, sectionId: 10, session: '2026/2027', term: '1st Term',
+      startDate: '2026-11-29', endDate: '2026-12-04', classIds: [40]
+    });
+    assert.strictEqual(dashboard.registerCompletion.expectedClassDays, 4,
+      'effective-dated schedules and approved section closures define expected class-days');
+    assert.strictEqual(dashboard.registerCompletion.submittedRegisters, 1);
+    assert.strictEqual(dashboard.registerCompletion.incompleteRegisters, 1);
+    assert.strictEqual(dashboard.registerCompletion.missingRegisters, 2);
+    assert.strictEqual(dashboard.registerCompletion.completionRate, 25);
+    assert.strictEqual(dashboard.overview.attendanceRate, 60);
+    assert.strictEqual(dashboard.overview.lateArrivals, 1);
+    assert.strictEqual(dashboard.overview.absences, 2);
+    assert.strictEqual(dashboard.overview.leaveDays, 1);
+    assert.strictEqual(dashboard.lowAttendanceStudents.length, 1);
+    assert.strictEqual(String(dashboard.lowAttendanceStudents[0].studentId), '31');
+    assert.strictEqual(dashboard.topLateStudents[0].late, 1);
+    assert.strictEqual(dashboard.dailySummary.length, 4);
+    assert(!dashboard.dailySummary.some(day => day.date === '2026-12-04'),
+      'approved section closures must not appear as expected class-days');
+
     const closureAudit = await db.get(
       "SELECT COUNT(*) AS count FROM attendance_foundation_audit_logs WHERE entity_type = 'attendance_closure'",
       []

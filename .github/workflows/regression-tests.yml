@@ -57,6 +57,8 @@ jobs:
         run: npm run test:attendance-register-workflow
       - name: Run attendance register save and submission workflow tests (PostgreSQL)
         run: npm run test:attendance-register-workflow-postgres
+      - name: Run attendance register UI regression checks
+        run: npm run test:attendance-register-ui
       - name: Run recovery and schema smoke checks
         run: npm run test:regression
       - name: Run offline cache policy and entry-context tests

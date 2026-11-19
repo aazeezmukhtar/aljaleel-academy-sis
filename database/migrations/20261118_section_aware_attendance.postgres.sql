@@ -25,10 +25,12 @@ BEGIN
     SELECT COUNT(*) INTO missing_ownership
     FROM attendance a
     LEFT JOIN classes c ON c.id = a.class_id
+    LEFT JOIN sections sec ON sec.id = c.section_id
     WHERE a.student_id IS NULL
        OR a.class_id IS NULL
        OR c.id IS NULL
        OR c.section_id IS NULL
+       OR sec.id IS NULL
        OR a.section_id IS NULL;
 
     IF missing_ownership > 0 THEN
@@ -52,7 +54,9 @@ BEGIN
     FROM attendance a
     JOIN students s ON s.id = a.student_id
     JOIN classes c ON c.id = a.class_id
-    WHERE s.school_id IS DISTINCT FROM c.school_id;
+    JOIN sections sec ON sec.id = c.section_id
+    WHERE s.school_id IS DISTINCT FROM c.school_id
+       OR sec.school_id IS DISTINCT FROM c.school_id;
 
     IF cross_school_rows > 0 THEN
         RAISE EXCEPTION

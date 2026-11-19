@@ -327,18 +327,21 @@ const db = {
       'SELECT academic_period_id, schedule_id, responsibility_id FROM attendance_registers WHERE school_id = ? AND class_id = ? ORDER BY id LIMIT 1',
       [1, 40]
     );
-    const reminderRegister = await db.get(`
-      INSERT INTO attendance_registers
-        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
-         register_date, timezone, submission_deadline_at, expected_student_count,
-         submitted_student_count, status)
-      VALUES (1, 40, 10, ?, ?, ?, '2026-11-25', 'Africa/Lagos',
-              '2026-11-25T13:00:00.000Z', 2, 0, 'expected')
-      RETURNING id
-    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    await db.run(`
+      INSERT INTO class_attendance_schedules
+        (school_id, class_id, section_id, weekday, effective_from, created_by)
+      VALUES (1, 40, 10, ?, '2026-09-01', 20)
+    `, [isoWeekday('2026-11-25')]);
     const firstReminderRun = await reminderService.scheduleDueReminders({
       now: '2026-11-25T13:00:00.000Z'
     });
+    assert.strictEqual(firstReminderRun.generatedRegisterCount, 1,
+      'the scheduler must generate a missing register for a scheduled class day');
+    const reminderRegister = await db.get(
+      "SELECT id FROM attendance_registers WHERE school_id = ? AND class_id = ? AND register_date = ?",
+      [1, 40, '2026-11-25']
+    );
+    assert(reminderRegister, 'missing scheduled register must be created before its reminder');
     assert.strictEqual(firstReminderRun.scheduledCount, 1,
       'stage one should be scheduled immediately after the deadline');
     const firstReminderRows = await db.all(

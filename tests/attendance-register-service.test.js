@@ -17,7 +17,8 @@ raw.exec(`
   CREATE TABLE classes(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id), section_id INTEGER NOT NULL REFERENCES sections(id));
   CREATE TABLE students(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL, status TEXT, current_class_id INTEGER);
   CREATE TABLE student_enrollments(id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, class_id INTEGER NOT NULL, session TEXT NOT NULL);
-  CREATE TABLE class_attendance_responsibilities(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL, class_id INTEGER NOT NULL, staff_id INTEGER NOT NULL, session TEXT NOT NULL, effective_from DATE NOT NULL, effective_to DATE);\n  INSERT INTO class_attendance_responsibilities VALUES(1,1,10,1,'2026/2027','2026-09-01',NULL);\n  CREATE TABLE attendance(id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, class_id INTEGER NOT NULL, section_id INTEGER NOT NULL, date DATE NOT NULL, status TEXT NOT NULL, session TEXT NOT NULL, term TEXT NOT NULL, reason TEXT, reason_type TEXT, custom_reason TEXT, UNIQUE(student_id,section_id,date,session,term));
+  CREATE TABLE class_attendance_responsibilities(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL, class_id INTEGER NOT NULL, staff_id INTEGER NOT NULL, session TEXT NOT NULL, effective_from DATE NOT NULL, effective_to DATE);
+  INSERT INTO class_attendance_responsibilities VALUES(1,1,10,1,'2026/2027','2026-09-01',NULL);\n  CREATE TABLE attendance(id INTEGER PRIMARY KEY AUTOINCREMENT, student_id INTEGER NOT NULL, class_id INTEGER NOT NULL, section_id INTEGER NOT NULL, date DATE NOT NULL, status TEXT NOT NULL, session TEXT NOT NULL, term TEXT NOT NULL, reason TEXT, reason_type TEXT, custom_reason TEXT, UNIQUE(student_id,section_id,date,session,term));
   INSERT INTO schools VALUES(1);
   INSERT INTO sections VALUES(1,1);
   INSERT INTO staff VALUES(1,1),(2,1);

@@ -1,6 +1,6 @@
 'use strict';
 
-const assert = require('assert');
+const assert = require('assert');\nconst fs = require('fs');\nconst path = require('path');
 
 const settings = new Map([[1, '82'], [2, 'not-a-number'], [3, '0']]);
 const fakeDb = {
@@ -12,6 +12,14 @@ const fakeDb = {
 };
 const dbPath = require.resolve('../utils/db');
 require.cache[dbPath] = { id: dbPath, filename: dbPath, loaded: true, exports: fakeDb };
+
+const settingsView = fs.readFileSync(path.join(__dirname, '..', 'views/settings.ejs'), 'utf8');
+const settingsController = fs.readFileSync(path.join(__dirname, '..', 'controllers/settingsController.js'), 'utf8');
+assert(settingsView.includes('name="attendance_minimum_percentage"') &&
+  settingsView.includes("settings['attendance.minimum_percentage']"),
+  'School Settings must expose the persisted low-attendance threshold.');
+assert(settingsController.includes("key: 'attendance.minimum_percentage'"),
+  'School Settings must persist the same threshold key consumed by the shared service.');
 
 const thresholdService = require('../services/attendanceThresholdService');
 

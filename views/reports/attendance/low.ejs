@@ -1,179 +1,71 @@
 <%- include('../../partials/header') %>
-    <%- include('../../partials/sidebar') %>
+<%- include('../../partials/sidebar') %>
+<main class="main-content">
+    <header class="content-header no-print">
+        <a href="/reports/attendance" class="back-link">← Back to Attendance Reports</a>
+        <h1>Low Attendance Alerts</h1>
+        <p>Students whose attendance rate is below the selected threshold.</p>
+    </header>
 
-        <main class="main-content">
-            <header class="content-header no-print">
-
-                <div class="header-left">
-                    <a href="/reports/attendance" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
-                    <h1>Low Attendance Alerts</h1>
-                </div>
-                <div class="header-actions">
-                    <button class="btn btn-primary btn-export" data-filename="low_attendance.csv">
-                        <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
-                    </button>
-                    <button onclick="window.print()" class="btn btn-secondary">
-                        <i class="bi bi-printer"></i> Print List
-                    </button>
-                </div>
-            </header>
-
-            <div class="card no-print settings-card">
-                <form action="/reports/attendance/low" method="GET" class="filter-form">
-                    <div class="form-group">
-                        <label>Term</label>
-                        <select name="term" required>
-                            <option value="1st Term" <%=query.term==='1st Term' ? 'selected' : '' %>>1st Term</option>
-                            <option value="2nd Term" <%=query.term==='2nd Term' ? 'selected' : '' %>>2nd Term</option>
-                            <option value="3rd Term" <%=query.term==='3rd Term' ? 'selected' : '' %>>3rd Term</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Session</label>
-                        <select name="session" required>
-                            <option value="">Select Session</option>
-                            <% 
-                            const sessList = (typeof availableSessions !== 'undefined' && availableSessions && availableSessions.length > 0) 
-                                ? availableSessions 
-                                : ((typeof available_sessions !== 'undefined' && available_sessions && available_sessions.length > 0) 
-                                    ? available_sessions 
-                                    : ['2024/2025', '2025/2026']);
-                            sessList.forEach(s => { 
-                            %>
-                                <option value="<%= s %>" <%= query.session === s ? 'selected' : '' %>><%= s %></option>
-                            <% }); %>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Min. Attendance (%)</label>
-                        <input type="number" name="threshold" value="<%= query.threshold %>" min="1" max="100"
-                            style="width: 80px;">
-                    </div>
-                    <button type="submit" class="btn btn-primary">Check</button>
-                </form>
+    <section class="card no-print" style="margin-bottom:22px;">
+        <form action="/reports/attendance/low" method="GET" style="display:flex;gap:14px;align-items:end;flex-wrap:wrap;">
+            <div class="form-group" style="min-width:220px;flex:1;">
+                <label for="section">Section</label>
+                <select id="section" name="section_id" required class="form-control">
+                    <option value="">Select one section</option>
+                    <% (sections || []).forEach(section => { %>
+                        <option value="<%= section.id %>" <%= String(selectedSectionId || '') === String(section.id) ? 'selected' : '' %>><%= section.name %></option>
+                    <% }); %>
+                </select>
             </div>
+            <div class="form-group">
+                <label for="threshold">Low-attendance threshold (%)</label>
+                <input id="threshold" type="number" name="threshold" min="0" max="100" step="0.1" value="<%= threshold %>" required class="form-control">
+            </div>
+            <button type="submit" class="btn btn-primary">Generate alerts</button>
+        </form>
+        <p class="text-muted" style="margin:10px 0 0;font-size:.85rem;">Only one section is analysed per report. Present, Late and approved Leave receive full credit; Absent receives zero. Missing and draft registers are excluded from the rate.</p>
+    </section>
 
-            <% if (students && students.length> 0) { %>
-                <div class="report-paper">
-                    <div class="report-header">
-                        <h2>Critical Attendance Report</h2>
-                        <p>Students below <%= query.threshold %>% attendance in <%= query.term %>, <%= query.session %>
-                        </p>
-                    </div>
+    <% if (reportError) { %><div class="card" role="alert" style="border-left:4px solid #dc2626;margin-bottom:20px;"><strong>Report unavailable</strong><p><%= reportError %></p></div><% } %>
 
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th>Student Name</th>
-                                <th>Adm No.</th>
-                                <th>Class</th>
-                                <th>Total Days</th>
-                                <th>Present Days</th>
-                                <th>Attendance %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% students.forEach(student=> { %>
-                                <% const percentage=((student.present_days / student.total_days) * 100).toFixed(1); %>
-                                    <tr>
-                                        <td style="font-weight: 500;">
-                                            <%= student.last_name.toUpperCase() %>, <%= student.first_name %>
-                                        </td>
-                                        <td>
-                                            <%= student.admission_number %>
-                                        </td>
-                                        <td>
-                                            <%= student.class_name %>
-                                        </td>
-                                        <td>
-                                            <%= student.total_days %>
-                                        </td>
-                                        <td>
-                                            <%= student.present_days %>
-                                        </td>
-                                        <td style="color: #dc2626; font-weight: bold;">
-                                            <%= percentage %>%
-                                        </td>
-                                    </tr>
-                                    <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-                <% } else if (query.term) { %>
-                    <div class="empty-state">
-                        <i class="bi bi-emoji-smile"></i>
-                        <p>Great! No students found with attendance below <%= query.threshold %>%.</p>
-                    </div>
-                    <% } %>
-        </main>
-
-        <style>
-            .filter-form {
-                display: flex;
-                gap: 20px;
-                align-items: flex-end;
-            }
-
-            .report-paper {
-                background: white;
-                padding: 40px;
-                border-radius: 4px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                max-width: 210mm;
-                margin: 0 auto;
-            }
-
-            .report-table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 0.95rem;
-            }
-
-            .report-table th,
-            .report-table td {
-                border: 1px solid #ddd;
-                padding: 10px;
-                text-align: left;
-            }
-
-            .report-table th {
-                background: #f8f9fa;
-            }
-
-            @media print {
-                @page {
-                    size: A4;
-                    margin: 10mm;
-                }
-
-                body * {
-                    visibility: hidden;
-                }
-
-                .report-paper,
-                .report-paper * {
-                    visibility: visible;
-                }
-
-                .report-paper {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    box-shadow: none;
-                    padding: 0;
-                    margin: 0;
-                }
-
-                .main-content {
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-
-                .no-print {
-                    display: none !important;
-                }
-            }
-        </style>
-
-        <%- include('../../partials/footer') %>
+    <% if (reportContext) { %>
+    <section class="card">
+        <div class="report-header" style="margin-bottom:18px;">
+            <h2>Critical Attendance Report</h2>
+            <p><%= selectedSection.name %> · <%= reportContext.session %> · <%= reportContext.term %></p>
+            <p><%= reportContext.start_date %> to <%= reportContext.end_date %> · Below <%= threshold %>%</p>
+        </div>
+        <% if (students.length) { %>
+        <div class="table-container mobile-cards">
+            <table class="data-table">
+                <thead><tr><th>Student</th><th>Class</th><th>Expected</th><th>Recorded</th><th>Present</th><th>Late</th><th>Leave</th><th>Absent</th><th>Attendance</th><th>Missing / Draft</th></tr></thead>
+                <tbody>
+                <% students.forEach(student => { %>
+                    <tr>
+                        <td data-label="Student"><strong><%= student.last_name %>, <%= student.first_name %></strong><small style="display:block;color:var(--text-muted);"><%= student.admission_number || '' %></small></td>
+                        <td data-label="Class"><%= student.class_name %></td>
+                        <td data-label="Expected"><%= student.expected_days %></td>
+                        <td data-label="Recorded"><%= student.recorded_days %></td>
+                        <td data-label="Present"><%= student.present_days %></td>
+                        <td data-label="Late"><%= student.late_days %></td>
+                        <td data-label="Leave"><%= student.leave_days %></td>
+                        <td data-label="Absent"><%= student.absent_days %></td>
+                        <td data-label="Attendance"><strong><%= student.attendance_rate.toFixed(1) %>%</strong></td>
+                        <td data-label="Missing / Draft"><%= student.missing_registers %> missing · <%= student.draft_registers %> draft</td>
+                    </tr>
+                <% }); %>
+                </tbody>
+            </table>
+        </div>
+        <% } else { %>
+            <p style="text-align:center;padding:28px;color:var(--text-muted);">No students with a calculable attendance rate are below this threshold.</p>
+        <% } %>
+    </section>
+    <% } %>
+</main>
+<style>
+.back-link{display:inline-block;margin-bottom:10px;color:var(--text-muted);text-decoration:none}
+@media print{.no-print{display:none!important}body *{visibility:hidden}.main-content,.main-content *{visibility:visible}.main-content{position:absolute;left:0;top:0;width:100%}}
+</style>
+<%- include('../../partials/footer') %>

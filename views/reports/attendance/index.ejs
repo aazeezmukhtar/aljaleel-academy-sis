@@ -1,160 +1,55 @@
 <%- include('../../partials/header') %>
-    <%- include('../../partials/sidebar') %>
+<%- include('../../partials/sidebar') %>
+<main class="main-content">
+    <header class="content-header">
+        <a href="/reports" class="back-link"><i class="bi bi-arrow-left"></i> Back to Report Center</a>
+        <h1>Attendance Reports</h1>
+        <p>Monitor attendance using expected class days and submitted registers.</p>
+    </header>
 
-        <main class="main-content">
-            <header class="content-header">
-                <a href="/reports" class="back-link"><i class="bi bi-arrow-left"></i> Back to Report Center</a>
-                <h1>Attendance Reports</h1>
-                <p>Monitor student attendance and punctuality.</p>
-            </header>
-
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #dcfce7; color: #16a34a;">
-                        <i class="bi bi-check-circle-fill"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>
-                            <%= stats.present_today %>
-                        </h3>
-                        <p>Present Today</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #fee2e2; color: #dc2626;">
-                        <i class="bi bi-x-circle-fill"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>
-                            <%= stats.absent_today %>
-                        </h3>
-                        <p>Absent Today</p>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon" style="background: #ffedd5; color: #ea580c;">
-                        <i class="bi bi-clock-history"></i>
-                    </div>
-                    <div class="stat-info">
-                        <h3>
-                            <%= stats.late_today %>
-                        </h3>
-                        <p>Late Today</p>
-                    </div>
-                </div>
+    <section class="card" style="margin-bottom:24px;">
+        <form action="/reports/attendance" method="GET" style="display:flex;gap:12px;align-items:end;flex-wrap:wrap;">
+            <div class="form-group" style="min-width:220px;flex:1;">
+                <label for="attendance-section">Section</label>
+                <select id="attendance-section" name="section_id" class="form-control" required>
+                    <option value="">Select one section</option>
+                    <% (sections || []).forEach(section => { %>
+                        <option value="<%= section.id %>" <%= String(selectedSectionId || '') === String(section.id) ? 'selected' : '' %>><%= section.name %></option>
+                    <% }); %>
+                </select>
             </div>
+            <button type="submit" class="btn btn-primary">View section</button>
+        </form>
+        <p class="text-muted" style="margin:10px 0 0;font-size:.85rem;">Figures are calculated for one section at a time. Academy and Tahfeez are never combined.</p>
+        <% if (selectedSection) { %>
+            <h3 style="margin:14px 0 0;"><%= selectedSection.name %></h3>
+            <p class="text-muted" style="margin:4px 0 0;"><%= selectedSection.current_session || 'Session not configured' %> · <%= selectedSection.current_term || 'Term not configured' %></p>
+        <% } %>
+    </section>
 
-            <div class="report-dashboard-grid">
-                <a href="/reports/attendance/register" class="report-card">
-                    <div class="report-icon">
-                        <i class="bi bi-calendar3"></i>
-                    </div>
-                    <div class="report-info">
-                        <h3>Monthly Register</h3>
-                        <p>View and print monthly attendance registers for any class.</p>
-                    </div>
-                </a>
-
-                <a href="/reports/attendance/low" class="report-card">
-                    <div class="report-icon">
-                        <i class="bi bi-exclamation-triangle-fill"></i>
-                    </div>
-                    <div class="report-info">
-                        <h3>Low Attendance Alerts</h3>
-                        <p>Students below the required attendance threshold.</p>
-                    </div>
-                </a>
-            </div>
-        </main>
-
-        <style>
-            .back-link {
-                display: inline-block;
-                margin-bottom: 10px;
-                color: var(--text-muted);
-                text-decoration: none;
-                font-size: 0.9rem;
-            }
-
-            .back-link:hover {
-                color: var(--primary);
-            }
-
-            .stats-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 20px;
-                margin-bottom: 30px;
-            }
-
-            .stat-card {
-                background: white;
-                padding: 20px;
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
-
-            .stat-icon {
-                width: 50px;
-                height: 50px;
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.5rem;
-            }
-
-            .stat-info h3 {
-                margin: 0;
-                font-size: 1.5rem;
-                color: var(--text-dark);
-            }
-
-            .stat-info p {
-                margin: 0;
-                font-size: 0.85rem;
-                color: var(--text-muted);
-            }
-
-            .report-dashboard-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 20px;
-            }
-
-            .report-card {
-                background: white;
-                border-radius: 12px;
-                padding: 25px;
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                text-decoration: none;
-                color: inherit;
-                border: 1px solid #eee;
-                transition: transform 0.2s;
-            }
-
-            .report-card:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-                border-color: var(--primary);
-            }
-
-            .report-icon {
-                width: 60px;
-                height: 60px;
-                background: #f8fafc;
-                color: var(--primary);
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.8rem;
-            }
-        </style>
-
-        <%- include('../../partials/footer') %>
+    <% if (selectedSection) { %>
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon" style="background:#dcfce7;color:#16a34a;"><i class="bi bi-check-circle-fill"></i></div><div class="stat-info"><h3><%= stats.present_today %></h3><p>Present Today</p></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-x-circle-fill"></i></div><div class="stat-info"><h3><%= stats.absent_today %></h3><p>Absent Today</p></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#ffedd5;color:#ea580c;"><i class="bi bi-clock-history"></i></div><div class="stat-info"><h3><%= stats.late_today %></h3><p>Late Today</p></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#eef2ff;color:#4f46e5;"><i class="bi bi-calendar-check"></i></div><div class="stat-info"><h3><%= stats.leave_today %></h3><p>Approved Leave Today</p></div></div>
+        <div class="stat-card"><div class="stat-icon" style="background:#f1f5f9;color:#334155;"><i class="bi bi-journal-check"></i></div><div class="stat-info"><h3><%= stats.submitted_registers %> / <%= stats.expected_registers %></h3><p>Submitted Registers / Classes</p></div></div>
+    </div>
+    <div class="report-dashboard-grid">
+        <a href="/reports/attendance/register" class="report-card"><div class="report-icon"><i class="bi bi-calendar3"></i></div><div class="report-info"><h3>Monthly Register</h3><p>View and print monthly attendance registers.</p></div></a>
+        <a href="/reports/attendance/low" class="report-card"><div class="report-icon"><i class="bi bi-exclamation-triangle-fill"></i></div><div class="report-info"><h3>Low Attendance Alerts</h3><p>Review students below the configured attendance threshold.</p></div></a>
+    </div>
+    <% } %>
+</main>
+<style>
+.back-link{display:inline-block;margin-bottom:10px;color:var(--text-muted);text-decoration:none;font-size:.9rem}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:30px}
+.stat-card{background:white;padding:20px;border-radius:12px;display:flex;align-items:center;gap:15px;box-shadow:0 2px 4px rgba(0,0,0,.05)}
+.stat-icon{width:50px;height:50px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.5rem}
+.stat-info h3{margin:0;font-size:1.5rem;color:var(--text-dark)}.stat-info p{margin:0;font-size:.85rem;color:var(--text-muted)}
+.report-dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.report-card{background:white;border-radius:12px;padding:25px;display:flex;align-items:center;gap:20px;text-decoration:none;color:inherit;border:1px solid #eee;transition:transform .2s}
+.report-card:hover{transform:translateY(-3px);box-shadow:0 10px 20px rgba(0,0,0,.05);border-color:var(--primary)}
+.report-icon{width:60px;height:60px;background:#f8fafc;color:var(--primary);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.8rem}
+</style>
+<%- include('../../partials/footer') %>

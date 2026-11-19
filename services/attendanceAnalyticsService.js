@@ -205,7 +205,12 @@ function createAttendanceAnalyticsService(db) {
         const registerCompletion = await getRegisterCompletion({
             schoolId, classId, sectionId, startDate, endDate
         });
-        return { rows, threshold, registerCompletion, recordCount: records.length };
+        return {
+            rows, threshold, registerCompletion, recordCount: records.length,
+            records: records.filter(record => VALID_STATUSES.has(record.status)).map(record => ({
+                ...record, date: normalizeDateValue(record.date)
+            }))
+        };
     }
 
     async function getRegisterCompletion(input) {

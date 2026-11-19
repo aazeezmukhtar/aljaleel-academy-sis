@@ -8,6 +8,8 @@ const { createAttendanceRegisterService, isoWeekday } =
   require('../services/attendanceRegisterGenerationService');
 const { createAttendanceRegisterWorkflowService } =
   require('../services/attendanceRegisterWorkflowService');
+const { createAttendanceRegisterAdministrationService } =
+  require('../services/attendanceRegisterAdministrationService');
 
 const sqlite = new Database(':memory:');
 sqlite.pragma('foreign_keys = ON');
@@ -164,13 +166,44 @@ const db = {
       /locked/
     );
 
-    // Simulate an explicitly reopened register to verify a correction can
-    // clear a previously stored status back to genuinely unmarked.
-    sqlite.prepare(`
-      UPDATE attendance_registers
-      SET status = 'reopened', submitted_student_count = 0, submitted_by = NULL
-      WHERE id = ?
-    `).run(generated.registerId);
+    const administration = createAttendanceRegisterAdministrationService(db);
+    await assert.rejects(
+      () => administration.reopenRegister({
+        schoolId: 1, classId: 40, registerDate: '2026-11-19',
+        actorStaffId: 20, reason: 'Correction requested by the school administrator.'
+      }),
+      /Only an administrator may reopen/
+    );
+    await assert.rejects(
+      () => administration.reopenRegister({
+        schoolId: 1, classId: 40, registerDate: '2026-11-19',
+        actorStaffId: 20, reason: ''
+      }),
+      /correction reason is required/
+    );
+    const reopened = await administration.reopenRegister({
+      schoolId: 1, classId: 40, registerDate: '2026-11-19',
+      actorStaffId: 21, reason: 'Correction requested by the school administrator.'
+    });
+    assert.strictEqual(reopened.status, 'reopened');
+    assert.strictEqual(reopened.submittedStudentCount, 0);
+    assert.strictEqual(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM attendance_register_events WHERE register_id = ? AND event_type = 'reopened' AND actor_staff_id = 21")
+        .get(generated.registerId).count,
+      1
+    );
+    assert.strictEqual(
+      sqlite.prepare("SELECT COUNT(*) AS count FROM attendance_foundation_audit_logs WHERE entity_type = 'attendance_register' AND action = 'register_reopened' AND actor_staff_id = 21 AND reason = 'Correction requested by the school administrator.'")
+        .get().count,
+      1
+    );
+    await assert.rejects(
+      () => administration.reopenRegister({
+        schoolId: 1, classId: 40, registerDate: '2026-11-19',
+        actorStaffId: 21, reason: 'Duplicate reopen attempt.'
+      }),
+      /Only a submitted attendance register can be reopened/
+    );
     const cleared = await workflow.saveRegisterProgress({
       schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20,
       attendance: { 31: 'Not recorded' }

@@ -54,6 +54,13 @@ const updateSettings = async (req, res) => {
     } = req.body;
     const logoFile = req.file;
 
+    if (attendance_minimum_percentage !== undefined && attendance_minimum_percentage !== '') {
+        const threshold = Number(attendance_minimum_percentage);
+        if (!Number.isFinite(threshold) || threshold < 0 || threshold > 100) {
+            return res.redirect('/settings?error=Low attendance threshold must be between 0 and 100');
+        }
+    }
+
     const updates = [
         { key: 'school_name', value: school_name },
         { key: 'school_motto', value: school_motto },

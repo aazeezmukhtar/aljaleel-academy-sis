@@ -37,7 +37,8 @@ const service = require('../services/attendanceRegisterService');
 const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-19', session:'2026/2027', term:'1st Term', actorId:1, actorRole:'Teacher' };
 (async () => {
   try {
-    await assert.rejects(service.saveDraft({ ...base, actorId:2, attendance:{101:'Present'} }), /not the assigned attendance register holder/);\n    await assert.rejects(service.saveDraft({ ...base, sectionId:2, attendance:{101:'Present'} }), /do not belong to the selected school context/);\n    const draft = await service.saveDraft({ ...base, attendance:{101:'Present'} });
+    await assert.rejects(service.saveDraft({ ...base, actorId:2, attendance:{101:'Present'} }), /not the assigned attendance register holder/);
+    await assert.rejects(service.saveDraft({ ...base, sectionId:2, attendance:{101:'Present'} }), /do not belong to the selected school context/);\n    const draft = await service.saveDraft({ ...base, attendance:{101:'Present'} });
     assert.equal(draft.status, 'open');
     assert.equal(draft.savedCount, 1);
     await assert.rejects(service.submit({ ...base, attendance:{101:'Present'} }), /incomplete/);
@@ -45,7 +46,8 @@ const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-19', session:'
     assert.equal(submitted.status, 'submitted');
     assert.equal(submitted.version, 1);
     await assert.rejects(service.saveDraft({ ...base, attendance:{101:'Absent'} }), /submitted and locked/);
-    await assert.rejects(service.reopen({ ...base, actorRole:'Teacher', reason:'Fix' }), /Only an administrator/);\n    await assert.rejects(service.reopen({ ...base, actorRole:'Admin', reason:'   ' }), /correction reason is required/);
+    await assert.rejects(service.reopen({ ...base, actorRole:'Teacher', reason:'Fix' }), /Only an administrator/);
+    await assert.rejects(service.reopen({ ...base, actorRole:'Admin', reason:'   ' }), /correction reason is required/);
     const reopened = await service.reopen({ ...base, actorRole:'Admin', reason:'Correct a wrongly marked status' });
     assert.equal(reopened.status, 'open');
     await service.saveDraft({ ...base, attendance:{101:'Late',102:'Leave'} });
@@ -54,7 +56,8 @@ const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-19', session:'
     const record = await service.getRegister(base);
     assert.equal(record.status, 'submitted');
     assert.deepStrictEqual(record.events.map(event=>event.action), ['submitted','reopened','submitted']);
-    assert.equal(record.events[1].reason, 'Correct a wrongly marked status');\n    await assert.rejects(db.run('UPDATE attendance_register_events SET reason = ? WHERE id = ?', ['tampered', record.events[0].id]), /immutable/);
+    assert.equal(record.events[1].reason, 'Correct a wrongly marked status');
+    await assert.rejects(db.run('UPDATE attendance_register_events SET reason = ? WHERE id = ?', ['tampered', record.events[0].id]), /immutable/);
     console.log('[attendance-register-sqlite] draft, completeness, locking, admin reopen, audited reason, resubmission and history passed.');
   } finally {
     try { fs.unlinkSync(file); } catch {}

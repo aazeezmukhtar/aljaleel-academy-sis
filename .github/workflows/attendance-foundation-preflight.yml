@@ -1,0 +1,44 @@
+name: Attendance Foundation Disposable Preflight
+
+on:
+  push:
+    branches:
+      - phase2/attendance-foundation-preflight
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migration-preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:17.6
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: acadme_attendance_preflight
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d acadme_attendance_preflight"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PG_TEST_URL: postgres://postgres:postgres@localhost:5432/acadme_attendance_preflight
+    steps:
+      - name: Check out isolated preflight branch
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install project dependencies
+        run: npm install --no-audit --no-fund
+      - name: Test SQLite foundation migration in memory
+        run: node tests/attendance-calendar-foundation-migration.test.js
+      - name: Test PostgreSQL foundation migration in disposable service
+        run: node tests/attendance-calendar-foundation-postgres.test.js

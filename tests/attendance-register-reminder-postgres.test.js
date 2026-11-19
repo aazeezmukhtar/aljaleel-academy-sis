@@ -36,11 +36,11 @@ if(!connectionString){console.error('[attendance-register-reminders-postgres] PG
     (school_id,section_id,session,term,start_date,end_date)
     VALUES(1,10,'2026/2027','1st Term','2026-11-16','2026-11-30')`);
   await client.query(`INSERT INTO class_attendance_schedules
-    (school_id,class_id,session,effective_from,monday,tuesday,wednesday,created_by)
-    VALUES(1,100,'2026/2027','2026-11-01',TRUE,FALSE,TRUE,7),
-      (1,101,'2026/2027','2026-11-01',FALSE,TRUE,FALSE,7),
-      (1,103,'2026/2027','2026-11-01',TRUE,FALSE,TRUE,7),
-      (1,104,'2026/2027','2026-11-01',TRUE,FALSE,TRUE,7)`);
+    (school_id,class_id,session,effective_from,monday,tuesday,wednesday,thursday,created_by)
+    VALUES(1,100,'2026/2027','2026-11-01',TRUE,FALSE,TRUE,FALSE,7),
+      (1,101,'2026/2027','2026-11-01',FALSE,FALSE,FALSE,TRUE,7),
+      (1,103,'2026/2027','2026-11-01',FALSE,FALSE,TRUE,FALSE,7),
+      (1,104,'2026/2027','2026-11-01',FALSE,FALSE,FALSE,TRUE,8)`);
   await client.query(`INSERT INTO class_attendance_responsibilities
     (school_id,class_id,staff_id,session,effective_from,created_by)
     VALUES(1,100,7,'2026/2027','2026-11-01',7),

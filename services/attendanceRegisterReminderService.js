@@ -238,13 +238,15 @@ function createAttendanceRegisterReminderService(db) {
         if (!Number.isSafeInteger(staffId) || staffId <= 0) {
             throw new Error('A valid staff member is required to deliver attendance reminders.');
         }
+        const now = asIso(input.now || new Date());
         return db.transaction(async client => {
+            await cancelObsoleteReminders(client);
             const reminders = await db.all(`
                 SELECT r.id, r.register_id
                 FROM attendance_register_reminders r
                 JOIN attendance_registers ar ON ar.id = r.register_id
                 WHERE r.recipient_staff_id = ? AND r.status = 'pending'
-                  AND r.scheduled_at <= CURRENT_TIMESTAMP
+                  AND r.scheduled_at <= ?
                   AND ar.status IN ('expected', 'in_progress', 'reopened')
                   AND NOT EXISTS (
                     SELECT 1 FROM class_attendance_closures cl
@@ -258,15 +260,15 @@ function createAttendanceRegisterReminderService(db) {
                   )
                 ORDER BY r.scheduled_at, r.id
                 LIMIT 50
-            `, [staffId], client);
+            `, [staffId, now], client);
             const delivered = [];
             for (const reminder of reminders) {
                 const updated = await db.run(`
                     UPDATE attendance_register_reminders
-                    SET status = 'sent', sent_at = CURRENT_TIMESTAMP,
+                    SET status = 'sent', sent_at = ?,
                         attempt_count = attempt_count + 1, last_error = NULL
                     WHERE id = ? AND recipient_staff_id = ? AND status = 'pending'
-                `, [reminder.id, staffId], client);
+                `, [now, reminder.id, staffId], client);
                 if (Number(updated.changes || 0) > 0) delivered.push(reminder.id);
             }
             return delivered;

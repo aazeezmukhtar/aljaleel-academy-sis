@@ -92,7 +92,12 @@ const service=require('../services/attendanceFoundationService');
       effectiveFrom:'2026-10-01',effectiveTo:null,createdBy:7
     }),e=>e.code==='ATTENDANCE_FOUNDATION_CONFLICT','Overlapping responsibility must fail');
 
-    await assert.rejects(()=>service.create('attendance_responsibility',{\n      schoolId:1,classId:101,staffId:8,session:'2026/2027',\n      effectiveFrom:'2026-09-01',effectiveTo:null,createdBy:7\n    }),/does not belong to this school/,'Cross-school responsible staff must fail');\n\n    const closure=await service.create('attendance_closure',{
+    await assert.rejects(()=>service.create('attendance_responsibility',{
+      schoolId:1,classId:101,staffId:8,session:'2026/2027',
+      effectiveFrom:'2026-09-01',effectiveTo:null,createdBy:7
+    }),/does not belong to this school/,'Cross-school responsible staff must fail');
+
+    const closure=await service.create('attendance_closure',{
       schoolId:1,scopeType:'section',sectionId:10,closureDate:'2026-12-25',
       reason:'Public holiday',sourceEventId:500,createdBy:7
     });

@@ -44,3 +44,5 @@ jobs:
         run: node tests/attendance-calendar-foundation-postgres.test.js
       - name: Test attendance foundation services against SQLite
         run: node tests/attendance-calendar-foundation-service.test.js
+      - name: Test attendance foundation services against disposable PostgreSQL
+        run: node tests/attendance-calendar-foundation-postgres-service.test.js

@@ -2,7 +2,7 @@ name: Recovery Baseline Checks
 
 on:
   pull_request:
-    branches: [master, feat/attendance-register-generation, feat/attendance-register-submission, feat/attendance-register-administration, feat/attendance-closure-approval, feat/attendance-reminder-scheduling, feat/attendance-analytics-engine, feat/attendance-analytics-dashboard, feat/attendance-offline-register-sync]
+    branches: [master, feat/attendance-register-generation, feat/attendance-register-submission, feat/attendance-register-administration, feat/attendance-closure-approval, feat/attendance-reminder-scheduling, feat/attendance-analytics-engine, feat/attendance-analytics-dashboard, feat/attendance-offline-register-sync, feat/student-portal-attendance-consistency]
   push:
     branches: [audit/recovery-test-alignment]
 

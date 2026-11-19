@@ -482,6 +482,66 @@ const saveAttendance = async (req, res) => {
     }
 };
 
+// POST /attendance/submit - Validate and submit a server-backed attendance register
+const submitAttendanceRegister = async (req, res) => {
+    const { class_id, date } = req.body || {};
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Session expired' });
+    }
+    if (!class_id || !Number.isSafeInteger(Number(class_id)) || Number(class_id) <= 0 || !date) {
+        return res.status(400).json({ success: false, message: 'A valid class and attendance date are required.' });
+    }
+
+    try {
+        const clazz = await db.get(
+            'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
+            [Number(class_id), schoolId]
+        );
+        if (!clazz || !clazz.section_id) {
+            return res.status(403).json({ success: false, message: 'Class not found or access denied.' });
+        }
+
+        if (user.role !== 'Admin') {
+            const assignedClasses = await getAssignedClasses(user, schoolId);
+            if (!assignedClasses.some(item => String(item.id) === String(class_id))) {
+                return res.status(403).json({ success: false, message: 'Access denied to this class.' });
+            }
+        }
+
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).json({
+                success: false,
+                message: 'The attendance register foundation is not installed. The register cannot be submitted yet.'
+            });
+        }
+
+        const submitted = await attendanceRegisterWorkflow.submitRegister({
+            schoolId,
+            classId: Number(class_id),
+            registerDate: date,
+            actorStaffId: user.id
+        });
+        logAction(user.id, 'SUBMIT_ATTENDANCE_REGISTER', 'ATTENDANCE_REGISTER', {
+            class_id, date, submitted_student_count: submitted.submittedStudentCount
+        }, req.ip);
+
+        return res.json({
+            success: true,
+            message: 'Attendance register submitted successfully.',
+            register: submitted
+        });
+    } catch (err) {
+        console.error('submitAttendanceRegister Error:', err);
+        return res.status(409).json({
+            success: false,
+            message: err.message || 'The attendance register could not be submitted.'
+        });
+    }
+};
+
 // GET /attendance/report - Attendance summary report
 const getReport = async (req, res) => {
     const { class_id, start_date, end_date } = req.query;
@@ -595,5 +655,5 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, getReport, getStaffAttendance, saveStaffAttendance };
+module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, getReport, getStaffAttendance, saveStaffAttendance };
 

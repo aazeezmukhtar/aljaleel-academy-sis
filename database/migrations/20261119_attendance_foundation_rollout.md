@@ -8,7 +8,7 @@ The Phase 7 feature branch requires the dated enrollment history foundation for 
 
 ## Exact migration order
 
-Choose one database engine and execute only its matching SQL file for each step. The attendance foundation is six migrations, with a prerequisite history migration when it is not already correctly installed.
+Choose one database engine and execute only its matching SQL file for each step. The attendance rollout comprises five foundation migrations, plus the prerequisite history migration when it is not already correctly installed.
 
 0. **Prerequisite: student enrollment history**
    - `20261105_student_enrollment_history.sqlite.sql` or `20261105_student_enrollment_history.postgres.sql`
@@ -111,7 +111,7 @@ Do not repair discrepancies by guessing dates or changing historical attendance.
 
 ## Application rollout sequence
 
-1. Verify all six attendance migrations, plus the prerequisite history migration when needed, against disposable SQLite and PostgreSQL 17.6 environments.
+1. Verify all five foundation migrations, plus the prerequisite history migration when needed, against disposable SQLite and PostgreSQL 17.6 environments.
 2. Apply approved migrations manually to the target database, one engine-specific file at a time, in the order above.
 3. Verify schema, row counts, foreign keys, indexes, audit triggers, and dated enrollment coverage using read-only queries.
 4. Deploy the application code only after the database schema is verified.

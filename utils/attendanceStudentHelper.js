@@ -17,6 +17,9 @@ async function getAttendanceRoster(classId, session, schoolId, date, term = null
         // Dated, confirmed placement is authoritative for a register date.
         // Current enrollment rows are consulted only to flag legacy members
         // whose dates are unknown; they never make a student eligible.
+        const termFilter = term ? 'AND a.term = ?' : '';
+        const attendanceParams = [classIdNum, Number(clazz.section_id), date, session];
+        if (term) attendanceParams.push(term);
         const students = await db.all(`
             SELECT DISTINCT s.id, s.first_name, s.last_name, s.admission_number,
                    s.passport_photo_path, a.status
@@ -25,14 +28,13 @@ async function getAttendanceRoster(classId, session, schoolId, date, term = null
               ON ep.student_id = s.id AND ep.school_id = s.school_id
             LEFT JOIN attendance a
               ON a.student_id = s.id AND a.class_id = ? AND a.section_id = ?
-             AND a.date = ? AND a.session = ? AND (? IS NULL OR a.term = ?)
+             AND a.date = ? AND a.session = ? ${termFilter}
             WHERE s.school_id = ? AND ep.section_id = ? AND ep.class_id = ?
               AND ep.session = ? AND ep.date_status = 'confirmed'
               AND ep.start_date <= ? AND (ep.end_date IS NULL OR ep.end_date >= ?)
               AND (s.status = 'active' OR s.status = 'Active' OR s.status IS NULL)
             ORDER BY s.last_name, s.first_name
-        `, [classIdNum, Number(clazz.section_id), date, session, term, term,
-             schoolIdNum, Number(clazz.section_id), classIdNum, session, date, date]);
+        `, [...attendanceParams, schoolIdNum, Number(clazz.section_id), classIdNum, session, date, date]);
 
         const unresolved = await db.get(`
             SELECT COUNT(DISTINCT s.id) AS count
@@ -81,7 +83,7 @@ async function getAttendanceRoster(classId, session, schoolId, date, term = null
         FROM students s
         LEFT JOIN attendance a
           ON a.student_id = s.id AND a.class_id = ? AND a.section_id = ?
-         AND a.date = ? AND (? IS NULL OR a.term = ?)
+         AND a.date = ? ${term ? 'AND a.term = ?' : ''}
         WHERE s.school_id = ?
           AND (s.status = 'active' OR s.status = 'Active' OR s.status IS NULL)
           AND (EXISTS (
@@ -89,7 +91,7 @@ async function getAttendanceRoster(classId, session, schoolId, date, term = null
                 WHERE se.student_id = s.id AND se.class_id = ?
               ) OR s.current_class_id = ?)
         ORDER BY s.last_name, s.first_name
-    `, [classIdNum, Number(clazz.section_id), date, term, term,
+    `, [classIdNum, Number(clazz.section_id), date, ...(term ? [term] : []),
          schoolIdNum, classIdNum, classIdNum]);
     return { students, unknownEnrollmentCount: students.length };
 }

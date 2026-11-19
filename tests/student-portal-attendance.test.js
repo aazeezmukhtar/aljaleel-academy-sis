@@ -39,7 +39,7 @@ assert(view.includes('Approved Leave') && view.includes('counts.missingRegister'
 const dashboardBlock = controller.slice(controller.indexOf('exports.getDashboard = async (req, res) => {'), controller.indexOf('\n};', controller.indexOf('exports.getDashboard = async (req, res) => {')));
 assert(dashboardBlock.includes("require('../services/attendanceAnalyticsService')") && dashboardBlock.includes('attendanceSummaries'),
   'Dashboard attendance summaries must use the shared analytics engine independently for each enrolled section.');
-assert(!dashboardBlock.includes('attendancePercentage') && !/presentCount\\s*\\/\\s*attRows/.test(dashboardBlock),
+assert(!dashboardBlock.includes('attendancePercentage') && !dashboardBlock.includes('attRows'),
   'Dashboard must not retain its old locally calculated, cross-section attendance percentage.');
 assert(dashboardView.includes('attendanceSummaries.forEach') && dashboardView.includes('summary.section_id'),
   'Dashboard must display separate attendance cards for the student\'s enrolled sections.');

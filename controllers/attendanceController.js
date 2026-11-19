@@ -3,6 +3,14 @@ const { logAction } = require('../utils/logger');
 const { getAttendanceStudents } = require('../utils/attendanceStudentHelper');
 const sessionHelper = require('../utils/sessionHelper');
 const { buildWhatsAppAttendanceAction } = require('../utils/whatsappHelper');
+const attendanceRegisterGeneration = require('../services/attendanceRegisterGenerationService');
+const attendanceRegisterWorkflow = require('../services/attendanceRegisterWorkflowService');
+const attendanceRegisterAdministration = require('../services/attendanceRegisterAdministrationService');
+const attendanceClosureService = require('../services/attendanceClosureService');
+const { createAttendanceAnalyticsService } = require('../services/attendanceAnalyticsService');
+const attendanceAnalytics = createAttendanceAnalyticsService(db);
+const { createAttendanceAnalyticsDashboardService } = require('../services/attendanceAnalyticsDashboardService');
+const attendanceAnalyticsDashboard = createAttendanceAnalyticsDashboardService(db, attendanceAnalytics);
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user, schoolId) => {
@@ -17,16 +25,49 @@ const getAssignedClasses = async (user, schoolId) => {
         `, [schoolId]);
     }
     const staffId = Number(user.id);
+    const hasRegisterFoundation = await attendanceRegisterWorkflow.isFoundationAvailable();
+    const responsibilityClause = hasRegisterFoundation
+        ? `OR EXISTS (
+            SELECT 1 FROM class_attendance_responsibilities cr
+            WHERE cr.school_id = c.school_id AND cr.class_id = c.id
+              AND cr.section_id = c.section_id AND cr.staff_id = ?
+              AND cr.effective_from <= ? AND (cr.effective_to IS NULL OR cr.effective_to >= ?)
+        )`
+        : '';
+    const todayParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date()).reduce((result, part) => {
+        if (part.type !== 'literal') result[part.type] = part.value;
+        return result;
+    }, {});
+    const schoolDate = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
+    const params = [staffId, staffId, staffId];
+    if (hasRegisterFoundation) params.push(staffId, schoolDate, schoolDate);
+    params.push(schoolId);
     return await db.all(`
         SELECT DISTINCT c.*, s.name AS section_name
         FROM classes c
         LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
         LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
         LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
-        WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL)
+        WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL ${responsibilityClause})
           AND c.school_id = ?
         ORDER BY s.name ASC, c.name ASC
-    `, [staffId, staffId, staffId, schoolId]);
+    `, params);
+};
+
+// Only an administrator or the responsible teacher snapshotted on the register
+// may record, correct or submit register attendance.
+const hasRegisterAttendanceAuthority = async (user, register, schoolId) => {
+    if (user && user.role === 'Admin') return true;
+    if (!user || !register || !register.responsibility_id) return false;
+    const responsible = await db.get(`
+        SELECT r.staff_id
+        FROM class_attendance_responsibilities r
+        JOIN staff s ON s.id = r.staff_id AND s.school_id = r.school_id
+        WHERE r.id = ? AND r.school_id = ?
+    `, [register.responsibility_id, schoolId]);
+    return !!responsible && String(responsible.staff_id) === String(user.id);
 };
 
 // Resolve academic settings from the class's own section when it belongs to one.
@@ -184,23 +225,77 @@ const getTakeAttendance = async (req, res) => {
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
         const settings = await getAcademicSettings(Number(class_id), schoolId);
+        let register = null;
+        let registerFeatureAvailable = false;
+        let registerSkipReason = null;
+        let students = null;
 
-        const students = await getAttendanceStudents(
-            Number(class_id),
-            settings.session,
-            schoolId,
-            date
-        );
+        // The application remains compatible with databases where the additive
+        // attendance-register migration has not yet been applied.
+        try {
+            registerFeatureAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
+            if (registerFeatureAvailable) {
+                let context = await attendanceRegisterWorkflow.getRegisterContext({
+                    schoolId, classId: Number(class_id), registerDate: date
+                });
+                if (context) {
+                    register = context.register;
+                    students = context.students;
+                    registerSkipReason = context.blockedReason;
+                } else {
+                    const generated = await attendanceRegisterGeneration.generateExpectedRegister({
+                        schoolId,
+                        classId: Number(class_id),
+                        registerDate: date,
+                        generatedBy: user.id
+                    });
+                    if (generated.skipped) registerSkipReason = generated.reason;
+                    context = await attendanceRegisterWorkflow.getRegisterContext({
+                        schoolId, classId: Number(class_id), registerDate: date
+                    });
+                    if (context) {
+                        register = context.register;
+                        students = context.students;
+                        registerSkipReason = context.blockedReason;
+                    }
+                }
+            }
+        } catch (registerError) {
+            // Fail closed to the established attendance sheet. Do not prevent
+            // ordinary attendance entry if register setup is incomplete.
+            console.error('Attendance register preparation unavailable:', registerError);
+            registerSkipReason = 'register_preparation_unavailable';
+        }
 
+        if (!students) {
+            students = await getAttendanceStudents(
+                Number(class_id),
+                settings.session,
+                schoolId,
+                date
+            );
+        }
+
+        const registerBlocked = ['approved_closure', 'not_a_scheduled_day', 'register_preparation_unavailable'].includes(registerSkipReason);
+        const locked = !!register && ['submitted', 'closed'].includes(register.status);
+        const canManageRegister = register
+            ? await hasRegisterAttendanceAuthority(user, register, schoolId)
+            : true;
+        const readOnly = registerBlocked || (!!register && (locked || !canManageRegister));
         res.render('attendance/take', {
             title: 'Mark Attendance',
             clazz,
             class_id,
             date,
             students,
-            currentTerm: settings.term,
-            currentSession: settings.session,
-            readOnly: false,
+            currentTerm: register ? register.term : settings.term,
+            currentSession: register ? register.session : settings.session,
+            register,
+            registerFeatureAvailable,
+            registerSkipReason,
+            readOnly,
+            canEdit: !registerBlocked && !locked && canManageRegister,
+            isAdmin: user.role === 'Admin',
             hasRecords: true
         });
     } catch (err) {
@@ -266,23 +361,49 @@ const getPreviousDayAttendance = async (req, res) => {
             ? { session: rows[0].session, term: rows[0].term }
             : await getAcademicSettings(Number(class_id), schoolId);
 
-        const students = await getAttendanceStudents(
-            Number(class_id), settings.session, schoolId, date
-        );
-        const statusByStudent = new Map(rows.map(row => [String(row.student_id), row.status]));
-        students.forEach(student => {
-            student.status = statusByStudent.get(String(student.id)) || null;
-        });
+        let register = null;
+        let registerFeatureAvailable = false;
+        let registerSkipReason = null;
+        let registerContext = null;
+        try {
+            registerFeatureAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
+            if (registerFeatureAvailable) {
+                registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+                    schoolId, classId: Number(class_id), registerDate: date
+                });
+            }
+        } catch (registerError) {
+            console.error('Previous-day attendance register lookup unavailable:', registerError);
+            registerSkipReason = 'register_lookup_unavailable';
+        }
 
+        let students = registerContext
+            ? registerContext.students
+            : await getAttendanceStudents(Number(class_id), settings.session, schoolId, date);
+        if (registerContext) {
+            register = registerContext.register;
+        } else {
+            const statusByStudent = new Map(rows.map(row => [String(row.student_id), row.status]));
+            students.forEach(student => {
+                student.status = statusByStudent.get(String(student.id)) || null;
+            });
+        }
+
+        const locked = !!register && ['submitted', 'closed'].includes(register.status);
         res.render('attendance/take', {
             title: "Yesterday's Attendance",
             clazz,
             class_id,
             date,
             students,
-            currentTerm: settings.term,
-            currentSession: settings.session,
+            currentTerm: register ? register.term : settings.term,
+            currentSession: register ? register.session : settings.session,
+            register,
+            registerFeatureAvailable,
+            registerSkipReason,
             readOnly: true,
+            canEdit: !locked && !(registerContext && registerContext.blockedReason) && (register ? await hasRegisterAttendanceAuthority(user, register, schoolId) : true),
+            isAdmin: user.role === 'Admin',
             hasRecords
         });
     } catch (err) {
@@ -320,6 +441,65 @@ const saveAttendance = async (req, res) => {
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Access Denied to this class' });
         }
 
+        const registerFoundationAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
+        if (registerFoundationAvailable) {
+            let registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+                schoolId, classId: Number(class_id), registerDate: date
+            });
+            if (registerContext && registerContext.blockedReason === 'approved_closure') {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Attendance cannot be recorded because an approved closure covers this date.'
+                });
+            }
+            if (!registerContext) {
+                const generated = await attendanceRegisterGeneration.generateExpectedRegister({
+                    schoolId,
+                    classId: Number(class_id),
+                    registerDate: date,
+                    generatedBy: user.id
+                });
+                if (generated.skipped && ['approved_closure', 'not_a_scheduled_day'].includes(generated.reason)) {
+                    return res.status(409).json({
+                        success: false,
+                        message: generated.reason === 'approved_closure'
+                            ? 'Attendance cannot be recorded because an approved closure covers this date.'
+                            : 'Attendance cannot be recorded because this class is not scheduled to open on this date.'
+                    });
+                }
+                registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+                    schoolId, classId: Number(class_id), registerDate: date
+                });
+            }
+            if (registerContext) {
+                if (!(await hasRegisterAttendanceAuthority(user, registerContext.register, schoolId))) {
+                    return res.status(403).json({
+                        success: false,
+                        message: 'Only an administrator or the responsible class teacher may record this register.'
+                    });
+                }
+                const saved = await attendanceRegisterWorkflow.saveRegisterProgress({
+                    schoolId,
+                    classId: Number(class_id),
+                    registerDate: date,
+                    actorStaffId: user.id,
+                    isAdministrator: user.role === 'Admin',
+                    attendance: attendance || {},
+                    reasons: reasons || {},
+                    customReasons: custom_reasons || {}
+                });
+                logAction(user.id, 'SAVE_ATTENDANCE_PROGRESS', 'ATTENDANCE_REGISTER', {
+                    class_id, date, changed_count: saved.changedStudentCount,
+                    saved_student_count: saved.savedStudentCount
+                }, req.ip);
+                return res.json({
+                    success: true,
+                    message: 'Attendance progress saved. Submit the register when every student has a deliberate status.',
+                    register: saved
+                });
+            }
+        }
+
         const sql = `
             INSERT INTO attendance
                 (student_id, class_id, section_id, date, status, session, term, reason, reason_type, custom_reason)
@@ -343,10 +523,13 @@ const saveAttendance = async (req, res) => {
             });
         }
 
-        await db.transaction(async () => {
+        await db.transaction(async (client) => {
             for (const [studentIdStr, status] of Object.entries(attendance || {})) {
                 const student_id = Number(studentIdStr);
-                if (isNaN(student_id)) continue;
+                if (!Number.isSafeInteger(student_id) || student_id <= 0) continue;
+                if (status !== 'Not recorded' && !['Present', 'Absent', 'Late', 'Leave'].includes(status)) {
+                    throw new Error('Unsupported attendance status for student ' + student_id + '.');
+                }
 
                 // Validate tenant ownership and membership in the selected class/session.
                 // Preserve the legacy current_class_id fallback only when the student has
@@ -372,18 +555,47 @@ const saveAttendance = async (req, res) => {
                         )
                       )
                 `, [student_id, schoolId, Number(class_id), effectiveSession,
-                    Number(class_id), effectiveSession]);
+                    Number(class_id), effectiveSession], client);
                 if (!studentCheck) continue;
-                
+
+                const existing = await db.get(`
+                    SELECT id, class_id, status, reason, reason_type, custom_reason
+                    FROM attendance
+                    WHERE student_id = ? AND section_id = ? AND date = ? AND session = ? AND term = ?
+                `, [student_id, Number(classCheck.section_id), date, effectiveSession, effectiveTerm], client);
+
+                if (existing && Number(existing.class_id) !== Number(class_id)) {
+                    throw new Error('An attendance record for this student already belongs to another class in this section and period.');
+                }
+
+                if (status === 'Not recorded') {
+                    if (existing) {
+                        await db.run('DELETE FROM attendance WHERE id = ?', [existing.id], client);
+                        if (registerFoundationAvailable) {
+                            await db.run(`
+                                INSERT INTO attendance_foundation_audit_logs
+                                    (entity_type, entity_id, action, actor_staff_id, before_data, after_data, reason)
+                                VALUES ('attendance', ?, 'attendance_status_cleared', ?, ?, NULL,
+                                        'Attendance status cleared to unmarked.')
+                            `, [existing.id, user.id, JSON.stringify({
+                                status: existing.status,
+                                reason: existing.reason,
+                                reason_type: existing.reason_type,
+                                custom_reason: existing.custom_reason
+                            })], client);
+                        }
+                    }
+                    continue;
+                }
+
                 const rawReason = reasons[studentIdStr] || null;
                 const customReason = custom_reasons[studentIdStr] || null;
-                
+
                 let reason = rawReason;
                 if (rawReason === 'Other' && customReason) {
-
                     reason = customReason;
                 }
-                
+
                 await db.run(sql, [
                     student_id,
                     Number(class_id),
@@ -395,7 +607,38 @@ const saveAttendance = async (req, res) => {
                     reason,
                     rawReason,
                     customReason
-                ]);
+                ], client);
+
+                const changed = !existing || existing.status !== status ||
+                    existing.reason !== reason || existing.reason_type !== rawReason ||
+                    existing.custom_reason !== customReason;
+                if (registerFoundationAvailable && changed) {
+                    const stored = await db.get(`
+                        SELECT id FROM attendance
+                        WHERE student_id = ? AND class_id = ? AND section_id = ?
+                          AND date = ? AND session = ? AND term = ?
+                    `, [student_id, Number(class_id), Number(classCheck.section_id),
+                        date, effectiveSession, effectiveTerm], client);
+                    await db.run(`
+                        INSERT INTO attendance_foundation_audit_logs
+                            (entity_type, entity_id, action, actor_staff_id, before_data, after_data, reason)
+                        VALUES ('attendance', ?, ?, ?, ?, ?, ?)
+                    `, [
+                        stored.id,
+                        existing ? 'attendance_status_updated' : 'attendance_status_created',
+                        user.id,
+                        existing ? JSON.stringify({
+                            status: existing.status,
+                            reason: existing.reason,
+                            reason_type: existing.reason_type,
+                            custom_reason: existing.custom_reason
+                        }) : null,
+                        JSON.stringify({
+                            status, reason, reason_type: rawReason, custom_reason: customReason
+                        }),
+                        existing ? 'Attendance status or reason corrected.' : 'Attendance status recorded.'
+                    ], client);
+                }
             }
         });
 
@@ -414,6 +657,239 @@ const saveAttendance = async (req, res) => {
     }
 };
 
+// POST /attendance/submit - Validate and submit a server-backed attendance register
+const submitAttendanceRegister = async (req, res) => {
+    const { class_id, date } = req.body || {};
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Session expired' });
+    }
+    if (!class_id || !Number.isSafeInteger(Number(class_id)) || Number(class_id) <= 0 || !date) {
+        return res.status(400).json({ success: false, message: 'A valid class and attendance date are required.' });
+    }
+
+    try {
+        const clazz = await db.get(
+            'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
+            [Number(class_id), schoolId]
+        );
+        if (!clazz || !clazz.section_id) {
+            return res.status(403).json({ success: false, message: 'Class not found or access denied.' });
+        }
+
+        if (user.role !== 'Admin') {
+            const assignedClasses = await getAssignedClasses(user, schoolId);
+            if (!assignedClasses.some(item => String(item.id) === String(class_id))) {
+                return res.status(403).json({ success: false, message: 'Access denied to this class.' });
+            }
+        }
+
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).json({
+                success: false,
+                message: 'The attendance register foundation is not installed. The register cannot be submitted yet.'
+            });
+        }
+
+        let registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+            schoolId, classId: Number(class_id), registerDate: date
+        });
+        if (registerContext && registerContext.blockedReason === 'approved_closure') {
+            return res.status(409).json({
+                success: false,
+                message: 'This date is covered by an approved closure; the register cannot be submitted.'
+            });
+        }
+        if (!registerContext) {
+            const generated = await attendanceRegisterGeneration.generateExpectedRegister({
+                schoolId,
+                classId: Number(class_id),
+                registerDate: date,
+                generatedBy: user.id
+            });
+            if (generated.skipped && ['approved_closure', 'not_a_scheduled_day'].includes(generated.reason)) {
+                return res.status(409).json({
+                    success: false,
+                    message: generated.reason === 'approved_closure'
+                        ? 'This date is covered by an approved closure; the register cannot be submitted.'
+                        : 'This class is not scheduled to open on this date; the register cannot be submitted.'
+                });
+            }
+            registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+                schoolId, classId: Number(class_id), registerDate: date
+            });
+        }
+        if (registerContext && !(await hasRegisterAttendanceAuthority(user, registerContext.register, schoolId))) {
+            return res.status(403).json({
+                success: false,
+                message: 'Only an administrator or the responsible class teacher may submit this register.'
+            });
+        }
+
+        const submitted = await attendanceRegisterWorkflow.submitRegister({
+            schoolId,
+            classId: Number(class_id),
+            registerDate: date,
+            actorStaffId: user.id,
+            isAdministrator: user.role === 'Admin'
+        });
+        logAction(user.id, 'SUBMIT_ATTENDANCE_REGISTER', 'ATTENDANCE_REGISTER', {
+            class_id, date, submitted_student_count: submitted.submittedStudentCount
+        }, req.ip);
+
+        return res.json({
+            success: true,
+            message: 'Attendance register submitted successfully.',
+            register: submitted
+        });
+    } catch (err) {
+        console.error('submitAttendanceRegister Error:', err);
+        return res.status(409).json({
+            success: false,
+            message: err.message || 'The attendance register could not be submitted.'
+        });
+    }
+};
+
+// POST /attendance/reopen - Reopen a submitted register for administrator-approved correction
+const reopenAttendanceRegister = async (req, res) => {
+    const { class_id, date, reason } = req.body || {};
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Session expired' });
+    }
+    if (user.role !== 'Admin') {
+        return res.status(403).json({ success: false, message: 'Only an administrator may reopen a submitted register.' });
+    }
+    if (!class_id || !Number.isSafeInteger(Number(class_id)) || Number(class_id) <= 0 || !date) {
+        return res.status(400).json({ success: false, message: 'A valid class and attendance date are required.' });
+    }
+
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).json({ success: false, message: 'The attendance register foundation is not installed.' });
+        }
+        const reopened = await attendanceRegisterAdministration.reopenRegister({
+            schoolId,
+            classId: Number(class_id),
+            registerDate: date,
+            actorStaffId: user.id,
+            reason
+        });
+        logAction(user.id, 'REOPEN_ATTENDANCE_REGISTER', 'ATTENDANCE_REGISTER', {
+            class_id, date, register_id: reopened.registerId, reason: reopened.reason
+        }, req.ip);
+        return res.json({
+            success: true,
+            message: 'Attendance register reopened. The correction is recorded in the audit history.',
+            register: reopened
+        });
+    } catch (err) {
+        console.error('reopenAttendanceRegister Error:', err);
+        return res.status(409).json({
+            success: false,
+            message: err.message || 'The attendance register could not be reopened.'
+        });
+    }
+};
+
+// GET /attendance/closures - Request and administer attendance closures
+const getAttendanceClosures = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).render('attendance/closures', {
+                title: 'Attendance Closures', user, isAdmin: user.role === 'Admin',
+                classes: [], sections: [], closures: [],
+                error: 'The attendance register foundation is not installed yet.'
+            });
+        }
+        const classes = await getAssignedClasses(user, schoolId);
+        const sections = user.role === 'Admin'
+            ? await db.all('SELECT id, name FROM sections WHERE school_id = ? ORDER BY name', [schoolId])
+            : [];
+        const closures = await attendanceClosureService.listClosures({ schoolId, actorStaffId: user.id });
+        return res.render('attendance/closures', {
+            title: 'Attendance Closures', user, isAdmin: user.role === 'Admin',
+            classes, sections, closures, error: null
+        });
+    } catch (err) {
+        console.error('getAttendanceClosures Error:', err);
+        return res.status(500).send('Could not load attendance closures.');
+    }
+};
+
+// POST /attendance/closures/request
+const requestAttendanceClosure = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).json({ success: false, message: 'The attendance register foundation is not installed.' });
+        }
+        const result = await attendanceClosureService.requestClosure({
+            schoolId, actorStaffId: user.id,
+            scopeType: req.body.scope_type,
+            sectionId: req.body.section_id,
+            classId: req.body.class_id,
+            startDate: req.body.start_date,
+            endDate: req.body.end_date,
+            reason: req.body.reason
+        });
+        logAction(user.id, 'REQUEST_ATTENDANCE_CLOSURE', 'ATTENDANCE_CLOSURE', {
+            closure_id: result.closureId, scope_type: result.scope_type,
+            start_date: result.startDate, end_date: result.endDate
+        }, req.ip);
+        return res.json({ success: true, message: 'Closure request submitted for administrator review.', closure: result });
+    } catch (err) {
+        return res.status(409).json({ success: false, message: err.message || 'Closure request failed.' });
+    }
+};
+
+// POST /attendance/closures/decide
+const decideAttendanceClosure = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
+    if (user.role !== 'Admin') return res.status(403).json({ success: false, message: 'Only an administrator may decide closure requests.' });
+    try {
+        const result = await attendanceClosureService.decideClosure({
+            schoolId, closureId: req.body.closure_id, actorStaffId: user.id,
+            decision: req.body.decision, reason: req.body.reason
+        });
+        logAction(user.id, 'DECIDE_ATTENDANCE_CLOSURE', 'ATTENDANCE_CLOSURE', {
+            closure_id: result.closureId, decision: result.status
+        }, req.ip);
+        return res.json({ success: true, message: 'Closure request ' + result.status + '.', closure: result });
+    } catch (err) {
+        return res.status(409).json({ success: false, message: err.message || 'Closure decision failed.' });
+    }
+};
+
+// POST /attendance/closures/cancel
+const cancelAttendanceClosure = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
+    try {
+        const result = await attendanceClosureService.cancelClosure({
+            schoolId, closureId: req.body.closure_id, actorStaffId: user.id
+        });
+        logAction(user.id, 'CANCEL_ATTENDANCE_CLOSURE', 'ATTENDANCE_CLOSURE', {
+            closure_id: result.closureId
+        }, req.ip);
+        return res.json({ success: true, message: 'Closure request cancelled.', closure: result });
+    } catch (err) {
+        return res.status(409).json({ success: false, message: err.message || 'Closure cancellation failed.' });
+    }
+};
+
 // GET /attendance/report - Attendance summary report
 const getReport = async (req, res) => {
     const { class_id, start_date, end_date } = req.query;
@@ -423,30 +899,32 @@ const getReport = async (req, res) => {
         const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
         const classes = await getAssignedClasses(user, schoolId);
         let reportData = null;
+        let reportMeta = null;
 
         if (class_id && start_date && end_date) {
-            if (user.role !== 'Admin') {
-                const hasAccess = classes.some(c => String(c.id) === String(class_id));
-                if (!hasAccess) {
+            if (user.role !== 'Admin' && !classes.some(c => String(c.id) === String(class_id))) {
+                reportData = [];
+            } else {
+                const selectedClass = await db.get(
+                    'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
+                    [Number(class_id), schoolId]
+                );
+                if (!selectedClass || !selectedClass.section_id) {
                     reportData = [];
+                } else {
+                    const report = await attendanceAnalytics.getClassAttendanceReport({
+                        schoolId,
+                        classId: Number(class_id),
+                        sectionId: Number(selectedClass.section_id),
+                        startDate: start_date,
+                        endDate: end_date
+                    });
+                    reportData = report.rows;
+                    reportMeta = {
+                        threshold: report.threshold,
+                        registerCompletion: report.registerCompletion
+                    };
                 }
-            }
-
-            if (reportData === null) {
-                reportData = await db.all(`
-                    SELECT s.first_name, s.last_name,
-                    SUM(CASE WHEN a.status = 'Present' THEN 1 ELSE 0 END) as present,
-                    SUM(CASE WHEN a.status = 'Absent' THEN 1 ELSE 0 END) as absent,
-                    SUM(CASE WHEN a.status = 'Late' THEN 1 ELSE 0 END) as late,
-                    SUM(CASE WHEN a.status = 'Leave' THEN 1 ELSE 0 END) as leave,
-                    COUNT(a.id) as total_days
-                    FROM students s
-                    JOIN attendance a ON s.id = a.student_id
-                    JOIN classes c ON c.id = a.class_id AND c.school_id = s.school_id
-                    WHERE a.class_id = ? AND a.date BETWEEN ? AND ? AND s.school_id = ?
-                    GROUP BY s.id
-                    ORDER BY s.last_name, s.first_name
-                `, [Number(class_id), start_date, end_date, schoolId]);
             }
         }
 
@@ -455,11 +933,114 @@ const getReport = async (req, res) => {
             classes,
             user,
             reportData,
+            reportMeta,
             filters: { class_id, start_date, end_date }
         });
     } catch (err) {
         console.error('Attendance Report Error:', err);
         res.status(500).send('Database Error');
+    }
+};
+
+// GET /attendance/analytics - section-aware attendance analytics dashboard
+const getAttendanceAnalytics = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
+    try {
+        const classes = await getAssignedClasses(user, schoolId);
+        const accessibleSectionIds = Array.from(new Set(classes.map(item => Number(item.section_id))
+            .filter(value => Number.isSafeInteger(value) && value > 0)));
+        const sections = accessibleSectionIds.length
+            ? await db.all(`
+                SELECT id, name FROM sections
+                WHERE school_id = ? AND id IN (${accessibleSectionIds.map(() => '?').join(',')})
+                ORDER BY name, id
+            `, [schoolId, ...accessibleSectionIds])
+            : [];
+        const foundationAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
+        if (!foundationAvailable) {
+            return res.status(409).render('attendance/analytics', {
+                title: 'Attendance Analytics', user, sections, classes: [],
+                periods: [], filters: {}, dashboard: null,
+                error: 'Attendance register foundation is not installed yet.'
+            });
+        }
+        const requestedSectionId = Number(req.query.section_id);
+        const selectedSection = sections.find(item => Number(item.id) === requestedSectionId) || sections[0] || null;
+        if (!selectedSection) {
+            return res.render('attendance/analytics', {
+                title: 'Attendance Analytics', user, sections, classes: [],
+                periods: [], filters: {}, dashboard: null,
+                error: 'No attendance sections are assigned to this account.'
+            });
+        }
+        const sectionClasses = classes.filter(item => String(item.section_id) === String(selectedSection.id));
+        const periods = await db.all(`
+            SELECT session, term, start_date, end_date
+            FROM section_academic_periods
+            WHERE school_id = ? AND section_id = ? AND status <> 'cancelled'
+            ORDER BY start_date DESC, term DESC
+        `, [schoolId, selectedSection.id]);
+        const requestedPeriod = periods.find(item =>
+            item.session === req.query.session && item.term === req.query.term
+        ) || periods.find(item => item.session === req.query.session);
+        const selectedPeriod = requestedPeriod || periods[0] || null;
+        if (!selectedPeriod) {
+            return res.render('attendance/analytics', {
+                title: 'Attendance Analytics', user, sections,
+                classes: sectionClasses, periods, filters: { section_id: selectedSection.id },
+                dashboard: null, error: 'No academic period is configured for this section.'
+            });
+        }
+        const todayParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+        }).formatToParts(new Date()).reduce((result, part) => {
+            if (part.type !== 'literal') result[part.type] = part.value;
+            return result;
+        }, {});
+        const today = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
+        const periodStart = selectedPeriod.start_date instanceof Date
+            ? selectedPeriod.start_date.toISOString().slice(0, 10) : String(selectedPeriod.start_date).slice(0, 10);
+        const periodEnd = selectedPeriod.end_date instanceof Date
+            ? selectedPeriod.end_date.toISOString().slice(0, 10) : String(selectedPeriod.end_date).slice(0, 10);
+        const startDate = req.query.start_date || periodStart;
+        const defaultEndDate = today < periodStart ? periodStart : (today < periodEnd ? today : periodEnd);
+        const endDate = req.query.end_date || defaultEndDate;
+        const requestedClassId = req.query.class_id ? Number(req.query.class_id) : null;
+        const selectedClasses = requestedClassId
+            ? sectionClasses.filter(item => Number(item.id) === requestedClassId)
+            : sectionClasses;
+        const dashboard = await attendanceAnalyticsDashboard.getDashboard({
+            schoolId,
+            sectionId: Number(selectedSection.id),
+            session: selectedPeriod.session,
+            term: selectedPeriod.term,
+            startDate,
+            endDate,
+            classIds: selectedClasses.map(item => item.id)
+        });
+        return res.render('attendance/analytics', {
+            title: 'Attendance Analytics', user, sections,
+            classes: sectionClasses, periods,
+            filters: {
+                section_id: selectedSection.id,
+                class_id: requestedClassId && selectedClasses.length ? requestedClassId : '',
+                session: selectedPeriod.session,
+                term: selectedPeriod.term,
+                start_date: dashboard.filters.startDate,
+                end_date: dashboard.filters.endDate
+            },
+            dashboard,
+            error: requestedClassId && !selectedClasses.length
+                ? 'The selected class is not available in this section.' : null
+        });
+    } catch (err) {
+        console.error('Attendance Analytics Error:', err);
+        return res.status(400).render('attendance/analytics', {
+            title: 'Attendance Analytics', user, sections: [], classes: [],
+            periods: [], filters: req.query, dashboard: null,
+            error: err.message || 'Could not load attendance analytics.'
+        });
     }
 };
 
@@ -527,5 +1108,5 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, getReport, getStaffAttendance, saveStaffAttendance };
+module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getAttendanceAnalytics, getStaffAttendance, saveStaffAttendance };
 

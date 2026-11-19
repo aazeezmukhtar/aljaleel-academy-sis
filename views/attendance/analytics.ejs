@@ -1,0 +1,195 @@
+<%- include('../partials/header') %>
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+    <main class="main-content">
+        <header style="margin-bottom:24px;">
+            <a href="/attendance" style="color:var(--primary);text-decoration:none;font-weight:600;">&larr; Attendance</a>
+            <h1 style="margin-top:10px;">Attendance Analytics</h1>
+            <p>Attendance performance, register completion and low-attendance monitoring by section.</p>
+        </header>
+
+        <% if (error) { %>
+        <div class="alert alert-warning" role="alert"><%= error %></div>
+        <% } %>
+
+        <section class="card" style="margin-bottom:20px;">
+            <form action="/attendance/analytics" method="GET" class="grid-2" style="gap:14px;align-items:end;">
+                <div class="form-group">
+                    <label for="analytics-section">Section</label>
+                    <select id="analytics-section" name="section_id" class="form-control" required onchange="this.form.class_id.value='';this.form.session.value='';this.form.term.value='';this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
+                        <% sections.forEach(section => { %>
+                        <option value="<%= section.id %>" <%= String(filters.section_id) === String(section.id) ? 'selected' : '' %>><%= section.name %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="analytics-class">Class</label>
+                    <select id="analytics-class" name="class_id" class="form-control" onchange="this.form.submit()">
+                        <option value="">All accessible classes</option>
+                        <% classes.forEach(clazz => { %>
+                        <option value="<%= clazz.id %>" <%= String(filters.class_id) === String(clazz.id) ? 'selected' : '' %>><%= clazz.name %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="analytics-session">Session</label>
+                    <select id="analytics-session" name="session" class="form-control" required onchange="this.form.term.value='';this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
+                        <% Array.from(new Set(periods.map(period => period.session))).forEach(session => { %>
+                        <option value="<%= session %>" <%= filters.session === session ? 'selected' : '' %>><%= session %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="analytics-term">Term</label>
+                    <select id="analytics-term" name="term" class="form-control" required onchange="this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
+                        <% periods.filter(period => period.session === filters.session).forEach(period => { %>
+                        <option value="<%= period.term %>" <%= filters.term === period.term ? 'selected' : '' %>><%= period.term %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="analytics-start">Start date</label>
+                    <input id="analytics-start" type="date" name="start_date" class="form-control" value="<%= filters.start_date || '' %>" required>
+                </div>
+                <div class="form-group">
+                    <label for="analytics-end">End date</label>
+                    <input id="analytics-end" type="date" name="end_date" class="form-control" value="<%= filters.end_date || '' %>" required>
+                </div>
+                <button class="btn" type="submit" style="width:100%;">Apply filters</button>
+            </form>
+        </section>
+
+        <% if (dashboard) { %>
+        <section class="grid-2" style="gap:14px;margin-bottom:20px;">
+            <div class="card">
+                <div style="font-size:.85rem;color:var(--text-muted);">Attendance rate</div>
+                <div style="font-size:2rem;font-weight:700;"><%= dashboard.overview.attendanceRate === null ? '—' : dashboard.overview.attendanceRate + '%' %></div>
+                <div style="font-size:.8rem;color:var(--text-muted);"><%= dashboard.overview.attendedStudentDays %> attended of <%= dashboard.overview.totalStudentDays %> marked student-days</div>
+            </div>
+            <div class="card">
+                <div style="font-size:.85rem;color:var(--text-muted);">Register completion</div>
+                <div style="font-size:2rem;font-weight:700;"><%= dashboard.registerCompletion.completionRate === null ? '—' : dashboard.registerCompletion.completionRate + '%' %></div>
+                <div style="font-size:.8rem;color:var(--text-muted);"><%= dashboard.registerCompletion.submittedRegisters %> submitted of <%= dashboard.registerCompletion.expectedClassDays %> expected class-days</div>
+            </div>
+            <div class="card">
+                <div style="font-size:.85rem;color:var(--text-muted);">Low-attendance students</div>
+                <div style="font-size:2rem;font-weight:700;"><%= dashboard.overview.lowAttendanceCount %></div>
+                <div style="font-size:.8rem;color:var(--text-muted);">Below their class's configured threshold</div>
+            </div>
+            <div class="card">
+                <div style="font-size:.85rem;color:var(--text-muted);">Late arrivals</div>
+                <div style="font-size:2rem;font-weight:700;"><%= dashboard.overview.lateArrivals %></div>
+                <div style="font-size:.8rem;color:var(--text-muted);">Late marks in the selected period</div>
+            </div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px;">
+            <h2 class="h5">Expected class-day register status</h2>
+            <p class="text-muted small">Approved closures are excluded. An incomplete or missing register is not treated as student absence.</p>
+            <div class="grid-2" style="gap:12px;">
+                <div><strong><%= dashboard.registerCompletion.expectedClassDays %></strong><div class="text-muted small">Expected class-days</div></div>
+                <div><strong><%= dashboard.registerCompletion.submittedRegisters %></strong><div class="text-muted small">Submitted registers</div></div>
+                <div><strong><%= dashboard.registerCompletion.incompleteRegisters %></strong><div class="text-muted small">Incomplete / reopened registers</div></div>
+                <div><strong><%= dashboard.registerCompletion.missingRegisters %></strong><div class="text-muted small">Missing registers</div></div>
+            </div>
+        </section>
+
+        <section class="card" style="margin-bottom:20px;">
+            <h2 class="h5">Class comparison</h2>
+            <% if (dashboard.classComparison.length) { %>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Class</th><th>Attendance</th><th>Expected days</th><th>Submitted</th><th>Incomplete</th><th>Missing</th><th>Low attendance</th></tr></thead>
+                    <tbody>
+                    <% dashboard.classComparison.forEach(item => { %>
+                        <tr>
+                            <td><strong><%= item.className %></strong></td>
+                            <td><%= item.attendanceRate === null ? '—' : item.attendanceRate + '%' %></td>
+                            <td><%= item.expectedClassDays %></td>
+                            <td><%= item.submittedRegisters %></td>
+                            <td><%= item.incompleteRegisters %></td>
+                            <td><%= item.missingRegisters %></td>
+                            <td><%= item.lowAttendanceCount %></td>
+                        </tr>
+                    <% }); %>
+                    </tbody>
+                </table>
+            </div>
+            <% } else { %><p class="text-muted mb-0">No class data is available for this filter.</p><% } %>
+        </section>
+
+        <section class="card" style="margin-bottom:20px;">
+            <h2 class="h5">Daily attendance trend</h2>
+            <% if (dashboard.dailySummary.length) { %>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Date</th><th>Attendance rate</th><th>Expected</th><th>Submitted</th><th>Incomplete</th><th>Missing</th><th>Present</th><th>Late</th><th>Absent</th><th>Leave</th></tr></thead>
+                    <tbody>
+                    <% dashboard.dailySummary.forEach(day => { %>
+                        <tr>
+                            <td><%= day.date %></td>
+                            <td style="min-width:120px;">
+                                <strong><%= day.attendanceRate === null ? '—' : day.attendanceRate + '%' %></strong>
+                                <div style="height:5px;background:var(--border-color,#e5e7eb);border-radius:5px;margin-top:5px;overflow:hidden;">
+                                    <div style="height:5px;width:<%= day.attendanceRate === null ? 0 : day.attendanceRate %>%;background:var(--primary);"></div>
+                                </div>
+                            </td>
+                            <td><%= day.expectedClassDays %></td>
+                            <td><%= day.submittedRegisters %></td>
+                            <td><%= day.incompleteRegisters %></td>
+                            <td><%= day.missingRegisters %></td>
+                            <td><%= day.present %></td>
+                            <td><%= day.late %></td>
+                            <td><%= day.absent %></td>
+                            <td><%= day.leave %></td>
+                        </tr>
+                    <% }); %>
+                    </tbody>
+                </table>
+            </div>
+            <% } else { %><p class="text-muted mb-0">No scheduled class-days fall within this date range.</p><% } %>
+        </section>
+
+        <section class="card" style="margin-bottom:20px;">
+            <h2 class="h5">Students below attendance threshold</h2>
+            <% if (dashboard.lowAttendanceStudents.length) { %>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Student</th><th>Class</th><th>Attendance</th><th>Threshold</th><th>Attended days</th><th>Absent</th><th>Late</th></tr></thead>
+                    <tbody>
+                    <% dashboard.lowAttendanceStudents.forEach(student => { %>
+                        <tr>
+                            <td><strong><%= student.studentName %></strong></td>
+                            <td><%= student.className %></td>
+                            <td><span class="text-danger fw-bold"><%= student.attendanceRate %>%</span></td>
+                            <td><%= student.threshold %>%</td>
+                            <td><%= student.attendedDays %> / <%= student.totalDays %></td>
+                            <td><%= student.absent %></td>
+                            <td><%= student.late %></td>
+                        </tr>
+                    <% }); %>
+                    </tbody>
+                </table>
+            </div>
+            <% } else { %><p class="text-muted mb-0">No students are below their configured class threshold.</p><% } %>
+        </section>
+
+        <section class="card">
+            <h2 class="h5">Most late arrivals</h2>
+            <% if (dashboard.topLateStudents.length) { %>
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead><tr><th>Student</th><th>Class</th><th>Late marks</th></tr></thead>
+                    <tbody>
+                    <% dashboard.topLateStudents.forEach(student => { %>
+                        <tr><td><strong><%= student.studentName %></strong></td><td><%= student.className %></td><td><%= student.late %></td></tr>
+                    <% }); %>
+                    </tbody>
+                </table>
+            </div>
+            <% } else { %><p class="text-muted mb-0">No late marks in this period.</p><% } %>
+        </section>
+        <% } %>
+    </main>
+</div>
+<%- include('../partials/footer') %>

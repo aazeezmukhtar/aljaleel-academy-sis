@@ -80,3 +80,16 @@ placement dates overlap the selected month, and include students with recorded
 attendance in that month to preserve legacy evidence. Legacy enrollment dates
 are not inferred. The dated-period migration must exist before this report
 query is deployed.
+
+
+## Attendance register foundation (2026-11-19)
+
+Files:
+
+- `20261119_attendance_register_foundation.postgres.sql`
+- `20261119_attendance_register_foundation.sqlite.sql`
+- `20261119_attendance_register_foundation.md`
+
+This additive/manual migration creates the section academic-period, class schedule, staff responsibility, class settings, closure, register, expected-student snapshot, event, reminder, and audit tables. It leaves the existing `attendance` table and all existing attendance rows unchanged. It relies on the previously introduced `student_enrollment_periods` table for dated roster membership. No historical dates or schedules are inferred. It is not wired into startup.
+
+Run the SQLite disposable migration test with `npm run test:attendance-register-sqlite`. Run PostgreSQL only against a disposable PostgreSQL 17.6 database with `PG_TEST_URL` set, using `npm run test:attendance-register-postgres`. Never point that test at production Supabase. See the dedicated migration note for invariants, application work still required, and production safety gates.

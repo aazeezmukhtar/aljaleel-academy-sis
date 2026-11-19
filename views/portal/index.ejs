@@ -86,19 +86,26 @@
                     <h2 class="acm-section-title">Quick Status</h2>
                     <div class="acm-quick-grid">
                         
-                        <!-- Attendance -->
-                        <a href="/portal/attendance" class="acm-quick-card acm-card-link">
-                            <h3 class="acm-quick-title">Attendance</h3>
-                            <% if (attendancePercentage !== null) { %>
-                                <div class="acm-quick-value"><%= attendancePercentage %>%</div>
-                            <% } else { %>
+                        <!-- Attendance: one independently calculated card per section -->
+                        <% if (attendanceSummaries && attendanceSummaries.length > 0) { %>
+                            <% attendanceSummaries.forEach(summary => { %>
+                            <a href="/portal/attendance?section_id=<%= summary.section_id %>" class="acm-quick-card acm-card-link">
+                                <h3 class="acm-quick-title">Attendance · <%= summary.section_name %></h3>
+                                <div class="acm-quick-value"><%= summary.attendanceRate !== null ? summary.attendanceRate + '%' : '--' %></div>
+                                <p class="text-muted"><%= summary.class_name %> · <%= summary.term %> · <%= summary.session %></p>
+                                <% if (summary.missingRegisters || summary.draftRegisters) { %>
+                                    <p class="text-muted">Pending registers: <%= summary.missingRegisters || 0 %> missing, <%= summary.draftRegisters || 0 %> draft</p>
+                                <% } %>
+                                <div class="acm-card-action"><span>View</span><i class="bi bi-arrow-right" aria-hidden="true"></i></div>
+                            </a>
+                            <% }) %>
+                        <% } else { %>
+                            <a href="/portal/attendance" class="acm-quick-card acm-card-link">
+                                <h3 class="acm-quick-title">Attendance</h3>
                                 <div class="acm-quick-value">--</div>
-                            <% } %>
-                            <div class="acm-card-action">
-                                <span>View</span>
-                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                            </div>
-                        </a>
+                                <div class="acm-card-action"><span>View</span><i class="bi bi-arrow-right" aria-hidden="true"></i></div>
+                            </a>
+                        <% } %>
 
                         <!-- Results -->
                         <a href="/portal/academics" class="acm-quick-card acm-card-link">

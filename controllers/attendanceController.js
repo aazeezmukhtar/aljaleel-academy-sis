@@ -307,23 +307,48 @@ const getPreviousDayAttendance = async (req, res) => {
             ? { session: rows[0].session, term: rows[0].term }
             : await getAcademicSettings(Number(class_id), schoolId);
 
-        const students = await getAttendanceStudents(
-            Number(class_id), settings.session, schoolId, date
-        );
-        const statusByStudent = new Map(rows.map(row => [String(row.student_id), row.status]));
-        students.forEach(student => {
-            student.status = statusByStudent.get(String(student.id)) || null;
-        });
+        let register = null;
+        let registerFeatureAvailable = false;
+        let registerSkipReason = null;
+        let registerContext = null;
+        try {
+            registerFeatureAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
+            if (registerFeatureAvailable) {
+                registerContext = await attendanceRegisterWorkflow.getRegisterContext({
+                    schoolId, classId: Number(class_id), registerDate: date
+                });
+            }
+        } catch (registerError) {
+            console.error('Previous-day attendance register lookup unavailable:', registerError);
+            registerSkipReason = 'register_lookup_unavailable';
+        }
 
+        let students = registerContext
+            ? registerContext.students
+            : await getAttendanceStudents(Number(class_id), settings.session, schoolId, date);
+        if (registerContext) {
+            register = registerContext.register;
+        } else {
+            const statusByStudent = new Map(rows.map(row => [String(row.student_id), row.status]));
+            students.forEach(student => {
+                student.status = statusByStudent.get(String(student.id)) || null;
+            });
+        }
+
+        const locked = !!register && ['submitted', 'closed'].includes(register.status);
         res.render('attendance/take', {
             title: "Yesterday's Attendance",
             clazz,
             class_id,
             date,
             students,
-            currentTerm: settings.term,
-            currentSession: settings.session,
+            currentTerm: register ? register.term : settings.term,
+            currentSession: register ? register.session : settings.session,
+            register,
+            registerFeatureAvailable,
+            registerSkipReason,
             readOnly: true,
+            canEdit: !locked,
             hasRecords
         });
     } catch (err) {

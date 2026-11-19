@@ -9,6 +9,8 @@ const attendanceRegisterAdministration = require('../services/attendanceRegister
 const attendanceClosureService = require('../services/attendanceClosureService');
 const { createAttendanceAnalyticsService } = require('../services/attendanceAnalyticsService');
 const attendanceAnalytics = createAttendanceAnalyticsService(db);
+const { createAttendanceAnalyticsDashboardService } = require('../services/attendanceAnalyticsDashboardService');
+const attendanceAnalyticsDashboard = createAttendanceAnalyticsDashboardService(db, attendanceAnalytics);
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user, schoolId) => {
@@ -921,6 +923,107 @@ const getReport = async (req, res) => {
     }
 };
 
+// GET /attendance/analytics - section-aware attendance analytics dashboard
+const getAttendanceAnalytics = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
+    try {
+        const classes = await getAssignedClasses(user, schoolId);
+        const accessibleSectionIds = Array.from(new Set(classes.map(item => Number(item.section_id))
+            .filter(value => Number.isSafeInteger(value) && value > 0)));
+        const sections = accessibleSectionIds.length
+            ? await db.all(`
+                SELECT id, name FROM sections
+                WHERE school_id = ? AND id IN (${accessibleSectionIds.map(() => '?').join(',')})
+                ORDER BY name, id
+            `, [schoolId, ...accessibleSectionIds])
+            : [];
+        const foundationAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
+        if (!foundationAvailable) {
+            return res.status(409).render('attendance/analytics', {
+                title: 'Attendance Analytics', user, sections, classes: [],
+                periods: [], filters: {}, dashboard: null,
+                error: 'Attendance register foundation is not installed yet.'
+            });
+        }
+        const requestedSectionId = Number(req.query.section_id);
+        const selectedSection = sections.find(item => Number(item.id) === requestedSectionId) || sections[0] || null;
+        if (!selectedSection) {
+            return res.render('attendance/analytics', {
+                title: 'Attendance Analytics', user, sections, classes: [],
+                periods: [], filters: {}, dashboard: null,
+                error: 'No attendance sections are assigned to this account.'
+            });
+        }
+        const sectionClasses = classes.filter(item => String(item.section_id) === String(selectedSection.id));
+        const periods = await db.all(`
+            SELECT session, term, start_date, end_date
+            FROM section_academic_periods
+            WHERE school_id = ? AND section_id = ? AND status <> 'cancelled'
+            ORDER BY start_date DESC, term DESC
+        `, [schoolId, selectedSection.id]);
+        const requestedPeriod = periods.find(item =>
+            item.session === req.query.session && item.term === req.query.term
+        );
+        const selectedPeriod = requestedPeriod || periods[0] || null;
+        if (!selectedPeriod) {
+            return res.render('attendance/analytics', {
+                title: 'Attendance Analytics', user, sections,
+                classes: sectionClasses, periods, filters: { section_id: selectedSection.id },
+                dashboard: null, error: 'No academic period is configured for this section.'
+            });
+        }
+        const todayParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+        }).formatToParts(new Date()).reduce((result, part) => {
+            if (part.type !== 'literal') result[part.type] = part.value;
+            return result;
+        }, {});
+        const today = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
+        const periodStart = selectedPeriod.start_date instanceof Date
+            ? selectedPeriod.start_date.toISOString().slice(0, 10) : String(selectedPeriod.start_date).slice(0, 10);
+        const periodEnd = selectedPeriod.end_date instanceof Date
+            ? selectedPeriod.end_date.toISOString().slice(0, 10) : String(selectedPeriod.end_date).slice(0, 10);
+        const startDate = req.query.start_date || periodStart;
+        const endDate = req.query.end_date || (today < periodEnd ? today : periodEnd);
+        const requestedClassId = req.query.class_id ? Number(req.query.class_id) : null;
+        const selectedClasses = requestedClassId
+            ? sectionClasses.filter(item => Number(item.id) === requestedClassId)
+            : sectionClasses;
+        const dashboard = await attendanceAnalyticsDashboard.getDashboard({
+            schoolId,
+            sectionId: Number(selectedSection.id),
+            session: selectedPeriod.session,
+            term: selectedPeriod.term,
+            startDate,
+            endDate,
+            classIds: selectedClasses.map(item => item.id)
+        });
+        return res.render('attendance/analytics', {
+            title: 'Attendance Analytics', user, sections,
+            classes: sectionClasses, periods,
+            filters: {
+                section_id: selectedSection.id,
+                class_id: requestedClassId && selectedClasses.length ? requestedClassId : '',
+                session: selectedPeriod.session,
+                term: selectedPeriod.term,
+                start_date: startDate,
+                end_date: endDate
+            },
+            dashboard,
+            error: requestedClassId && !selectedClasses.length
+                ? 'The selected class is not available in this section.' : null
+        });
+    } catch (err) {
+        console.error('Attendance Analytics Error:', err);
+        return res.status(400).render('attendance/analytics', {
+            title: 'Attendance Analytics', user, sections: [], classes: [],
+            periods: [], filters: req.query, dashboard: null,
+            error: err.message || 'Could not load attendance analytics.'
+        });
+    }
+};
+
 // GET /attendance/staff - Staff attendance page (Admin only)
 const getStaffAttendance = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
@@ -985,5 +1088,5 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getStaffAttendance, saveStaffAttendance };
+module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getAttendanceAnalytics, getStaffAttendance, saveStaffAttendance };
 

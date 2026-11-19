@@ -1234,10 +1234,8 @@ exports.getAttendance = async (req, res) => {
                         const endDate = row.end_date == null ? String(period.end_date).slice(0,10) : String(row.end_date).slice(0,10);
                         return endDate > max ? endDate : max;
                     }, String(period.end_date).slice(0,10));
-                    const thresholdValue = school['attendance.low_attendance_threshold'] == null
-                        ? 75 : Number(school['attendance.low_attendance_threshold']);
-                    const lowAttendanceThreshold = Number.isFinite(thresholdValue) && thresholdValue >= 0 && thresholdValue <= 100
-                        ? thresholdValue : 75;
+                    const lowAttendanceThreshold = await require('../services/attendanceThresholdService')
+                        .getThreshold(schoolId);
 
                     analytics = await analyticsService.calculate({
                         schoolId, sectionId: selectedSectionId, classId: selectedClassId,

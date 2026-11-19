@@ -283,11 +283,14 @@ async function getPendingCount() {
 async function getPendingAttendanceCount() {
     try {
         const ownerKey = getOfflineOwnerKey();
-        if (!ownerKey) return 0;
         const attendanceItems = await getAllQueued('attendance_sync');
+        // If account ownership cannot be resolved, fail closed: queued records
+        // must not be ignored when deciding whether a register can be submitted.
+        if (!ownerKey) return attendanceItems.length;
         return attendanceItems.filter(item => item._ownerKey === ownerKey).length;
     } catch {
-        return 0;
+        // An unreadable queue cannot prove that attendance is fully synchronized.
+        return Number.MAX_SAFE_INTEGER;
     }
 }
 

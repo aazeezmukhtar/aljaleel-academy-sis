@@ -36,6 +36,7 @@ sqlite.prepare(`INSERT INTO class_attendance_closures(school_id,scope_type,secti
   VALUES (1,'school',NULL,NULL,'2026-09-02','School-wide closure',7),
          (1,'section',10,NULL,'2026-09-02','Academy closure',7),
          (1,'class',NULL,1000,'2026-09-02','Class event',7),
+         (1,'section',10,NULL,'2026-09-03','Section-only closure',7),
          (1,'class',NULL,1000,'2026-09-05','Cancelled event',7)`).run();
 sqlite.prepare("UPDATE class_attendance_closures SET status='cancelled' WHERE closure_date='2026-09-05'").run();
 sqlite.prepare(`INSERT INTO student_enrollment_periods
@@ -60,7 +61,7 @@ const service=require('../services/expectedAttendanceDaysService');
     assert.equal(byDate['2026-08-31'].status,'outside_term');
     assert.equal(byDate['2026-09-01'].status,'expected');
     assert.equal(byDate['2026-09-02'].status,'closed');
-    assert.equal(byDate['2026-09-03'].status,'expected');
+    assert.equal(byDate['2026-09-03'].status,'closed');
     assert.equal(byDate['2026-09-04'].status,'expected');
     assert.equal(byDate['2026-09-05'].status,'non_opening');
     assert.equal(byDate['2026-09-06'].status,'expected');
@@ -77,7 +78,7 @@ const service=require('../services/expectedAttendanceDaysService');
     assert.equal(studentDays['2026-09-08'].status,'unknown_enrollment','Review-needed enrollment must not count as confirmed.');
     assert.equal(studentDays['2026-09-09'].status,'unknown_enrollment');
 
-    const noSchedule=await service.calculate({schoolId:1,sectionId:10,classId:1001,session:'2026/2027',term:'1st Term',startDate:'2026-09-01',endDate:'2026-09-02'});
+    const otherSection=await service.calculate({schoolId:1,sectionId:11,classId:1100,session:'2026/2027',term:'1st Term',startDate:'2026-09-03',endDate:'2026-09-03'});\n    assert.equal(otherSection.days[0].status,'expected','A section closure must not affect a different section.');\n    const noSchedule=await service.calculate({schoolId:1,sectionId:10,classId:1001,session:'2026/2027',term:'1st Term',startDate:'2026-09-01',endDate:'2026-09-02'});
     assert.equal(noSchedule.days[0].status,'unknown_schedule','Missing schedule is unknown, not a closure or non-opening day.');
     const missingTerm=await service.calculate({schoolId:1,sectionId:10,classId:1000,session:'2026/2027',term:'2nd Term',startDate:'2026-09-01',endDate:'2026-09-02'});
     assert.equal(missingTerm.days[0].status,'unknown_period');

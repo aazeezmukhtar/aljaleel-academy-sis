@@ -455,6 +455,81 @@
             });
         }
     });
+
+    async function submitAttendanceRegister() {
+        if (!navigator.onLine) {
+            alert('Reconnect before submitting. Offline attendance is saved locally and is not yet a server-submitted register.');
+            return;
+        }
+
+        const offline = window.AcadMeOffline || window.NexusOffline;
+        if (offline && typeof offline.getPendingAttendanceCount === 'function') {
+            const pending = await offline.getPendingAttendanceCount();
+            if (pending > 0) {
+                alert('There are ' + pending + ' attendance item(s) waiting to sync. Wait for synchronization to finish, then submit the register.');
+                return;
+            }
+        }
+
+        if (!window.confirm('Submit this attendance register? Every expected student must have a deliberate status. Once submitted, the register is locked until an administrator reopens it.')) {
+            return;
+        }
+
+        const buttons = [
+            document.getElementById('submit-attendance-register'),
+            document.getElementById('submit-attendance-register-mobile')
+        ].filter(Boolean);
+        buttons.forEach(button => {
+            button.disabled = true;
+            button.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Submitting...';
+        });
+
+        try {
+            const form = document.getElementById('attendance-form');
+            const response = await fetch('/attendance/submit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({
+                    class_id: form.querySelector('[name="class_id"]').value,
+                    date: form.querySelector('[name="date"]').value
+                })
+            });
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) {
+                alert(result.message || 'The register could not be submitted.');
+                return;
+            }
+            alert('Attendance register submitted successfully.');
+            window.location.reload();
+        } catch (error) {
+            alert('Submission failed. Reconnect and try again. The register has not been submitted.');
+        } finally {
+            buttons.forEach(button => {
+                button.disabled = !navigator.onLine;
+                button.innerHTML = '<i class="bi bi-send-check"></i> ' + (button.id.endsWith('-mobile') ? 'Submit' : 'Submit Register');
+            });
+        }
+    }
+
+    ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
+        const button = document.getElementById(id);
+        if (button) {
+            button.disabled = !navigator.onLine;
+            button.addEventListener('click', submitAttendanceRegister);
+        }
+    });
+    window.addEventListener('online', () => {
+        ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
+            const button = document.getElementById(id);
+            if (button) button.disabled = false;
+        });
+    });
+    window.addEventListener('offline', () => {
+        ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
+            const button = document.getElementById(id);
+            if (button) button.disabled = true;
+        });
+    });
 </script>
 
 

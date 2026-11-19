@@ -12,8 +12,17 @@ function normalizeDate(value, label) {
     return date;
 }
 
+function dateKey(value) {
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+    return String(value || '').slice(0, 10);
+}
+
 function overlaps(aStart, aEnd, bStart, bEnd) {
-    return aStart <= bEnd && bStart <= aEnd;
+    const aStartKey = dateKey(aStart);
+    const aEndKey = dateKey(aEnd);
+    const bStartKey = dateKey(bStart);
+    const bEndKey = dateKey(bEnd);
+    return aStartKey <= bEndKey && bStartKey <= aEndKey;
 }
 
 function scopesIntersect(a, b) {

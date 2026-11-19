@@ -197,10 +197,10 @@ function createAttendanceClosureService(db) {
             await db.run(`
                 UPDATE class_attendance_closures
                 SET status = ?,
-                    approved_by = CASE WHEN ? = 'approved' THEN ? ELSE NULL END,
-                    approved_at = CASE WHEN ? = 'approved' THEN CURRENT_TIMESTAMP ELSE NULL END
+                    approved_by = CASE WHEN ? THEN CAST(? AS BIGINT) ELSE NULL END,
+                    approved_at = CASE WHEN ? THEN CURRENT_TIMESTAMP ELSE NULL END
                 WHERE id = ? AND school_id = ? AND status = 'pending'
-            `, [nextStatus, nextStatus, actorStaffId, nextStatus, closureId, schoolId], client);
+            `, [nextStatus, decision === 'approved', actorStaffId, decision === 'approved', closureId, schoolId], client);
             const updatedClosure = await db.get(
                 'SELECT status, approved_by, approved_at FROM class_attendance_closures WHERE id = ? AND school_id = ?',
                 [closureId, schoolId], client

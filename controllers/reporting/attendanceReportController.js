@@ -3,22 +3,60 @@
 const getAttendanceDashboard = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (user ? user.school_id : 1);
+    const selectedSectionId = req.query.section_id ? Number(req.query.section_id) : null;
+    const stats = { present_today: 0, absent_today: 0, late_today: 0, leave_today: 0, submitted_registers: 0, expected_registers: 0 };
+    let selectedSection = null;
     try {
-        const dateSql = db.DB_TYPE === 'postgres'
-            ? "SELECT COUNT(*) as count FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.date = CURRENT_DATE AND s.school_id = $1"
-            : "SELECT COUNT(*) as count FROM attendance a JOIN students s ON a.student_id = s.id WHERE a.date = date('now') AND s.school_id = ?";
-        const statsResult = await db.get(dateSql, [schoolId]);
-        const stats = {
-            total_records: statsResult ? statsResult.count : 0
-        };
-        res.render('reports/attendance/index', {
-            title: 'Attendance Reports Dashboard',
-            stats,
-            user
+        const sections = await db.all('SELECT id, name, current_session, current_term FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
+        if (selectedSectionId) {
+            selectedSection = sections.find(section => Number(section.id) === selectedSectionId) || null;
+            if (!selectedSection) return res.status(400).send('The selected section does not belong to this school.');
+            const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
+            if (selectedSection.current_session && selectedSection.current_term) {
+                const classes = await db.all('SELECT id, section_id FROM classes WHERE school_id = ? AND section_id = ? ORDER BY id', [schoolId, selectedSectionId]);
+                const analytics = require('../../services/attendanceAnalyticsService');
+                for (const cls of classes) {
+                    const roster = await db.all(`SELECT DISTINCT st.id
+                        FROM students st JOIN student_enrollment_periods ep
+                          ON ep.student_id = st.id AND ep.school_id = st.school_id
+                        WHERE st.school_id = ? AND ep.section_id = ? AND ep.class_id = ?
+                          AND ep.session = ? AND ep.start_date <= ?
+                          AND (ep.end_date IS NULL OR ep.end_date >= ?)`,
+                    [schoolId, selectedSectionId, cls.id, selectedSection.current_session, today, today]);
+                    for (const student of roster) {
+                        const result = await analytics.calculate({
+                            schoolId, sectionId: selectedSectionId, classId: Number(cls.id),
+                            studentId: Number(student.id), session: selectedSection.current_session,
+                            term: selectedSection.current_term, startDate: today, endDate: today,
+                            lowAttendanceThreshold: 75
+                        });
+                        for (const day of result.days) {
+                            if (day.status === 'recorded') {
+                                if (day.attendanceStatus === 'Present') stats.present_today += 1;
+                                else if (day.attendanceStatus === 'Absent') stats.absent_today += 1;
+                                else if (day.attendanceStatus === 'Late') stats.late_today += 1;
+                                else if (day.attendanceStatus === 'Leave') stats.leave_today += 1;
+                            }
+                        }
+                    }
+                }
+                const registerStats = await db.get(`SELECT
+                    COUNT(*) AS submitted_registers
+                    FROM attendance_registers
+                    WHERE school_id = ? AND section_id = ? AND attendance_date = ?
+                      AND session = ? AND term = ? AND status = 'submitted'`,
+                [schoolId, selectedSectionId, today, selectedSection.current_session, selectedSection.current_term]);
+                stats.submitted_registers = Number(registerStats ? registerStats.submitted_registers : 0);
+                stats.expected_registers = classes.length;
+            }
+        }
+        return res.render('reports/attendance/index', {
+            title: 'Attendance Reports Dashboard', stats, user, sections,
+            selectedSection, selectedSectionId
         });
     } catch (err) {
         console.error('Attendance Dashboard Error:', err);
-        res.status(500).send('Database Error');
+        return res.status(500).send('Unable to generate the attendance dashboard.');
     }
 };
 

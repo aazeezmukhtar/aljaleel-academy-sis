@@ -72,7 +72,7 @@ async function ensureNoOverlap(type, schoolId, parentId, session, from, to, exce
 async function createPeriod(input, client) {
   const { schoolId, sectionId, session, term, startDate, endDate, createdBy } = input || {};
   if (!String(session || '').trim() || !String(term || '').trim()) throw new Error('Session and term are required.');
-  const span = interval(startDate, endDate, 'startDate', 'endDate');
+  const span = interval(startDate, endDate, 'startDate', 'endDate');\n  if (!span.end) throw new Error('An academic period must have a defined end date.');
   await actorCheck(schoolId, createdBy, client);
   await lockParent('section', schoolId, sectionId, client);
   // Serialize the whole section/session timeline, including gaps with no existing term rows.
@@ -104,7 +104,7 @@ async function createSchedule(input, client) {
   const id = await insertReturning(`INSERT INTO class_attendance_schedules
     (school_id, class_id, session, effective_from, effective_to, ${cols}, created_by)
     VALUES (?, ?, ?, ?, ?, ${marks}, ?)`,
-  [schoolId, classId, session, span.start, span.end, ...WEEKDAYS.map(d => flags[d]), createdBy], client);
+  [schoolId, classId, session, span.start, span.end, ...WEEKDAYS.map(d => flags[d] ? 1 : 0), createdBy], client);
   await audit(schoolId, 'attendance_schedule', id, 'created', null,
     { classId, session, effectiveFrom: span.start, effectiveTo: span.end, weekdays: flags },
     'Attendance schedule configured', createdBy, client);
@@ -193,11 +193,11 @@ async function correct(type, id, changes, reason, actorId, schoolId) {
     const allowed = type === 'academic_period' ? ['term','start_date','end_date']
       : type === 'attendance_schedule' ? [...WEEKDAYS,'effective_from','effective_to']
       : ['staff_id','effective_from','effective_to'];
-    const set = []; const params = [];
+    const set = []; const params = [];\n    if (type === 'academic_period' && !span.end) throw new Error('An academic period must have a defined end date.');
     for (const key of allowed) if (Object.prototype.hasOwnProperty.call(changes,key)) {
       set.push(key + ' = ?'); params.push(key === 'effective_from' || key === 'effective_to' || key === 'start_date' || key === 'end_date'
         ? (changes[key] == null ? null : date(changes[key],key))
-        : changes[key]);
+        : (type === 'attendance_schedule' && WEEKDAYS.includes(key) ? (changes[key] ? 1 : 0) : changes[key]));
     }
     if (!set.length) throw new Error('No supported correction fields were supplied.');
     if (type === 'attendance_responsibility' && Object.prototype.hasOwnProperty.call(changes,'staff_id')) {

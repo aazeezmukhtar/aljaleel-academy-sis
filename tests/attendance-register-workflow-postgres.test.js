@@ -53,7 +53,7 @@ if (!url) {
     await client.query(`
       CREATE TABLE schools(id INTEGER PRIMARY KEY);
       CREATE TABLE sections(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id));
-      CREATE TABLE staff(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id));
+      CREATE TABLE staff(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id), role TEXT);
       CREATE TABLE students(
         id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id),
         status TEXT, first_name TEXT, last_name TEXT, admission_number TEXT, passport_photo_path TEXT
@@ -82,7 +82,7 @@ if (!url) {
       );
       INSERT INTO schools VALUES (1);
       INSERT INTO sections VALUES (10, 1);
-      INSERT INTO staff VALUES (20, 1), (21, 1);
+      INSERT INTO staff VALUES (20, 1, 'Teacher'), (21, 1, 'Admin');
       INSERT INTO students VALUES
         (30, 1, 'active', 'Amina', 'Adamu', 'A001', NULL),
         (31, 1, 'active', 'Bello', 'Musa', 'A002', NULL);

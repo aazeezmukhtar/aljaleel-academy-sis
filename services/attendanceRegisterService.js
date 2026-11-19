@@ -32,7 +32,7 @@ function context(input) {
     schoolId: Number(value.schoolId), classId: Number(value.classId),
     sectionId: Number(value.sectionId), actorId: Number(value.actorId),
     date: validDate(value.date), session: required(value.session, 'Academic session'),
-    term: required(value.term, 'Academic term')
+    term: required(value.term, 'Academic term'), actorRole: String(value.actorRole || '')
   };
 }
 async function lockClass(ctx, client) {
@@ -45,6 +45,18 @@ async function lockClass(ctx, client) {
   const actor = await db.get('SELECT id FROM staff WHERE id = ? AND school_id = ?',
     [ctx.actorId, ctx.schoolId], client);
   if (!actor) throw new Error('The acting staff member does not belong to this school.');
+  if (ctx.actorRole !== 'Admin') {
+    const responsibility = await db.get(`SELECT id FROM class_attendance_responsibilities
+      WHERE school_id = ? AND class_id = ? AND staff_id = ? AND session = ?
+        AND effective_from <= ? AND (effective_to IS NULL OR effective_to >= ?)
+      ORDER BY effective_from DESC, id DESC LIMIT 1`,
+    [ctx.schoolId, ctx.classId, ctx.actorId, ctx.session, ctx.date, ctx.date], client);
+    if (!responsibility) {
+      const error = new Error('You are not the assigned attendance register holder for this class and date.');
+      error.code = 'ATTENDANCE_REGISTER_FORBIDDEN';
+      throw error;
+    }
+  }
 }
 async function roster(ctx, client) {
   return db.all(`

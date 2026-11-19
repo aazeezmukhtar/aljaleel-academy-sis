@@ -59,26 +59,30 @@ async function lockClass(ctx, client) {
   }
 }
 async function roster(ctx, client) {
+  // Attendance is date-specific. Use only confirmed dated placements so a
+  // student transferred mid-session belongs to the correct class on this day.
+  // Do not fall back to current_class_id/student_enrollments: those records
+  // cannot establish historical class membership without inventing dates.
+  const uncertain = await db.get(`
+    SELECT COUNT(*) AS count
+    FROM student_enrollment_periods ep
+    JOIN students s ON s.id = ep.student_id AND s.school_id = ep.school_id
+    WHERE ep.school_id = ? AND ep.section_id = ? AND ep.class_id = ?
+      AND ep.session = ? AND ep.date_status = 'review_needed'
+      AND ep.start_date <= ? AND (ep.end_date IS NULL OR ep.end_date >= ?)
+  `, [ctx.schoolId, ctx.sectionId, ctx.classId, ctx.session, ctx.date, ctx.date], client);
+  if (Number(uncertain && uncertain.count || 0) > 0) {
+    throw new Error('The class roster contains enrollment dates requiring review; resolve them before saving attendance.');
+  }
   return db.all(`
-    SELECT s.id
-    FROM students s
-    WHERE s.school_id = ?
-      AND (s.status = 'active' OR s.status = 'Active' OR s.status IS NULL)
-      AND (
-        EXISTS (
-          SELECT 1 FROM student_enrollments se
-          WHERE se.student_id = s.id AND se.class_id = ? AND se.session = ?
-        )
-        OR (
-          s.current_class_id = ?
-          AND NOT EXISTS (
-            SELECT 1 FROM student_enrollments se_current
-            WHERE se_current.student_id = s.id AND se_current.session = ?
-          )
-        )
-      )
+    SELECT DISTINCT s.id
+    FROM student_enrollment_periods ep
+    JOIN students s ON s.id = ep.student_id AND s.school_id = ep.school_id
+    WHERE ep.school_id = ? AND ep.section_id = ? AND ep.class_id = ?
+      AND ep.session = ? AND ep.date_status = 'confirmed'
+      AND ep.start_date <= ? AND (ep.end_date IS NULL OR ep.end_date >= ?)
     ORDER BY s.id
-  `, [ctx.schoolId, ctx.classId, ctx.session, ctx.classId, ctx.session], client);
+  `, [ctx.schoolId, ctx.sectionId, ctx.classId, ctx.session, ctx.date, ctx.date], client);
 }
 async function ensureRegister(ctx, client) {
   await db.run(`INSERT INTO attendance_registers

@@ -119,7 +119,7 @@ async function run(sql, params = [], client = null) {
 /**
  * Executes a transaction.
  */
-async function transaction(callback) {
+async function transaction(callback, options = {}) {
     if (DB_TYPE === 'postgres') {
         const client = await pool.connect();
         try {
@@ -134,7 +134,7 @@ async function transaction(callback) {
             client.release();
         }
     }
-    sqliteDb.prepare('BEGIN').run();
+    // BEGIN IMMEDIATE serializes SQLite writers before overlap checks run.\n    sqliteDb.prepare(options.immediate ? 'BEGIN IMMEDIATE' : 'BEGIN').run();
     try {
         const result = await callback(null);
         sqliteDb.prepare('COMMIT').run();

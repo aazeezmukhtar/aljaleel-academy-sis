@@ -17,11 +17,11 @@ if (!connectionString) {
     await client.query(`CREATE SCHEMA "${schema}"`);
     await client.query(`SET search_path TO "${schema}"`);
     await client.query(`
-      CREATE TABLE schools(id BIGINT PRIMARY KEY);
-      CREATE TABLE sections(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
-      CREATE TABLE staff(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
-      CREATE TABLE classes(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id), section_id BIGINT NOT NULL REFERENCES sections(id));
-      CREATE TABLE term_events(id BIGINT PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id), section_id BIGINT, event_date DATE NOT NULL);
+      CREATE TABLE schools(id BIGSERIAL PRIMARY KEY);
+      CREATE TABLE sections(id BIGSERIAL PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
+      CREATE TABLE staff(id BIGSERIAL PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id));
+      CREATE TABLE classes(id BIGSERIAL PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id), section_id BIGINT NOT NULL REFERENCES sections(id));
+      CREATE TABLE term_events(id BIGSERIAL PRIMARY KEY, school_id BIGINT NOT NULL REFERENCES schools(id), section_id BIGINT, event_date DATE NOT NULL);
       INSERT INTO schools VALUES(1);
       INSERT INTO sections VALUES(1,1),(2,1);
       INSERT INTO staff VALUES(1,1);
@@ -53,7 +53,21 @@ if (!connectionString) {
       VALUES(1,'attendance_schedule',1,'created','{"monday":true}'::jsonb,'Initial schedule',1)`);
     await assert.rejects(client.query('UPDATE attendance_foundation_audit_logs SET reason=$1 WHERE id=1',['tampered']));
     await assert.rejects(client.query('DELETE FROM attendance_foundation_audit_logs WHERE id=1'));
-    console.log('[attendance-foundation-postgres] schema, checks, uniqueness, audit immutability and rerun checks passed.');
+
+    // Audit failure must roll back the business write in the same transaction.
+    await client.query('BEGIN');
+    await client.query(`INSERT INTO class_attendance_closures
+      (school_id,scope_type,closure_date,reason,created_by)
+      VALUES(1,'school','2026-12-26','Atomicity probe',1)`);
+    await assert.rejects(client.query(`INSERT INTO attendance_foundation_audit_logs
+      (school_id,entity_type,entity_id,action,reason,changed_by)
+      VALUES(1,'attendance_closure',999,'created','Invalid actor',999999)`), e=>e.code==='23503');
+    await client.query('ROLLBACK');
+    const rolledBack = await client.query(`SELECT COUNT(*)::int AS count FROM class_attendance_closures
+      WHERE closure_date='2026-12-26' AND reason='Atomicity probe'`);
+    assert.equal(rolledBack.rows[0].count, 0, 'Business write survived failed audit insert');
+
+    console.log('[attendance-foundation-postgres] schema, checks, uniqueness, audit immutability, atomic rollback and rerun checks passed.');
   } finally {
     try { await client.query('SET search_path TO public'); await client.query(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`); }
     finally { client.release(); await pool.end(); }

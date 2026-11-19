@@ -15,7 +15,7 @@ raw.exec(`
   CREATE TABLE sections(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id));
   CREATE TABLE staff(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id));
   CREATE TABLE classes(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL REFERENCES schools(id), section_id INTEGER NOT NULL REFERENCES sections(id));
-  CREATE TABLE students(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL, status TEXT, current_class_id INTEGER);
+  CREATE TABLE students(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL, status TEXT, current_class_id INTEGER, first_name TEXT, last_name TEXT, admission_number TEXT, passport_photo_path TEXT);
   CREATE TABLE student_enrollments(id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, class_id INTEGER NOT NULL, session TEXT NOT NULL);
   CREATE TABLE student_enrollment_history(id INTEGER PRIMARY KEY);
   CREATE TABLE class_attendance_responsibilities(id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL, class_id INTEGER NOT NULL, staff_id INTEGER NOT NULL, session TEXT NOT NULL, effective_from DATE NOT NULL, effective_to DATE);
@@ -27,7 +27,7 @@ raw.exec(`
   INSERT INTO sections VALUES(1,1);
   INSERT INTO staff VALUES(1,1),(2,1);
   INSERT INTO classes VALUES(10,1,1),(11,1,1);
-  INSERT INTO students VALUES(101,1,'active',11),(102,1,'active',10);
+  INSERT INTO students(id,school_id,status,current_class_id) VALUES(101,1,'active',11),(102,1,'active',10);
   INSERT INTO student_enrollments VALUES
     (1,101,10,'2026/2027'),(2,102,10,'2026/2027'),(3,101,11,'2026/2027');
 `);
@@ -96,7 +96,7 @@ const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-05', session:'
     assert.equal(currentSource.rosterCount, 1, 'A transferred student must not remain in the source-class roster after the transfer date.');
 
     const migrationDb2 = new Database(file);
-    migrationDb2.prepare(`INSERT INTO students VALUES(103,1,'active',10)`).run();
+    migrationDb2.prepare(`INSERT INTO students(id,school_id,status,current_class_id) VALUES(103,1,'active',10)`).run();
     migrationDb2.prepare(`INSERT INTO student_enrollments VALUES(4,103,10,'2026/2027')`).run();
     migrationDb2.close();
     const unresolved = await service.saveDraft({ ...base, date:'2026-11-20', attendance:{102:'Present'} });

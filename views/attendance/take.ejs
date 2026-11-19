@@ -20,8 +20,8 @@
                     <button type="submit" form="attendance-form" class="btn btn-primary attendance-save-action" <%= readOnly ? 'hidden' : '' %>>
                         <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Records' %>
                     </button>
-                    <% if (register && !readOnly) { %>
-                    <button type="button" id="submit-attendance-register" class="btn btn-success">
+                    <% if (register && canEdit !== false) { %>
+                    <button type="button" id="submit-attendance-register" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
                         <i class="bi bi-send-check"></i> Submit Register
                     </button>
                     <% } %>
@@ -126,8 +126,8 @@
             <button type="submit" form="attendance-form" class="btn btn-primary">
                 <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Records' %>
             </button>
-            <% if (register && !readOnly) { %>
-            <button type="button" id="submit-attendance-register-mobile" class="btn btn-success">
+            <% if (register && canEdit !== false) { %>
+            <button type="button" id="submit-attendance-register-mobile" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
                 <i class="bi bi-send-check"></i> Submit
             </button>
             <% } %>
@@ -312,7 +312,7 @@
 
         const editButton = document.getElementById('edit-attendance-btn');
         if (editButton) editButton.hidden = true;
-        document.querySelectorAll('.attendance-save-action, .attendance-mobile-save, .mark-all-present-action')
+        document.querySelectorAll('.attendance-save-action, .attendance-mobile-save, .mark-all-present-action, #submit-attendance-register, #submit-attendance-register-mobile')
             .forEach(element => { element.hidden = false; });
 
         const notice = document.querySelector('.attendance-container .alert');

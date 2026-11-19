@@ -18,6 +18,7 @@ function date(value, field) {
   }
   return s;
 }
+function dbDate(value) { return value instanceof Date ? value.toISOString().slice(0,10) : String(value).slice(0,10); }
 function interval(from, to, fromName, toName) {
   const start = date(from, fromName);
   const end = to == null || to === '' ? null : date(to, toName);
@@ -180,8 +181,54 @@ async function create(type, input) {
   const tx = db.transactionImmediate || db.transaction;
   return tx.call(db, client => fn(input, client));
 }
+async function correctClosure(id, changes, reason, actorId, schoolId) {
+  const tx = db.transactionImmediate || db.transaction;
+  return tx.call(db, async client => {
+    await actorCheck(schoolId, actorId, client);
+    await lockParent('school', schoolId, schoolId, client);
+    const old = await db.get("SELECT * FROM class_attendance_closures WHERE id = ? AND school_id = ? AND status = 'active'", [id, schoolId], client);
+    if (!old) throw new Error('Active attendance closure was not found in this school.');
+    const scopeType = changes.scope_type || old.scope_type;
+    const sectionId = Object.prototype.hasOwnProperty.call(changes, 'section_id') ? changes.section_id : old.section_id;
+    const classId = Object.prototype.hasOwnProperty.call(changes, 'class_id') ? changes.class_id : old.class_id;
+    const closureDate = changes.closure_date == null ? dbDate(old.closure_date) : date(changes.closure_date, 'closure_date');
+    const closureReason = Object.prototype.hasOwnProperty.call(changes, 'reason') ? String(changes.reason || '').trim() : old.reason;
+    if (!closureReason) throw new Error('A closure reason is required.');
+    let classSection = null;
+    if (scopeType === 'school') {
+      if (sectionId != null || classId != null) throw new Error('School closure cannot have a narrower target.');
+    } else if (scopeType === 'section') {
+      if (!idOk(sectionId) || classId != null) throw new Error('Section closure requires only a section target.');
+      await lockParent('section', schoolId, sectionId, client);
+    } else if (scopeType === 'class') {
+      if (!idOk(classId) || sectionId != null) throw new Error('Class closure requires only a class target.');
+      classSection = await db.get('SELECT section_id FROM classes WHERE id = ? AND school_id = ?', [classId, schoolId], client);
+      if (!classSection) throw new Error('The selected class does not belong to this school.');
+    } else throw new Error('Closure scope must be school, section, or class.');
+    const sourceEventId = Object.prototype.hasOwnProperty.call(changes, 'source_event_id') ? changes.source_event_id : old.source_event_id;
+    if (sourceEventId != null) {
+      const event = await db.get('SELECT id, school_id, event_date, section_id FROM term_events WHERE id = ? AND school_id = ?', [sourceEventId, schoolId], client);
+      if (!event) throw new Error('The linked calendar event does not belong to this school.');
+      if (dbDate(event.event_date) !== closureDate) throw new Error('The linked calendar event date must match the closure date.');
+      const expectedSection = scopeType === 'section' ? Number(sectionId) : scopeType === 'class' ? Number(classSection.section_id) : null;
+      if (expectedSection != null && event.section_id != null && Number(event.section_id) !== expectedSection)
+        throw new Error('The linked calendar event section does not match the closure scope.');
+    }
+    const duplicateSql = "SELECT id FROM class_attendance_closures WHERE school_id = ? AND closure_date = ? AND scope_type = ? AND status = 'active' AND id <> ? " +
+      "AND ((? = 'school') OR (? = 'section' AND section_id = ?) OR (? = 'class' AND class_id = ?)) LIMIT 1";
+    const duplicate = await db.get(duplicateSql, [schoolId, closureDate, scopeType, id, scopeType, scopeType, sectionId, scopeType, classId], client);
+    if (duplicate) throw conflict('An active closure already exists for this target and date.');
+    await db.run('UPDATE class_attendance_closures SET scope_type = ?, section_id = ?, class_id = ?, closure_date = ?, reason = ?, source_event_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND school_id = ?',
+      [scopeType, sectionId, classId, closureDate, closureReason, sourceEventId, id, schoolId], client);
+    const updated = await db.get('SELECT * FROM class_attendance_closures WHERE id = ? AND school_id = ?', [id, schoolId], client);
+    await audit(schoolId, 'attendance_closure', id, 'corrected', old, updated, requiredReason(reason), actorId, client);
+    return { id: Number(id) };
+  });
+}
+
 async function correct(type, id, changes, reason, actorId, schoolId) {
   const why = requiredReason(reason);
+  if (type === 'attendance_closure' && idOk(id)) return correctClosure(id, changes || {}, why, actorId, schoolId);
   if (!ENTITY[type] || !idOk(id)) throw new Error('A valid correctable entity and record ID are required.');
   const spec = ENTITY[type];
   const tx = db.transactionImmediate || db.transaction;
@@ -189,7 +236,7 @@ async function correct(type, id, changes, reason, actorId, schoolId) {
     await actorCheck(schoolId, actorId, client);
     const old = await db.get(`SELECT * FROM ${spec.table} WHERE id = ? AND school_id = ?`, [id, schoolId], client);
     if (!old) throw new Error('Attendance foundation record was not found in this school.');
-    const from = changes[spec.dateFrom] == null ? String(old[spec.dateFrom]).slice(0,10) : date(changes[spec.dateFrom], spec.dateFrom);
+    const from = changes[spec.dateFrom] == null ? dbDate(old[spec.dateFrom]) : date(changes[spec.dateFrom], spec.dateFrom);
     const toValue = Object.prototype.hasOwnProperty.call(changes, spec.dateTo) ? changes[spec.dateTo] : old[spec.dateTo];
     const span = interval(from, toValue, spec.dateFrom, spec.dateTo);
     const parentId = Number(old[spec.parent === 'section' ? 'section_id' : 'class_id']);

@@ -145,6 +145,12 @@ if (!url) {
       schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20,
       attendance: { 31: 'Leave' }
     });
+    const createdAudit = await client.query(`
+      SELECT COUNT(*) AS count
+      FROM attendance_foundation_audit_logs
+      WHERE action = 'attendance_status_created' AND actor_staff_id = 20
+    `);
+    assert.strictEqual(Number(createdAudit.rows[0].count), 2);
     const submitted = await workflow.submitRegister({
       schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20
     });
@@ -157,6 +163,22 @@ if (!url) {
     );
     assert.strictEqual(stored.rows[0].status, 'submitted');
     assert.strictEqual(Number(stored.rows[0].submitted_student_count), 2);
+
+    await client.query(`
+      UPDATE attendance_registers
+      SET status = 'reopened', submitted_student_count = 0, submitted_by = NULL
+      WHERE id = $1
+    `, [generated.registerId]);
+    await workflow.saveRegisterProgress({
+      schoolId: 1, classId: 40, registerDate: '2026-11-19', actorStaffId: 20,
+      attendance: { 31: 'Not recorded' }
+    });
+    const clearedAudit = await client.query(`
+      SELECT COUNT(*) AS count
+      FROM attendance_foundation_audit_logs
+      WHERE action = 'attendance_status_cleared' AND actor_staff_id = 20
+    `);
+    assert.strictEqual(Number(clearedAudit.rows[0].count), 1);
 
     console.log('[attendance-register-workflow-postgres] PostgreSQL progress save, unmarked guard, transactional submission, submitted count and responsible-teacher authorization passed.');
   } finally {

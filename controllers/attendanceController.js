@@ -31,6 +31,20 @@ const getAssignedClasses = async (user, schoolId) => {
     `, [staffId, staffId, staffId, schoolId]);
 };
 
+// Only an administrator or the responsible teacher snapshotted on the register
+// may record, correct or submit register attendance.
+const hasRegisterAttendanceAuthority = async (user, register, schoolId) => {
+    if (user && user.role === 'Admin') return true;
+    if (!user || !register || !register.responsibility_id) return false;
+    const responsible = await db.get(`
+        SELECT r.staff_id
+        FROM class_attendance_responsibilities r
+        JOIN staff s ON s.id = r.staff_id AND s.school_id = r.school_id
+        WHERE r.id = ? AND r.school_id = ?
+    `, [register.responsibility_id, schoolId]);
+    return !!responsible && String(responsible.staff_id) === String(user.id);
+};
+
 // Resolve academic settings from the class's own section when it belongs to one.
 // A configured section must never silently inherit another section's current term/session.
 const getAcademicSettings = async (class_id = null, schoolId) => {

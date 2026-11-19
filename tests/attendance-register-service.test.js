@@ -47,7 +47,7 @@ migrationDb.close();
 
 const db = require('../utils/db');
 const service = require('../services/attendanceRegisterService');
-const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-19', session:'2026/2027', term:'1st Term', actorId:1, actorRole:'Teacher' };
+const base = { schoolId:1, classId:10, sectionId:1, date:'2026-11-05', session:'2026/2027', term:'1st Term', actorId:1, actorRole:'Teacher' };
 (async () => {
   try {
     await assert.rejects(service.saveDraft({ ...base, actorId:2, attendance:{101:'Present'} }), /not the assigned attendance register holder/);

@@ -76,7 +76,7 @@ if (!connectionString) {
     assert.deepStrictEqual(JSON.parse(register.events[1].old_values).map(row => row.status), ['Present','Leave']);
     assert.deepStrictEqual(JSON.parse(register.events[2].new_values).map(row => row.status), ['Late','Leave']);
 
-    const oldClass = await service.saveDraft({ ...base, date:'2026-11-05', attendance:{101:'Present'} });
+    const oldClass = await service.saveDraft({ ...base, date:'2026-11-06', attendance:{101:'Present'} });
     assert.equal(oldClass.rosterCount, 2);
     const newClass = await service.saveDraft({ ...base, classId:11, date:'2026-11-19', attendance:{101:'Present'} });
     assert.equal(newClass.rosterCount, 1);

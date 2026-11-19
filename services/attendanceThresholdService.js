@@ -4,6 +4,9 @@ const db = require('../utils/db');
 const DEFAULT_THRESHOLD = 75;
 
 function validateThreshold(value) {
+  if (value === undefined || value === null || String(value).trim() === '') {
+    throw new Error('Attendance threshold is required.');
+  }
   const number = Number(value);
   if (!Number.isFinite(number) || number < 0 || number > 100) {
     throw new Error('Attendance threshold must be a number between 0 and 100.');

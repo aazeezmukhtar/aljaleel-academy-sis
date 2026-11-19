@@ -29,5 +29,19 @@ assert(view.includes('register.status === \'submitted\' && isAdmin'));
 assert(controller.includes('attendanceRegisterWorkflow.saveRegisterProgress'));
 assert(controller.includes('attendanceRegisterWorkflow.submitRegister'));
 assert(controller.includes('hasRegisterAttendanceAuthority'));
+const closureController = controller.includes('attendanceClosureService.requestClosure') &&
+    controller.includes('attendanceClosureService.decideClosure') &&
+    controller.includes('attendanceClosureService.cancelClosure');
+const closureRoutes = routes.includes("router.get('/closures', attendanceController.getAttendanceClosures);") &&
+    routes.includes("router.post('/closures/request', attendanceController.requestAttendanceClosure);") &&
+    routes.includes("router.post('/closures/decide', attendanceController.decideAttendanceClosure);") &&
+    routes.includes("router.post('/closures/cancel', attendanceController.cancelAttendanceClosure);");
+const closureView = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'closures.ejs'), 'utf8');
+assert(closureController, 'closure requests and decisions must be wired through the controller');
+assert(closureRoutes, 'closure management routes must be registered');
+assert(closureView.includes('Submit closure request'));
+assert(closureView.includes('data-closure-action="approved"') || closureView.includes('data-closure-action="<%= item.status'));
+assert(view.includes('href="/attendance/closures"'));
+
 
 console.log('[attendance-register-ui] unmarked default, deliberate status cycle, online-only submission, pending-sync guard and responsible-teacher route checks passed.');

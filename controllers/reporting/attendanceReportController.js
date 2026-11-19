@@ -5,6 +5,7 @@ const getAttendanceDashboard = async (req, res) => {
     const schoolId = req.schoolId || (user ? user.school_id : 1);
     const selectedSectionId = req.query.section_id ? Number(req.query.section_id) : null;
     const stats = { present_today: 0, absent_today: 0, late_today: 0, leave_today: 0, submitted_registers: 0, expected_registers: 0 };
+    const attendanceThreshold = await require('../../services/attendanceThresholdService').getSchoolThreshold(schoolId);
     let selectedSection = null;
     try {
         const sections = await db.all('SELECT id, name, current_session, current_term FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
@@ -28,7 +29,7 @@ const getAttendanceDashboard = async (req, res) => {
                             schoolId, sectionId: selectedSectionId, classId: Number(cls.id),
                             studentId: Number(student.id), session: selectedSection.current_session,
                             term: selectedSection.current_term, startDate: today, endDate: today,
-                            lowAttendanceThreshold: 75
+                            lowAttendanceThreshold: attendanceThreshold
                         });
                         for (const day of result.days) {
                             if (day.status === 'recorded') {
@@ -198,16 +199,14 @@ const getLowAttendance = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (user ? user.school_id : 1);
     const selectedSectionId = req.query.section_id ? Number(req.query.section_id) : null;
-    const activeThreshold = req.query.threshold === undefined || req.query.threshold === '' ? 75 : Number(req.query.threshold);
+    let activeThreshold = 75;
     const sections = await db.all('SELECT id, name, current_session, current_term FROM sections WHERE school_id = ? ORDER BY name', [schoolId]);
     let students = [];
     let selectedSection = null;
     let reportContext = null;
     let reportError = null;
     try {
-        if (!Number.isFinite(activeThreshold) || activeThreshold < 0 || activeThreshold > 100) {
-            throw new Error('Attendance threshold must be between 0 and 100.');
-        }
+        activeThreshold = await require('../../services/attendanceThresholdService').getSchoolThreshold(schoolId, req.query.threshold);
         if (selectedSectionId) {
             selectedSection = sections.find(section => Number(section.id) === selectedSectionId) || null;
             if (!selectedSection) return res.status(400).send('The selected section does not belong to this school.');

@@ -1,6 +1,5 @@
 'use strict';
 
-const defaultDb = null;
 const VALID_STATUSES = new Set(['Present', 'Absent', 'Late', 'Leave']);
 const UNMARKED_STATUS = 'Not recorded';
 const FOUNDATION_TABLES = [
@@ -233,6 +232,21 @@ function createAttendanceRegisterWorkflowService(db) {
                     VALUES (?, 'attendance_started', ?, ?, 'in_progress', ?)
                 `, [register.id, actorStaffId, register.status, JSON.stringify({
                     saved_student_count: savedCount,
+                    changed_student_count: changedCount
+                })], client);
+            } else if (savedCount === 0 && changedCount > 0 && register.status === 'in_progress') {
+                nextStatus = 'expected';
+                await db.run(`
+                    UPDATE attendance_registers
+                    SET status = 'expected', updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                `, [register.id], client);
+                await db.run(`
+                    INSERT INTO attendance_register_events
+                        (register_id, event_type, actor_staff_id, previous_status, new_status, metadata)
+                    VALUES (?, 'corrected', ?, 'in_progress', 'expected', ?)
+                `, [register.id, actorStaffId, JSON.stringify({
+                    saved_student_count: 0,
                     changed_student_count: changedCount
                 })], client);
             } else {

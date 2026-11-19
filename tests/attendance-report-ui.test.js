@@ -23,7 +23,7 @@ assert(!reportBlock.includes('class_assignments') && !reportBlock.includes('subj
   'Subject, general class and register responsibility assignments must not grant report access.');
 assert(reportBlock.includes("require('../services/attendanceAnalyticsService')"),
   'Class reports must use the shared attendance analytics engine.');
-assert(reportBlock.includes('student_enrollment_periods') && reportBlock.includes('date_status'),
+assert(reportBlock.includes('student_enrollment_periods') && reportBlock.includes('start_date') && reportBlock.includes('end_date'),
   'Roster must use dated enrollment records and must not infer historical eligibility.');
 assert(reportBlock.includes('section_id') && reportBlock.includes('school_id'),
   'Report data must remain school and section scoped.');

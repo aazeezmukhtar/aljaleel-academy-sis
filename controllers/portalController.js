@@ -1119,139 +1119,182 @@ exports.postMarkAllNotificationsRead = async (req, res) => {
 
 exports.getAttendance = async (req, res) => {
     try {
-        const studentId = req.session.student.id;
+        const studentId = Number(req.session.student.id);
         const schoolId = await getStudentSchoolId(req);
         if (!schoolId) return res.status(403).send('Access Denied: Missing Tenant Context');
+
         const school = await getSettings(schoolId);
         const ctx = await getStudentContext(studentId, school, schoolId);
-        const { studentObj, activeSession, activeTerm, individualMessagesCount } = ctx;
+        const analyticsService = require('../services/attendanceAnalyticsService');
 
-        // Fetch distinct session & term periods with attendance records
-        const periods = await db.all(`
-            SELECT DISTINCT session, term 
-            FROM attendance 
-            WHERE student_id = ? 
-            ORDER BY session DESC, term DESC
-        `, [studentId]);
+        // Only sections in this student's own dated enrollment history are selectable.
+        const sectionOptions = await db.all(`
+            SELECT DISTINCT sec.id AS section_id, sec.name AS section_name
+            FROM student_enrollment_periods ep
+            JOIN sections sec ON sec.id = ep.section_id AND sec.school_id = ep.school_id
+            JOIN classes c ON c.id = ep.class_id AND c.school_id = ep.school_id
+            WHERE ep.school_id = ? AND ep.student_id = ?
+            ORDER BY sec.name
+        `, [schoolId, studentId]);
 
-        const selectedSession = req.query.session || (periods[0] ? periods[0].session : activeSession);
-        const selectedTerm = req.query.term || (periods[0] ? periods[0].term : activeTerm);
-        const selectedFilter = (req.query.status || 'all').toLowerCase();
+        const selectedSectionId = sectionOptions.some(s => Number(s.section_id) === Number(req.query.section_id))
+            ? Number(req.query.section_id)
+            : (sectionOptions.length ? Number(sectionOptions[0].section_id) : null);
+
+        let periods = [];
+        let selectedSession = '';
+        let selectedTerm = '';
+        let selectedClassId = null;
+        let classOptions = [];
+        let analytics = null;
+        let allTermRecords = [];
+        let filteredRecords = [];
+        let calendar = null;
+        const selectedFilter = ['all','present','late','absent','leave'].includes(String(req.query.status || 'all').toLowerCase())
+            ? String(req.query.status || 'all').toLowerCase() : 'all';
         const activeView = req.query.view === 'calendar' ? 'calendar' : 'history';
 
-        // Fetch all attendance records for the selected term & session
-        const rawRecords = await db.all(`
-            SELECT id, date, status, reason, reason_type, custom_reason
-            FROM attendance
-            WHERE student_id = ? AND session = ? AND term = ?
-            ORDER BY date DESC
-        `, [studentId, selectedSession, selectedTerm]);
+        if (selectedSectionId) {
+            periods = await db.all(`
+                SELECT DISTINCT p.session, p.term, p.start_date, p.end_date
+                FROM section_academic_periods p
+                JOIN student_enrollment_periods ep
+                  ON ep.school_id = p.school_id AND ep.section_id = p.section_id
+                 AND ep.session = p.session
+                 AND ep.start_date <= p.end_date
+                 AND (ep.end_date IS NULL OR ep.end_date >= p.start_date)
+                WHERE p.school_id = ? AND p.section_id = ? AND ep.student_id = ?
+                ORDER BY p.start_date DESC, p.session DESC
+            `, [schoolId, selectedSectionId, studentId]);
 
-        // Normalize date field to 'YYYY-MM-DD' string for consistent handling across SQLite/Postgres
-        const allTermRecords = (rawRecords || []).map(r => {
-            let dateStr = '';
-            if (r.date instanceof Date) {
-                dateStr = r.date.toISOString().slice(0, 10);
-            } else if (typeof r.date === 'string') {
-                dateStr = r.date.slice(0, 10);
-            } else if (r.date) {
-                dateStr = new Date(r.date).toISOString().slice(0, 10);
+            const requestedPeriod = periods.find(p =>
+                p.session === req.query.session && p.term === req.query.term);
+            const activeSection = (ctx.enrolledClasses || []).find(c => Number(c.section_id) === selectedSectionId);
+            const defaultPeriod = periods.find(p =>
+                activeSection && p.session === activeSection.section_session && p.term === activeSection.section_term
+            ) || periods[0];
+            const period = requestedPeriod || defaultPeriod || null;
+
+            if (period) {
+                selectedSession = period.session;
+                selectedTerm = period.term;
+                classOptions = await db.all(`
+                    SELECT DISTINCT c.id AS class_id, c.name AS class_name
+                    FROM student_enrollment_periods ep
+                    JOIN classes c ON c.id = ep.class_id AND c.school_id = ep.school_id
+                    WHERE ep.school_id = ? AND ep.student_id = ? AND ep.section_id = ?
+                      AND ep.session = ? AND ep.start_date <= ? AND (ep.end_date IS NULL OR ep.end_date >= ?)
+                    ORDER BY c.name
+                `, [schoolId, studentId, selectedSectionId, selectedSession, period.end_date, period.start_date]);
+
+                selectedClassId = classOptions.some(c => Number(c.class_id) === Number(req.query.class_id))
+                    ? Number(req.query.class_id)
+                    : (classOptions.length ? Number(classOptions[0].class_id) : null);
+
+                if (selectedClassId) {
+                    const placements = await db.all(`
+                        SELECT start_date, end_date
+                        FROM student_enrollment_periods
+                        WHERE school_id = ? AND student_id = ? AND section_id = ?
+                          AND class_id = ? AND session = ?
+                          AND start_date <= ? AND (end_date IS NULL OR end_date >= ?)
+                        ORDER BY start_date
+                    `, [schoolId, studentId, selectedSectionId, selectedClassId,
+                        selectedSession, period.end_date, period.start_date]);
+
+                    const rangeStart = placements.reduce((min, row) =>
+                        String(row.start_date).slice(0,10) < min ? String(row.start_date).slice(0,10) : min,
+                        String(period.start_date).slice(0,10));
+                    const rangeEnd = placements.reduce((max, row) => {
+                        const endDate = row.end_date == null ? String(period.end_date).slice(0,10) : String(row.end_date).slice(0,10);
+                        return endDate > max ? endDate : max;
+                    }, String(period.end_date).slice(0,10));
+                    const thresholdValue = school['attendance.low_attendance_threshold'] == null
+                        ? 75 : Number(school['attendance.low_attendance_threshold']);
+                    const lowAttendanceThreshold = Number.isFinite(thresholdValue) && thresholdValue >= 0 && thresholdValue <= 100
+                        ? thresholdValue : 75;
+
+                    analytics = await analyticsService.calculate({
+                        schoolId, sectionId: selectedSectionId, classId: selectedClassId,
+                        studentId, session: selectedSession, term: selectedTerm,
+                        startDate: rangeStart, endDate: rangeEnd, lowAttendanceThreshold
+                    });
+
+                    const rawRows = await db.all(`
+                        SELECT date, status, reason
+                        FROM attendance
+                        WHERE student_id = ? AND school_id = ? AND section_id = ?
+                          AND class_id = ? AND session = ? AND term = ?
+                          AND date >= ? AND date <= ?
+                        ORDER BY date DESC
+                    `, [studentId, schoolId, selectedSectionId, selectedClassId,
+                        selectedSession, selectedTerm, rangeStart, rangeEnd]);
+                    const reasonByDate = new Map(rawRows.map(row => [
+                        row.date instanceof Date ? row.date.toISOString().slice(0,10) : String(row.date).slice(0,10),
+                        row.reason || ''
+                    ]));
+
+                    allTermRecords = analytics.days
+                        .filter(day => day.status === 'recorded')
+                        .map(day => ({
+                            date: day.date,
+                            status: day.attendanceStatus,
+                            reason: reasonByDate.get(day.date) || ''
+                        }))
+                        .sort((a,b) => b.date.localeCompare(a.date));
+                    filteredRecords = selectedFilter === 'all'
+                        ? allTermRecords
+                        : allTermRecords.filter(row => row.status.toLowerCase() === selectedFilter);
+
+                    const requestedMonth = /^\\d{4}-\\d{2}$/.test(String(req.query.month || ''))
+                        ? String(req.query.month) : (period.end_date instanceof Date
+                            ? period.end_date.toISOString().slice(0,7)
+                            : String(period.end_date).slice(0,7));
+                    const [calYear, calMonth] = requestedMonth.split('-').map(Number);
+                    const firstDay = new Date(Date.UTC(calYear, calMonth - 1, 1));
+                    const lastDay = new Date(Date.UTC(calYear, calMonth, 0));
+                    const daysInMonth = lastDay.getUTCDate();
+                    const startDayOfWeek = firstDay.getUTCDay();
+                    const recordsByDate = {};
+                    analytics.days.forEach(day => {
+                        const status = day.status === 'recorded' ? day.attendanceStatus.toLowerCase() : day.status;
+                        recordsByDate[day.date] = { status, reason: day.reason || '' };
+                    });
+                    const prev = new Date(Date.UTC(calYear, calMonth - 2, 1));
+                    const next = new Date(Date.UTC(calYear, calMonth, 1));
+                    const monthString = date => `${date.getUTCFullYear()}-${String(date.getUTCMonth()+1).padStart(2,'0')}`;
+                    calendar = {
+                        year: calYear, month: calMonth,
+                        monthName: firstDay.toLocaleDateString('en-US', { month:'long', year:'numeric', timeZone:'UTC' }),
+                        monthStr: requestedMonth, prevMonthStr: monthString(prev), nextMonthStr: monthString(next),
+                        daysInMonth, startDayOfWeek, recordsByDate
+                    };
+                }
             }
-            return {
-                ...r,
-                date: dateStr
-            };
-        });
-
-        // Summary calculations
-        const totalDays = allTermRecords.length;
-        const presentCount = allTermRecords.filter(r => r.status === 'Present').length;
-        const lateCount = allTermRecords.filter(r => r.status === 'Late').length;
-        const absentCount = allTermRecords.filter(r => r.status === 'Absent').length;
-        const leaveCount = allTermRecords.filter(r => r.status === 'Leave').length;
-        
-        const attendanceRate = totalDays > 0 
-            ? Math.round(((presentCount + lateCount) / totalDays) * 100) 
-            : null;
-
-        // Factual insights
-        const recentAbsence = allTermRecords.find(r => r.status === 'Absent');
-        const recentLate = allTermRecords.find(r => r.status === 'Late');
-
-        // Check for school term absence limit
-        const limitRow = await db.get("SELECT value FROM settings WHERE key = 'attendance.term_absence_limit'");
-        const termAbsenceLimit = Number(limitRow ? limitRow.value : 10);
-
-        // Filtered records for History view
-        let filteredRecords = allTermRecords;
-        if (selectedFilter !== 'all') {
-            filteredRecords = allTermRecords.filter(r => r.status.toLowerCase() === selectedFilter);
         }
 
-        // Calendar computation
-        let calMonthStr = req.query.month;
-        if (!calMonthStr) {
-            if (allTermRecords.length > 0) {
-                calMonthStr = allTermRecords[0].date.substring(0, 7); // 'YYYY-MM'
-            } else {
-                const now = new Date();
-                calMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            }
-        }
-
-        const [calYear, calMonth] = calMonthStr.split('-').map(Number);
-        const firstDayOfMonth = new Date(calYear, calMonth - 1, 1);
-        const lastDayOfMonth = new Date(calYear, calMonth, 0);
-        const daysInMonth = lastDayOfMonth.getDate();
-        const startDayOfWeek = firstDayOfMonth.getDay(); // 0 = Sun, 1 = Mon...
-
-        // Map date -> status for quick lookup in calendar
-        const recordsByDate = {};
-        allTermRecords.forEach(r => {
-            recordsByDate[r.date] = r;
-        });
-
-        // Prev and Next month navigation strings
-        const prevMonthDate = new Date(calYear, calMonth - 2, 1);
-        const nextMonthDate = new Date(calYear, calMonth, 1);
-        const prevMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
-        const nextMonthStr = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
+        const selectedSection = sectionOptions.find(s => Number(s.section_id) === selectedSectionId);
+        const selectedClass = classOptions.find(c => Number(c.class_id) === selectedClassId);
+        const counts = analytics ? analytics.counts : {};
+        const presentCount = counts.present || 0;
+        const lateCount = counts.late || 0;
+        const absentCount = counts.absent || 0;
+        const leaveCount = counts.approvedLeave || 0;
+        const totalDays = counts.recorded || 0;
+        const attendanceRate = analytics ? analytics.attendanceRate : null;
+        const recentAbsence = allTermRecords.find(row => row.status === 'Absent') || null;
+        const recentLate = allTermRecords.find(row => row.status === 'Late') || null;
 
         res.render('portal/attendance', {
-            title: 'Attendance',
-            path: '/portal/attendance',
-            school,
-            student: studentObj || req.session.student,
-            currentTerm: activeTerm,
-            currentSession: activeSession,
-            selectedTerm,
-            selectedSession,
-            selectedFilter,
-            activeView,
-            periods,
-            totalDays,
-            presentCount,
-            lateCount,
-            absentCount,
-            leaveCount,
-            attendanceRate,
-            filteredRecords,
-            allTermRecords,
-            recentAbsence,
-            recentLate,
-            termAbsenceLimit,
-            calendar: {
-                year: calYear,
-                month: calMonth,
-                monthName: firstDayOfMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
-                monthStr: calMonthStr,
-                prevMonthStr,
-                nextMonthStr,
-                daysInMonth,
-                startDayOfWeek,
-                recordsByDate
-            },
-            individualMessagesCount,
+            title: 'Attendance', path: '/portal/attendance', school,
+            student: { ...(ctx.studentObj || req.session.student), class_name: selectedClass ? selectedClass.class_name : 'Not assigned' },
+            currentTerm: ctx.activeTerm, currentSession: ctx.activeSession,
+            sectionOptions, selectedSectionId, selectedSection,
+            classOptions, selectedClassId,
+            selectedTerm, selectedSession, selectedFilter, activeView, periods,
+            analytics, counts, totalDays, presentCount, lateCount, absentCount, leaveCount,
+            attendanceRate, filteredRecords, allTermRecords, recentAbsence, recentLate, calendar,
+            individualMessagesCount: ctx.individualMessagesCount,
             sectionInfo: ctx.enrolledClasses
         });
     } catch (err) {

@@ -18,6 +18,8 @@ assert(view.includes("if (!navigator.onLine)"));
 assert(view.includes("getPendingAttendanceCount"));
 assert(offline.includes('async function getPendingAttendanceCount()'));
 assert(offline.includes('    getPendingAttendanceCount,'));
+assert(offline.includes('if (!ownerKey) return attendanceItems.length;'));
+assert(offline.includes('return Number.MAX_SAFE_INTEGER;'));
 assert(routes.includes("router.post('/submit', attendanceController.submitAttendanceRegister);"));
 assert(controller.includes('attendanceRegisterWorkflow.saveRegisterProgress'));
 assert(controller.includes('attendanceRegisterWorkflow.submitRegister'));

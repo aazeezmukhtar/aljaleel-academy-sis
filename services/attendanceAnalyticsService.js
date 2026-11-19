@@ -48,7 +48,8 @@ function calculateAttendanceSummary(records, threshold = null) {
 
 function createAttendanceAnalyticsService(db) {
     if (!db) throw new Error('An attendance analytics database adapter is required.');
-    const registerWorkflow = require('./attendanceRegisterWorkflowService')(db);
+    const { createAttendanceRegisterWorkflowService } = require('./attendanceRegisterWorkflowService');
+    const registerWorkflow = createAttendanceRegisterWorkflowService(db);
 
     async function hasRegisterFoundation() {
         return registerWorkflow.isFoundationAvailable();
@@ -208,7 +209,7 @@ function createAttendanceAnalyticsService(db) {
 
     async function getRegisterCompletion(input) {
         if (!(await hasRegisterFoundation())) {
-            return { expectedRegisters: null, submittedRegisters: null, pendingRegisters: null, completionRate: null };
+            return { generatedRegisters: null, submittedRegisters: null, pendingRegisters: null, completionRate: null };
         }
         const row = await db.get(`
             SELECT COUNT(*) AS expected_registers,
@@ -218,7 +219,7 @@ function createAttendanceAnalyticsService(db) {
             WHERE school_id = ? AND class_id = ? AND section_id = ?
               AND register_date BETWEEN ? AND ?
         `, [input.schoolId, input.classId, input.sectionId, input.startDate, input.endDate]);
-        const expectedRegisters = Number(row && row.expected_registers || 0);
+        const generatedRegisters = Number(row && row.expected_registers || 0);
         const submittedRegisters = Number(row && row.submitted_registers || 0);
         const pendingRegisters = Number(row && row.pending_registers || 0);
         return {

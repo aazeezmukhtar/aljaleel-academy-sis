@@ -22,6 +22,9 @@ assert(settingsView.includes('name="attendance_minimum_percentage"') &&
   'School Settings must expose the persisted low-attendance threshold.');
 assert(settingsController.includes("key: 'attendance.minimum_percentage'"),
   'School Settings must persist the same threshold key consumed by the shared service.');
+assert(settingsController.includes('threshold < 0 || threshold > 100'),
+  'The server must reject out-of-range attendance threshold values.');
+require('ejs').compile(settingsView, { filename: path.join(__dirname, '..', 'views/settings.ejs') });
 
 const thresholdService = require('../services/attendanceThresholdService');
 

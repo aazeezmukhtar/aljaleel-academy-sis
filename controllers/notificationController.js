@@ -62,10 +62,28 @@ exports.getLatestNotifications = async (req, res) => {
             `, [userId, schoolId]);
         }
 
+        // Attendance reminders are generated only for staff with explicit register
+        // responsibility. The service checks expected class days and submitted state.
+        let attendanceReminders = [];
+        if (req.session.staff) {
+            const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date());
+            attendanceReminders = await require('../services/attendanceRegisterReminderService')
+                .collectForStaff({ schoolId, staffId: userId, today });
+        }
+        const reminderNotifications = attendanceReminders.map(reminder => ({
+            id: reminder.id,
+            title: `Attendance register pending — ${reminder.section_name} / ${reminder.class_name}`,
+            type: 'Attendance reminder',
+            date: reminder.attendance_date,
+            created_at: reminder.created_at,
+            source_type: 'attendance_register_reminder',
+            url: `/attendance/take?class_id=${reminder.class_id}&date=${encodeURIComponent(String(reminder.attendance_date).slice(0,10))}`
+        }));
+
         // 2. Merge and Sort
-        let rawNotifications = [...announcements, ...assignments]
+        let rawNotifications = [...announcements, ...assignments, ...reminderNotifications]
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 15);
+            .slice(0, 20);
 
         // 3. Fetch read statuses
         const reads = await db.all(`

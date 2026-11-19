@@ -31,6 +31,12 @@ Choose one database engine and execute only its matching SQL file for each step.
    - Requires the section-aware attendance uniqueness key, dated enrollment periods, and calendar responsibilities.
    - Creates formal register state and immutable submitted/reopened event history.
 
+5. **Missing-register reminders**
+   - `20261119_attendance_register_reminders.sqlite.sql` or `20261119_attendance_register_reminders.postgres.sql`
+   - Requires sections, classes, staff, academic periods, schedules, responsibilities and formal attendance registers.
+   - Creates one idempotent reminder record per expected class date. Staff notification-feed requests generate reminders for expected, unsubmitted dates in the current term. Submission resolves the reminder atomically.
+   - This is request-driven in-app notification behavior; no cron, email, SMS or WhatsApp sender is introduced.
+
 These migrations are manual and must not be added to `utils/migrateOnStartup.js`, application startup, deploy hooks, or an automatic migration runner.
 
 ## Required read-only preflight
@@ -99,7 +105,7 @@ Do not repair discrepancies by guessing dates or changing historical attendance.
 
 ## Application rollout sequence
 
-1. Verify all four migrations against disposable SQLite and PostgreSQL 17.6 environments.
+1. Verify all five migrations against disposable SQLite and PostgreSQL 17.6 environments.
 2. Apply approved migrations manually to the target database, one engine-specific file at a time, in the order above.
 3. Verify schema, row counts, foreign keys, indexes, audit triggers, and dated enrollment coverage using read-only queries.
 4. Deploy the application code only after the database schema is verified.

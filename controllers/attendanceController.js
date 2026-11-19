@@ -291,129 +291,83 @@ const getPreviousDayAttendance = async (req, res) => {
     }
 };
 
-// POST /attendance/save - Save student attendance records
+// POST /attendance/save - Save an editable attendance draft.
 const saveAttendance = async (req, res) => {
-    const { class_id, date, session, term, attendance, reasons = {}, custom_reasons = {} } = req.body;
     const user = req.session.staff;
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
-
-    if (!user) {
-        return res.status(401).json({ success: false, message: 'Session expired' });
-    }
-
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
     try {
-        const classCheck = await db.get(
-            'SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?',
-            [Number(class_id), schoolId]
-        );
-        if (!classCheck) return res.status(403).json({ success: false, message: 'Class not found or access denied' });
-        if (!classCheck.section_id) {
-            return res.status(409).json({
-                success: false,
-                message: 'This class has no section assigned. Attendance cannot be saved until its section is configured.'
-            });
-        }
-
+        const classId = Number(req.body.class_id);
+        const cls = await db.get('SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?', [classId, schoolId]);
+        if (!cls || !cls.section_id) return res.status(403).json({ success: false, message: 'Class not found or section is not configured.' });
         if (user.role !== 'Admin') {
-            const assignedClasses = await getAssignedClasses(user, schoolId);
-            const hasAccess = assignedClasses.some(c => String(c.id) === String(class_id));
-            if (!hasAccess) return res.status(403).json({ success: false, message: 'Access Denied to this class' });
+            const assigned = await getAssignedClasses(user, schoolId);
+            if (!assigned.some(item => Number(item.id) === classId)) return res.status(403).json({ success: false, message: 'Access denied to this class.' });
         }
-
-        const sql = `
-            INSERT INTO attendance
-                (student_id, class_id, section_id, date, status, session, term, reason, reason_type, custom_reason)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ON CONFLICT(student_id, section_id, date, session, term)
-            DO UPDATE SET
-                status = excluded.status,
-                class_id = excluded.class_id,
-                reason = excluded.reason,
-                reason_type = excluded.reason_type,
-                custom_reason = excluded.custom_reason
-        `;
-
-        const settings = await getAcademicSettings(class_id, schoolId);
-        const effectiveSession = session || settings.session;
-        const effectiveTerm = term || settings.term;
-        if (!effectiveSession || !effectiveTerm) {
-            return res.status(409).json({
-                success: false,
-                message: 'The selected class has no configured academic session and term.'
-            });
-        }
-
-        await db.transaction(async () => {
-            for (const [studentIdStr, status] of Object.entries(attendance || {})) {
-                const student_id = Number(studentIdStr);
-                if (isNaN(student_id)) continue;
-
-                // Validate tenant ownership and membership in the selected class/session.
-                // Preserve the legacy current_class_id fallback only when the student has
-                // no enrollment row at all for this session, matching the attendance sheet.
-                const studentCheck = await db.get(`
-                    SELECT s.id
-                    FROM students s
-                    WHERE s.id = ? AND s.school_id = ?
-                      AND (
-                        EXISTS (
-                            SELECT 1 FROM student_enrollments se
-                            WHERE se.student_id = s.id
-                              AND se.class_id = ?
-                              AND se.session = ?
-                        )
-                        OR (
-                            s.current_class_id = ?
-                            AND NOT EXISTS (
-                                SELECT 1 FROM student_enrollments se_current
-                                WHERE se_current.student_id = s.id
-                                  AND se_current.session = ?
-                            )
-                        )
-                      )
-                `, [student_id, schoolId, Number(class_id), effectiveSession,
-                    Number(class_id), effectiveSession]);
-                if (!studentCheck) continue;
-                
-                const rawReason = reasons[studentIdStr] || null;
-                const customReason = custom_reasons[studentIdStr] || null;
-                
-                let reason = rawReason;
-                if (rawReason === 'Other' && customReason) {
-
-                    reason = customReason;
-                }
-                
-                await db.run(sql, [
-                    student_id,
-                    Number(class_id),
-                    Number(classCheck.section_id),
-                    date,
-                    status,
-                    effectiveSession,
-                    effectiveTerm,
-                    reason,
-                    rawReason,
-                    customReason
-                ]);
-            }
+        const settings = await getAcademicSettings(classId, schoolId);
+        const result = await require('../services/attendanceRegisterService').saveDraft({
+            schoolId, classId, sectionId: Number(cls.section_id), date: req.body.date,
+            session: req.body.session || settings.session, term: req.body.term || settings.term,
+            actorId: Number(user.id), attendance: req.body.attendance, reasons: req.body.reasons,
+            custom_reasons: req.body.custom_reasons
         });
-
-        logAction(user.id, 'SAVE_ATTENDANCE', 'ATTENDANCE', {
-            class_id, date, count: Object.keys(attendance || {}).length
-        }, req.ip);
-
-        return res.json({ success: true, message: 'Attendance saved successfully' });
+        logAction(user.id, 'SAVE_ATTENDANCE_DRAFT', 'ATTENDANCE', { class_id: classId, date: req.body.date, count: result.savedCount }, req.ip);
+        return res.json({ success: true, message: 'Attendance draft saved successfully.', register: result });
     } catch (err) {
-        console.error('saveAttendance Error:', err);
-        return res.status(500).json({ 
-            success: false, 
-            message: 'Database Error', 
-            error: err.message
-        });
+        const status = err.code === 'ATTENDANCE_REGISTER_CONFLICT' ? 409 : /required|valid|roster|status|belong|configured/i.test(err.message || '') ? 400 : 500;
+        return res.status(status).json({ success: false, message: err.message || 'Database Error' });
     }
 };
 
+const submitAttendanceRegister = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
+    try {
+        const classId = Number(req.body.class_id);
+        const cls = await db.get('SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?', [classId, schoolId]);
+        if (!cls || !cls.section_id) return res.status(403).json({ success: false, message: 'Class not found or section is not configured.' });
+        if (user.role !== 'Admin') {
+            const assigned = await getAssignedClasses(user, schoolId);
+            if (!assigned.some(item => Number(item.id) === classId)) return res.status(403).json({ success: false, message: 'Access denied to this class.' });
+        }
+        const settings = await getAcademicSettings(classId, schoolId);
+        const result = await require('../services/attendanceRegisterService').submit({
+            schoolId, classId, sectionId: Number(cls.section_id), date: req.body.date,
+            session: req.body.session || settings.session, term: req.body.term || settings.term,
+            actorId: Number(user.id), attendance: req.body.attendance, reasons: req.body.reasons,
+            custom_reasons: req.body.custom_reasons
+        });
+        logAction(user.id, 'SUBMIT_ATTENDANCE_REGISTER', 'ATTENDANCE', { class_id: classId, date: req.body.date, version: result.version }, req.ip);
+        return res.json({ success: true, message: 'Attendance register submitted successfully.', register: result });
+    } catch (err) {
+        const status = err.code === 'ATTENDANCE_REGISTER_CONFLICT' ? 409 : /required|valid|roster|status|belong|configured|empty/i.test(err.message || '') ? 400 : 500;
+        return res.status(status).json({ success: false, message: err.message || 'Database Error' });
+    }
+};
+
+const reopenAttendanceRegister = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user) return res.status(401).json({ success: false, message: 'Session expired' });
+    if (user.role !== 'Admin') return res.status(403).json({ success: false, message: 'Only an administrator can reopen a submitted register.' });
+    try {
+        const classId = Number(req.body.class_id);
+        const cls = await db.get('SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?', [classId, schoolId]);
+        if (!cls || !cls.section_id) return res.status(404).json({ success: false, message: 'Class not found.' });
+        const settings = await getAcademicSettings(classId, schoolId);
+        const result = await require('../services/attendanceRegisterService').reopen({
+            schoolId, classId, sectionId: Number(cls.section_id), date: req.body.date,
+            session: req.body.session || settings.session, term: req.body.term || settings.term,
+            actorId: Number(user.id), actorRole: user.role, reason: req.body.reason
+        });
+        logAction(user.id, 'REOPEN_ATTENDANCE_REGISTER', 'ATTENDANCE', { class_id: classId, date: req.body.date, version: result.version, reason: req.body.reason }, req.ip);
+        return res.json({ success: true, message: 'Register reopened for corrections.', register: result });
+    } catch (err) {
+        const status = err.code === 'ATTENDANCE_REGISTER_CONFLICT' ? 409 : /required|valid|belong|configured/i.test(err.message || '') ? 400 : 500;
+        return res.status(status).json({ success: false, message: err.message || 'Database Error' });
+    }
+};
 // GET /attendance/report - Attendance summary report
 const getReport = async (req, res) => {
     const { class_id, start_date, end_date } = req.query;
@@ -527,5 +481,5 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, getReport, getStaffAttendance, saveStaffAttendance };
+module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getReport, getStaffAttendance, saveStaffAttendance };
 

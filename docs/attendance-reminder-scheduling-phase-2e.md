@@ -29,7 +29,9 @@ This phase adds idempotent scheduling of attendance reminders, staged administra
 - `GET /api/cron/attendance-reminders`
 - Requires `Authorization: Bearer <CRON_SECRET>` (or `x-cron-secret` for a compatible external scheduler).
 - Missing secret returns 503; an invalid secret returns 401.
-- The endpoint schedules up to 100 due registers per invocation and returns counts only; it does not expose recipient or student data.
+- Before scheduling reminders, each invocation reconciles missing expected registers for scheduled class days across the current school-local date and the preceding six days. It uses the class schedule, academic period, attendance settings, enrollment dates and approved closures; it does not infer enrollment history.
+- The endpoint processes up to 100 missing class/date combinations and schedules up to 100 due registers per invocation. It returns counts only; it does not expose recipient or student data.
+- A skipped register (for example, unresolved enrollment dates or no eligible academic period) is not silently converted into an absence or reminder; the skip count is returned for operational review.
 - Production must configure `CRON_SECRET` and an external scheduler to invoke this endpoint every minute. This PR deliberately does not add a Vercel cron expression because Vercel Hobby plans do not support sub-daily cron schedules; the account plan/scheduler choice must be confirmed before deployment.
 - Scheduler invocations are best-effort and may be repeated; the service is designed to be idempotent and to catch up on overdue stages.
 

@@ -31,6 +31,7 @@ raw.close();
 const migration = fs.readFileSync(path.join(__dirname, '..', 'database/migrations/20261119_attendance_register_submission.sqlite.sql'), 'utf8');
 const migrationDb = new Database(file);
 migrationDb.exec(migration);
+migrationDb.exec(migration);
 migrationDb.close();
 
 const db = require('../utils/db');

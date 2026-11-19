@@ -121,11 +121,8 @@ exports.getDashboard = async (req, res) => {
 
     // Dashboard summaries use the same engine, kept separate for every enrolled section.
     const attendanceAnalytics = require('../services/attendanceAnalyticsService');
-    const attendanceThresholdValue = school['attendance.low_attendance_threshold'] == null
-        ? 75 : Number(school['attendance.low_attendance_threshold']);
-    const attendanceThreshold = Number.isFinite(attendanceThresholdValue) &&
-        attendanceThresholdValue >= 0 && attendanceThresholdValue <= 100
-        ? attendanceThresholdValue : 75;
+    const attendanceThreshold = await require('../services/attendanceThresholdService')
+        .getThreshold(schoolId);
     const attendanceSummaries = [];
     for (const enrolled of sectionInfo) {
         if (!enrolled.section_id || !enrolled.class_id) continue;

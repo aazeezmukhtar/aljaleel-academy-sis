@@ -34,7 +34,7 @@ if(!connectionString){console.error('[expected-attendance-days-postgres] PG_TEST
     VALUES(1,10,'2026/2027','1st Term','2026-09-01','2026-09-10'),(1,11,'2026/2027','1st Term','2026-09-01','2026-09-10')`);
   await client.query(`INSERT INTO class_attendance_schedules
     (school_id,class_id,session,effective_from,effective_to,monday,tuesday,wednesday,thursday,friday,saturday,sunday,created_by)
-    VALUES(1,1000,'2026/2027','2026-09-01','2026-09-04',true,true,true,true,false,false,false,7),
+    VALUES(1,1000,'2026/2027','2026-09-01','2026-09-04',true,true,true,true,true,false,false,7),
           (1,1000,'2026/2027','2026-09-05',NULL,false,false,false,false,false,true,true,7),
           (1,1100,'2026/2027','2026-09-01',NULL,true,true,true,true,true,false,false,7)`);
   await client.query(`INSERT INTO class_attendance_closures(school_id,scope_type,closure_date,reason,created_by)

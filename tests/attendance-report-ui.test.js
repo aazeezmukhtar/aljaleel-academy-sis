@@ -35,7 +35,7 @@ assert(routes.includes("router.get('/attendance', isAdmin,") &&
   routes.includes("router.get('/attendance/low', isAdmin,") &&
   routes.includes("router.get('/attendance/daily', isAdmin,"),
   'School-wide legacy attendance reports must be Admin-only.');
-assert(reportView.includes('missing_register') === false && reportView.includes('row.missing_register'),
+assert(reportView.includes('row.missing_register'),
   'Report must display missing registers separately.');
 assert(reportView.includes('row.draft_register') && reportView.includes('row.attendance_rate'),
   'Report must display draft registers and shared-engine attendance rate.');

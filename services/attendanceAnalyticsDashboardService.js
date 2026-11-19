@@ -86,6 +86,20 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
               AND status <> 'cancelled'
               AND start_date <= ? AND end_date >= ?
         `, [schoolId, sectionId, session, term, endDate, startDate]);
+        if (!periods.length) {
+            return emptyDashboard({ schoolId, sectionId, session, term, startDate, endDate, classIds });
+        }
+        const periodStart = periods.map(period => period.start_date instanceof Date
+            ? period.start_date.toISOString().slice(0, 10) : String(period.start_date).slice(0, 10))
+            .sort()[0];
+        const periodEnd = periods.map(period => period.end_date instanceof Date
+            ? period.end_date.toISOString().slice(0, 10) : String(period.end_date).slice(0, 10))
+            .sort().slice(-1)[0];
+        const effectiveStartDate = startDate < periodStart ? periodStart : startDate;
+        const effectiveEndDate = endDate > periodEnd ? periodEnd : endDate;
+        if (effectiveEndDate < effectiveStartDate) {
+            return emptyDashboard({ schoolId, sectionId, session, term, startDate: effectiveStartDate, endDate: effectiveEndDate, classIds });
+        }
         const schedules = await db.all(`
             SELECT sch.class_id, sch.section_id, sch.weekday, sch.effective_from, sch.effective_to
             FROM class_attendance_schedules sch
@@ -94,21 +108,21 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
               AND sch.effective_from <= ?
               AND (sch.effective_to IS NULL OR sch.effective_to >= ?)
             ORDER BY sch.class_id, sch.effective_from, sch.weekday
-        `, [schoolId, sectionId, ...classIds, endDate, startDate]);
+        `, [schoolId, sectionId, ...classIds, effectiveEndDate, effectiveStartDate]);
         const closures = await db.all(`
             SELECT scope_type, section_id, class_id, start_date, end_date
             FROM class_attendance_closures
             WHERE school_id = ? AND status = 'approved'
               AND start_date <= ? AND end_date >= ?
             ORDER BY id
-        `, [schoolId, endDate, startDate]);
+        `, [schoolId, effectiveEndDate, effectiveStartDate]);
         const registers = await db.all(`
             SELECT id, class_id, section_id, register_date, status
             FROM attendance_registers
             WHERE school_id = ? AND section_id = ?
               AND class_id IN (${placeholders})
               AND register_date BETWEEN ? AND ?
-        `, [schoolId, sectionId, ...classIds, startDate, endDate]);
+        `, [schoolId, sectionId, ...classIds, effectiveStartDate, effectiveEndDate]);
 
         const registersByKey = new Map(registers.map(register => {
             const date = register.register_date instanceof Date
@@ -125,7 +139,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
             incompleteRegisters: 0, missingRegisters: 0
         }]));
 
-        for (let date = startDate; date <= endDate; date = addDays(date, 1)) {
+        for (let date = effectiveStartDate; date <= effectiveEndDate; date = addDays(date, 1)) {
             const insidePeriod = periods.some(period => dateCovers(period.start_date, period.end_date, date));
             if (!insidePeriod) continue;
             for (const schedule of schedules) {
@@ -174,7 +188,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
         for (const classItem of classes) {
             const report = await analyticsService.getClassAttendanceReport({
                 schoolId, classId: Number(classItem.id), sectionId,
-                startDate, endDate, session, term
+                startDate: effectiveStartDate, endDate: effectiveEndDate, session, term
             });
             const classStats = classExpected.get(String(classItem.id));
             const totals = summarize(report.records || []);
@@ -262,7 +276,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
             .slice(0, 10);
 
         return {
-            filters: { schoolId, sectionId, session, term, startDate, endDate, classIds },
+            filters: { schoolId, sectionId, session, term, startDate: effectiveStartDate, endDate: effectiveEndDate, classIds },
             overview: {
                 attendanceRate,
                 totalStudentDays,

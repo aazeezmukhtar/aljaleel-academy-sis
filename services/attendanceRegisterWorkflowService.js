@@ -163,6 +163,12 @@ function createAttendanceRegisterWorkflowService(db) {
                 if (status === UNMARKED_STATUS) {
                     if (existing) {
                         await db.run('DELETE FROM attendance WHERE id = ?', [existing.id], client);
+                        const beforeData = {
+                            status: existing.status,
+                            reason: existing.reason,
+                            reason_type: existing.reason_type,
+                            custom_reason: existing.custom_reason
+                        };
                         await db.run(`
                             INSERT INTO attendance_register_events
                                 (register_id, event_type, actor_staff_id, reason, metadata)
@@ -172,6 +178,12 @@ function createAttendanceRegisterWorkflowService(db) {
                             previous_status: existing.status,
                             new_status: null
                         })], client);
+                        await db.run(`
+                            INSERT INTO attendance_foundation_audit_logs
+                                (entity_type, entity_id, action, actor_staff_id, before_data, after_data, reason)
+                            VALUES ('attendance', ?, 'attendance_status_cleared', ?, ?, NULL,
+                                    'Attendance status cleared to unmarked.')
+                        `, [existing.id, actorStaffId, JSON.stringify(beforeData)], client);
                         changedCount += 1;
                     }
                     continue;
@@ -201,6 +213,12 @@ function createAttendanceRegisterWorkflowService(db) {
                     existing.reason !== reason || existing.reason_type !== rawReason ||
                     existing.custom_reason !== customReason) {
                     changedCount += 1;
+                    const beforeData = existing ? {
+                        status: existing.status,
+                        reason: existing.reason,
+                        reason_type: existing.reason_type,
+                        custom_reason: existing.custom_reason
+                    } : null;
                     if (existing) {
                         await db.run(`
                             INSERT INTO attendance_register_events
@@ -212,6 +230,23 @@ function createAttendanceRegisterWorkflowService(db) {
                             new_status: status
                         })], client);
                     }
+                    const stored = await db.get(`
+                        SELECT id FROM attendance
+                        WHERE student_id = ? AND class_id = ? AND section_id = ?
+                          AND date = ? AND session = ? AND term = ?
+                    `, [studentId, classId, register.section_id, registerDate, register.session, register.term], client);
+                    await db.run(`
+                        INSERT INTO attendance_foundation_audit_logs
+                            (entity_type, entity_id, action, actor_staff_id, before_data, after_data, reason)
+                        VALUES ('attendance', ?, ?, ?, ?, ?, ?)
+                    `, [
+                        stored.id,
+                        existing ? 'attendance_status_updated' : 'attendance_status_created',
+                        actorStaffId,
+                        beforeData ? JSON.stringify(beforeData) : null,
+                        JSON.stringify({ status, reason, reason_type: rawReason, custom_reason: customReason }),
+                        existing ? 'Attendance status or reason corrected.' : 'Attendance status recorded.'
+                    ], client);
                 }
             }
 

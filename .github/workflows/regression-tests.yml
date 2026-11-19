@@ -53,6 +53,8 @@ jobs:
         run: npm run test:attendance-register-generation
       - name: Run attendance register generation service tests (PostgreSQL)
         run: npm run test:attendance-register-generation-postgres
+      - name: Run attendance register save and submission workflow tests
+        run: npm run test:attendance-register-workflow
       - name: Run recovery and schema smoke checks
         run: npm run test:regression
       - name: Run offline cache policy and entry-context tests

@@ -62,11 +62,14 @@ async function ensureNoOverlap(type, schoolId, parentId, session, from, to, exce
   const spec = ENTITY[type];
   const parentColumn = spec.parent === 'section' ? 'section_id' : 'class_id';
   const end = to || '9999-12-31';
-  const sql = `SELECT id FROM ${spec.table}
-    WHERE school_id = ? AND ${parentColumn} = ? AND session = ?
-      AND ${spec.dateFrom} <= ? AND COALESCE(${spec.dateTo}, '9999-12-31') >= ?
-      AND (? IS NULL OR id <> ?) LIMIT 1`;
-  const found = await db.get(sql, [schoolId, parentId, session, end, from, exceptId || null, exceptId || null], client);
+  const exclusion = exceptId ? ' AND id <> ?' : '';
+  const params = [schoolId, parentId, session, end, from];
+  if (exceptId) params.push(exceptId);
+  const sql = \`SELECT id FROM \${spec.table}
+    WHERE school_id = ? AND \${parentColumn} = ? AND session = ?
+      AND \${spec.dateFrom} <= ? AND COALESCE(\${spec.dateTo}, '9999-12-31') >= ?\${exclusion}
+    LIMIT 1\`;
+  const found = await db.get(sql, params, client);
   if (found) throw conflict('This effective date range overlaps an existing ' + type.replaceAll('_',' ') + ' record.');
 }
 async function createPeriod(input, client) {

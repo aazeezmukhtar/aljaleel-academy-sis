@@ -342,7 +342,7 @@ const submitAttendanceRegister = async (req, res) => {
         const cls = await db.get('SELECT id, section_id FROM classes WHERE id = ? AND school_id = ?', [classId, schoolId]);
         if (!cls || !cls.section_id) return res.status(403).json({ success: false, message: 'Class not found or section is not configured.' });
         if (user.role !== 'Admin') {
-            const assigned = await getAssignedClasses(user, schoolId);
+            const assigned = await getAssignedClasses(user, schoolId, req.body.date);
             if (!assigned.some(item => Number(item.id) === classId)) return res.status(403).json({ success: false, message: 'Access denied to this class.' });
         }
         const settings = await getAcademicSettings(classId, schoolId);

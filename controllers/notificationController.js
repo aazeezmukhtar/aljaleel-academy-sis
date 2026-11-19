@@ -177,8 +177,9 @@ exports.markAsRead = async (req, res) => {
         }
 
         await db.run(`
-            INSERT OR IGNORE INTO notification_reads (user_id, user_type, source_id, source_type)
+            INSERT INTO notification_reads (user_id, user_type, source_id, source_type)
             VALUES (?, ?, ?, ?)
+            ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING
         `, [userId, userType, source_id, source_type]);
 
         res.json({ success: true });

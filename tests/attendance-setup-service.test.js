@@ -37,10 +37,6 @@ function makeDb() {
     const db = makeDb();
     const service = createAttendanceSetupService(db);
     const base = { schoolId: 1, actorStaffId: 7 };
-    await assert.rejects(
-        service.createAcademicPeriod({ ...base, sectionId: 10, session: '2026/2027', term: '1st Term', startDate: '2026-09-01', endDate: '2026-12-20' }),
-        /overlaps an existing academic period/
-    ).catch(() => {});
     // Valid date and ownership checks, plus audit writes for each created configuration.
     const period = await service.createAcademicPeriod({ ...base, sectionId: 10, session: '2026/2027', term: '1st Term', startDate: '2026-09-01', endDate: '2026-12-20' });
     assert.ok(period.id);

@@ -49,6 +49,10 @@ const { createNotificationDeliveryService } = require('../services/notificationD
         assert.strictEqual(first.id, duplicate.id, 'same recipient and idempotency key must return the original delivery');
         assert.strictEqual(duplicate.title, 'Attendance register overdue');
         assert.strictEqual(sqlite.prepare('SELECT COUNT(*) AS count FROM notification_deliveries').get().count, 1);
+        await assert.rejects(
+            () => service.enqueue({ ...base, sourceId: 999 }),
+            /already assigned to a different notification source/
+        );
 
         const otherRecipient = await service.enqueue({ ...base, recipientId: 21 });
         assert.notStrictEqual(otherRecipient.id, first.id, 'idempotency must be scoped to the recipient');

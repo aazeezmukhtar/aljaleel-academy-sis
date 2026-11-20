@@ -351,18 +351,23 @@ const db = {
       [1, 40, '2026-11-25']
     );
     assert(reminderRegister, 'missing scheduled register must be created before its reminder');
-    assert.strictEqual(firstReminderRun.scheduledCount, 1,
-      'stage one should be scheduled immediately after the deadline');
+    assert.strictEqual(firstReminderRun.scheduledCount, 2,
+      'the scheduler should persist the due first stage and the future escalation stage');
     const firstReminderRows = await db.all(
-      'SELECT recipient_staff_id, reminder_stage, reminder_type, status FROM attendance_register_reminders WHERE register_id = ?',
+      'SELECT recipient_staff_id, reminder_stage, reminder_type, status FROM attendance_register_reminders WHERE register_id = ? ORDER BY reminder_stage',
       [reminderRegister.id]
     );
-    assert.strictEqual(firstReminderRows.length, 1);
+    assert.strictEqual(firstReminderRows.length, 2,
+      'the next escalation stage should be queued before its due time');
     assert.strictEqual(String(firstReminderRows[0].recipient_staff_id), '20');
     assert.strictEqual(Number(firstReminderRows[0].reminder_stage), 1);
     assert.strictEqual(firstReminderRows[0].reminder_type, 'responsible_teacher');
     assert.strictEqual(firstReminderRows[0].status, 'sent',
       'the scheduler must publish due reminders through the shared delivery queue');
+    assert.strictEqual(Number(firstReminderRows[1].reminder_stage), 2);
+    assert.strictEqual(firstReminderRows[1].reminder_type, 'administrator_escalation');
+    assert.strictEqual(firstReminderRows[1].status, 'pending',
+      'the future escalation remains pending until its scheduled time');
     const firstDelivery = await db.get(`
       SELECT status, recipient_type, recipient_id, delivered_at
       FROM notification_deliveries
@@ -399,13 +404,19 @@ const db = {
     const escalationRun = await reminderService.scheduleDueReminders({
       now: '2026-11-25T14:00:00.000Z'
     });
-    assert.strictEqual(escalationRun.scheduledCount, 1,
-      'the configured 60-minute interval should escalate to administrators');
+    assert.strictEqual(escalationRun.scheduledCount, 0,
+      'the future escalation was already queued by the earlier scheduler run');
     const adminDelivery = await reminderService.deliverDueRemindersForStaff({
       staffId: 21, now: '2026-11-25T14:00:00.000Z'
     });
     assert.strictEqual(adminDelivery.length, 0,
       'administrator escalation must also be published by the scheduler');
+    const adminReminder = await db.get(
+      'SELECT status FROM attendance_register_reminders WHERE register_id = ? AND recipient_staff_id = ? AND reminder_stage = 2',
+      [reminderRegister.id, 21]
+    );
+    assert.strictEqual(adminReminder.status, 'sent',
+      'the scheduler must publish the escalation when its scheduled time arrives');
     const teacherReminder = await db.get(
       'SELECT id FROM attendance_register_reminders WHERE register_id = ? AND recipient_staff_id = ? AND reminder_stage = 1',
       [reminderRegister.id, 20]

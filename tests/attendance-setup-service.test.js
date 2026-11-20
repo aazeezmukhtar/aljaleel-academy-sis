@@ -10,6 +10,7 @@ function assertViewDefaults() {
     assert.ok(setupView.includes("window.prompt('Enter the last effective date (YYYY-MM-DD):', suggestedEnd)"));
     assert.ok(setupView.includes("const suggestedEnd = todayKey < button.dataset.start ? button.dataset.start : todayKey;"));
     assert.ok(setupView.includes('>Shorten period</button>'));
+    assert.ok(setupView.includes('attendanceTodayKey'));
     assert.ok(!setupView.includes("window.prompt('Enter the last effective date (YYYY-MM-DD):', button.dataset.start)"));
 }
 const { createAttendanceSetupService } = require('../services/attendanceSetupService');

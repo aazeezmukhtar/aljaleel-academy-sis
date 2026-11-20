@@ -31,6 +31,7 @@ const mockDb = {
     },
     async run(sql, params, client) {
         if (sql.includes('UPDATE notification_deliveries')) return { changes: 1 };
+        if (sql.includes('UPDATE attendance_register_reminders')) return { changes: 1 };
         if (sql.includes('INSERT INTO notification_reads')) {
             assert.ok(client, 'reminder read-state insert must use the acknowledgement transaction');
             calls.readInserts += 1;

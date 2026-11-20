@@ -49,7 +49,6 @@ if (!url) {
         await bootstrapClient.query('SET search_path TO public');
         bootstrapClient.release();
         bootstrapClient = null;
-        await bootstrapPool.end();
 
         pool = new Pool({
             connectionString: url,

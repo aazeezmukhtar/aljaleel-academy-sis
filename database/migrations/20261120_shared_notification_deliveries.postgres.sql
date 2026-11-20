@@ -5,7 +5,7 @@
 BEGIN;
 
 CREATE TABLE IF NOT EXISTS notification_deliveries (
-    id BIGSERIAL PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
     school_id INTEGER NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
     recipient_type TEXT NOT NULL CHECK (recipient_type IN ('staff', 'student')),
     recipient_id INTEGER NOT NULL CHECK (recipient_id > 0),
@@ -33,8 +33,12 @@ CREATE TABLE IF NOT EXISTS notification_deliveries (
     CHECK (length(trim(title)) > 0),
     CHECK (destination IS NULL OR destination LIKE '/%'),
     CHECK (
-        (status = 'delivered' AND delivered_at IS NOT NULL)
-        OR status <> 'delivered'
+        (status IN ('delivered', 'read') AND delivered_at IS NOT NULL)
+        OR status NOT IN ('delivered', 'read')
+    ),
+    CHECK (
+        (status = 'failed' AND last_error IS NOT NULL)
+        OR status <> 'failed'
     ),
     CHECK (
         (status = 'cancelled' AND cancelled_at IS NOT NULL)

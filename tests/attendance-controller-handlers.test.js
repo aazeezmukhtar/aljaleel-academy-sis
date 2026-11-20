@@ -105,6 +105,7 @@ function responseRecorder() {
     assert.strictEqual(pageResponse.rendered.data.readOnly, true);
     assert.strictEqual(pageResponse.rendered.data.canEdit, false);
     assert.strictEqual(pageResponse.rendered.data.students.length, 1);
+    assert.strictEqual(calls.generated, 1, 'GET must attempt register generation and preserve the skip reason');
 
     calls.generated = 0;
     const saveResponse = responseRecorder();

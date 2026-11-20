@@ -177,7 +177,7 @@ function responseRecorder() {
     assert.ok(queuedNotification, 'shared-queue attendance reminders must appear in the staff feed');
     assert.strictEqual(queuedNotification.id, 501, 'the legacy reminder ID remains the acknowledgement source ID');
     assert.strictEqual(queuedNotification.url, '/attendance/take?class_id=40&date=2026-11-20');
-    assert.strictEqual(calls.deliveredForStaff.length, 0, 'queue-backed feed reads must remain side-effect free');
+    assert.deepStrictEqual(calls.deliveredForStaff, [20], 'queue-backed feed reads must not add another delivery side effect');
 
     const queueAcknowledgement = responseRecorder();
     await controller.markAsRead({

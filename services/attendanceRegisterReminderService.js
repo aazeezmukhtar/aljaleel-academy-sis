@@ -373,7 +373,7 @@ function createAttendanceRegisterReminderService(db) {
                        ar.school_id, ar.class_id, ar.register_date
                 FROM attendance_register_reminders r
                 JOIN attendance_registers ar ON ar.id = r.register_id
-                WHERE r.status = 'pending' AND r.scheduled_at <= ?
+                WHERE r.status = 'pending'
                   AND ar.status IN ('expected', 'in_progress', 'reopened')
                   AND NOT EXISTS (
                     SELECT 1 FROM class_attendance_closures cl
@@ -387,7 +387,7 @@ function createAttendanceRegisterReminderService(db) {
                   )
                 ORDER BY r.scheduled_at, r.id
                 LIMIT ?
-            `, [now, limit]);
+            `, [limit]);
 
             for (const reminder of dueReminders) {
                 const registerDate = asDateKey(reminder.register_date);

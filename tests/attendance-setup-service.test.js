@@ -64,6 +64,39 @@ function makeDb() {
     const settings = await service.createSettings({ ...base, classId: 20, sectionId: 10, startDate: '2026-09-01', deadline: '14:00', firstReminderDelayMinutes: 0, subsequentReminderIntervals: [60, 120], lowAttendanceThreshold: 75 });
     assert.ok(settings.id);
     assert.strictEqual(db.state.audits.length, 4);
+
+    // Readiness is evaluated against the current Africa/Lagos date and is class-specific.
+    const todayParts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date()).reduce((result, part) => {
+        if (part.type !== 'literal') result[part.type] = part.value;
+        return result;
+    }, {});
+    const today = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
+    const readinessDb = makeDb();
+    readinessDb.all = async sql => {
+        if (sql.includes('SELECT c.id, c.name, c.section_id')) return [{ id: 20, name: 'Nursery 1', section_id: 10, section_name: 'Academy' }];
+        if (sql.includes('SELECT p.*')) return [{ section_id: 10, status: 'active', start_date: today, end_date: today }];
+        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_schedules')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
+        if (sql.includes('SELECT r.*, c.name AS class_name')) return [{ class_id: 20, section_id: 10, responsibility_type: 'primary', effective_from: today, effective_to: null }];
+        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
+        return [];
+    };
+    const readiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(readiness.readinessSummary.total, 1);
+    assert.strictEqual(readiness.readinessSummary.ready, 1);
+    assert.deepStrictEqual(readiness.readiness[0].missing, []);
+    readinessDb.all = async sql => {
+        if (sql.includes('SELECT c.id, c.name, c.section_id')) return [{ id: 20, name: 'Nursery 1', section_id: 10, section_name: 'Academy' }];
+        if (sql.includes('SELECT p.*')) return [{ section_id: 10, status: 'active', start_date: today, end_date: today }];
+        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_schedules')) return [];
+        if (sql.includes('SELECT r.*, c.name AS class_name')) return [{ class_id: 20, section_id: 10, responsibility_type: 'primary', effective_from: today, effective_to: null }];
+        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
+        return [];
+    };
+    const incomplete = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(incomplete.readinessSummary.incomplete, 1);
+    assert.deepStrictEqual(incomplete.readiness[0].missing, ['Opening days']);
     await assert.rejects(
         service.createSchedule({ ...base, classId: 20, sectionId: 10, weekday: 8, startDate: '2026-09-01' }),
         /weekday/

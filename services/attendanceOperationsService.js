@@ -44,7 +44,7 @@ function createAttendanceOperationsService(db) {
     async function getOperations(input) {
         const schoolId = Number(input && input.schoolId);
         if (!Number.isSafeInteger(schoolId) || schoolId <= 0) throw new Error('A valid school is required.');
-        const today = key(input && input.now ? new Date(input.now) : new Date());
+        const today = dateKeyInNigeria(input && input.now ? new Date(input.now) : new Date());
         const startDate = shiftDate(today, -13);
         const nowIso = input && input.now ? new Date(input.now).toISOString() : new Date().toISOString();
 

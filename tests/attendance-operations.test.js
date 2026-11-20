@@ -12,6 +12,8 @@ const serviceSource = fs.readFileSync(path.join(__dirname, '..', 'services', 'at
 ejs.compile(view);
 assert.ok(view.includes('This page is read-only'));
 assert.ok(view.includes('Scheduler run history'));
+assert.ok(view.includes('Notification delivery queue'));
+assert.ok(view.includes('Latest failed deliveries'));
 assert.ok(view.includes('Possibly interrupted'));
 assert.ok(view.includes('Missing means no register exists'));
 assert.ok(view.includes('overdue means an existing register has passed its submission deadline without being submitted'));
@@ -27,8 +29,12 @@ function makeDb(options = {}) {
         DB_TYPE: options.dbType || 'sqlite',
         async get(sql) {
             if (sql.includes('sqlite_master')) {
-                return options.schedulerTable === false ? undefined : { name: 'attendance_scheduler_runs' };
+                const tableName = arguments[1] && arguments[1][0];
+                if (tableName === 'attendance_scheduler_runs') return options.schedulerTable === false ? undefined : { name: tableName };
+                if (tableName === 'notification_deliveries') return options.deliveryTable === false ? undefined : { name: tableName };
+                return undefined;
             }
+            if (sql.includes('COUNT(*) AS total')) return { total: 8, queued: 3, due: 2, delivered: 2, read: 1, failed: 1, cancelled: 1, oldest_queued_at: '2026-11-20T10:00:00.000Z' };
             throw new Error('Unexpected get query: ' + sql);
         },
         async all(sql) {
@@ -57,6 +63,9 @@ function makeDb(options = {}) {
                     status: 'sent', attempt_count: 1, last_error: null,
                     first_name: 'Amina', last_name: 'Bello'
                 }];
+            }
+            if (sql.includes('FROM notification_deliveries')) {
+                return [{ id: 77, category: 'attendance', source_type: 'attendance_register_reminder', title: 'Register reminder', last_error: 'Temporary dispatch issue', attempt_count: 2, updated_at: '2026-11-20T12:00:00.000Z' }];
             }
             if (sql.includes('FROM attendance_scheduler_runs')) {
                 return [
@@ -102,24 +111,39 @@ function makeDb(options = {}) {
     assert.strictEqual(missing.status, 'missing');
     assert.strictEqual(missing.registerId, null);
     assert.strictEqual(result.schedulerHistory.available, true);
+    assert.strictEqual(result.notificationDeliveryHealth.available, true);
+    assert.strictEqual(result.notificationDeliveryHealth.summary.total, 8);
+    assert.strictEqual(result.notificationDeliveryHealth.summary.due, 2);
+    assert.strictEqual(result.notificationDeliveryHealth.summary.failed, 1);
+    assert.strictEqual(result.notificationDeliveryHealth.summary.oldestQueuedAgeMinutes, 810);
+    assert.strictEqual(result.notificationDeliveryHealth.recentFailures[0].error, 'Temporary dispatch issue');
     assert.strictEqual(result.schedulerHistory.summary.succeeded, 1);
     assert.strictEqual(result.schedulerHistory.latest.status, 'running');
     const successfulRun = result.schedulerHistory.runs.find(run => run.status === 'succeeded');
     assert.strictEqual(successfulRun.summary.scheduledCount, 3);
 
-    const noMigration = await createAttendanceOperationsService(makeDb({ schedulerTable: false }))
+    const noMigration = await createAttendanceOperationsService(makeDb({ schedulerTable: false, deliveryTable: false }))
         .getOperations({ schoolId: 1, now });
     assert.strictEqual(noMigration.schedulerHistory.available, false);
     assert.strictEqual(noMigration.schedulerHistory.runs.length, 0);
+    assert.strictEqual(noMigration.notificationDeliveryHealth.available, false);
 
     const postgresDb = makeDb({ dbType: 'postgres' });
-    postgresDb.get = async sql => {
-        assert.ok(sql.includes('to_regclass'));
-        return { table_name: 'attendance_scheduler_runs' };
+    postgresDb.get = async (sql, params = []) => {
+        if (sql.includes('to_regclass')) {
+            const tableName = params[0];
+            return { table_name: tableName === 'public.attendance_scheduler_runs' ? 'attendance_scheduler_runs' : 'notification_deliveries' };
+        }
+        if (sql.includes('COUNT(*) AS total')) {
+            return { total: 8, queued: 3, due: 2, delivered: 2, read: 1, failed: 1, cancelled: 1, oldest_queued_at: '2026-11-20T10:00:00.000Z' };
+        }
+        throw new Error('Unexpected PostgreSQL get query: ' + sql);
     };
     const postgresHistory = await createAttendanceOperationsService(postgresDb)
         .getOperations({ schoolId: 1, now });
     assert.strictEqual(postgresHistory.schedulerHistory.available, true);
+    assert.strictEqual(postgresHistory.notificationDeliveryHealth.available, true);
+    assert.strictEqual(postgresHistory.notificationDeliveryHealth.summary.queued, 3);
     assert.strictEqual(postgresHistory.schedulerHistory.latest.status, 'running');
     assert.strictEqual(postgresHistory.schedulerHistory.runs.find(run => run.status === 'succeeded').summary.scheduledCount, 3);
 

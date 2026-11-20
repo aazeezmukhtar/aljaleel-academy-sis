@@ -27,9 +27,15 @@ Make the attendance scheduler the only process that publishes attendance reminde
 - When a shared delivery exists, the same transaction also changes its status to `read` and inserts its delivery-specific `notification_reads` row. Repeated acknowledgement remains idempotent.
 - The staff recipient and school are checked before delivery retrieval and acknowledgement.
 
-## Migration compatibility
+## Migration and production rollout compatibility
 
-The shared delivery migration from Phase 2J is additive and must be applied before queue-backed delivery is used. Until it is installed, the attendance scheduler uses the existing reminder status transition as a compatibility delivery path. This fallback is scheduler-owned, not triggered by notification feed requests. Once the queue migration is installed, the scheduler uses the shared queue.
+The shared delivery migration from Phase 2J is additive and must be applied before queue-backed delivery is used. Until it is installed, the attendance scheduler uses the existing reminder status transition as a compatibility delivery path.
+
+The notification feed switches to read-only queue retrieval only when both conditions are true:
+- the shared delivery migration is available; and
+- `ATTENDANCE_REMINDER_SCHEDULER_DELIVERY=true` is configured.
+
+Until that flag is enabled, the existing feed-triggered delivery behavior remains as a rollout safety net. This prevents reminders from silently stopping if the application is deployed before the external scheduler has been configured and verified. After production has the migration, correct live deployment/domain, `CRON_SECRET`, and a verified external minute scheduler, enable the flag to make feed retrieval read-only. Do not enable the flag before the scheduler is confirmed healthy.
 
 No existing attendance reminder rows are backfilled. Old `sent` and `acknowledged` rows continue to appear in the feed. Announcement and assignment feed behavior is unchanged.
 

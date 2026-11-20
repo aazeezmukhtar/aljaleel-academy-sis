@@ -10,19 +10,27 @@ const routes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'attendanceR
 const sidebar = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'sidebar.ejs'), 'utf8');
 const serviceSource = fs.readFileSync(path.join(__dirname, '..', 'services', 'attendanceOperationsService.js'), 'utf8');
 ejs.compile(view);
-assert.ok(view.includes('This page does not generate registers'));
-assert.ok(view.includes('administrator_escalation'));
+assert.ok(view.includes('This page is read-only'));
+assert.ok(view.includes('Scheduler run history'));
+assert.ok(view.includes('Possibly interrupted'));
 assert.ok(view.includes('Missing means no register exists'));
 assert.ok(view.includes('overdue means an existing register has passed its submission deadline without being submitted'));
 assert.ok(routes.includes("router.get('/operations', attendanceController.getAttendanceOperations);"));
 assert.ok(controller.includes("user.role !== 'Admin'"));
 assert.ok(sidebar.includes('href="/attendance/operations"'));
-assert.ok(!/\b(INSERT\s+INTO|UPDATE\s+attendance_|DELETE\s+FROM)\b/i.test(serviceSource), 'operations service must remain read-only');
+assert.ok(!/\\b(INSERT\\s+INTO|UPDATE\\s+attendance_|DELETE\\s+FROM)\\b/i.test(serviceSource), 'operations service must remain read-only');
 
 const { createAttendanceOperationsService } = require('../services/attendanceOperationsService');
 
-function makeDb() {
+function makeDb(options = {}) {
     return {
+        DB_TYPE: options.dbType || 'sqlite',
+        async get(sql) {
+            if (sql.includes('sqlite_master')) {
+                return options.schedulerTable === false ? undefined : { name: 'attendance_scheduler_runs' };
+            }
+            throw new Error('Unexpected get query: ' + sql);
+        },
         async all(sql) {
             if (sql.includes('FROM classes c JOIN sections')) {
                 return [{ class_id: 4, class_name: 'Primary 1', section_id: 2, section_name: 'Academy' }];
@@ -50,16 +58,23 @@ function makeDb() {
                     first_name: 'Amina', last_name: 'Bello'
                 }];
             }
+            if (sql.includes('FROM attendance_scheduler_runs')) {
+                return [{
+                    id: 9, started_at: '2026-11-20T12:00:00.000Z',
+                    completed_at: '2026-11-20T12:00:08.000Z', status: 'succeeded',
+                    summary: JSON.stringify({ generatedRegisterCount: 2, scheduledCount: 3 }),
+                    error_message: null
+                }];
+            }
             throw new Error('Unexpected query: ' + sql);
         }
     };
 }
 
 (async () => {
+    const now = '2026-11-20T23:30:00.000Z';
     const service = createAttendanceOperationsService(makeDb());
-    const result = await service.getOperations({
-        schoolId: 1, now: '2026-11-20T23:30:00.000Z'
-    });
+    const result = await service.getOperations({ schoolId: 1, now });
     assert.strictEqual(result.startDate, '2026-11-08');
     assert.strictEqual(result.endDate, '2026-11-21');
     assert.strictEqual(result.summary.expected, 2);
@@ -74,6 +89,25 @@ function makeDb() {
     const missing = result.rows.find(row => row.date === '2026-11-20');
     assert.strictEqual(missing.status, 'missing');
     assert.strictEqual(missing.registerId, null);
+    assert.strictEqual(result.schedulerHistory.available, true);
+    assert.strictEqual(result.schedulerHistory.summary.succeeded, 1);
+    assert.strictEqual(result.schedulerHistory.latest.summary.scheduledCount, 3);
+
+    const noMigration = await createAttendanceOperationsService(makeDb({ schedulerTable: false }))
+        .getOperations({ schoolId: 1, now });
+    assert.strictEqual(noMigration.schedulerHistory.available, false);
+    assert.strictEqual(noMigration.schedulerHistory.runs.length, 0);
+
+    const postgresDb = makeDb({ dbType: 'postgres' });
+    postgresDb.get = async sql => {
+        assert.ok(sql.includes('to_regclass'));
+        return { table_name: 'attendance_scheduler_runs' };
+    };
+    const postgresHistory = await createAttendanceOperationsService(postgresDb)
+        .getOperations({ schoolId: 1, now });
+    assert.strictEqual(postgresHistory.schedulerHistory.available, true);
+    assert.strictEqual(postgresHistory.schedulerHistory.latest.status, 'succeeded');
+
     console.log('Attendance operations service tests passed.');
 })().catch(error => {
     console.error(error);

@@ -34,7 +34,7 @@ function createAttendanceSetupService(db) {
         const [sections, classes, staff, periods, schedules, responsibilities, settings] = await Promise.all([
             db.all('SELECT id, name FROM sections WHERE school_id = ? ORDER BY name', [schoolId]),
             db.all('SELECT c.id, c.name, c.section_id, s.name AS section_name FROM classes c JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id WHERE c.school_id = ? ORDER BY s.name, c.name', [schoolId]),
-            db.all("SELECT id, first_name, last_name, role FROM staff WHERE school_id = ? AND status = 'active' ORDER BY first_name, last_name", [schoolId]),
+            db.all("SELECT id, first_name, last_name, role FROM staff WHERE school_id = ? AND (status = 'active' OR status IS NULL) ORDER BY first_name, last_name", [schoolId]),
             db.all('SELECT p.*, s.name AS section_name FROM section_academic_periods p JOIN sections s ON s.id = p.section_id WHERE p.school_id = ? ORDER BY p.start_date DESC, p.id DESC', [schoolId]),
             db.all('SELECT a.*, c.name AS class_name, s.name AS section_name FROM class_attendance_schedules a JOIN classes c ON c.id = a.class_id JOIN sections s ON s.id = a.section_id WHERE a.school_id = ? ORDER BY a.effective_from DESC, a.class_id, a.weekday', [schoolId]),
             db.all('SELECT r.*, c.name AS class_name, s.name AS section_name, st.first_name, st.last_name FROM class_attendance_responsibilities r JOIN classes c ON c.id = r.class_id JOIN sections s ON s.id = r.section_id JOIN staff st ON st.id = r.staff_id WHERE r.school_id = ? ORDER BY r.effective_from DESC, r.class_id', [schoolId]),
@@ -79,7 +79,7 @@ function createAttendanceSetupService(db) {
         return db.transaction(async client => {
             const { schoolId, actorStaffId } = await admin(i, client), classId = Number(i.classId), sectionId = Number(i.sectionId), staffId = Number(i.staffId);
             await ownership(schoolId, classId, sectionId, client);
-            const teacher = await db.get("SELECT id FROM staff WHERE id = ? AND school_id = ? AND status = 'active'", [staffId, schoolId], client);
+            const teacher = await db.get("SELECT id FROM staff WHERE id = ? AND school_id = ? AND (status = 'active' OR status IS NULL)", [staffId, schoolId], client);
             if (!teacher) throw new Error('Choose an active staff member from this school.');
             const rows = await db.all('SELECT effective_from, effective_to FROM class_attendance_responsibilities WHERE school_id = ? AND class_id = ? AND section_id = ? AND responsibility_type = ? AND effective_from <= ? AND (effective_to IS NULL OR effective_to >= ?)',
                 [schoolId, classId, sectionId, type, end || '9999-12-31', start], client);

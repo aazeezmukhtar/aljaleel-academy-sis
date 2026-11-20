@@ -118,7 +118,8 @@
             const payload = Object.fromEntries(new FormData(form).entries());
             payload.action = form.dataset.action;
             if (payload.subsequentReminderIntervals !== undefined) {
-                payload.subsequentReminderIntervals = payload.subsequentReminderIntervals.split(',').map(v => Number(v.trim()));
+                const rawIntervals = payload.subsequentReminderIntervals.trim();
+                payload.subsequentReminderIntervals = rawIntervals ? rawIntervals.split(',').map(v => Number(v.trim())) : [];
             }
             try {
                 const response = await fetch('/attendance/setup/save', {

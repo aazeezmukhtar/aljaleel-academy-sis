@@ -348,6 +348,25 @@ function createAttendanceRegisterReminderService(db) {
 
         let queuedDeliveryCount = 0;
         let dispatchedDeliveryCount = 0;
+        let legacySchedulerDeliveryCount = 0;
+        if (!queueAvailable) {
+            // Until the additive queue migration is installed, keep delivery scheduler-owned
+            // using the existing reminder status transition (never from a feed request).
+            const legacyRecipients = await db.all(`
+                SELECT DISTINCT recipient_staff_id
+                FROM attendance_register_reminders
+                WHERE status = 'pending' AND scheduled_at <= ?
+                ORDER BY recipient_staff_id
+                LIMIT ?
+            `, [now, limit]);
+            for (const recipient of legacyRecipients) {
+                const delivered = await deliverDueRemindersForStaff({
+                    staffId: recipient.recipient_staff_id,
+                    now
+                });
+                legacySchedulerDeliveryCount += delivered.length;
+            }
+        }
         if (queueAvailable) {
             const dueReminders = await db.all(`
                 SELECT r.id, r.recipient_staff_id, r.scheduled_at,
@@ -422,6 +441,7 @@ function createAttendanceRegisterReminderService(db) {
             registerGenerationErrorCount: reconciliation.errorCount,
             queuedDeliveryCount,
             dispatchedDeliveryCount,
+            legacySchedulerDeliveryCount,
             checkedAt: now
         };
     }

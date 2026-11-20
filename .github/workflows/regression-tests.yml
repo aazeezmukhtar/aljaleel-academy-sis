@@ -63,6 +63,8 @@ jobs:
         run: npm run test:attendance-controller-handlers
       - name: Run attendance reminder notification handler test
         run: npm run test:attendance-reminder-notification
+      - name: Run attendance scheduler run history tests
+        run: npm run test:attendance-scheduler-run-history
       - name: Run attendance setup service tests
         run: npm run test:attendance-setup-service
       - name: Run attendance operations monitoring tests

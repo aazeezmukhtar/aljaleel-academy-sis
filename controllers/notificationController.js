@@ -65,9 +65,8 @@ exports.getLatestNotifications = async (req, res) => {
             `, [userId, schoolId]);
         }
 
-        // Attendance reminders are retrieved read-only. The scheduler owns delivery.
-        // If the shared queue migration is not yet installed, retain visibility of
-        // already-sent legacy reminders without triggering request-time delivery.
+        // Attendance reminders use the shared queue after the scheduler rollout flag is enabled.
+        // Before then, preserve the existing feed behavior as a production safety net.
         let reminderNotifications = [];
         if (req.session.staff && await attendanceRegisterWorkflow.isFoundationAvailable()) {
             const queueAvailable = await sharedNotificationDelivery.isAvailable();

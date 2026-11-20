@@ -59,12 +59,24 @@ function makeDb(options = {}) {
                 }];
             }
             if (sql.includes('FROM attendance_scheduler_runs')) {
-                return [{
-                    id: 9, started_at: '2026-11-20T12:00:00.000Z',
-                    completed_at: '2026-11-20T12:00:08.000Z', status: 'succeeded',
-                    summary: JSON.stringify({ generatedRegisterCount: 2, scheduledCount: 3 }),
-                    error_message: null
-                }];
+                return [
+                    {
+                        id: 11, started_at: '2026-11-20T12:00:00.000Z',
+                        completed_at: null, status: 'running', summary: null,
+                        error_message: null
+                    },
+                    {
+                        id: 10, started_at: '2026-11-20T11:00:00.000Z',
+                        completed_at: '2026-11-20T11:00:03.000Z', status: 'failed',
+                        summary: null, error_message: 'Test scheduler failure'
+                    },
+                    {
+                        id: 9, started_at: '2026-11-20T10:00:00.000Z',
+                        completed_at: '2026-11-20T10:00:08.000Z', status: 'succeeded',
+                        summary: JSON.stringify({ generatedRegisterCount: 2, scheduledCount: 3 }),
+                        error_message: null
+                    }
+                ];
             }
             throw new Error('Unexpected query: ' + sql);
         }

@@ -58,10 +58,10 @@ function makeDb() {
 (async () => {
     const service = createAttendanceOperationsService(makeDb());
     const result = await service.getOperations({
-        schoolId: 1, now: '2026-11-20T12:00:00.000Z'
+        schoolId: 1, now: '2026-11-20T23:30:00.000Z'
     });
     assert.strictEqual(result.startDate, '2026-11-07');
-    assert.strictEqual(result.endDate, '2026-11-20');
+    assert.strictEqual(result.endDate, '2026-11-21');
     assert.strictEqual(result.summary.expected, 2);
     assert.strictEqual(result.summary.incomplete, 1);
     assert.strictEqual(result.summary.missing, 1);

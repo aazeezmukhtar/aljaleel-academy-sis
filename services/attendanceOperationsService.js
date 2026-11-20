@@ -213,7 +213,9 @@ function createAttendanceOperationsService(db) {
             WHERE ar.school_id = ? AND ar.register_date BETWEEN ? AND ?
             ORDER BY r.scheduled_at DESC, r.id DESC`, [schoolId, startDate, today]);
 
-        const [schedulerHistory, notificationDeliveryHealth] = await Promise.all([\n            getSchedulerHistory(nowIso), getNotificationDeliveryHealth(schoolId, nowIso)\n        ]);
+        const [schedulerHistory, notificationDeliveryHealth] = await Promise.all([
+            getSchedulerHistory(nowIso), getNotificationDeliveryHealth(schoolId, nowIso)
+        ]);
         const classMap = new Map(classes.map(item => [String(item.class_id), item]));
         const registerMap = new Map(registers.map(item => [String(item.class_id) + '|' + key(item.register_date), item]));
         const remindersByRegister = new Map();

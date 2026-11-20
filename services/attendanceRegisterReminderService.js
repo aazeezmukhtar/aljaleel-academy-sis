@@ -362,7 +362,8 @@ function createAttendanceRegisterReminderService(db) {
             for (const recipient of legacyRecipients) {
                 const delivered = await deliverDueRemindersForStaff({
                     staffId: recipient.recipient_staff_id,
-                    now
+                    now,
+                    queueAvailable: false
                 });
                 legacySchedulerDeliveryCount += delivered.length;
             }
@@ -452,8 +453,11 @@ function createAttendanceRegisterReminderService(db) {
             throw new Error('A valid staff member is required to deliver attendance reminders.');
         }
         const now = asIso(input.now || new Date());
+        const queueAvailable = typeof input.queueAvailable === 'boolean'
+            ? input.queueAvailable
+            : await isDeliveryQueueAvailable();
         return db.transaction(async client => {
-            await cancelObsoleteReminders(client, now, await isDeliveryQueueAvailable());
+            await cancelObsoleteReminders(client, now, queueAvailable);
             const reminders = await db.all(`
                 SELECT r.id, r.register_id
                 FROM attendance_register_reminders r

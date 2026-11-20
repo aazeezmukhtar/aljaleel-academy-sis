@@ -26,6 +26,11 @@ if (!url) {
         await bootstrapClient.query(`
             CREATE TABLE schools (id INTEGER PRIMARY KEY);
             INSERT INTO schools (id) VALUES (1), (2);
+            CREATE TABLE staff (id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL);
+            CREATE TABLE students (id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL);
+            INSERT INTO staff (id, school_id) VALUES
+                (20, 1), (30, 1), (31, 1), (32, 1), (33, 1), (34, 1), (35, 1),
+                (50, 1), (60, 1);
             CREATE TABLE notification_reads (
                 user_id INTEGER NOT NULL,
                 user_type TEXT NOT NULL,
@@ -191,14 +196,12 @@ if (!url) {
         if (setupClient) setupClient.release();
         if (pool) await pool.end();
         if (bootstrapClient) bootstrapClient.release();
-        await bootstrapPool.end().catch(() => {});
-        const cleanupPool = new Pool({ connectionString: url, max: 1 });
-        const cleanupClient = await cleanupPool.connect();
+        const cleanupClient = await bootstrapPool.connect();
         try {
             await cleanupClient.query('DROP SCHEMA IF EXISTS "' + schema + '" CASCADE');
         } finally {
             cleanupClient.release();
-            await cleanupPool.end();
+            await bootstrapPool.end();
         }
     }
 })().catch(error => {

@@ -930,6 +930,7 @@ const getReport = async (req, res) => {
                     reportData = report.rows;
                     reportMeta = {
                         threshold: report.threshold,
+                        thresholdError: report.thresholdError || null,
                         registerCompletion: report.registerCompletion
                     };
                 }

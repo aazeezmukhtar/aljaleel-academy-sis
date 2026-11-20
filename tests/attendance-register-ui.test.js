@@ -100,7 +100,10 @@ assert(closureView.includes('data-closure-action="approved"') || closureView.inc
 assert(view.includes('href="/attendance/closures"'));
 assert(app.includes("app.get('/api/cron/attendance-reminders'"));
 assert(app.includes('attendanceReminderSchedulerController'));
-assert(notificationController.includes('deliverDueRemindersForStaff'));
+assert(notificationController.includes('deliverDueRemindersForStaff'), 'legacy feed delivery must remain available until scheduler rollout is verified');
+assert(notificationController.includes('ATTENDANCE_REMINDER_SCHEDULER_DELIVERY'));
+assert(notificationController.includes('sharedNotificationDelivery.listForRecipient'));
+assert(notificationController.includes('sharedNotificationDelivery.isAvailable'));
 assert(notificationController.includes('acknowledgeReminder'));
 assert(notificationController.includes("ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING"));
 assert(notificationBar.includes("n.type === 'Attendance Reminder'"));

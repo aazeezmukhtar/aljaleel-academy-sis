@@ -186,7 +186,7 @@ function responseRecorder() {
         body: { source_id: 501, source_type: 'attendance_register_reminder' }
     }, queueAcknowledgement);
     assert.strictEqual(queueAcknowledgement.statusCode, 200);
-    assert.strictEqual(calls.committed, 2, 'queue acknowledgement and both read records share one transaction');
+    assert.strictEqual(calls.committed, 3, 'queue acknowledgement and both read records share one transaction (including the earlier not-found transaction)');
 
     console.log('[attendance-reminder-notification] read-only feed retrieval and atomic shared-queue acknowledgement tests passed.');
 })().catch(error => {

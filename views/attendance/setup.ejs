@@ -1,0 +1,158 @@
+<%- include('../partials/header') %>
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+    <main class="main-content">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <div>
+                <a href="/attendance" class="text-decoration-none">← Attendance</a>
+                <h1 class="h3 mt-2 mb-1">Attendance setup</h1>
+                <p class="text-muted mb-0">Configure section academic periods, class opening days, responsible teachers and attendance rules.</p>
+            </div>
+        </div>
+        <% if (error) { %><div class="alert alert-warning" role="alert"><%= error %></div><% } %>
+        <% if (setup) { %>
+        <div id="setup-feedback" class="alert d-none" role="status" aria-live="polite"></div>
+        <section class="card p-3 mb-3">
+            <h2 class="h5">1. Section academic periods</h2>
+            <p class="text-muted small">Each section needs exactly one period covering an attendance date. Periods in the same section cannot overlap.</p>
+            <form class="row g-2 setup-form" data-action="academic_period">
+                <div class="col-md-3"><label class="form-label">Section</label><select class="form-select" name="sectionId" required><option value="">Select section</option><% setup.sections.forEach(s => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></div>
+                <div class="col-md-2"><label class="form-label">Session</label><input class="form-control" name="session" placeholder="2026/2027" maxlength="40" required></div>
+                <div class="col-md-2"><label class="form-label">Term</label><select class="form-select" name="term" required><option value="">Select term</option><option>1st Term</option><option>2nd Term</option><option>3rd Term</option></select></div>
+                <div class="col-md-2"><label class="form-label">Start date</label><input class="form-control" type="date" name="startDate" required></div>
+                <div class="col-md-2"><label class="form-label">End date</label><input class="form-control" type="date" name="endDate" required></div>
+                <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary w-100">Add</button></div>
+            </form>
+            <div class="table-responsive mt-3"><table class="table table-sm align-middle"><thead><tr><th>Section</th><th>Session / term</th><th>Dates</th><th>Status</th><th></th></tr></thead><tbody>
+            <% setup.periods.forEach(p => { %><tr><td><%= p.section_name %></td><td><%= p.session %> · <%= p.term %></td><td><%= String(p.start_date).slice(0,10) %> – <%= String(p.end_date).slice(0,10) %></td><td><%= p.status %></td><td><% if (p.status === 'active') { %><button class="btn btn-sm btn-outline-secondary" data-end="academic_period" data-id="<%= p.id %>" data-start="<%= String(p.start_date).slice(0,10) %>" data-current-end="<%= String(p.end_date).slice(0,10) %>">End period</button><% } %></td></tr><% }) %>
+            <% if (!setup.periods.length) { %><tr><td colspan="5" class="text-muted">No academic periods configured.</td></tr><% } %>
+            </tbody></table></div>
+        </section>
+
+        <section class="card p-3 mb-3">
+            <h2 class="h5">2. Class opening days</h2>
+            <p class="text-muted small">Add one row per opening weekday. Use effective dates when a class changes its weekly schedule.</p>
+            <form class="row g-2 setup-form" data-action="schedule">
+                <div class="col-md-3"><label class="form-label">Section</label><select class="form-select section-filter" name="sectionId" required><option value="">Select section</option><% setup.sections.forEach(s => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></div>
+                <div class="col-md-3"><label class="form-label">Class</label><select class="form-select class-filter" name="classId" required><option value="">Select class</option><% setup.classes.forEach(c => { %><option value="<%= c.id %>" data-section="<%= c.section_id %>"><%= c.name %></option><% }) %></select></div>
+                <div class="col-md-2"><label class="form-label">Weekday</label><select class="form-select" name="weekday" required><option value="">Choose</option><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="7">Sunday</option></select></div>
+                <div class="col-md-2"><label class="form-label">Effective from</label><input class="form-control" type="date" name="startDate" required></div>
+                <div class="col-md-2"><label class="form-label">Effective to (optional)</label><input class="form-control" type="date" name="endDate"></div>
+                <div class="col-12"><button class="btn btn-primary">Add opening day</button></div>
+            </form>
+            <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Class</th><th>Weekday</th><th>Effective dates</th><th></th></tr></thead><tbody>
+            <% const weekdays = ['','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']; setup.schedules.forEach(a => { %><tr><td><%= a.section_name %> · <%= a.class_name %></td><td><%= weekdays[Number(a.weekday)] %></td><td><%= String(a.effective_from).slice(0,10) %> – <%= a.effective_to ? String(a.effective_to).slice(0,10) : 'Ongoing' %></td><td><% if (!a.effective_to) { %><button class="btn btn-sm btn-outline-secondary" data-end="schedule" data-id="<%= a.id %>" data-start="<%= String(a.effective_from).slice(0,10) %>">End</button><% } %></td></tr><% }) %>
+            <% if (!setup.schedules.length) { %><tr><td colspan="4" class="text-muted">No opening days configured.</td></tr><% } %>
+            </tbody></table></div>
+        </section>
+
+        <section class="card p-3 mb-3">
+            <h2 class="h5">3. Responsible and substitute teachers</h2>
+            <p class="text-muted small">One primary and one substitute assignment may be effective for a class at a time. A substitute takes precedence while active.</p>
+            <form class="row g-2 setup-form" data-action="responsibility">
+                <div class="col-md-3"><label class="form-label">Section</label><select class="form-select section-filter" name="sectionId" required><option value="">Select section</option><% setup.sections.forEach(s => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></div>
+                <div class="col-md-3"><label class="form-label">Class</label><select class="form-select class-filter" name="classId" required><option value="">Select class</option><% setup.classes.forEach(c => { %><option value="<%= c.id %>" data-section="<%= c.section_id %>"><%= c.name %></option><% }) %></select></div>
+                <div class="col-md-2"><label class="form-label">Assignment</label><select class="form-select" name="responsibilityType" required><option value="primary">Primary</option><option value="substitute">Substitute</option></select></div>
+                <div class="col-md-4"><label class="form-label">Staff member</label><select class="form-select" name="staffId" required><option value="">Select staff</option><% setup.staff.forEach(s => { %><option value="<%= s.id %>"><%= s.first_name %> <%= s.last_name %> · <%= s.role %></option><% }) %></select></div>
+                <div class="col-md-3"><label class="form-label">Effective from</label><input class="form-control" type="date" name="startDate" required></div>
+                <div class="col-md-3"><label class="form-label">Effective to (optional)</label><input class="form-control" type="date" name="endDate"></div>
+                <div class="col-12"><button class="btn btn-primary">Assign teacher</button></div>
+            </form>
+            <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Class</th><th>Type</th><th>Staff</th><th>Effective dates</th><th></th></tr></thead><tbody>
+            <% setup.responsibilities.forEach(r => { %><tr><td><%= r.section_name %> · <%= r.class_name %></td><td><%= r.responsibility_type %></td><td><%= r.first_name %> <%= r.last_name %></td><td><%= String(r.effective_from).slice(0,10) %> – <%= r.effective_to ? String(r.effective_to).slice(0,10) : 'Ongoing' %></td><td><% if (!r.effective_to) { %><button class="btn btn-sm btn-outline-secondary" data-end="responsibility" data-id="<%= r.id %>" data-start="<%= String(r.effective_from).slice(0,10) %>">End</button><% } %></td></tr><% }) %>
+            <% if (!setup.responsibilities.length) { %><tr><td colspan="5" class="text-muted">No teacher responsibilities configured.</td></tr><% } %>
+            </tbody></table></div>
+        </section>
+
+        <section class="card p-3 mb-4">
+            <h2 class="h5">4. Class attendance settings</h2>
+            <p class="text-muted small">Settings are effective-dated. Reminder intervals are minutes after the first reminder, entered as comma-separated whole numbers.</p>
+            <form class="row g-2 setup-form" data-action="settings">
+                <div class="col-md-3"><label class="form-label">Section</label><select class="form-select section-filter" name="sectionId" required><option value="">Select section</option><% setup.sections.forEach(s => { %><option value="<%= s.id %>"><%= s.name %></option><% }) %></select></div>
+                <div class="col-md-3"><label class="form-label">Class</label><select class="form-select class-filter" name="classId" required><option value="">Select class</option><% setup.classes.forEach(c => { %><option value="<%= c.id %>" data-section="<%= c.section_id %>"><%= c.name %></option><% }) %></select></div>
+                <div class="col-md-2"><label class="form-label">Deadline</label><input class="form-control" type="time" name="deadline" value="14:00" required></div>
+                <div class="col-md-2"><label class="form-label">First reminder (min)</label><input class="form-control" type="number" name="firstReminderDelayMinutes" min="0" max="10080" value="0" required></div>
+                <div class="col-md-2"><label class="form-label">Low attendance (%)</label><input class="form-control" type="number" name="lowAttendanceThreshold" min="0" max="100" step="0.01" value="75" required></div>
+                <div class="col-md-3"><label class="form-label">Effective from</label><input class="form-control" type="date" name="startDate" required></div>
+                <div class="col-md-3"><label class="form-label">Effective to (optional)</label><input class="form-control" type="date" name="endDate"></div>
+                <div class="col-md-6"><label class="form-label">Subsequent reminder intervals (minutes)</label><input class="form-control" name="subsequentReminderIntervals" value="60, 120" placeholder="60, 120"></div>
+                <div class="col-12"><button class="btn btn-primary">Save class settings</button></div>
+            </form>
+            <div class="table-responsive mt-3"><table class="table table-sm"><thead><tr><th>Class</th><th>Deadline</th><th>First reminder</th><th>Later intervals</th><th>Threshold</th><th>Effective dates</th><th></th></tr></thead><tbody>
+            <% setup.settings.forEach(s => { let intervals = s.subsequent_reminder_intervals_minutes; if (typeof intervals === 'string') { try { intervals = JSON.parse(intervals); } catch (_) { intervals = []; } } %><tr><td><%= s.section_name %> · <%= s.class_name %></td><td><%= String(s.submission_deadline_time).slice(0,5) %></td><td><%= s.first_reminder_delay_minutes %> min</td><td><%= Array.isArray(intervals) ? intervals.join(', ') : '' %></td><td><%= s.low_attendance_threshold %>%</td><td><%= String(s.effective_from).slice(0,10) %> – <%= s.effective_to ? String(s.effective_to).slice(0,10) : 'Ongoing' %></td><td><% if (!s.effective_to) { %><button class="btn btn-sm btn-outline-secondary" data-end="settings" data-id="<%= s.id %>" data-start="<%= String(s.effective_from).slice(0,10) %>">End</button><% } %></td></tr><% }) %>
+            <% if (!setup.settings.length) { %><tr><td colspan="7" class="text-muted">No class attendance settings configured.</td></tr><% } %>
+            </tbody></table></div>
+        </section>
+        <% } %>
+    </main>
+</div>
+<script>
+(() => {
+    const feedback = document.getElementById('setup-feedback');
+    const show = (message, bad) => {
+        if (!feedback) return;
+        feedback.textContent = message;
+        feedback.classList.remove('d-none', 'alert-success', 'alert-danger');
+        feedback.classList.add(bad ? 'alert-danger' : 'alert-success');
+        feedback.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+    document.querySelectorAll('.setup-form').forEach(form => {
+        const section = form.querySelector('.section-filter');
+        const classSelect = form.querySelector('.class-filter');
+        if (section && classSelect) {
+            const filter = () => {
+                const selected = section.value;
+                Array.from(classSelect.options).forEach(option => {
+                    if (!option.value) return;
+                    option.hidden = Boolean(selected && option.dataset.section !== selected);
+                });
+                if (classSelect.selectedOptions[0]?.hidden) classSelect.value = '';
+            };
+            section.addEventListener('change', filter);
+            filter();
+        }
+        form.addEventListener('submit', async event => {
+            event.preventDefault();
+            const button = form.querySelector('button[type="submit"],button:not([type])');
+            if (button) button.disabled = true;
+            const payload = Object.fromEntries(new FormData(form).entries());
+            payload.action = form.dataset.action;
+            if (payload.subsequentReminderIntervals !== undefined) {
+                payload.subsequentReminderIntervals = payload.subsequentReminderIntervals.split(',').map(v => Number(v.trim())).filter(v => Number.isFinite(v));
+            }
+            try {
+                const response = await fetch('/attendance/setup/save', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.success) throw new Error(result.message || 'Could not save attendance setup.');
+                show(result.message + ' Refreshing the configuration list…', false);
+                window.location.reload();
+            } catch (error) { show(error.message, true); }
+            finally { if (button) button.disabled = false; }
+        });
+    });
+    document.querySelectorAll('[data-end]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const endDate = window.prompt('Enter the last effective date (YYYY-MM-DD):', button.dataset.start);
+            if (!endDate) return;
+            const reason = window.prompt('Why is this configuration being ended?');
+            if (!reason) return;
+            button.disabled = true;
+            try {
+                const response = await fetch('/attendance/setup/save', {
+                    method: 'POST', credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    body: JSON.stringify({ action: 'end', type: button.dataset.end, recordId: button.dataset.id, endDate, reason })
+                });
+                const result = await response.json().catch(() => ({}));
+                if (!response.ok || !result.success) throw new Error(result.message || 'Could not end configuration.');
+                window.location.reload();
+            } catch (error) { show(error.message, true); button.disabled = false; }
+        });
+    });
+})();
+</script>
+<%- include('../partials/footer') %>

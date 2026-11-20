@@ -42,6 +42,25 @@ assert(view.includes('register.status === \'submitted\' && isAdmin'));
 assert(controller.includes('attendanceRegisterWorkflow.saveRegisterProgress'));
 assert(controller.includes('attendanceRegisterWorkflow.submitRegister'));
 assert(controller.includes('hasRegisterAttendanceAuthority'));
+const attendanceTakeHandler = controller.slice(
+    controller.indexOf('const getTakeAttendance ='),
+    controller.indexOf('// GET /attendance/yesterday')
+);
+const attendanceSaveHandler = controller.slice(
+    controller.indexOf('const saveAttendance ='),
+    controller.indexOf('// POST /attendance/submit')
+);
+assert(
+    attendanceTakeHandler.includes("'enrollment_dates_need_review'") &&
+    attendanceTakeHandler.includes('readOnly'),
+    'attendance page must be read-only when dated enrollment needs review'
+);
+assert(
+    attendanceSaveHandler.includes("'enrollment_dates_need_review'") &&
+    attendanceSaveHandler.includes('res.status(409)') &&
+    attendanceSaveHandler.includes('code: generated.reason'),
+    'attendance save API must reject dated-enrollment review cases with HTTP 409'
+);
 const closureController = controller.includes('attendanceClosureService.requestClosure') &&
     controller.includes('attendanceClosureService.decideClosure') &&
     controller.includes('attendanceClosureService.cancelClosure');

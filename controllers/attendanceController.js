@@ -276,7 +276,7 @@ const getTakeAttendance = async (req, res) => {
             );
         }
 
-        const registerBlocked = ['approved_closure', 'not_a_scheduled_day', 'register_preparation_unavailable'].includes(registerSkipReason);
+        const registerBlocked = ['approved_closure', 'not_a_scheduled_day', 'enrollment_dates_need_review', 'register_preparation_unavailable'].includes(registerSkipReason);
         const locked = !!register && ['submitted', 'closed'].includes(register.status);
         const canManageRegister = register
             ? await hasRegisterAttendanceAuthority(user, register, schoolId)
@@ -459,12 +459,20 @@ const saveAttendance = async (req, res) => {
                     registerDate: date,
                     generatedBy: user.id
                 });
-                if (generated.skipped && ['approved_closure', 'not_a_scheduled_day'].includes(generated.reason)) {
+                if (generated.skipped && [
+                    'approved_closure',
+                    'not_a_scheduled_day',
+                    'enrollment_dates_need_review'
+                ].includes(generated.reason)) {
+                    const messages = {
+                        approved_closure: 'Attendance cannot be recorded because an approved closure covers this date.',
+                        not_a_scheduled_day: 'Attendance cannot be recorded because this class is not scheduled to open on this date.',
+                        enrollment_dates_need_review: 'Attendance cannot be recorded because one or more student enrollment dates need administrative review.'
+                    };
                     return res.status(409).json({
                         success: false,
-                        message: generated.reason === 'approved_closure'
-                            ? 'Attendance cannot be recorded because an approved closure covers this date.'
-                            : 'Attendance cannot be recorded because this class is not scheduled to open on this date.'
+                        code: generated.reason,
+                        message: messages[generated.reason]
                     });
                 }
                 registerContext = await attendanceRegisterWorkflow.getRegisterContext({

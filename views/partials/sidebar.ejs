@@ -51,7 +51,7 @@
             </a>
         <% } %>
 
-                <a href="/attendance" class="<%= title.includes('Attendance') ? 'active' : '' %>">
+                <a href="/attendance" class="<%= title.includes('Attendance') && !title.includes('Setup') ? 'active' : '' %>">
                     <i class="bi bi-calendar-check-fill"></i> Attendance
                 </a>
                 <% if (user && user.role === 'Admin') { %>

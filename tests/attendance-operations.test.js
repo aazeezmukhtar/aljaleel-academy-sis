@@ -103,7 +103,9 @@ function makeDb(options = {}) {
     assert.strictEqual(missing.registerId, null);
     assert.strictEqual(result.schedulerHistory.available, true);
     assert.strictEqual(result.schedulerHistory.summary.succeeded, 1);
-    assert.strictEqual(result.schedulerHistory.latest.summary.scheduledCount, 3);
+    assert.strictEqual(result.schedulerHistory.latest.status, 'running');
+    const successfulRun = result.schedulerHistory.runs.find(run => run.status === 'succeeded');
+    assert.strictEqual(successfulRun.summary.scheduledCount, 3);
 
     const noMigration = await createAttendanceOperationsService(makeDb({ schedulerTable: false }))
         .getOperations({ schoolId: 1, now });
@@ -118,7 +120,8 @@ function makeDb(options = {}) {
     const postgresHistory = await createAttendanceOperationsService(postgresDb)
         .getOperations({ schoolId: 1, now });
     assert.strictEqual(postgresHistory.schedulerHistory.available, true);
-    assert.strictEqual(postgresHistory.schedulerHistory.latest.status, 'succeeded');
+    assert.strictEqual(postgresHistory.schedulerHistory.latest.status, 'running');
+    assert.strictEqual(postgresHistory.schedulerHistory.runs.find(run => run.status === 'succeeded').summary.scheduledCount, 3);
 
     console.log('Attendance operations service tests passed.');
 })().catch(error => {

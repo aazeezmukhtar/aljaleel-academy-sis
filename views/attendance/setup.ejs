@@ -13,6 +13,43 @@
         <% if (setup) { %>
         <% const attendanceTodayParts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).reduce((result, part) => { if (part.type !== 'literal') result[part.type] = part.value; return result; }, {}); const attendanceTodayKey = attendanceTodayParts.year + '-' + attendanceTodayParts.month + '-' + attendanceTodayParts.day; %>
         <div id="setup-feedback" class="alert d-none" role="status" aria-live="polite"></div>
+        <section class="card p-3 mb-3" aria-labelledby="readiness-heading">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                <div>
+                    <h2 class="h5 mb-1" id="readiness-heading">Setup readiness</h2>
+                    <p class="text-muted small mb-0">Current configuration as of <%= setup.readinessSummary.checkedDate %>. A class is ready when its section has an active academic period and the class has opening days, attendance settings and a primary teacher.</p>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge text-bg-success"><%= setup.readinessSummary.ready %> ready</span>
+                    <span class="badge text-bg-warning"><%= setup.readinessSummary.incomplete %> need attention</span>
+                    <span class="badge text-bg-secondary"><%= setup.readinessSummary.total %> classes</span>
+                </div>
+            </div>
+            <% if (!setup.readiness.length) { %>
+                <p class="text-muted mb-0 mt-3">No classes are available for setup.</p>
+            <% } else { %>
+            <div class="table-responsive mt-3">
+                <table class="table table-sm table-hover align-middle mb-0">
+                    <thead><tr><th>Section / class</th><th>Academic period</th><th>Opening days</th><th>Settings</th><th>Primary teacher</th><th>Readiness</th></tr></thead>
+                    <tbody>
+                    <% setup.readiness.forEach(item => { %>
+                        <tr>
+                            <td><strong><%= item.section_name %></strong><div><%= item.class_name %></div></td>
+                            <td><%= item.period ? 'Configured' : 'Missing' %></td>
+                            <td><%= item.schedule ? 'Configured' : 'Missing' %></td>
+                            <td><%= item.settings ? 'Configured' : 'Missing' %></td>
+                            <td><%= item.primary_teacher ? 'Assigned' : 'Missing' %></td>
+                            <td>
+                                <% if (item.ready) { %><span class="badge text-bg-success">Ready</span>
+                                <% } else { %><span class="badge text-bg-warning">Incomplete</span><div class="small text-muted"><%= item.missing.join(' · ') %></div><% } %>
+                            </td>
+                        </tr>
+                    <% }) %>
+                    </tbody>
+                </table>
+            </div>
+            <% } %>
+        </section>
         <section class="card p-3 mb-3">
             <h2 class="h5">1. Section academic periods</h2>
             <p class="text-muted small">Each section needs exactly one period covering an attendance date. Periods in the same section cannot overlap.</p>

@@ -489,6 +489,28 @@ const db = {
     assert.strictEqual(classAnalytics.registerCompletion.generatedRegisters, 2);
     assert.strictEqual(classAnalytics.registerCompletion.submittedRegisters, 1);
     assert.strictEqual(classAnalytics.registerCompletion.pendingRegisters, 1);
+
+    const thresholdFailureDb = {
+      DB_TYPE: db.DB_TYPE,
+      all: (...args) => db.all(...args),
+      get: (sql, ...args) => {
+        if (sql.includes('SELECT low_attendance_threshold')) {
+          throw new Error('simulated threshold settings lookup failure');
+        }
+        return db.get(sql, ...args);
+      },
+      run: (...args) => db.run(...args),
+      transaction: (...args) => db.transaction(...args)
+    };
+    const thresholdFailureAnalytics = createAttendanceAnalyticsService(thresholdFailureDb);
+    const thresholdFailureReport = await thresholdFailureAnalytics.getClassAttendanceReport({
+      schoolId: 1, classId: 40, sectionId: 10,
+      startDate: '2026-11-29', endDate: '2026-12-01'
+    });
+    assert.strictEqual(thresholdFailureReport.threshold, null);
+    assert.match(thresholdFailureReport.thresholdError, /alerts may be incomplete/i);
+    assert.strictEqual(thresholdFailureReport.rows.length, 2,
+      'attendance figures must remain available when only the threshold lookup fails');
     assert.strictEqual(classAnalytics.registerCompletion.completionRate, 50);
     await db.run(`
       UPDATE class_attendance_schedules SET effective_to = '2026-11-28'

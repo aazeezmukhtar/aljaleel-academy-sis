@@ -38,8 +38,69 @@ function closureApplies(closure, classId, sectionId, date) {
         String(closure.class_id) === String(classId);
 }
 
+function parseRunSummary(value) {
+    if (!value) return null;
+    if (typeof value === 'object') return value;
+    try { return JSON.parse(value); } catch (_) { return null; }
+}
+
 function createAttendanceOperationsService(db) {
     if (!db) throw new Error('An attendance operations database adapter is required.');
+
+    async function getSchedulerHistory(nowIso) {
+        let tableExists = false;
+        if (db.DB_TYPE === 'postgres') {
+            const result = await db.get(
+                "SELECT to_regclass('public.attendance_scheduler_runs') AS table_name", []
+            );
+            tableExists = Boolean(result && result.table_name);
+        } else {
+            const result = await db.get(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+                ['attendance_scheduler_runs']
+            );
+            tableExists = Boolean(result);
+        }
+        if (!tableExists) {
+            return {
+                available: false, runs: [],
+                summary: { total: 0, succeeded: 0, failed: 0, running: 0, staleRunning: 0 },
+                latest: null
+            };
+        }
+
+        const records = await db.all(`
+            SELECT id, started_at, completed_at, status, summary, error_message
+            FROM attendance_scheduler_runs
+            ORDER BY started_at DESC, id DESC
+            LIMIT 20
+        `, []);
+        const now = new Date(nowIso).getTime();
+        const runs = records.map(record => {
+            const startedAt = record.started_at instanceof Date
+                ? record.started_at.toISOString() : String(record.started_at);
+            const ageMinutes = Math.max(0, Math.floor((now - new Date(startedAt).getTime()) / 60000));
+            return {
+                id: record.id, startedAt, completedAt: record.completed_at || null,
+                status: record.status, ageMinutes,
+                stale: record.status === 'running' && ageMinutes >= 15,
+                summary: parseRunSummary(record.summary),
+                errorMessage: record.error_message || null
+            };
+        });
+        return {
+            available: true,
+            runs,
+            latest: runs[0] || null,
+            summary: {
+                total: runs.length,
+                succeeded: runs.filter(run => run.status === 'succeeded').length,
+                failed: runs.filter(run => run.status === 'failed').length,
+                running: runs.filter(run => run.status === 'running').length,
+                staleRunning: runs.filter(run => run.stale).length
+            }
+        };
+    }
 
     async function getOperations(input) {
         const schoolId = Number(input && input.schoolId);
@@ -84,6 +145,7 @@ function createAttendanceOperationsService(db) {
             WHERE ar.school_id = ? AND ar.register_date BETWEEN ? AND ?
             ORDER BY r.scheduled_at DESC, r.id DESC`, [schoolId, startDate, today]);
 
+        const schedulerHistory = await getSchedulerHistory(nowIso);
         const classMap = new Map(classes.map(item => [String(item.class_id), item]));
         const registerMap = new Map(registers.map(item => [String(item.class_id) + '|' + key(item.register_date), item]));
         const remindersByRegister = new Map();
@@ -147,7 +209,7 @@ function createAttendanceOperationsService(db) {
             failedReminders: reminders.filter(item => item.status === 'failed').length,
             escalations: reminders.filter(item => item.reminder_type === 'administrator_escalation').length
         };
-        return { startDate, endDate: today, summary, rows, reminderHistory: reminders };
+        return { startDate, endDate: today, summary, rows, reminderHistory: reminders, schedulerHistory };
     }
 
     return { getOperations };

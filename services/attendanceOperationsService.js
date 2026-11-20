@@ -102,6 +102,74 @@ function createAttendanceOperationsService(db) {
         };
     }
 
+    async function getNotificationDeliveryHealth(schoolId, nowIso) {
+        let tableExists = false;
+        if (db.DB_TYPE === 'postgres') {
+            const result = await db.get(
+                "SELECT to_regclass('public.notification_deliveries') AS table_name", []
+            );
+            tableExists = Boolean(result && result.table_name);
+        } else {
+            const result = await db.get(
+                "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+                ['notification_deliveries']
+            );
+            tableExists = Boolean(result);
+        }
+        if (!tableExists) {
+            return {
+                available: false,
+                summary: { total: 0, queued: 0, due: 0, delivered: 0, read: 0, failed: 0, cancelled: 0, oldestQueuedAt: null, oldestQueuedAgeMinutes: null },
+                recentFailures: []
+            };
+        }
+
+        const stats = await db.get(`
+            SELECT COUNT(*) AS total,
+                   SUM(CASE WHEN status = 'queued' THEN 1 ELSE 0 END) AS queued,
+                   SUM(CASE WHEN status = 'queued' AND scheduled_at <= ? THEN 1 ELSE 0 END) AS due,
+                   SUM(CASE WHEN status = 'delivered' THEN 1 ELSE 0 END) AS delivered,
+                   SUM(CASE WHEN status = 'read' THEN 1 ELSE 0 END) AS read,
+                   SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed,
+                   SUM(CASE WHEN status = 'cancelled' THEN 1 ELSE 0 END) AS cancelled,
+                   MIN(CASE WHEN status = 'queued' THEN scheduled_at END) AS oldest_queued_at
+            FROM notification_deliveries
+            WHERE school_id = ?
+        `, [nowIso, schoolId]);
+        const recentFailures = await db.all(`
+            SELECT id, category, source_type, title, last_error, attempt_count, updated_at
+            FROM notification_deliveries
+            WHERE school_id = ? AND status = 'failed'
+            ORDER BY updated_at DESC, id DESC
+            LIMIT 10
+        `, [schoolId]);
+        const oldestQueuedAt = stats && stats.oldest_queued_at
+            ? (stats.oldest_queued_at instanceof Date ? stats.oldest_queued_at.toISOString() : String(stats.oldest_queued_at))
+            : null;
+        const oldestAge = oldestQueuedAt ? Math.max(0, Math.floor(
+            (new Date(nowIso).getTime() - new Date(oldestQueuedAt).getTime()) / 60000
+        )) : null;
+        return {
+            available: true,
+            summary: {
+                total: Number(stats && stats.total || 0),
+                queued: Number(stats && stats.queued || 0),
+                due: Number(stats && stats.due || 0),
+                delivered: Number(stats && stats.delivered || 0),
+                read: Number(stats && stats.read || 0),
+                failed: Number(stats && stats.failed || 0),
+                cancelled: Number(stats && stats.cancelled || 0),
+                oldestQueuedAt,
+                oldestQueuedAgeMinutes: oldestAge
+            },
+            recentFailures: recentFailures.map(row => ({
+                id: row.id, category: row.category, sourceType: row.source_type,
+                title: row.title, error: row.last_error || 'No failure detail recorded',
+                attemptCount: Number(row.attempt_count || 0), updatedAt: row.updated_at
+            }))
+        };
+    }
+
     async function getOperations(input) {
         const schoolId = Number(input && input.schoolId);
         if (!Number.isSafeInteger(schoolId) || schoolId <= 0) throw new Error('A valid school is required.');
@@ -145,7 +213,7 @@ function createAttendanceOperationsService(db) {
             WHERE ar.school_id = ? AND ar.register_date BETWEEN ? AND ?
             ORDER BY r.scheduled_at DESC, r.id DESC`, [schoolId, startDate, today]);
 
-        const schedulerHistory = await getSchedulerHistory(nowIso);
+        const [schedulerHistory, notificationDeliveryHealth] = await Promise.all([\n            getSchedulerHistory(nowIso), getNotificationDeliveryHealth(schoolId, nowIso)\n        ]);
         const classMap = new Map(classes.map(item => [String(item.class_id), item]));
         const registerMap = new Map(registers.map(item => [String(item.class_id) + '|' + key(item.register_date), item]));
         const remindersByRegister = new Map();
@@ -209,7 +277,7 @@ function createAttendanceOperationsService(db) {
             failedReminders: reminders.filter(item => item.status === 'failed').length,
             escalations: reminders.filter(item => item.reminder_type === 'administrator_escalation').length
         };
-        return { startDate, endDate: today, summary, rows, reminderHistory: reminders, schedulerHistory };
+        return { startDate, endDate: today, summary, rows, reminderHistory: reminders, schedulerHistory, notificationDeliveryHealth };
     }
 
     return { getOperations };

@@ -305,7 +305,7 @@ function createAttendanceRegisterReminderService(db) {
                     const scheduledAt = stage === 1
                         ? firstScheduledAt
                         : addMinutes(previousStageAt, intervals[stage - 2]);
-                    if (new Date(scheduledAt).getTime() > new Date(now).getTime()) break;
+                    const stageIsDue = new Date(scheduledAt).getTime() <= new Date(now).getTime();
 
                     let recipients;
                     let reminderType;
@@ -331,6 +331,10 @@ function createAttendanceRegisterReminderService(db) {
                     count += recipients.length;
                     latestStage = stage;
                     previousStageAt = scheduledAt;
+                    // Persist the next reminder stage even when it is scheduled for the
+                    // future so the shared queue can hold it and cancel it if the register
+                    // is submitted or closed before its due time.
+                    if (!stageIsDue) break;
                 }
 
                 return { scheduled: count, processed: true, cancelled: 0 };

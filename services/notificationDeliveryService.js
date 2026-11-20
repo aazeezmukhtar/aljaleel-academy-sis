@@ -59,6 +59,9 @@ function createNotificationDeliveryService(db) {
                   AND idempotency_key = ?
             `, [schoolId, recipientType, recipientId, idempotencyKey], client);
             if (!row) throw new Error('The notification delivery could not be persisted.');
+            if (row.source_type !== sourceType || Number(row.source_id) !== sourceId) {
+                throw new Error('The idempotency key is already assigned to a different notification source.');
+            }
             return row;
         });
     }

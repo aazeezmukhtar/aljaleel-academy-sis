@@ -40,7 +40,48 @@ function createAttendanceSetupService(db) {
             db.all('SELECT r.*, c.name AS class_name, s.name AS section_name, st.first_name, st.last_name FROM class_attendance_responsibilities r JOIN classes c ON c.id = r.class_id JOIN sections s ON s.id = r.section_id JOIN staff st ON st.id = r.staff_id WHERE r.school_id = ? ORDER BY r.effective_from DESC, r.class_id', [schoolId]),
             db.all('SELECT a.*, c.name AS class_name, s.name AS section_name FROM class_attendance_settings a JOIN classes c ON c.id = a.class_id JOIN sections s ON s.id = a.section_id WHERE a.school_id = ? ORDER BY a.effective_from DESC, a.class_id', [schoolId])
         ]);
-        return { sections, classes, staff, periods, schedules, responsibilities, settings };
+        const todayParts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+        }).formatToParts(new Date()).reduce((result, part) => {
+            if (part.type !== 'literal') result[part.type] = part.value;
+            return result;
+        }, {});
+        const today = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
+        const isEffective = row => String(row.effective_from).slice(0, 10) <= today
+            && (!row.effective_to || String(row.effective_to).slice(0, 10) >= today);
+        const readiness = classes.map(clazz => {
+            const period = periods.find(row => Number(row.section_id) === Number(clazz.section_id)
+                && row.status === 'active'
+                && String(row.start_date).slice(0, 10) <= today
+                && String(row.end_date).slice(0, 10) >= today);
+            const hasSchedule = schedules.some(row => Number(row.class_id) === Number(clazz.id)
+                && Number(row.section_id) === Number(clazz.section_id) && isEffective(row));
+            const hasSettings = settings.some(row => Number(row.class_id) === Number(clazz.id)
+                && Number(row.section_id) === Number(clazz.section_id) && isEffective(row));
+            const hasPrimaryTeacher = responsibilities.some(row => Number(row.class_id) === Number(clazz.id)
+                && Number(row.section_id) === Number(clazz.section_id)
+                && row.responsibility_type === 'primary' && isEffective(row));
+            const missing = [];
+            if (!period) missing.push('Academic period');
+            if (!hasSchedule) missing.push('Opening days');
+            if (!hasSettings) missing.push('Attendance settings');
+            if (!hasPrimaryTeacher) missing.push('Primary teacher');
+            return {
+                class_id: clazz.id, class_name: clazz.name, section_id: clazz.section_id,
+                section_name: clazz.section_name, period: !!period, schedule: hasSchedule,
+                settings: hasSettings, primary_teacher: hasPrimaryTeacher,
+                ready: missing.length === 0, missing
+            };
+        });
+        return {
+            sections, classes, staff, periods, schedules, responsibilities, settings,
+            readiness, readinessSummary: {
+                total: readiness.length,
+                ready: readiness.filter(row => row.ready).length,
+                incomplete: readiness.filter(row => !row.ready).length,
+                checkedDate: today
+            }
+        };
     }
     async function createAcademicPeriod(i) {
         const start = date(i.startDate, 'Start date'), end = date(i.endDate, 'End date'), session = String(i.session || '').trim(), term = String(i.term || '').trim();

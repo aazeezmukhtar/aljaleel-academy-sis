@@ -145,6 +145,15 @@ exports.getLatestNotifications = async (req, res) => {
                 } else {
                     url = userType === 'student' ? '/portal#class-board' : '/staff/board';
                 }
+            } else if (n.source_type === 'attendance_register_reminder') {
+                // Preserve the register destination when normalizing reminder notifications.
+                const registerDate = n.register_date instanceof Date
+                    ? n.register_date.toISOString().slice(0, 10)
+                    : String(n.register_date || '').slice(0, 10);
+                if (n.class_id && /^\d{4}-\d{2}-\d{2}$/.test(registerDate)) {
+                    url = '/attendance/take?class_id=' + encodeURIComponent(n.class_id) +
+                        '&date=' + encodeURIComponent(registerDate);
+                }
             }
 
             return {

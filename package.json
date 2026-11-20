@@ -33,7 +33,8 @@
     "test:attendance-register-ui": "node tests/attendance-register-ui.test.js",
     "test:attendance-register-sqlite": "node tests/attendance-register-foundation-sqlite.test.js",
     "test:attendance-register-postgres": "node tests/attendance-register-foundation-postgres.test.js",
-    "test:attendance-controller-handlers": "node tests/attendance-controller-handlers.test.js"
+    "test:attendance-controller-handlers": "node tests/attendance-controller-handlers.test.js",
+    "test:attendance-reminder-notification": "node tests/attendance-reminder-notification.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

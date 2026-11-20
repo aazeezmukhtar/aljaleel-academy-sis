@@ -53,6 +53,18 @@ assert(
     view.includes('school administrator confirms or corrects those dates'),
     'attendance page must explain why enrollment-date review blocks entry'
 );
+assert(
+    controller.includes("'no_academic_period'") &&
+    controller.includes("'attendance_settings_missing'") &&
+    controller.includes('registerBlocked'),
+    'missing academic periods and attendance settings must block the attendance page'
+);
+assert(
+    view.includes("registerSkipReason === 'no_academic_period'") &&
+    view.includes("registerSkipReason === 'attendance_settings_missing'") &&
+    view.includes('Attendance entry and saving are disabled'),
+    'attendance page must explain incomplete academic-period and settings setup'
+);
 assert(controller.includes('hasRegisterAttendanceAuthority'));
 const attendanceTakeHandler = controller.slice(
     controller.indexOf('const getTakeAttendance ='),

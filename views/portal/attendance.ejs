@@ -84,6 +84,14 @@
                     <% if (belowThreshold) { %><span class="acm-status-chip acm-status-chip--overdue">Below threshold</span><% } %>
                 </div>
                 <% } %>
+                <% if (attendanceThresholdError) { %>
+                <div class="acm-attention-block acm-attention-block--warning" role="status" aria-live="polite" style="margin-top:12px;">
+                    <i class="bi bi-exclamation-triangle acm-attention-icon" aria-hidden="true"></i>
+                    <div class="acm-attention-content">
+                        <p class="acm-attention-text"><strong>Low-attendance alerts may be incomplete.</strong> <%= attendanceThresholdError %></p>
+                    </div>
+                </div>
+                <% } %>
             </div>
         </div>
 

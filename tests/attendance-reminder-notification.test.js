@@ -5,7 +5,8 @@ const Module = require('module');
 const path = require('path');
 
 const controllerPath = path.resolve(__dirname, '..', 'controllers', 'notificationController.js');
-const calls = { deliveredForStaff: [] };
+const calls = { deliveredForStaff: [], acknowledgements: [], committed: 0, rolledBack: 0, readInserts: 0 };
+let failReadInsert = false;
 
 const reminder = {
     id: 501,
@@ -22,8 +23,25 @@ const mockDb = {
         if (sql.includes('FROM notification_reads')) return [];
         throw new Error('Unexpected notification query: ' + sql);
     },
-    async run() {
-        throw new Error('This notification destination test must not write to the database');
+    async run(sql, params, client) {
+        if (sql.includes('INSERT INTO notification_reads')) {
+            assert.ok(client, 'reminder read-state insert must use the acknowledgement transaction');
+            calls.readInserts += 1;
+            if (failReadInsert) throw new Error('Simulated read-state write failure');
+            return { changes: 1 };
+        }
+        throw new Error('Unexpected notification write: ' + sql);
+    },
+    async transaction(callback) {
+        const client = { transaction: calls.committed + calls.rolledBack + 1 };
+        try {
+            const result = await callback(client);
+            calls.committed += 1;
+            return result;
+        } catch (error) {
+            calls.rolledBack += 1;
+            throw error;
+        }
     }
 };
 
@@ -37,7 +55,10 @@ const mocks = {
             calls.deliveredForStaff.push(input.staffId);
             return [];
         },
-        async acknowledgeReminder() { return true; }
+        async acknowledgeReminder(input, client) {
+            calls.acknowledgements.push({ input, client });
+            return Number(input.reminderId) !== 999;
+        }
     }
 };
 
@@ -89,7 +110,37 @@ function responseRecorder() {
     assert.strictEqual(response.body.unreadCount, 1);
     assert.deepStrictEqual(calls.deliveredForStaff, [20]);
 
-    console.log('[attendance-reminder-notification] actual notification handler preserves the register destination and delivers reminders for the signed-in staff member.');
+    const acknowledgementResponse = responseRecorder();
+    await controller.markAsRead({
+        session: { staff: { id: 20, school_id: 1, role: 'Teacher' } },
+        body: { source_id: 501, source_type: 'attendance_register_reminder' }
+    }, acknowledgementResponse);
+    assert.strictEqual(acknowledgementResponse.statusCode, 200);
+    assert.deepStrictEqual(acknowledgementResponse.body, { success: true });
+    assert.strictEqual(calls.committed, 1);
+    assert.strictEqual(calls.readInserts, 1);
+    assert.strictEqual(calls.acknowledgements[0].input.staffId, 20);
+    assert.strictEqual(calls.acknowledgements[0].input.reminderId, 501);
+    assert.ok(calls.acknowledgements[0].client, 'acknowledgement must share the read-state transaction');
+
+    const missingReminderResponse = responseRecorder();
+    await controller.markAsRead({
+        session: { staff: { id: 20, school_id: 1, role: 'Teacher' } },
+        body: { source_id: 999, source_type: 'attendance_register_reminder' }
+    }, missingReminderResponse);
+    assert.strictEqual(missingReminderResponse.statusCode, 404);
+    assert.strictEqual(calls.readInserts, 1, 'unknown or unowned reminders must not create read-state rows');
+
+    failReadInsert = true;
+    const failedTransactionResponse = responseRecorder();
+    await controller.markAsRead({
+        session: { staff: { id: 20, school_id: 1, role: 'Teacher' } },
+        body: { source_id: 501, source_type: 'attendance_register_reminder' }
+    }, failedTransactionResponse);
+    assert.strictEqual(failedTransactionResponse.statusCode, 500);
+    assert.strictEqual(calls.rolledBack, 1, 'read-state failure must roll back the acknowledgement transaction');
+
+    console.log('[attendance-reminder-notification] notification retrieval and atomic reminder acknowledgement tests passed.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

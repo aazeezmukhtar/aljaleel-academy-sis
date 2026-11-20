@@ -178,7 +178,8 @@ function createAttendanceRegisterReminderService(db) {
             throw new Error('Reminder scheduling limit must be between 1 and 500.');
         }
 
-        const queueAvailable = await isDeliveryQueueAvailable() &&
+        const deliveryTableAvailable = await isDeliveryQueueAvailable();
+        const queueAvailable = deliveryTableAvailable &&
             process.env.ATTENDANCE_REMINDER_SCHEDULER_DELIVERY === 'true';
         const reconciliation = await reconcileMissingRegisters(now, limit);
         const candidates = await db.all(`
@@ -348,7 +349,7 @@ function createAttendanceRegisterReminderService(db) {
         // Also cancel queued reminders when a register was submitted or closed
         // after it stopped qualifying as a scheduling candidate.
         const staleCancelled = await db.transaction(client =>
-            cancelObsoleteReminders(client, now, queueAvailable)
+            cancelObsoleteReminders(client, now, deliveryTableAvailable)
         );
 
         let queuedDeliveryCount = 0;
@@ -368,7 +369,7 @@ function createAttendanceRegisterReminderService(db) {
                 const delivered = await deliverDueRemindersForStaff({
                     staffId: recipient.recipient_staff_id,
                     now,
-                    queueAvailable: false
+                    queueAvailable: deliveryTableAvailable
                 });
                 legacySchedulerDeliveryCount += delivered.length;
             }
@@ -491,7 +492,12 @@ function createAttendanceRegisterReminderService(db) {
                         attempt_count = attempt_count + 1, last_error = NULL
                     WHERE id = ? AND recipient_staff_id = ? AND status = 'pending'
                 `, [now, reminder.id, staffId], client);
-                if (Number(updated.changes || 0) > 0) delivered.push(reminder.id);
+                if (Number(updated.changes || 0) > 0) {
+                    delivered.push(reminder.id);
+                    // If rollout has been switched back to legacy delivery, retire any
+                    // previously queued copy so it cannot be dispatched later as a duplicate.
+                    await cancelQueuedDeliveryForReminder(reminder.id, now, client, queueAvailable);
+                }
             }
             return delivered;
         });

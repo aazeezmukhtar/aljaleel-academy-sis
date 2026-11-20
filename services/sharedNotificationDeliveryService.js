@@ -42,6 +42,12 @@ function createSharedNotificationDeliveryService(db) {
             throw new Error('Notification recipient type must be staff or student.');
         }
         const recipientId = positiveInteger(input && input.recipientId, 'recipient');
+        const recipientTable = recipientType === 'staff' ? 'staff' : 'students';
+        const recipient = await db.get(
+            'SELECT id FROM ' + recipientTable + ' WHERE id = ? AND school_id = ?',
+            [recipientId, schoolId], client
+        );
+        if (!recipient) throw new Error('The notification recipient does not belong to the selected school.');
         const category = requiredText(input && input.category, 'Notification category', 80);
         const sourceType = requiredText(input && input.sourceType, 'Notification source type', 80);
         const sourceId = positiveId(input && input.sourceId, 'notification source');

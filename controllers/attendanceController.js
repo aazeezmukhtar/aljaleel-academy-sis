@@ -7,6 +7,7 @@ const attendanceRegisterGeneration = require('../services/attendanceRegisterGene
 const attendanceRegisterWorkflow = require('../services/attendanceRegisterWorkflowService');
 const attendanceRegisterAdministration = require('../services/attendanceRegisterAdministrationService');
 const attendanceClosureService = require('../services/attendanceClosureService');
+const attendanceSetupService = require('../services/attendanceSetupService');
 const { createAttendanceAnalyticsService } = require('../services/attendanceAnalyticsService');
 const attendanceAnalytics = createAttendanceAnalyticsService(db);
 const { createAttendanceAnalyticsDashboardService } = require('../services/attendanceAnalyticsDashboardService');
@@ -1133,5 +1134,51 @@ const saveStaffAttendance = async (req, res) => {
     }
 };
 
-module.exports = { getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getAttendanceAnalytics, getStaffAttendance, saveStaffAttendance };
+
+const getAttendanceSetup = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user || user.role !== 'Admin') return res.status(403).send('Only an administrator may manage attendance setup.');
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).render('attendance/setup', {
+                title: 'Attendance Setup', user, setup: null,
+                error: 'The attendance register foundation is not installed.'
+            });
+        }
+        const setup = await attendanceSetupService.listSetup({ schoolId, actorStaffId: user.id });
+        return res.render('attendance/setup', { title: 'Attendance Setup', user, setup, error: null });
+    } catch (err) {
+        console.error('getAttendanceSetup Error:', err);
+        return res.status(500).send('Could not load attendance setup.');
+    }
+};
+
+const saveAttendanceSetup = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    if (!user || user.role !== 'Admin') return res.status(403).json({ success: false, message: 'Only an administrator may manage attendance setup.' });
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).json({ success: false, message: 'The attendance register foundation is not installed.' });
+        }
+        const input = { ...req.body, schoolId, actorStaffId: user.id };
+        const action = String(req.body.action || '');
+        let result;
+        if (action === 'academic_period') result = await attendanceSetupService.createAcademicPeriod(input);
+        else if (action === 'schedule') result = await attendanceSetupService.createSchedule(input);
+        else if (action === 'responsibility') result = await attendanceSetupService.createResponsibility(input);
+        else if (action === 'settings') result = await attendanceSetupService.createSettings(input);
+        else if (action === 'end') result = await attendanceSetupService.endConfiguration(input);
+        else return res.status(400).json({ success: false, message: 'Choose a valid attendance setup action.' });
+        logAction(user.id, 'MANAGE_ATTENDANCE_SETUP', 'ATTENDANCE_SETUP', {
+            action, record_id: result && result.id, record_type: req.body.type || action
+        }, req.ip);
+        return res.json({ success: true, message: 'Attendance setup saved.', result });
+    } catch (err) {
+        return res.status(409).json({ success: false, message: err.message || 'Attendance setup could not be saved.' });
+    }
+};
+
+module.exports = { getAttendanceSetup, saveAttendanceSetup, getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getAttendanceAnalytics, getStaffAttendance, saveStaffAttendance };
 

@@ -51,9 +51,14 @@
             </a>
         <% } %>
 
-                <a href="/attendance" class="<%= title.includes('Attendance') ? 'active' : '' %>">
+                <a href="/attendance" class="<%= title.includes('Attendance') && !title.includes('Setup') ? 'active' : '' %>">
                     <i class="bi bi-calendar-check-fill"></i> Attendance
                 </a>
+                <% if (user && user.role === 'Admin') { %>
+                    <a href="/attendance/setup" class="<%= title.includes('Attendance Setup') ? 'active' : '' %>">
+                        <i class="bi bi-sliders"></i> Attendance Setup
+                    </a>
+                <% } %>
 
                 <% if (user && (user.role === 'Admin' || user.role === 'Bursar')) { %>
                     <a href="/fees/manager" class="<%= title.includes('Fee') ? 'active' : '' %>">

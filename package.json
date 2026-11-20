@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "description": "Premium, Offline-First School Information System",
   "main": "app.js",
-  "engines": { "node": ">=18.0.0" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "start": "node app.js",
     "test:regression": "node tests/regression.test.js",
@@ -29,9 +31,9 @@
     "test:attendance-register-workflow": "node tests/attendance-register-workflow.test.js",
     "test:attendance-register-workflow-postgres": "node tests/attendance-register-workflow-postgres.test.js",
     "test:attendance-register-ui": "node tests/attendance-register-ui.test.js",
-    "test:attendance-register-workflow-postgres": "node tests/attendance-register-workflow-postgres.test.js",
     "test:attendance-register-sqlite": "node tests/attendance-register-foundation-sqlite.test.js",
-    "test:attendance-register-postgres": "node tests/attendance-register-foundation-postgres.test.js"
+    "test:attendance-register-postgres": "node tests/attendance-register-foundation-postgres.test.js",
+    "test:attendance-controller-handlers": "node tests/attendance-controller-handlers.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
@@ -48,5 +50,7 @@
     "pg": "^8.20.0",
     "xlsx": "^0.18.5"
   },
-  "devDependencies": { "nodemon": "^3.1.14" }
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
 }

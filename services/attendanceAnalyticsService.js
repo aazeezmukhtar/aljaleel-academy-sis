@@ -179,9 +179,18 @@ function createAttendanceAnalyticsService(db) {
         `, params);
 
         const referenceDate = endDate;
-        const threshold = await getAttendanceThreshold({
-            schoolId, classId, sectionId, referenceDate
-        }).catch(() => null);
+        let threshold = null;
+        let thresholdError = null;
+        try {
+            threshold = await getAttendanceThreshold({
+                schoolId, classId, sectionId, referenceDate
+            });
+        } catch {
+            // Keep the attendance figures available, but expose that threshold
+            // alerts may be incomplete instead of silently treating the
+            // failed lookup as an unconfigured threshold.
+            thresholdError = 'The low-attendance threshold could not be loaded. Attendance figures are shown, but below-threshold alerts may be incomplete.';
+        }
         const grouped = new Map();
         for (const record of records) {
             if (!VALID_STATUSES.has(record.status)) continue;
@@ -206,7 +215,7 @@ function createAttendanceAnalyticsService(db) {
             schoolId, classId, sectionId, startDate, endDate
         });
         return {
-            rows, threshold, registerCompletion, recordCount: records.length,
+            rows, threshold, thresholdError, registerCompletion, recordCount: records.length,
             records: records.filter(record => VALID_STATUSES.has(record.status)).map(record => ({
                 ...record, date: normalizeDateValue(record.date)
             }))

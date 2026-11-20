@@ -13,7 +13,7 @@ ejs.compile(view);
 assert.ok(view.includes('This page does not generate registers'));
 assert.ok(view.includes('administrator_escalation'));
 assert.ok(view.includes('Missing means no register exists'));
-assert.ok(view.includes('Overdue means an existing register'));
+assert.ok(view.includes('an overdue register exists'));
 assert.ok(routes.includes("router.get('/operations', attendanceController.getAttendanceOperations);"));
 assert.ok(controller.includes("user.role !== 'Admin'"));
 assert.ok(sidebar.includes('href="/attendance/operations"'));

@@ -34,6 +34,60 @@
         </section>
 
         <section class="card" style="margin-bottom:20px;">
+            <h2 style="font-size:1.1rem;margin-bottom:6px;">Scheduler run history</h2>
+            <% if (!operations.schedulerHistory.available) { %>
+                <div class="alert alert-warning" role="status">
+                    Scheduler run history is not available yet. Apply the reviewed attendance scheduler run-history migration before expecting run records here.
+                </div>
+            <% } else { %>
+                <p style="font-size:.85rem;color:var(--text-muted);">Latest 20 scheduler executions. A run still marked running after 15 minutes is flagged for investigation; it is not automatically changed or retried.</p>
+                <div class="grid-2" style="gap:12px;margin:12px 0;">
+                    <% [
+                        ['Runs shown', operations.schedulerHistory.summary.total],
+                        ['Succeeded', operations.schedulerHistory.summary.succeeded],
+                        ['Failed', operations.schedulerHistory.summary.failed],
+                        ['Still running', operations.schedulerHistory.summary.running],
+                        ['Possibly interrupted', operations.schedulerHistory.summary.staleRunning]
+                    ].forEach(item => { %>
+                    <article class="card">
+                        <div style="font-size:.8rem;color:var(--text-muted);"><%= item[0] %></div>
+                        <div style="font-size:1.4rem;font-weight:700;"><%= item[1] %></div>
+                    </article>
+                    <% }); %>
+                </div>
+                <% if (!operations.schedulerHistory.runs.length) { %>
+                    <p>No scheduler runs have been recorded.</p>
+                <% } else { %>
+                <div style="overflow-x:auto;">
+                    <table class="table" style="min-width:700px;width:100%;">
+                        <thead><tr><th>Started (Nigeria time)</th><th>Duration / age</th><th>Status</th><th>Summary / error</th></tr></thead>
+                        <tbody>
+                        <% operations.schedulerHistory.runs.forEach(run => { %>
+                            <tr>
+                                <td><%= new Date(run.startedAt).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' }) %></td>
+                                <td><%= run.completedAt ? new Date(run.completedAt).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' }) : (run.ageMinutes + ' min elapsed') %></td>
+                                <td>
+                                    <% if (run.status === 'succeeded') { %><span class="badge bg-success">Succeeded</span>
+                                    <% } else if (run.status === 'failed') { %><span class="badge bg-danger">Failed</span>
+                                    <% } else if (run.stale) { %><span class="badge bg-warning text-dark">Possibly interrupted</span>
+                                    <% } else { %><span class="badge bg-secondary">Running</span><% } %>
+                                </td>
+                                <td>
+                                    <% if (run.errorMessage) { %><span><%= run.errorMessage %></span>
+                                    <% } else if (run.summary) { %>
+                                        <small>Registers generated: <%= run.summary.generatedRegisterCount || 0 %> · Reminders scheduled: <%= run.summary.scheduledCount || 0 %> · Errors: <%= run.summary.registerGenerationErrorCount || 0 %></small>
+                                    <% } else { %>—<% } %>
+                                </td>
+                            </tr>
+                        <% }); %>
+                        </tbody>
+                    </table>
+                </div>
+                <% } %>
+            <% } %>
+        </section>
+
+        <section class="card" style="margin-bottom:20px;">
             <h2 style="font-size:1.1rem;margin-bottom:6px;">Register follow-up</h2>
             <p style="font-size:.85rem;color:var(--text-muted);">Each row represents a class register expected on a scheduled school day. Missing means no register exists; overdue means an existing register has passed its submission deadline without being submitted.</p>
             <% if (!operations.rows.length) { %>
@@ -80,7 +134,7 @@
             </div>
             <% } %>
         </section>
-        <p style="font-size:.8rem;color:var(--text-muted);">This page does not generate registers, send reminders, acknowledge notifications or change attendance records.</p>
+        <p style="font-size:.8rem;color:var(--text-muted);">This page is read-only. It does not generate registers, run the scheduler, send external messages, acknowledge notifications or change attendance records.</p>
         <% } %>
     </main>
 </div>

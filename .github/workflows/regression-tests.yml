@@ -65,6 +65,10 @@ jobs:
         run: npm run test:attendance-reminder-notification
       - name: Run attendance scheduler run history tests
         run: npm run test:attendance-scheduler-run-history
+      - name: Run shared notification delivery tests (SQLite)
+        run: npm run test:notification-delivery
+      - name: Run shared notification delivery tests (PostgreSQL)
+        run: npm run test:notification-delivery-postgres
       - name: Run attendance setup service tests
         run: npm run test:attendance-setup-service
       - name: Run attendance operations monitoring tests

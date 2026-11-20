@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const attendanceRegisterWorkflow = require('../services/attendanceRegisterWorkflowService');
 const attendanceRegisterReminders = require('../services/attendanceRegisterReminderService');
+const sharedNotificationDelivery = require('../services/sharedNotificationDeliveryService');
 
 exports.getLatestNotifications = async (req, res) => {
     try {
@@ -64,30 +65,60 @@ exports.getLatestNotifications = async (req, res) => {
             `, [userId, schoolId]);
         }
 
-        // Attendance-register reminders are staff-only and remain compatible
-        // with installations where the additive attendance foundation is absent.
+        // Attendance reminders are retrieved read-only. The scheduler owns delivery.
+        // If the shared queue migration is not yet installed, retain visibility of
+        // already-sent legacy reminders without triggering request-time delivery.
         let reminderNotifications = [];
         if (req.session.staff && await attendanceRegisterWorkflow.isFoundationAvailable()) {
-            await attendanceRegisterReminders.deliverDueRemindersForStaff({ staffId: userId });
-            reminderNotifications = await db.all(`
+            const queueAvailable = await sharedNotificationDelivery.isAvailable();
+            if (queueAvailable) {
+                const deliveries = await sharedNotificationDelivery.listForRecipient({
+                    schoolId,
+                    recipientType: 'staff',
+                    recipientId: userId,
+                    limit: 100
+                });
+                reminderNotifications = deliveries
+                    .filter(item => item.source_type === 'attendance_register_reminder')
+                    .map(item => ({
+                        id: item.source_id,
+                        title: item.title,
+                        type: 'Attendance Reminder',
+                        source_type: 'attendance_register_reminder',
+                        created_at: item.delivered_at || item.created_at,
+                        date: null,
+                        url: item.destination || '#',
+                        isRead: Number(item.is_read) === 1 || item.status === 'read'
+                    }))
+                    .slice(0, 15);
+            }
+
+            const legacyReminders = await db.all(`
                 SELECT r.id, ar.class_id, ar.register_date, r.sent_at AS created_at
                 FROM attendance_register_reminders r
                 JOIN attendance_registers ar ON ar.id = r.register_id
                 WHERE r.recipient_staff_id = ? AND r.status IN ('sent', 'acknowledged')
                 ORDER BY r.sent_at DESC, r.id DESC
-                LIMIT 15
+                LIMIT 50
             `, [userId]);
-            reminderNotifications = reminderNotifications.map(reminder => ({
-                ...reminder,
-                title: 'Attendance register overdue',
-                type: 'Attendance Reminder',
-                source_type: 'attendance_register_reminder',
-                date: reminder.register_date,
-                url: '/attendance/take?class_id=' + encodeURIComponent(reminder.class_id) +
-                    '&date=' + encodeURIComponent(reminder.register_date instanceof Date
-                        ? reminder.register_date.toISOString().slice(0, 10)
-                        : String(reminder.register_date).slice(0, 10))
-            }));
+            const existingReminderIds = new Set(reminderNotifications.map(item => String(item.id)));
+            for (const reminder of legacyReminders) {
+                if (existingReminderIds.has(String(reminder.id))) continue;
+                const registerDate = reminder.register_date instanceof Date
+                    ? reminder.register_date.toISOString().slice(0, 10)
+                    : String(reminder.register_date).slice(0, 10);
+                reminderNotifications.push({
+                    ...reminder,
+                    title: 'Attendance register overdue',
+                    type: 'Attendance Reminder',
+                    source_type: 'attendance_register_reminder',
+                    date: registerDate,
+                    url: '/attendance/take?class_id=' + encodeURIComponent(reminder.class_id) +
+                        '&date=' + encodeURIComponent(registerDate)
+                });
+                existingReminderIds.add(String(reminder.id));
+            }
+            reminderNotifications = reminderNotifications.slice(0, 15);
         }
 
         // 2. Merge and Sort
@@ -108,7 +139,7 @@ exports.getLatestNotifications = async (req, res) => {
         let unreadCount = 0;
         
         const notifications = rawNotifications.map(n => {
-            const isRead = readSet.has(`${n.source_type}_${n.id}`);
+            const isRead = Boolean(n.isRead) || readSet.has(`${n.source_type}_${n.id}`);
             if (!isRead) unreadCount++;
 
             let countdown = null;
@@ -146,7 +177,9 @@ exports.getLatestNotifications = async (req, res) => {
                     url = userType === 'student' ? '/portal#class-board' : '/staff/board';
                 }
             } else if (n.source_type === 'attendance_register_reminder') {
-                // Preserve the register destination when normalizing reminder notifications.
+                // Shared deliveries already carry a validated internal destination.
+                if (n.url && n.url !== '#') url = n.url;
+                // Preserve the legacy register destination when normalizing reminder notifications.
                 const registerDate = n.register_date instanceof Date
                     ? n.register_date.toISOString().slice(0, 10)
                     : String(n.register_date || '').slice(0, 10);
@@ -187,11 +220,39 @@ exports.markAsRead = async (req, res) => {
         `, readParams, client);
 
         if (req.session.staff && source_type === 'attendance_register_reminder') {
+            const schoolId = req.schoolId || req.session.staff.school_id;
+            const queueAvailable = await sharedNotificationDelivery.isAvailable();
             const acknowledged = await db.transaction(async client => {
                 const updated = await attendanceRegisterReminders.acknowledgeReminder({
                     staffId: userId, reminderId: source_id
                 }, client);
                 if (!updated) return false;
+
+                if (queueAvailable) {
+                    const delivery = await db.get(`
+                        SELECT id FROM notification_deliveries
+                        WHERE school_id = ? AND recipient_type = 'staff'
+                          AND recipient_id = ? AND source_type = 'attendance_register_reminder'
+                          AND source_id = ?
+                          AND status IN ('delivered', 'read')
+                        LIMIT 1
+                    `, [schoolId, userId, source_id], client);
+                    if (delivery) {
+                        const now = new Date().toISOString();
+                        await db.run(`
+                            UPDATE notification_deliveries
+                            SET status = 'read', updated_at = ?
+                            WHERE id = ? AND school_id = ? AND recipient_type = 'staff'
+                              AND recipient_id = ? AND status IN ('delivered', 'read')
+                        `, [now, delivery.id, schoolId, userId], client);
+                        await db.run(`
+                            INSERT INTO notification_reads (user_id, user_type, source_id, source_type)
+                            VALUES (?, 'staff', ?, 'notification_delivery')
+                            ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING
+                        `, [userId, delivery.id], client);
+                    }
+                }
+
                 await insertRead(client);
                 return true;
             });

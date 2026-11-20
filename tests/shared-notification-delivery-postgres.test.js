@@ -14,14 +14,16 @@ if (!url) {
 }
 
 (async () => {
-    const pool = new Pool({ connectionString: url, max: 4 });
     const schema = 'shared_notification_test_' + process.pid;
+    const bootstrapPool = new Pool({ connectionString: url, max: 1 });
+    let bootstrapClient;
+    let pool;
     let setupClient;
     try {
-        setupClient = await pool.connect();
-        await setupClient.query('CREATE SCHEMA "' + schema + '"');
-        await setupClient.query('SET search_path TO "' + schema + '"');
-        await setupClient.query(`
+        bootstrapClient = await bootstrapPool.connect();
+        await bootstrapClient.query('CREATE SCHEMA "' + schema + '"');
+        await bootstrapClient.query('SET search_path TO "' + schema + '"');
+        await bootstrapClient.query(`
             CREATE TABLE schools (id INTEGER PRIMARY KEY);
             INSERT INTO schools (id) VALUES (1), (2);
             CREATE TABLE notification_reads (
@@ -37,8 +39,19 @@ if (!url) {
             path.join(__dirname, '..', 'database', 'migrations', '20261120_shared_notification_deliveries.postgres.sql'),
             'utf8'
         );
-        await setupClient.query(migration);
-        await setupClient.query(migration);
+        await bootstrapClient.query(migration);
+        await bootstrapClient.query(migration);
+        await bootstrapClient.query('SET search_path TO public');
+        bootstrapClient.release();
+        bootstrapClient = null;
+        await bootstrapPool.end();
+
+        pool = new Pool({
+            connectionString: url,
+            max: 4,
+            options: '-c search_path=' + schema
+        });
+        setupClient = await pool.connect();
 
         const db = {
             DB_TYPE: 'postgres',
@@ -175,12 +188,18 @@ if (!url) {
 
         console.log('[shared-notification-delivery-postgres] migration, idempotency, concurrent dispatch, recipient isolation, read state, cancellation and failure handling passed.');
     } finally {
-        if (setupClient) {
-            await setupClient.query('SET search_path TO public');
-            await setupClient.query('DROP SCHEMA IF EXISTS "' + schema + '" CASCADE');
-            setupClient.release();
+        if (setupClient) setupClient.release();
+        if (pool) await pool.end();
+        if (bootstrapClient) bootstrapClient.release();
+        await bootstrapPool.end().catch(() => {});
+        const cleanupPool = new Pool({ connectionString: url, max: 1 });
+        const cleanupClient = await cleanupPool.connect();
+        try {
+            await cleanupClient.query('DROP SCHEMA IF EXISTS "' + schema + '" CASCADE');
+        } finally {
+            cleanupClient.release();
+            await cleanupPool.end();
         }
-        await pool.end();
     }
 })().catch(error => {
     console.error(error);

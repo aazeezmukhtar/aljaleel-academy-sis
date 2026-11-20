@@ -6,6 +6,7 @@ const path = require('path');
 
 const controllerPath = path.resolve(__dirname, '..', 'controllers', 'attendanceController.js');
 const calls = { generated: 0, legacyTransaction: 0 };
+let generationReason = 'enrollment_dates_need_review';
 const mockDb = {
     async get(sql) {
         if (sql.includes('SELECT * FROM classes') || sql.includes('SELECT id, section_id FROM classes')) {
@@ -33,7 +34,7 @@ const workflow = {
 const generation = {
     async generateExpectedRegister() {
         calls.generated += 1;
-        return { created: false, skipped: true, reason: 'enrollment_dates_need_review' };
+        return { created: false, skipped: true, reason: generationReason };
     }
 };
 
@@ -129,7 +130,32 @@ function responseRecorder() {
     assert.strictEqual(calls.generated, 1);
     assert.strictEqual(calls.legacyTransaction, 0, 'blocked requests must never fall through to legacy attendance writes');
 
-    console.log('[attendance-controller-handlers] actual GET page and POST save handlers block enrollment-date review cases without writing attendance.');
+    for (const reason of ['no_academic_period', 'attendance_settings_missing']) {
+        generationReason = reason;
+        calls.generated = 0;
+        const blockedPage = responseRecorder();
+        await controller.getTakeAttendance({
+            query: { class_id: '40', date: '2026-11-20' },
+            session: { staff: admin }, schoolId: 1
+        }, blockedPage);
+        assert.strictEqual(blockedPage.rendered.data.registerSkipReason, reason);
+        assert.strictEqual(blockedPage.rendered.data.readOnly, true, reason + ' must render a read-only page');
+        assert.strictEqual(blockedPage.rendered.data.canEdit, false, reason + ' must disable editing');
+
+        calls.generated = 0;
+        const blockedSave = responseRecorder();
+        await controller.saveAttendance({
+            body: { class_id: '40', date: '2026-11-20', session: '2026/2027', term: '1st Term', attendance: { 30: 'Present' } },
+            session: { staff: admin }, schoolId: 1, ip: '127.0.0.1'
+        }, blockedSave);
+        assert.strictEqual(blockedSave.statusCode, 409, reason + ' must reject legacy attendance saving');
+        assert.strictEqual(blockedSave.body.code, reason);
+        assert.match(blockedSave.body.message, /administrator/i);
+        assert.strictEqual(calls.generated, 1);
+        assert.strictEqual(calls.legacyTransaction, 0, reason + ' must not fall through to legacy writes');
+    }
+
+    console.log('[attendance-controller-handlers] actual GET and POST handlers block enrollment-review, missing-period and missing-settings cases without legacy writes.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

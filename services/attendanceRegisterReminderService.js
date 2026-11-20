@@ -178,7 +178,8 @@ function createAttendanceRegisterReminderService(db) {
             throw new Error('Reminder scheduling limit must be between 1 and 500.');
         }
 
-        const queueAvailable = await isDeliveryQueueAvailable();
+        const queueAvailable = await isDeliveryQueueAvailable() &&
+            process.env.ATTENDANCE_REMINDER_SCHEDULER_DELIVERY === 'true';
         const reconciliation = await reconcileMissingRegisters(now, limit);
         const candidates = await db.all(`
             SELECT ar.id

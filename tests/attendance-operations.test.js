@@ -18,7 +18,7 @@ assert.ok(view.includes('overdue means an existing register has passed its submi
 assert.ok(routes.includes("router.get('/operations', attendanceController.getAttendanceOperations);"));
 assert.ok(controller.includes("user.role !== 'Admin'"));
 assert.ok(sidebar.includes('href="/attendance/operations"'));
-assert.ok(!/\\b(INSERT\\s+INTO|UPDATE\\s+attendance_|DELETE\\s+FROM)\\b/i.test(serviceSource), 'operations service must remain read-only');
+assert.ok(!/\b(INSERT\s+INTO|UPDATE\s+attendance_|DELETE\s+FROM)\b/i.test(serviceSource), 'operations service must remain read-only');
 
 const { createAttendanceOperationsService } = require('../services/attendanceOperationsService');
 

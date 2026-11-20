@@ -88,6 +88,55 @@
         </section>
 
         <section class="card" style="margin-bottom:20px;">
+            <h2 style="font-size:1.1rem;margin-bottom:6px;">Notification delivery queue</h2>
+            <% if (!operations.notificationDeliveryHealth || !operations.notificationDeliveryHealth.available) { %>
+                <div class="alert alert-warning" role="status">
+                    Shared notification delivery health is unavailable. Apply the reviewed shared notification delivery migration before expecting queue metrics here.
+                </div>
+            <% } else { %>
+                <p style="font-size:.85rem;color:var(--text-muted);">School-scoped queue status. “Due” means queued items whose scheduled time has arrived. Delivery means available in AcadMe's in-app feed, not SMS, email or proof of viewing.</p>
+                <div class="grid-2" style="gap:12px;margin:12px 0;">
+                    <% [
+                        ['Total records', operations.notificationDeliveryHealth.summary.total],
+                        ['Queued', operations.notificationDeliveryHealth.summary.queued],
+                        ['Due now', operations.notificationDeliveryHealth.summary.due],
+                        ['Delivered', operations.notificationDeliveryHealth.summary.delivered],
+                        ['Read', operations.notificationDeliveryHealth.summary.read],
+                        ['Failed', operations.notificationDeliveryHealth.summary.failed],
+                        ['Cancelled', operations.notificationDeliveryHealth.summary.cancelled],
+                        ['Oldest queued age (minutes)', operations.notificationDeliveryHealth.summary.oldestQueuedAgeMinutes === null ? '—' : operations.notificationDeliveryHealth.summary.oldestQueuedAgeMinutes]
+                    ].forEach(item => { %>
+                    <article class="card">
+                        <div style="font-size:.8rem;color:var(--text-muted);"><%= item[0] %></div>
+                        <div style="font-size:1.4rem;font-weight:700;"><%= item[1] %></div>
+                    </article>
+                    <% }); %>
+                </div>
+                <% if (operations.notificationDeliveryHealth.recentFailures.length) { %>
+                    <h3 style="font-size:1rem;margin:14px 0 8px;">Latest failed deliveries</h3>
+                    <div style="overflow-x:auto;">
+                        <table class="table" style="min-width:650px;width:100%;">
+                            <thead><tr><th>Updated (Nigeria time)</th><th>Notification</th><th>Category / source</th><th>Attempts</th><th>Failure detail</th></tr></thead>
+                            <tbody>
+                            <% operations.notificationDeliveryHealth.recentFailures.forEach(item => { %>
+                                <tr>
+                                    <td><%= item.updatedAt ? new Date(item.updatedAt).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' }) : '—' %></td>
+                                    <td><%= item.title %></td>
+                                    <td><%= item.category %> · <%= item.sourceType %></td>
+                                    <td><%= item.attemptCount %></td>
+                                    <td><%= item.error %></td>
+                                </tr>
+                            <% }); %>
+                            </tbody>
+                        </table>
+                    </div>
+                <% } else { %>
+                    <p>No failed notification deliveries are currently recorded.</p>
+                <% } %>
+            <% } %>
+        </section>
+
+        <section class="card" style="margin-bottom:20px;">
             <h2 style="font-size:1.1rem;margin-bottom:6px;">Register follow-up</h2>
             <p style="font-size:.85rem;color:var(--text-muted);">Each row represents a class register expected on a scheduled school day. Missing means no register exists; overdue means an existing register has passed its submission deadline without being submitted.</p>
             <% if (!operations.rows.length) { %>

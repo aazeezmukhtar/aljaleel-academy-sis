@@ -1,5 +1,7 @@
 'use strict';
 
+process.env.ATTENDANCE_REMINDER_SCHEDULER_DELIVERY = 'true';
+
 const assert = require('assert');
 const fs = require('fs');
 const path = require('path');

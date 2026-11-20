@@ -10,8 +10,8 @@ BEGIN;
 
 CREATE TABLE IF NOT EXISTS section_academic_periods (
     id BIGSERIAL PRIMARY KEY,
-    school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
-    section_id BIGINT NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
+    school_id INTEGER NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
+    section_id INTEGER NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
     session TEXT NOT NULL,
     term TEXT NOT NULL,
     start_date DATE NOT NULL,
@@ -26,13 +26,13 @@ CREATE TABLE IF NOT EXISTS section_academic_periods (
 
 CREATE TABLE IF NOT EXISTS class_attendance_schedules (
     id BIGSERIAL PRIMARY KEY,
-    school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
-    section_id BIGINT NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
+    school_id INTEGER NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
+    section_id INTEGER NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
     weekday SMALLINT NOT NULL CHECK (weekday BETWEEN 1 AND 7),
     effective_from DATE NOT NULL,
     effective_to DATE,
-    created_by BIGINT REFERENCES staff(id) ON DELETE RESTRICT,
+    created_by INTEGER REFERENCES staff(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (effective_to IS NULL OR effective_to >= effective_from),
     UNIQUE (class_id, section_id, weekday, effective_from)
@@ -40,15 +40,15 @@ CREATE TABLE IF NOT EXISTS class_attendance_schedules (
 
 CREATE TABLE IF NOT EXISTS class_attendance_responsibilities (
     id BIGSERIAL PRIMARY KEY,
-    school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
-    section_id BIGINT NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
-    staff_id BIGINT NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
+    school_id INTEGER NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
+    section_id INTEGER NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
+    staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
     responsibility_type TEXT NOT NULL
         CHECK (responsibility_type IN ('primary', 'secondary', 'substitute')),
     effective_from DATE NOT NULL,
     effective_to DATE,
-    created_by BIGINT REFERENCES staff(id) ON DELETE RESTRICT,
+    created_by INTEGER REFERENCES staff(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (effective_to IS NULL OR effective_to >= effective_from),
     UNIQUE (class_id, section_id, staff_id, responsibility_type, effective_from)
@@ -56,9 +56,9 @@ CREATE TABLE IF NOT EXISTS class_attendance_responsibilities (
 
 CREATE TABLE IF NOT EXISTS class_attendance_settings (
     id BIGSERIAL PRIMARY KEY,
-    school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
-    section_id BIGINT NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
+    school_id INTEGER NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
+    section_id INTEGER NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
     effective_from DATE NOT NULL,
     effective_to DATE,
     submission_deadline_time TIME NOT NULL,
@@ -68,24 +68,24 @@ CREATE TABLE IF NOT EXISTS class_attendance_settings (
         CHECK (jsonb_typeof(subsequent_reminder_intervals_minutes) = 'array'),
     low_attendance_threshold NUMERIC(5,2) NOT NULL
         CHECK (low_attendance_threshold >= 0 AND low_attendance_threshold <= 100),
-    created_by BIGINT REFERENCES staff(id) ON DELETE RESTRICT,
+    created_by INTEGER REFERENCES staff(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (effective_to IS NULL OR effective_to >= effective_from)
 );
 
 CREATE TABLE IF NOT EXISTS class_attendance_closures (
     id BIGSERIAL PRIMARY KEY,
-    school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
+    school_id INTEGER NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
     scope_type TEXT NOT NULL CHECK (scope_type IN ('school', 'section', 'class')),
-    section_id BIGINT REFERENCES sections(id) ON DELETE RESTRICT,
-    class_id BIGINT REFERENCES classes(id) ON DELETE RESTRICT,
+    section_id INTEGER REFERENCES sections(id) ON DELETE RESTRICT,
+    class_id INTEGER REFERENCES classes(id) ON DELETE RESTRICT,
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     reason TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending'
         CHECK (status IN ('pending', 'approved', 'rejected', 'cancelled')),
-    requested_by BIGINT NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
-    approved_by BIGINT REFERENCES staff(id) ON DELETE RESTRICT,
+    requested_by INTEGER NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
+    approved_by INTEGER REFERENCES staff(id) ON DELETE RESTRICT,
     approved_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CHECK (end_date >= start_date),
@@ -102,9 +102,9 @@ CREATE TABLE IF NOT EXISTS class_attendance_closures (
 
 CREATE TABLE IF NOT EXISTS attendance_registers (
     id BIGSERIAL PRIMARY KEY,
-    school_id BIGINT NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
-    class_id BIGINT NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
-    section_id BIGINT NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
+    school_id INTEGER NOT NULL REFERENCES schools(id) ON DELETE RESTRICT,
+    class_id INTEGER NOT NULL REFERENCES classes(id) ON DELETE RESTRICT,
+    section_id INTEGER NOT NULL REFERENCES sections(id) ON DELETE RESTRICT,
     academic_period_id BIGINT NOT NULL REFERENCES section_academic_periods(id) ON DELETE RESTRICT,
     schedule_id BIGINT NOT NULL REFERENCES class_attendance_schedules(id) ON DELETE RESTRICT,
     responsibility_id BIGINT REFERENCES class_attendance_responsibilities(id) ON DELETE RESTRICT,
@@ -119,7 +119,7 @@ CREATE TABLE IF NOT EXISTS attendance_registers (
     ),
     first_submitted_at TIMESTAMPTZ,
     last_submitted_at TIMESTAMPTZ,
-    submitted_by BIGINT REFERENCES staff(id) ON DELETE RESTRICT,
+    submitted_by INTEGER REFERENCES staff(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (class_id, section_id, register_date),
@@ -134,7 +134,7 @@ CREATE TABLE IF NOT EXISTS attendance_registers (
 CREATE TABLE IF NOT EXISTS attendance_register_students (
     id BIGSERIAL PRIMARY KEY,
     register_id BIGINT NOT NULL REFERENCES attendance_registers(id) ON DELETE RESTRICT,
-    student_id BIGINT NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
+    student_id INTEGER NOT NULL REFERENCES students(id) ON DELETE RESTRICT,
     enrollment_period_id BIGINT NOT NULL REFERENCES student_enrollment_periods(id) ON DELETE RESTRICT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (register_id, student_id)
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS attendance_register_events (
         'generated', 'attendance_started', 'submitted', 'reopened',
         'resubmitted', 'administratively_closed', 'corrected', 'reminder_scheduled'
     )),
-    actor_staff_id BIGINT REFERENCES staff(id) ON DELETE RESTRICT,
+    actor_staff_id INTEGER REFERENCES staff(id) ON DELETE RESTRICT,
     previous_status TEXT,
     new_status TEXT,
     reason TEXT,
@@ -159,7 +159,7 @@ CREATE TABLE IF NOT EXISTS attendance_register_events (
 CREATE TABLE IF NOT EXISTS attendance_register_reminders (
     id BIGSERIAL PRIMARY KEY,
     register_id BIGINT NOT NULL REFERENCES attendance_registers(id) ON DELETE RESTRICT,
-    recipient_staff_id BIGINT NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
+    recipient_staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
     reminder_stage INTEGER NOT NULL CHECK (reminder_stage >= 1),
     reminder_type TEXT NOT NULL CHECK (reminder_type IN ('responsible_teacher', 'administrator_escalation')),
     scheduled_at TIMESTAMPTZ NOT NULL,
@@ -178,7 +178,7 @@ CREATE TABLE IF NOT EXISTS attendance_foundation_audit_logs (
     entity_type TEXT NOT NULL,
     entity_id BIGINT NOT NULL,
     action TEXT NOT NULL,
-    actor_staff_id BIGINT REFERENCES staff(id) ON DELETE RESTRICT,
+    actor_staff_id INTEGER REFERENCES staff(id) ON DELETE RESTRICT,
     before_data JSONB,
     after_data JSONB,
     reason TEXT,

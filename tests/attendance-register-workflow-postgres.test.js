@@ -338,11 +338,34 @@ if (!url) {
     assert.strictEqual(firstReminderRows[0].reminder_type, 'responsible_teacher');
     assert.strictEqual(firstReminderRows[0].status, 'sent',
       'the scheduler must publish due reminders through the shared delivery queue');
+    const firstDelivery = await db.get(`
+      SELECT status, recipient_type, recipient_id, delivered_at
+      FROM notification_deliveries
+      WHERE source_type = 'attendance_register_reminder' AND source_id = (
+        SELECT id FROM attendance_register_reminders
+        WHERE register_id = ? AND recipient_staff_id = 20 AND reminder_stage = 1
+      )
+    `, [reminderRegister.id]);
+    assert.strictEqual(firstDelivery.status, 'delivered');
+    assert.strictEqual(firstDelivery.recipient_type, 'staff');
+    assert.strictEqual(String(firstDelivery.recipient_id), '20');
+    assert(firstDelivery.delivered_at);
     const duplicateReminderRun = await reminderService.scheduleDueReminders({
       now: '2026-11-25T13:00:00.000Z'
     });
     assert.strictEqual(duplicateReminderRun.scheduledCount, 0,
       'repeated scheduler runs must not duplicate a reminder stage');
+    assert.strictEqual(
+      Number((await db.get(`
+        SELECT COUNT(*) AS count FROM notification_deliveries
+        WHERE source_type = 'attendance_register_reminder' AND source_id = (
+          SELECT id FROM attendance_register_reminders
+          WHERE register_id = ? AND recipient_staff_id = 20 AND reminder_stage = 1
+        )
+      `, [reminderRegister.id])).count),
+      1,
+      'repeated scheduler runs must not duplicate the in-app delivery'
+    );
     const teacherDelivery = await reminderService.deliverDueRemindersForStaff({
       staffId: 20, now: '2026-11-25T13:00:00.000Z'
     });
@@ -400,6 +423,15 @@ if (!url) {
     );
     assert.strictEqual(cancelledPendingReminder.status, 'cancelled',
       'pending reminders must be cancelled after server-confirmed submission');
+    const cancelledDelivery = await db.get(`
+      SELECT status FROM notification_deliveries
+      WHERE source_type = 'attendance_register_reminder'
+        AND source_id = (
+          SELECT id FROM attendance_register_reminders WHERE register_id = ?
+        )
+    `, [pendingRegister.id]);
+    assert.strictEqual(cancelledDelivery.status, 'cancelled',
+      'a queued future delivery must be cancelled when the register is submitted');
 
     const analytics = createAttendanceAnalyticsService(db);
     await db.run("INSERT INTO sections(id, school_id, name) VALUES (11, 1, 'Tahfeez')");

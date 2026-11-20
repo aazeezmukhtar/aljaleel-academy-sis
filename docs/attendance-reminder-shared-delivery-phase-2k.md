@@ -29,7 +29,7 @@ Make the attendance scheduler the only process that publishes attendance reminde
 
 ## Migration and production rollout compatibility
 
-The shared delivery migration from Phase 2J is additive and must be applied before queue-backed delivery is used. Until it is installed, the attendance scheduler uses the existing reminder status transition as a compatibility delivery path.
+The shared delivery migration from Phase 2J is additive and must be applied before queue-backed delivery is used. Until both the migration is installed and `ATTENDANCE_REMINDER_SCHEDULER_DELIVERY=true` is enabled, the attendance scheduler uses the existing reminder status transition as a compatibility delivery path. The scheduler only creates shared delivery rows after the rollout flag is enabled.
 
 The notification feed switches to read-only queue retrieval only when both conditions are true:
 - the shared delivery migration is available; and

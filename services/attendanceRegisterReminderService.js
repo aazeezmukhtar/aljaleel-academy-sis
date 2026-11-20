@@ -446,6 +446,7 @@ function createAttendanceRegisterReminderService(db) {
             generatedRegisterCount: reconciliation.generatedCount,
             skippedRegisterCount: reconciliation.skippedCount,
             registerGenerationErrorCount: reconciliation.errorCount,
+            deliveryMode: queueAvailable ? 'shared_queue' : 'legacy_scheduler',
             queuedDeliveryCount,
             dispatchedDeliveryCount,
             legacySchedulerDeliveryCount,

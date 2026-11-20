@@ -179,17 +179,28 @@ exports.markAsRead = async (req, res) => {
 
         if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
-        if (req.session.staff && source_type === 'attendance_register_reminder') {
-            await attendanceRegisterReminders.acknowledgeReminder({
-                staffId: userId, reminderId: source_id
-            });
-        }
-
-        await db.run(`
+        const readParams = [userId, userType, source_id, source_type];
+        const insertRead = async client => db.run(`
             INSERT INTO notification_reads (user_id, user_type, source_id, source_type)
             VALUES (?, ?, ?, ?)
             ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING
-        `, [userId, userType, source_id, source_type]);
+        `, readParams, client);
+
+        if (req.session.staff && source_type === 'attendance_register_reminder') {
+            const acknowledged = await db.transaction(async client => {
+                const updated = await attendanceRegisterReminders.acknowledgeReminder({
+                    staffId: userId, reminderId: source_id
+                }, client);
+                if (!updated) return false;
+                await insertRead(client);
+                return true;
+            });
+            if (!acknowledged) {
+                return res.status(404).json({ error: 'Attendance reminder not found.' });
+            }
+        } else {
+            await insertRead();
+        }
 
         res.json({ success: true });
     } catch (e) {

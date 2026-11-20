@@ -44,6 +44,12 @@
                 <% if (reportData) { %>
                     <% if (reportMeta) { %>
                     <section class="card" style="margin-bottom: 16px;">
+                        <% if (reportMeta.thresholdError) { %>
+                        <div class="alert alert-warning" role="status" style="margin-bottom: 12px;">
+                            <strong>Threshold alerts may be incomplete</strong>
+                            <div><%= reportMeta.thresholdError %></div>
+                        </div>
+                        <% } %>
                         <div style="display:flex;gap:18px;flex-wrap:wrap;">
                             <% if (reportMeta.threshold !== null) { %>
                             <span>Low-attendance threshold: <strong><%= reportMeta.threshold %>%</strong></span>

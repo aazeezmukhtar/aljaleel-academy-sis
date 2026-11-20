@@ -24,7 +24,7 @@
                 <div class="col-md-1 d-flex align-items-end"><button class="btn btn-primary w-100">Add</button></div>
             </form>
             <div class="table-responsive mt-3"><table class="table table-sm align-middle"><thead><tr><th>Section</th><th>Session / term</th><th>Dates</th><th>Status</th><th></th></tr></thead><tbody>
-            <% setup.periods.forEach(p => { %><tr><td><%= p.section_name %></td><td><%= p.session %> · <%= p.term %></td><td><%= String(p.start_date).slice(0,10) %> – <%= String(p.end_date).slice(0,10) %></td><td><%= p.status %></td><td><% if (p.status === 'active') { %><button class="btn btn-sm btn-outline-secondary" data-end="academic_period" data-id="<%= p.id %>" data-start="<%= String(p.start_date).slice(0,10) %>" data-current-end="<%= String(p.end_date).slice(0,10) %>">End period</button><% } %></td></tr><% }) %>
+            <% setup.periods.forEach(p => { %><tr><td><%= p.section_name %></td><td><%= p.session %> · <%= p.term %></td><td><%= String(p.start_date).slice(0,10) %> – <%= String(p.end_date).slice(0,10) %></td><td><%= p.status %></td><td><% if (p.status === 'active' && String(p.end_date).slice(0,10) > new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date())) { %><button class="btn btn-sm btn-outline-secondary" data-end="academic_period" data-id="<%= p.id %>" data-start="<%= String(p.start_date).slice(0,10) %>" data-current-end="<%= String(p.end_date).slice(0,10) %>">Shorten period</button><% } %></td></tr><% }) %>
             <% if (!setup.periods.length) { %><tr><td colspan="5" class="text-muted">No academic periods configured.</td></tr><% } %>
             </tbody></table></div>
         </section>
@@ -137,7 +137,15 @@
     });
     document.querySelectorAll('[data-end]').forEach(button => {
         button.addEventListener('click', async () => {
-            const endDate = window.prompt('Enter the last effective date (YYYY-MM-DD):', button.dataset.start);
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+            }).formatToParts(new Date()).reduce((result, part) => {
+                if (part.type !== 'literal') result[part.type] = part.value;
+                return result;
+            }, {});
+            const todayKey = parts.year + '-' + parts.month + '-' + parts.day;
+            const suggestedEnd = todayKey < button.dataset.start ? button.dataset.start : todayKey;
+            const endDate = window.prompt('Enter the last effective date (YYYY-MM-DD):', button.dataset.currentEnd ? suggestedEnd : suggestedEnd);
             if (!endDate) return;
             const reason = window.prompt('Why is this configuration being ended?');
             if (!reason) return;

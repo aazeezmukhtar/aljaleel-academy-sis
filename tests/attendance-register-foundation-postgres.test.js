@@ -113,6 +113,37 @@ if (!url) {
     );
     await client.query(migration);
 
+    const schedulerHistoryMigration = fs.readFileSync(
+      path.join(__dirname, '..', 'database', 'migrations', '20261120_attendance_scheduler_runs.postgres.sql'),
+      'utf8'
+    );
+    await client.query(schedulerHistoryMigration);
+    const schedulerHistory = await client.query(`
+      INSERT INTO attendance_scheduler_runs (status, started_at)
+      VALUES ('running', '2026-11-20T10:00:00Z')
+      RETURNING id, status, completed_at
+    `);
+    assert.strictEqual(schedulerHistory.rows[0].status, 'running');
+    assert.strictEqual(schedulerHistory.rows[0].completed_at, null);
+    await client.query(`
+      UPDATE attendance_scheduler_runs
+      SET status = 'succeeded', completed_at = '2026-11-20T10:00:01Z',
+          summary = '{"scheduledCount":2}'::jsonb
+      WHERE id = $1
+    `, [schedulerHistory.rows[0].id]);
+    const completedRun = await client.query(
+      'SELECT status, summary->>\'scheduledCount\' AS scheduled_count FROM attendance_scheduler_runs WHERE id = $1',
+      [schedulerHistory.rows[0].id]
+    );
+    assert.deepStrictEqual(completedRun.rows[0], { status: 'succeeded', scheduled_count: '2' });
+    await assert.rejects(
+      () => client.query(`
+        INSERT INTO attendance_scheduler_runs (status, started_at)
+        VALUES ('failed', '2026-11-20T10:00:00Z')
+      `),
+      error => error.code === '23514'
+    );
+
     const found = await client.query(`
       SELECT count(*)::int AS n
       FROM information_schema.tables

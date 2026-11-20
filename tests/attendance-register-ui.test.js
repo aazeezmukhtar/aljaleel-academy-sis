@@ -99,6 +99,8 @@ assert(portalAttendanceView.includes('selectedSectionId'));
 assert(portalAttendanceView.includes('status=leave'));
 assert(portalAttendanceView.includes('attendedDays'));
 assert(attendanceReportView.includes('row.attendanceRate'));
+assert(attendanceReportView.includes('reportMeta.thresholdError'));
+assert(attendanceReportView.includes('Threshold alerts may be incomplete'));
 assert(!attendanceReportView.includes('row.late * 0.5'));
 assert(analyticsController.includes('attendanceAnalyticsDashboard.getDashboard'));
 assert(routes.includes("router.get('/analytics', attendanceController.getAttendanceAnalytics);"));

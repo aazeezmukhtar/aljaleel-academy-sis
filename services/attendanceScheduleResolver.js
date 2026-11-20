@@ -24,12 +24,6 @@ function normalizeWeekdays(values) {
     return days.sort((a, b) => a - b);
 }
 
-function covers(row, date) {
-    const start = String(row.effective_from).slice(0, 10);
-    const end = row.effective_to ? String(row.effective_to).slice(0, 10) : null;
-    return start <= date && (!end || end >= date);
-}
-
 function createAttendanceScheduleResolver(db) {
     if (!db) throw new Error('Attendance schedule resolver requires a database adapter.');
 

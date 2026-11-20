@@ -145,7 +145,7 @@
             }, {});
             const todayKey = parts.year + '-' + parts.month + '-' + parts.day;
             const suggestedEnd = todayKey < button.dataset.start ? button.dataset.start : todayKey;
-            const endDate = window.prompt('Enter the last effective date (YYYY-MM-DD):', button.dataset.currentEnd ? suggestedEnd : suggestedEnd);
+            const endDate = window.prompt('Enter the last effective date (YYYY-MM-DD):', suggestedEnd);
             if (!endDate) return;
             const reason = window.prompt('Why is this configuration being ended?');
             if (!reason) return;

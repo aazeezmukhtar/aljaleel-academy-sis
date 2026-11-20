@@ -34,7 +34,7 @@ if (!url) {
             CREATE TABLE notification_reads (
                 user_id INTEGER NOT NULL,
                 user_type TEXT NOT NULL,
-                source_id BIGINT NOT NULL,
+                source_id INTEGER NOT NULL,
                 source_type TEXT NOT NULL,
                 read_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(user_id, user_type, source_id, source_type)

@@ -12,8 +12,8 @@ function makeDb() {
             if (sql.includes('FROM staff WHERE id = ? AND school_id = ?')) {
                 return params[0] === 7 ? { id: 7, role: 'Admin' } : { id: params[0], role: 'Teacher' };
             }
-            if (sql.includes('FROM sections WHERE id = ?')) return { id: params[0] };
-            if (sql.includes('FROM classes WHERE id = ?')) return { id: params[0], section_id: params[2] };
+            if (sql.includes('FROM sections WHERE id = ?')) return params[0] === 10 ? { id: 10 } : null;
+            if (sql.includes('FROM classes WHERE id = ?')) return params[2] === 10 ? { id: params[0], section_id: 10 } : null;
             if (sql.includes('INSERT INTO') && sql.includes('RETURNING id')) {
                 const row = { id: state.nextId++ }; state.inserted.push({ sql, params }); return row;
             }

@@ -14,6 +14,10 @@ const { createSharedNotificationDeliveryService } =
         sqlite.exec(`
             CREATE TABLE schools (id INTEGER PRIMARY KEY);
             INSERT INTO schools (id) VALUES (1), (2);
+            CREATE TABLE staff (id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL);
+            CREATE TABLE students (id INTEGER PRIMARY KEY, school_id INTEGER NOT NULL);
+            INSERT INTO staff (id, school_id) VALUES (20, 1), (21, 1), (22, 1);
+            INSERT INTO students (id, school_id) VALUES (30, 1);
             CREATE TABLE notification_reads (
                 user_id INTEGER NOT NULL,
                 user_type TEXT NOT NULL,
@@ -73,11 +77,20 @@ const { createSharedNotificationDeliveryService } =
         assert.strictEqual(first.created, true);
         const duplicate = await service.enqueue(base);
         assert.strictEqual(duplicate.id, first.id);
+        await assert.rejects(() => service.enqueue({
+            ...base, recipientId: 21
+        }), /idempotency key is already assigned/);
+        await assert.rejects(() => service.enqueue({
+            ...base, schoolId: 2, idempotencyKey: 'wrong-school-recipient'
+        }), /does not belong to the selected school/);
         assert.strictEqual(duplicate.created, false);
         assert.strictEqual(sqlite.prepare('SELECT COUNT(*) AS n FROM notification_deliveries').get().n, 1);
 
         await assert.rejects(() => service.enqueue({
             ...base, idempotencyKey: 'external-destination', destination: 'https://example.com'
+        }), /internal application path/);
+        await assert.rejects(() => service.enqueue({
+            ...base, idempotencyKey: 'protocol-relative-destination', destination: '//outside.example'
         }), /internal application path/);
         await assert.rejects(() => service.enqueue({
             ...base, idempotencyKey: 'invalid-recipient-type', recipientType: 'parent'

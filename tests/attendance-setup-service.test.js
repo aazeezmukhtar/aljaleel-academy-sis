@@ -3,7 +3,15 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
-ejs.compile(fs.readFileSync(path.resolve(__dirname, '../views/attendance/setup.ejs'), 'utf8'));
+const setupView = fs.readFileSync(path.resolve(__dirname, '../views/attendance/setup.ejs'), 'utf8');
+ejs.compile(setupView);
+assertViewDefaults();
+function assertViewDefaults() {
+    assert.ok(setupView.includes("window.prompt('Enter the last effective date (YYYY-MM-DD):', suggestedEnd)"));
+    assert.ok(setupView.includes("const suggestedEnd = todayKey < button.dataset.start ? button.dataset.start : todayKey;"));
+    assert.ok(setupView.includes('>Shorten period</button>'));
+    assert.ok(!setupView.includes("window.prompt('Enter the last effective date (YYYY-MM-DD):', button.dataset.start)"));
+}
 const { createAttendanceSetupService } = require('../services/attendanceSetupService');
 
 function makeDb() {

@@ -37,7 +37,9 @@
     "test:attendance-setup-service": "node tests/attendance-setup-service.test.js",
     "test:attendance-reminder-notification": "node tests/attendance-reminder-notification.test.js",
     "test:attendance-operations": "node tests/attendance-operations.test.js",
-    "test:attendance-scheduler-run-history": "node tests/attendance-scheduler-run-history.test.js"
+    "test:attendance-scheduler-run-history": "node tests/attendance-scheduler-run-history.test.js",
+    "test:notification-delivery": "node tests/notification-delivery-service.test.js",
+    "test:notification-delivery-postgres": "node tests/notification-delivery-postgres.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

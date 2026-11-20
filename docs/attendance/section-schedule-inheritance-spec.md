@@ -142,8 +142,9 @@ For each class, resolve the effective schedule for the readiness date using the 
 - Store the selected schedule_set_id on each new register so historical registers retain the schedule set used at generation time.
 - A class override must replace, not add to, section days.
 - Missing or conflicting schedules must produce a safe, observable failure and must not silently fall back to legacy or guessed weekdays.
-- Operations dashboards and analytics must use generated register expectations / the shared resolver rather than independently reconstructing section or class schedules.
-- Student portal attendance consistency remains required: the definition of an expected school day must be shared, not reimplemented separately.
+- The reminder scheduler's candidate-class discovery and expected-register generation must use the same resolver. It must not discover classes by querying only `class_attendance_schedules`, or it will miss classes that inherit section defaults.
+- Operations dashboards and analytics must use generated register expectations / the shared resolver rather than independently reconstructing section or class schedules. The current analytics dashboard directly reads `class_attendance_schedules`; it must be refactored as part of this phase.
+- Student portal attendance consistency remains required: the definition of an expected school day must be shared, not reimplemented separately. Audit the portal and any attendance summary endpoints for direct weekday/schedule queries.
 - Existing legacy attendance records and existing attendance analytics must remain unchanged by this setup refactor unless a separate approved migration explicitly addresses them.
 
 ## 9. Migration and rollout safety

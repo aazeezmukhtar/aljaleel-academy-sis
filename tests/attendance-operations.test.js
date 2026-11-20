@@ -5,11 +5,19 @@ const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
 const view = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'operations.ejs'), 'utf8');
+const controller = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'attendanceController.js'), 'utf8');
+const routes = fs.readFileSync(path.join(__dirname, '..', 'routes', 'attendanceRoutes.js'), 'utf8');
+const sidebar = fs.readFileSync(path.join(__dirname, '..', 'views', 'partials', 'sidebar.ejs'), 'utf8');
+const serviceSource = fs.readFileSync(path.join(__dirname, '..', 'services', 'attendanceOperationsService.js'), 'utf8');
 ejs.compile(view);
 assert.ok(view.includes('This page does not generate registers'));
 assert.ok(view.includes('administrator_escalation'));
 assert.ok(view.includes('Missing means no register exists'));
 assert.ok(view.includes('Overdue means an existing register'));
+assert.ok(routes.includes("router.get('/operations', attendanceController.getAttendanceOperations);"));
+assert.ok(controller.includes("user.role !== 'Admin'"));
+assert.ok(sidebar.includes('href="/attendance/operations"'));
+assert.ok(!/\\b(INSERT\\s+INTO|UPDATE\\s+attendance_|DELETE\\s+FROM)\\b/i.test(serviceSource), 'operations service must remain read-only');
 
 const { createAttendanceOperationsService } = require('../services/attendanceOperationsService');
 

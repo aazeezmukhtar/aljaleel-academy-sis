@@ -71,7 +71,8 @@ exports.getLatestNotifications = async (req, res) => {
         let reminderNotifications = [];
         if (req.session.staff && await attendanceRegisterWorkflow.isFoundationAvailable()) {
             const queueAvailable = await sharedNotificationDelivery.isAvailable();
-            if (queueAvailable) {
+            const schedulerDeliveryEnabled = process.env.ATTENDANCE_REMINDER_SCHEDULER_DELIVERY === 'true';
+            if (queueAvailable && schedulerDeliveryEnabled) {
                 const deliveries = await sharedNotificationDelivery.listForRecipient({
                     schoolId,
                     recipientType: 'staff',
@@ -91,6 +92,12 @@ exports.getLatestNotifications = async (req, res) => {
                         isRead: Number(item.is_read) === 1 || item.status === 'read'
                     }))
                     .slice(0, 15);
+            }
+
+            if (!queueAvailable || !schedulerDeliveryEnabled) {
+                // Rollout safety: keep the previous feed-triggered behavior until the
+                // secured external scheduler is configured and verified in production.
+                await attendanceRegisterReminders.deliverDueRemindersForStaff({ staffId: userId });
             }
 
             const legacyReminders = await db.all(`

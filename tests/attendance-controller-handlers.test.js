@@ -153,9 +153,21 @@ function responseRecorder() {
         assert.match(blockedSave.body.message, /administrator/i);
         assert.strictEqual(calls.generated, 1);
         assert.strictEqual(calls.legacyTransaction, 0, reason + ' must not fall through to legacy writes');
+
+        calls.generated = 0;
+        const submitResponse = responseRecorder();
+        await controller.submitAttendanceRegister({
+            body: { class_id: '40', date: '2026-11-20' },
+            session: { staff: admin }, schoolId: 1, ip: '127.0.0.1'
+        }, submitResponse);
+        assert.strictEqual(submitResponse.statusCode, 409, reason + ' must reject register submission');
+        assert.strictEqual(submitResponse.body.success, false);
+        assert.strictEqual(submitResponse.body.code, reason);
+        assert.match(submitResponse.body.message, /administrator/i);
+        assert.strictEqual(calls.generated, 1);
     }
 
-    console.log('[attendance-controller-handlers] actual GET and POST handlers block enrollment-review, missing-period and missing-settings cases without legacy writes.');
+    console.log('[attendance-controller-handlers] actual GET, save and submit handlers block enrollment-review, missing-period and missing-settings cases without legacy writes.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

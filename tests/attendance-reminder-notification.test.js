@@ -30,6 +30,7 @@ const mockDb = {
         throw new Error('Unexpected notification get: ' + sql);
     },
     async run(sql, params, client) {
+        if (sql.includes('UPDATE notification_deliveries')) return { changes: 1 };
         if (sql.includes('INSERT INTO notification_reads')) {
             assert.ok(client, 'reminder read-state insert must use the acknowledgement transaction');
             calls.readInserts += 1;
@@ -150,6 +151,7 @@ function responseRecorder() {
     assert.strictEqual(failedTransactionResponse.statusCode, 500);
     assert.strictEqual(calls.rolledBack, 1, 'read-state failure must roll back the acknowledgement transaction');
 
+    failReadInsert = false;
     queueAvailable = true;
     queuedDeliveries = [{
         id: 9001,

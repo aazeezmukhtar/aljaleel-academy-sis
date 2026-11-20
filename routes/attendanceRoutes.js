@@ -9,6 +9,7 @@ router.post('/save', attendanceController.saveAttendance);
 router.post('/submit', attendanceController.submitAttendanceRegister);
 router.post('/reopen', attendanceController.reopenAttendanceRegister);
 router.get('/analytics', attendanceController.getAttendanceAnalytics);
+router.get('/operations', attendanceController.getAttendanceOperations);
 router.get('/setup', attendanceController.getAttendanceSetup);
 router.post('/setup/save', attendanceController.saveAttendanceSetup);
 router.get('/closures', attendanceController.getAttendanceClosures);

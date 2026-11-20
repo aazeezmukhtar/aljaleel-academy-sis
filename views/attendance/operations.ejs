@@ -1,0 +1,87 @@
+<%- include('../partials/header') %>
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+    <main class="main-content">
+        <header style="margin-bottom:24px;">
+            <a href="/attendance" style="color:var(--primary);text-decoration:none;font-weight:600;">&larr; Attendance</a>
+            <h1 style="margin-top:10px;">Attendance Operations</h1>
+            <p>Read-only monitoring of expected registers, overdue submissions and reminder activity.</p>
+            <% if (operations) { %>
+            <p style="font-size:.85rem;color:var(--text-muted);">Coverage: <%= operations.startDate %> to <%= operations.endDate %> (Nigeria time)</p>
+            <% } %>
+        </header>
+
+        <% if (error) { %><div class="alert alert-warning" role="alert"><%= error %></div><% } %>
+
+        <% if (operations) { %>
+        <section class="grid-2" style="gap:14px;margin-bottom:20px;">
+            <% [
+                ['Expected registers', operations.summary.expected],
+                ['Submitted', operations.summary.submitted],
+                ['Incomplete', operations.summary.incomplete],
+                ['Missing', operations.summary.missing],
+                ['Overdue', operations.summary.overdue],
+                ['Reminders recorded', operations.summary.reminders],
+                ['Pending reminders', operations.summary.pendingReminders],
+                ['Failed reminders', operations.summary.failedReminders],
+                ['Admin escalations', operations.summary.escalations]
+            ].forEach(item => { %>
+            <article class="card">
+                <div style="font-size:.85rem;color:var(--text-muted);"><%= item[0] %></div>
+                <div style="font-size:1.8rem;font-weight:700;"><%= item[1] %></div>
+            </article>
+            <% }); %>
+        </section>
+
+        <section class="card" style="margin-bottom:20px;">
+            <h2 style="font-size:1.1rem;margin-bottom:6px;">Register follow-up</h2>
+            <p style="font-size:.85rem;color:var(--text-muted);">Each row represents a class register expected on a scheduled school day. Missing means no register exists; overdue means an existing register has passed its submission deadline without being submitted.</p>
+            <% if (!operations.rows.length) { %>
+                <p>No expected class registers were found in this period.</p>
+            <% } else { %>
+            <div style="overflow-x:auto;">
+                <table class="table" style="min-width:850px;width:100%;">
+                    <thead><tr><th>Date</th><th>Section / Class</th><th>Status</th><th>Responsible teacher</th><th>Deadline</th><th>Reminders</th></tr></thead>
+                    <tbody>
+                    <% operations.rows.forEach(row => { %>
+                        <tr>
+                            <td><%= row.date %><br><small><%= row.session %> · <%= row.term %></small></td>
+                            <td><strong><%= row.className %></strong><br><small><%= row.sectionName %></small></td>
+                            <td>
+                                <% if (row.status === 'submitted') { %><span class="badge bg-success">Submitted</span>
+                                <% } else if (row.status === 'missing') { %><span class="badge bg-warning text-dark">Missing</span>
+                                <% } else if (row.overdue) { %><span class="badge bg-danger">Overdue</span>
+                                <% } else { %><span class="badge bg-secondary">Incomplete</span><% } %>
+                            </td>
+                            <td><%= row.responsibleTeacher || 'Not assigned / unavailable' %></td>
+                            <td><%= row.deadline ? new Date(row.deadline).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' }) : '—' %></td>
+                            <td>
+                                <strong><%= row.reminderCount %></strong>
+                                <% if (row.reminders.length) { %>
+                                <details style="margin-top:5px;">
+                                    <summary>View history</summary>
+                                    <% row.reminders.forEach(reminder => { %>
+                                    <div style="font-size:.8rem;padding:6px 0;border-bottom:1px solid var(--border-color, #ddd);">
+                                        Stage <%= reminder.stage %> · <%= reminder.type === 'administrator_escalation' ? 'Admin escalation' : 'Teacher reminder' %><br>
+                                        <%= reminder.recipient %> · <%= reminder.status %><br>
+                                        <small>Scheduled: <%= new Date(reminder.scheduledAt).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' }) %></small>
+                                        <% if (reminder.sentAt) { %><br><small>Sent: <%= new Date(reminder.sentAt).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' }) %></small><% } %>
+                                        <% if (reminder.acknowledgedAt) { %><br><small>Acknowledged: <%= new Date(reminder.acknowledgedAt).toLocaleString('en-GB', { timeZone: 'Africa/Lagos' }) %></small><% } %>
+                                        <% if (reminder.lastError) { %><br><small>Issue: <%= reminder.lastError %></small><% } %>
+                                    </div>
+                                    <% }); %>
+                                </details>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                    </tbody>
+                </table>
+            </div>
+            <% } %>
+        </section>
+        <p style="font-size:.8rem;color:var(--text-muted);">This page does not generate registers, send reminders, acknowledge notifications or change attendance records.</p>
+        <% } %>
+    </main>
+</div>
+<%- include('../partials/footer') %>

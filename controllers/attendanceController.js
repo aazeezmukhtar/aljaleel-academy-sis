@@ -12,6 +12,8 @@ const { createAttendanceAnalyticsService } = require('../services/attendanceAnal
 const attendanceAnalytics = createAttendanceAnalyticsService(db);
 const { createAttendanceAnalyticsDashboardService } = require('../services/attendanceAnalyticsDashboardService');
 const attendanceAnalyticsDashboard = createAttendanceAnalyticsDashboardService(db, attendanceAnalytics);
+const { createAttendanceOperationsService } = require('../services/attendanceOperationsService');
+const attendanceOperations = createAttendanceOperationsService(db);
 
 // Helper: get classes assigned to a staff member
 const getAssignedClasses = async (user, schoolId) => {
@@ -1180,5 +1182,22 @@ const saveAttendanceSetup = async (req, res) => {
     }
 };
 
-module.exports = { getAttendanceSetup, saveAttendanceSetup, getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getAttendanceAnalytics, getStaffAttendance, saveStaffAttendance };
+// GET /attendance/operations - administrator-only, read-only register monitoring
+const getAttendanceOperations = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
+    if (!user) return res.status(401).send('Session expired');
+    if (user.role !== 'Admin') return res.status(403).send('Access Denied: Only Administrators can monitor attendance operations.');
+    try {
+        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+            return res.status(409).render('attendance/operations', { title: 'Attendance Operations', user, operations: null, error: 'The attendance register foundation is not installed yet.' });
+        }
+        const operations = await attendanceOperations.getOperations({ schoolId });
+        return res.render('attendance/operations', { title: 'Attendance Operations', user, operations, error: null });
+    } catch (err) {
+        console.error('getAttendanceOperations Error:', err);
+        return res.status(500).render('attendance/operations', { title: 'Attendance Operations', user, operations: null, error: err.message || 'Could not load attendance operations.' });
+    }
+};
+module.exports = { getAttendanceOperations, getAttendanceSetup, saveAttendanceSetup, getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getAttendanceAnalytics, getStaffAttendance, saveStaffAttendance };
 

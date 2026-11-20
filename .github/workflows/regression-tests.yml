@@ -65,6 +65,8 @@ jobs:
         run: npm run test:attendance-reminder-notification
       - name: Run attendance setup service tests
         run: npm run test:attendance-setup-service
+      - name: Run attendance operations monitoring tests
+        run: npm run test:attendance-operations
       - name: Run recovery and schema smoke checks
         run: npm run test:regression
       - name: Run offline cache policy and entry-context tests

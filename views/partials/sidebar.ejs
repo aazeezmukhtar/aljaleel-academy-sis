@@ -55,6 +55,9 @@
                     <i class="bi bi-calendar-check-fill"></i> Attendance
                 </a>
                 <% if (user && user.role === 'Admin') { %>
+                    <a href="/attendance/operations" class="<%= title.includes('Attendance Operations') ? 'active' : '' %>">
+                        <i class="bi bi-clipboard-data"></i> Attendance Operations
+                    </a>
                     <a href="/attendance/setup" class="<%= title.includes('Attendance Setup') ? 'active' : '' %>">
                         <i class="bi bi-sliders"></i> Attendance Setup
                     </a>

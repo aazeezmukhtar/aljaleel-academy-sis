@@ -223,34 +223,47 @@ exports.markAsRead = async (req, res) => {
             const schoolId = req.schoolId || req.session.staff.school_id;
             const queueAvailable = await sharedNotificationDelivery.isAvailable();
             const acknowledged = await db.transaction(async client => {
-                const updated = await attendanceRegisterReminders.acknowledgeReminder({
-                    staffId: userId, reminderId: source_id
-                }, client);
-                if (!updated) return false;
-
+                let delivery = null;
                 if (queueAvailable) {
-                    const delivery = await db.get(`
-                        SELECT id FROM notification_deliveries
+                    delivery = await db.get(`
+                        SELECT id, delivered_at FROM notification_deliveries
                         WHERE school_id = ? AND recipient_type = 'staff'
                           AND recipient_id = ? AND source_type = 'attendance_register_reminder'
                           AND source_id = ?
                           AND status IN ('delivered', 'read')
                         LIMIT 1
                     `, [schoolId, userId, source_id], client);
+
+                    // Recover the narrow crash window where queue publication committed
+                    // but the scheduler had not yet synchronized the legacy reminder row.
                     if (delivery) {
-                        const now = new Date().toISOString();
                         await db.run(`
-                            UPDATE notification_deliveries
-                            SET status = 'read', updated_at = ?
-                            WHERE id = ? AND school_id = ? AND recipient_type = 'staff'
-                              AND recipient_id = ? AND status IN ('delivered', 'read')
-                        `, [now, delivery.id, schoolId, userId], client);
-                        await db.run(`
-                            INSERT INTO notification_reads (user_id, user_type, source_id, source_type)
-                            VALUES (?, 'staff', ?, 'notification_delivery')
-                            ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING
-                        `, [userId, delivery.id], client);
+                            UPDATE attendance_register_reminders
+                            SET status = 'sent', sent_at = COALESCE(sent_at, ?),
+                                attempt_count = CASE WHEN attempt_count < 1 THEN 1 ELSE attempt_count END
+                            WHERE id = ? AND recipient_staff_id = ? AND status = 'pending'
+                        `, [delivery.delivered_at || new Date().toISOString(), source_id, userId], client);
                     }
+                }
+
+                const updated = await attendanceRegisterReminders.acknowledgeReminder({
+                    staffId: userId, reminderId: source_id
+                }, client);
+                if (!updated) return false;
+
+                if (delivery) {
+                    const now = new Date().toISOString();
+                    await db.run(`
+                        UPDATE notification_deliveries
+                        SET status = 'read', updated_at = ?
+                        WHERE id = ? AND school_id = ? AND recipient_type = 'staff'
+                          AND recipient_id = ? AND status IN ('delivered', 'read')
+                    `, [now, delivery.id, schoolId, userId], client);
+                    await db.run(`
+                        INSERT INTO notification_reads (user_id, user_type, source_id, source_type)
+                        VALUES (?, 'staff', ?, 'notification_delivery')
+                        ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING
+                    `, [userId, delivery.id], client);
                 }
 
                 await insertRead(client);

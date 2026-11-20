@@ -51,7 +51,8 @@ function createSharedNotificationDeliveryService(db) {
         const destination = input && input.destination != null
             ? requiredText(input.destination, 'Notification destination', 500)
             : null;
-        if (destination !== null && !destination.startsWith('/')) {
+        if (destination !== null &&
+            (!destination.startsWith('/') || destination.startsWith('//') || destination.includes('\\'))) {
             throw new Error('Notification destination must be an internal application path.');
         }
         const scheduledAt = isoTimestamp(input && input.scheduledAt);
@@ -67,10 +68,17 @@ function createSharedNotificationDeliveryService(db) {
         if (result && result.id !== undefined) return { id: result.id, created: true };
 
         const existing = await db.get(`
-            SELECT id FROM notification_deliveries
+            SELECT id, recipient_type, recipient_id, source_type, source_id
+            FROM notification_deliveries
             WHERE school_id = ? AND idempotency_key = ?
         `, [schoolId, idempotencyKey], client);
         if (!existing) throw new Error('The notification could not be queued.');
+        if (existing.recipient_type !== recipientType ||
+            Number(existing.recipient_id) !== recipientId ||
+            existing.source_type !== sourceType ||
+            String(existing.source_id) !== sourceId) {
+            throw new Error('The notification idempotency key is already assigned to a different recipient or source.');
+        }
         return { id: existing.id, created: false };
     }
 

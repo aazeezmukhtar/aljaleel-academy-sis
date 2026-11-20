@@ -107,6 +107,11 @@ if (!url) {
       'utf8'
     );
     await client.query(migration);
+    const notificationMigration = fs.readFileSync(
+      path.join(__dirname, '..', 'database', 'migrations', '20261120_shared_notification_deliveries.postgres.sql'),
+      'utf8'
+    );
+    await client.query(notificationMigration);
     await client.query(`
       INSERT INTO section_academic_periods
         (school_id, section_id, session, term, start_date, end_date, status)
@@ -331,7 +336,8 @@ if (!url) {
     assert.strictEqual(String(firstReminderRows[0].recipient_staff_id), '20');
     assert.strictEqual(Number(firstReminderRows[0].reminder_stage), 1);
     assert.strictEqual(firstReminderRows[0].reminder_type, 'responsible_teacher');
-    assert.strictEqual(firstReminderRows[0].status, 'pending');
+    assert.strictEqual(firstReminderRows[0].status, 'sent',
+      'the scheduler must publish due reminders through the shared delivery queue');
     const duplicateReminderRun = await reminderService.scheduleDueReminders({
       now: '2026-11-25T13:00:00.000Z'
     });
@@ -340,7 +346,8 @@ if (!url) {
     const teacherDelivery = await reminderService.deliverDueRemindersForStaff({
       staffId: 20, now: '2026-11-25T13:00:00.000Z'
     });
-    assert.strictEqual(teacherDelivery.length, 1);
+    assert.strictEqual(teacherDelivery.length, 0,
+      'a reminder already published by the scheduler must not be delivered again from the staff feed');
     const escalationRun = await reminderService.scheduleDueReminders({
       now: '2026-11-25T14:00:00.000Z'
     });
@@ -349,7 +356,8 @@ if (!url) {
     const adminDelivery = await reminderService.deliverDueRemindersForStaff({
       staffId: 21, now: '2026-11-25T14:00:00.000Z'
     });
-    assert.strictEqual(adminDelivery.length, 1);
+    assert.strictEqual(adminDelivery.length, 0,
+      'administrator escalation must also be published by the scheduler');
     const teacherReminder = await db.get(
       'SELECT id FROM attendance_register_reminders WHERE register_id = ? AND recipient_staff_id = ? AND reminder_stage = 1',
       [reminderRegister.id, 20]
@@ -364,6 +372,10 @@ if (!url) {
     assert.strictEqual(acknowledged.status, 'acknowledged');
     assert(acknowledged.acknowledged_at);
 
+    await db.run(
+      'UPDATE class_attendance_settings SET first_reminder_delay_minutes = 30 WHERE school_id = ? AND class_id = ?',
+      [1, 40]
+    );
     const pendingRegister = await db.get(`
       INSERT INTO attendance_registers
         (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,

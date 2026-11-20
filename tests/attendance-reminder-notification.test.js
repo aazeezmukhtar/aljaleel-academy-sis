@@ -6,6 +6,8 @@ const path = require('path');
 
 const controllerPath = path.resolve(__dirname, '..', 'controllers', 'notificationController.js');
 const calls = { deliveredForStaff: [], acknowledgements: [], committed: 0, rolledBack: 0, readInserts: 0 };
+let queueAvailable = false;
+let queuedDeliveries = [];
 let failReadInsert = false;
 
 const reminder = {
@@ -22,6 +24,10 @@ const mockDb = {
         if (sql.includes('FROM attendance_register_reminders')) return [reminder];
         if (sql.includes('FROM notification_reads')) return [];
         throw new Error('Unexpected notification query: ' + sql);
+    },
+    async get(sql, params, client) {
+        if (sql.includes('FROM notification_deliveries')) return queueAvailable ? { id: 9001 } : undefined;
+        throw new Error('Unexpected notification get: ' + sql);
     },
     async run(sql, params, client) {
         if (sql.includes('INSERT INTO notification_reads')) {
@@ -49,6 +55,10 @@ const mocks = {
     '../utils/db': mockDb,
     '../services/attendanceRegisterWorkflowService': {
         async isFoundationAvailable() { return true; }
+    },
+    '../services/sharedNotificationDeliveryService': {
+        async isAvailable() { return queueAvailable; },
+        async listForRecipient() { return queuedDeliveries; }
     },
     '../services/attendanceRegisterReminderService': {
         async deliverDueRemindersForStaff(input) {
@@ -108,7 +118,7 @@ function responseRecorder() {
     );
     assert.strictEqual(notification.isRead, false);
     assert.strictEqual(response.body.unreadCount, 1);
-    assert.deepStrictEqual(calls.deliveredForStaff, [20]);
+    assert.deepStrictEqual(calls.deliveredForStaff, [], 'opening the notification feed must not trigger attendance reminder delivery');
 
     const acknowledgementResponse = responseRecorder();
     await controller.markAsRead({
@@ -140,7 +150,41 @@ function responseRecorder() {
     assert.strictEqual(failedTransactionResponse.statusCode, 500);
     assert.strictEqual(calls.rolledBack, 1, 'read-state failure must roll back the acknowledgement transaction');
 
-    console.log('[attendance-reminder-notification] notification retrieval and atomic reminder acknowledgement tests passed.');
+    queueAvailable = true;
+    queuedDeliveries = [{
+        id: 9001,
+        source_id: 501,
+        source_type: 'attendance_register_reminder',
+        title: 'Attendance register overdue',
+        destination: '/attendance/take?class_id=40&date=2026-11-20',
+        delivered_at: '2026-11-20T13:00:00.000Z',
+        created_at: '2026-11-20T13:00:00.000Z',
+        status: 'delivered',
+        is_read: 0
+    }];
+    const queueResponse = responseRecorder();
+    await controller.getLatestNotifications({
+        session: { staff: { id: 20, school_id: 1, role: 'Teacher' } },
+        schoolId: 1
+    }, queueResponse);
+    const queuedNotification = queueResponse.body.notifications.find(item =>
+        item.source_type === 'attendance_register_reminder'
+    );
+    assert.ok(queuedNotification, 'shared-queue attendance reminders must appear in the staff feed');
+    assert.strictEqual(queuedNotification.id, 501, 'the legacy reminder ID remains the acknowledgement source ID');
+    assert.strictEqual(queuedNotification.url, '/attendance/take?class_id=40&date=2026-11-20');
+    assert.strictEqual(calls.deliveredForStaff.length, 0, 'queue-backed feed reads must remain side-effect free');
+
+    const queueAcknowledgement = responseRecorder();
+    await controller.markAsRead({
+        session: { staff: { id: 20, school_id: 1 }, },
+        schoolId: 1,
+        body: { source_id: 501, source_type: 'attendance_register_reminder' }
+    }, queueAcknowledgement);
+    assert.strictEqual(queueAcknowledgement.statusCode, 200);
+    assert.strictEqual(calls.committed, 2, 'queue acknowledgement and both read records share one transaction');
+
+    console.log('[attendance-reminder-notification] read-only feed retrieval and atomic shared-queue acknowledgement tests passed.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

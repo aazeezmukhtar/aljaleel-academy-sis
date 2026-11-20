@@ -42,6 +42,7 @@ No existing attendance reminder rows are backfilled. Old `sent` and `acknowledge
 ## Operational summary
 
 The attendance scheduler run summary now includes:
+- `deliveryMode`: `shared_queue` when the queue migration and rollout flag are both active; otherwise `legacy_scheduler`.
 - `queuedDeliveryCount`: newly created shared queue items for attendance reminders;
 - `dispatchedDeliveryCount`: shared queue items dispatched during this run;
 - `legacySchedulerDeliveryCount`: reminders delivered through the compatibility path when the shared queue migration is absent.

@@ -276,7 +276,7 @@ const getTakeAttendance = async (req, res) => {
             );
         }
 
-        const registerBlocked = ['approved_closure', 'not_a_scheduled_day', 'enrollment_dates_need_review', 'register_preparation_unavailable'].includes(registerSkipReason);
+        const registerBlocked = ['approved_closure', 'not_a_scheduled_day', 'enrollment_dates_need_review', 'no_academic_period', 'attendance_settings_missing', 'register_preparation_unavailable'].includes(registerSkipReason);
         const locked = !!register && ['submitted', 'closed'].includes(register.status);
         const canManageRegister = register
             ? await hasRegisterAttendanceAuthority(user, register, schoolId)
@@ -462,12 +462,16 @@ const saveAttendance = async (req, res) => {
                 if (generated.skipped && [
                     'approved_closure',
                     'not_a_scheduled_day',
-                    'enrollment_dates_need_review'
+                    'enrollment_dates_need_review',
+                    'no_academic_period',
+                    'attendance_settings_missing'
                 ].includes(generated.reason)) {
                     const messages = {
                         approved_closure: 'Attendance cannot be recorded because an approved closure covers this date.',
                         not_a_scheduled_day: 'Attendance cannot be recorded because this class is not scheduled to open on this date.',
-                        enrollment_dates_need_review: 'Attendance cannot be recorded because one or more student enrollment dates need administrative review.'
+                        enrollment_dates_need_review: 'Attendance cannot be recorded because one or more student enrollment dates need administrative review.',
+                        no_academic_period: 'Attendance cannot be recorded because no academic period covers this date. Please ask the school administrator to configure the section academic period.',
+                        attendance_settings_missing: 'Attendance cannot be recorded because attendance settings are missing for this class and date. Please ask the school administrator to configure them.'
                     };
                     return res.status(409).json({
                         success: false,

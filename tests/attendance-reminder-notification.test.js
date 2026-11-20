@@ -120,7 +120,7 @@ function responseRecorder() {
     );
     assert.strictEqual(notification.isRead, false);
     assert.strictEqual(response.body.unreadCount, 1);
-    assert.deepStrictEqual(calls.deliveredForStaff, [], 'opening the notification feed must not trigger attendance reminder delivery');
+    assert.deepStrictEqual(calls.deliveredForStaff, [20], 'legacy feed delivery remains active until the scheduler rollout flag is enabled');
 
     const acknowledgementResponse = responseRecorder();
     await controller.markAsRead({
@@ -154,6 +154,7 @@ function responseRecorder() {
 
     failReadInsert = false;
     queueAvailable = true;
+    process.env.ATTENDANCE_REMINDER_SCHEDULER_DELIVERY = 'true';
     queuedDeliveries = [{
         id: 9001,
         source_id: 501,

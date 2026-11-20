@@ -724,12 +724,16 @@ const submitAttendanceRegister = async (req, res) => {
             if (generated.skipped && [
                 'approved_closure',
                 'not_a_scheduled_day',
-                'enrollment_dates_need_review'
+                'enrollment_dates_need_review',
+                'no_academic_period',
+                'attendance_settings_missing'
             ].includes(generated.reason)) {
                 const messages = {
                     approved_closure: 'This date is covered by an approved closure; the register cannot be submitted.',
                     not_a_scheduled_day: 'This class is not scheduled to open on this date; the register cannot be submitted.',
-                    enrollment_dates_need_review: 'The register cannot be submitted because one or more student enrollment dates need administrative review. Please contact the school administrator.'
+                    enrollment_dates_need_review: 'The register cannot be submitted because one or more student enrollment dates need administrative review. Please contact the school administrator.',
+                    no_academic_period: 'The register cannot be submitted because no academic period covers this date. Please ask the school administrator to configure the section academic period.',
+                    attendance_settings_missing: 'The register cannot be submitted because attendance settings are missing for this class and date. Please ask the school administrator to configure them.'
                 };
                 return res.status(409).json({
                     success: false,

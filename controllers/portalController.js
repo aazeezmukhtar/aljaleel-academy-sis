@@ -1209,11 +1209,18 @@ exports.getAttendance = async (req, res) => {
                 Number(item.section_id) === selectedSectionId
             )?.class_id;
         let attendanceThreshold = null;
+        let attendanceThresholdError = null;
         if (thresholdClassId && allTermRecords[0]?.date) {
-            attendanceThreshold = await attendanceAnalytics.getAttendanceThreshold({
-                schoolId, classId: Number(thresholdClassId),
-                sectionId: selectedSectionId, referenceDate: allTermRecords[0].date
-            }).catch(() => null);
+            try {
+                attendanceThreshold = await attendanceAnalytics.getAttendanceThreshold({
+                    schoolId, classId: Number(thresholdClassId),
+                    sectionId: selectedSectionId, referenceDate: allTermRecords[0].date
+                });
+            } catch {
+                // Keep student attendance figures visible, but make a failed
+                // threshold lookup explicit so families are not misled.
+                attendanceThresholdError = 'The low-attendance threshold could not be loaded. Attendance figures are shown, but below-threshold alerts may be incomplete. Please contact the school administrator if this continues.';
+            }
         }
         const belowThreshold = attendanceRate !== null && attendanceThreshold !== null &&
             attendanceRate < attendanceThreshold;
@@ -1286,6 +1293,7 @@ exports.getAttendance = async (req, res) => {
             attendedDays,
             attendanceRate,
             attendanceThreshold,
+            attendanceThresholdError,
             belowThreshold,
             filteredRecords,
             allTermRecords,

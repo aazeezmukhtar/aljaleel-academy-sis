@@ -103,12 +103,23 @@ const { createSharedNotificationDeliveryService } =
             recipientId: 21,
             scheduledAt: '2026-11-20T11:00:00.000Z'
         });
+        const studentDelivery = await service.enqueue({
+            ...base,
+            recipientType: 'student',
+            recipientId: 30,
+            sourceType: 'class_post',
+            sourceId: 900,
+            idempotencyKey: 'class-post:900:student:30',
+            category: 'assignment',
+            title: 'New assignment',
+            destination: '/portal/assignment/900'
+        });
         const dueResult = await service.dispatchDue({
             now: '2026-11-20T10:30:00.000Z',
             limit: 10
         });
-        assert.strictEqual(dueResult.deliveredCount, 1);
-        assert.deepStrictEqual(dueResult.deliveredIds, [first.id]);
+        assert.strictEqual(dueResult.deliveredCount, 2);
+        assert.deepStrictEqual(new Set(dueResult.deliveredIds), new Set([first.id, studentDelivery.id]));
         assert.strictEqual(
             sqlite.prepare('SELECT status FROM notification_deliveries WHERE id = ?').get(first.id).status,
             'delivered'
@@ -131,6 +142,11 @@ const { createSharedNotificationDeliveryService } =
         assert.strictEqual((await service.listForRecipient({
             schoolId: 2, recipientType: 'staff', recipientId: 20
         })).length, 0, 'recipients must not see deliveries from another school');
+        const studentItems = await service.listForRecipient({
+            schoolId: 1, recipientType: 'student', recipientId: 30
+        });
+        assert.strictEqual(studentItems.length, 1);
+        assert.strictEqual(studentItems[0].id, studentDelivery.id);
 
         assert.strictEqual(await service.markRead({
             schoolId: 1, recipientType: 'staff', recipientId: 21, deliveryId: first.id

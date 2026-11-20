@@ -717,12 +717,20 @@ const submitAttendanceRegister = async (req, res) => {
                 registerDate: date,
                 generatedBy: user.id
             });
-            if (generated.skipped && ['approved_closure', 'not_a_scheduled_day'].includes(generated.reason)) {
+            if (generated.skipped && [
+                'approved_closure',
+                'not_a_scheduled_day',
+                'enrollment_dates_need_review'
+            ].includes(generated.reason)) {
+                const messages = {
+                    approved_closure: 'This date is covered by an approved closure; the register cannot be submitted.',
+                    not_a_scheduled_day: 'This class is not scheduled to open on this date; the register cannot be submitted.',
+                    enrollment_dates_need_review: 'The register cannot be submitted because one or more student enrollment dates need administrative review. Please contact the school administrator.'
+                };
                 return res.status(409).json({
                     success: false,
-                    message: generated.reason === 'approved_closure'
-                        ? 'This date is covered by an approved closure; the register cannot be submitted.'
-                        : 'This class is not scheduled to open on this date; the register cannot be submitted.'
+                    code: generated.reason,
+                    message: messages[generated.reason]
                 });
             }
             registerContext = await attendanceRegisterWorkflow.getRegisterContext({

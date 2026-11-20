@@ -41,6 +41,18 @@ assert(view.includes("fetch('/attendance/reopen'"));
 assert(view.includes('register.status === \'submitted\' && isAdmin'));
 assert(controller.includes('attendanceRegisterWorkflow.saveRegisterProgress'));
 assert(controller.includes('attendanceRegisterWorkflow.submitRegister'));
+assert(
+    controller.includes("'enrollment_dates_need_review'") &&
+    controller.includes("code: generated.reason") &&
+    controller.includes('administrative review. Please contact the school administrator.'),
+    'register submission must return an actionable enrollment-review conflict'
+);
+assert(
+    view.includes("registerSkipReason === 'enrollment_dates_need_review'") &&
+    view.includes('Enrollment dates need review') &&
+    view.includes('school administrator confirms or corrects those dates'),
+    'attendance page must explain why enrollment-date review blocks entry'
+);
 assert(controller.includes('hasRegisterAttendanceAuthority'));
 const attendanceTakeHandler = controller.slice(
     controller.indexOf('const getTakeAttendance ='),

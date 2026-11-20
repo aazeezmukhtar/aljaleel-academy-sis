@@ -1,5 +1,7 @@
 'use strict';
 
+const { createSharedNotificationDeliveryService } = require('./sharedNotificationDeliveryService');
+
 function asIso(value) {
     const date = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(date.getTime())) throw new Error('A valid UTC timestamp is required.');
@@ -35,6 +37,27 @@ function createAttendanceRegisterReminderService(db) {
     const { createAttendanceRegisterService, isoWeekday } =
         require('./attendanceRegisterGenerationService');
     const registerGenerator = createAttendanceRegisterService(db);
+    const notificationDelivery = createSharedNotificationDeliveryService(db);
+
+    async function isDeliveryQueueAvailable() {
+        try {
+            await db.get('SELECT id FROM notification_deliveries LIMIT 0');
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
+    async function cancelQueuedDeliveryForReminder(reminderId, now, client, queueAvailable) {
+        if (!queueAvailable) return 0;
+        const result = await db.run(`
+            UPDATE notification_deliveries
+            SET status = 'cancelled', cancelled_at = ?, updated_at = ?
+            WHERE source_type = 'attendance_register_reminder' AND source_id = ?
+              AND status = 'queued'
+        `, [now, now, reminderId], client);
+        return Number(result.changes || 0);
+    }
 
     function localDateKey(timestamp) {
         const parts = new Intl.DateTimeFormat('en-CA', {
@@ -114,9 +137,9 @@ function createAttendanceRegisterReminderService(db) {
         return { generatedCount, skippedCount, errorCount };
     }
 
-    async function cancelObsoleteReminders(client) {
+    async function cancelObsoleteReminders(client, now, queueAvailable) {
         const pending = await db.all(`
-            SELECT DISTINCT r.register_id
+            SELECT DISTINCT r.id AS reminder_id, r.register_id
             FROM attendance_register_reminders r
             JOIN attendance_registers ar ON ar.id = r.register_id
             WHERE r.status = 'pending'
@@ -137,10 +160,13 @@ function createAttendanceRegisterReminderService(db) {
         let cancelledCount = 0;
         for (const row of pending) {
             const result = await db.run(
-                "UPDATE attendance_register_reminders SET status = 'cancelled' WHERE register_id = ? AND status = 'pending'",
-                [row.register_id], client
+                "UPDATE attendance_register_reminders SET status = 'cancelled' WHERE id = ? AND status = 'pending'",
+                [row.reminder_id], client
             );
             cancelledCount += Number(result.changes || 0);
+            if (Number(result.changes || 0) > 0) {
+                await cancelQueuedDeliveryForReminder(row.reminder_id, now, client, queueAvailable);
+            }
         }
         return cancelledCount;
     }
@@ -152,6 +178,9 @@ function createAttendanceRegisterReminderService(db) {
             throw new Error('Reminder scheduling limit must be between 1 and 500.');
         }
 
+        const deliveryTableAvailable = await isDeliveryQueueAvailable();
+        const queueAvailable = deliveryTableAvailable &&
+            process.env.ATTENDANCE_REMINDER_SCHEDULER_DELIVERY === 'true';
         const reconciliation = await reconcileMissingRegisters(now, limit);
         const candidates = await db.all(`
             SELECT ar.id
@@ -210,11 +239,22 @@ function createAttendanceRegisterReminderService(db) {
                 `, [register.school_id, registerDate, registerDate,
                     register.section_id, register.section_id, register.class_id], client);
                 if (closure) {
-                    const cancelled = await db.run(
-                        "UPDATE attendance_register_reminders SET status = 'cancelled' WHERE register_id = ? AND status = 'pending'",
+                    const obsolete = await db.all(
+                        "SELECT id FROM attendance_register_reminders WHERE register_id = ? AND status = 'pending'",
                         [register.id], client
                     );
-                    return { scheduled: 0, processed: false, cancelled: Number(cancelled.changes || 0) };
+                    let cancelledCount = 0;
+                    for (const reminder of obsolete) {
+                        const cancelled = await db.run(
+                            "UPDATE attendance_register_reminders SET status = 'cancelled' WHERE id = ? AND status = 'pending'",
+                            [reminder.id], client
+                        );
+                        cancelledCount += Number(cancelled.changes || 0);
+                        if (Number(cancelled.changes || 0) > 0) {
+                            await cancelQueuedDeliveryForReminder(reminder.id, now, client, queueAvailable);
+                        }
+                    }
+                    return { scheduled: 0, processed: false, cancelled: cancelledCount };
                 }
 
                 const settings = await db.get(`
@@ -267,7 +307,7 @@ function createAttendanceRegisterReminderService(db) {
                     const scheduledAt = stage === 1
                         ? firstScheduledAt
                         : addMinutes(previousStageAt, intervals[stage - 2]);
-                    if (new Date(scheduledAt).getTime() > new Date(now).getTime()) break;
+                    const stageIsDue = new Date(scheduledAt).getTime() <= new Date(now).getTime();
 
                     let recipients;
                     let reminderType;
@@ -293,6 +333,10 @@ function createAttendanceRegisterReminderService(db) {
                     count += recipients.length;
                     latestStage = stage;
                     previousStageAt = scheduledAt;
+                    // Persist the next reminder stage even when it is scheduled for the
+                    // future so the shared queue can hold it and cancel it if the register
+                    // is submitted or closed before its due time.
+                    if (!stageIsDue) break;
                 }
 
                 return { scheduled: count, processed: true, cancelled: 0 };
@@ -305,8 +349,96 @@ function createAttendanceRegisterReminderService(db) {
         // Also cancel queued reminders when a register was submitted or closed
         // after it stopped qualifying as a scheduling candidate.
         const staleCancelled = await db.transaction(client =>
-            cancelObsoleteReminders(client)
+            cancelObsoleteReminders(client, now, deliveryTableAvailable)
         );
+
+        let queuedDeliveryCount = 0;
+        let dispatchedDeliveryCount = 0;
+        let legacySchedulerDeliveryCount = 0;
+        if (!queueAvailable) {
+            // Until the additive queue migration is installed, keep delivery scheduler-owned
+            // using the existing reminder status transition (never from a feed request).
+            const legacyRecipients = await db.all(`
+                SELECT DISTINCT recipient_staff_id
+                FROM attendance_register_reminders
+                WHERE status = 'pending' AND scheduled_at <= ?
+                ORDER BY recipient_staff_id
+                LIMIT ?
+            `, [now, limit]);
+            for (const recipient of legacyRecipients) {
+                const delivered = await deliverDueRemindersForStaff({
+                    staffId: recipient.recipient_staff_id,
+                    now,
+                    queueAvailable: deliveryTableAvailable
+                });
+                legacySchedulerDeliveryCount += delivered.length;
+            }
+        }
+        if (queueAvailable) {
+            const dueReminders = await db.all(`
+                SELECT r.id, r.recipient_staff_id, r.scheduled_at,
+                       ar.school_id, ar.class_id, ar.register_date
+                FROM attendance_register_reminders r
+                JOIN attendance_registers ar ON ar.id = r.register_id
+                WHERE r.status = 'pending'
+                  AND ar.status IN ('expected', 'in_progress', 'reopened')
+                  AND NOT EXISTS (
+                    SELECT 1 FROM class_attendance_closures cl
+                    WHERE cl.school_id = ar.school_id AND cl.status = 'approved'
+                      AND cl.start_date <= ar.register_date AND cl.end_date >= ar.register_date
+                      AND (
+                        cl.scope_type = 'school'
+                        OR (cl.scope_type = 'section' AND cl.section_id = ar.section_id)
+                        OR (cl.scope_type = 'class' AND cl.section_id = ar.section_id AND cl.class_id = ar.class_id)
+                      )
+                  )
+                ORDER BY r.scheduled_at, r.id
+                LIMIT ?
+            `, [limit]);
+
+            for (const reminder of dueReminders) {
+                const registerDate = asDateKey(reminder.register_date);
+                const queued = await notificationDelivery.enqueue({
+                    schoolId: reminder.school_id,
+                    recipientType: 'staff',
+                    recipientId: reminder.recipient_staff_id,
+                    category: 'attendance',
+                    sourceType: 'attendance_register_reminder',
+                    sourceId: reminder.id,
+                    idempotencyKey: 'attendance-reminder:' + reminder.id + ':staff:' + reminder.recipient_staff_id,
+                    title: 'Attendance register overdue',
+                    body: 'An attendance register is overdue. Please complete the register.',
+                    destination: '/attendance/take?class_id=' + encodeURIComponent(reminder.class_id) +
+                        '&date=' + encodeURIComponent(registerDate),
+                    scheduledAt: reminder.scheduled_at
+                });
+                if (queued.created) queuedDeliveryCount += 1;
+            }
+
+            const dispatched = await notificationDelivery.dispatchDue({ now, limit });
+            dispatchedDeliveryCount = dispatched.deliveredCount;
+
+            const publishedReminders = await db.all(`
+                SELECT d.source_id, d.status, d.delivered_at
+                FROM notification_deliveries d
+                JOIN attendance_register_reminders r ON r.id = d.source_id
+                WHERE d.source_type = 'attendance_register_reminder'
+                  AND d.status IN ('delivered', 'read')
+                  AND r.status = 'pending'
+                ORDER BY d.id
+                LIMIT ?
+            `, [limit]);
+            for (const reminder of publishedReminders) {
+                await db.run(`
+                    UPDATE attendance_register_reminders
+                    SET status = 'sent', sent_at = COALESCE(sent_at, ?),
+                        attempt_count = CASE WHEN attempt_count < 1 THEN 1 ELSE attempt_count END,
+                        last_error = NULL
+                    WHERE id = ? AND status = 'pending'
+                `, [reminder.delivered_at || now, reminder.source_id]);
+            }
+        }
+
         return {
             processedCount,
             scheduledCount,
@@ -314,6 +446,10 @@ function createAttendanceRegisterReminderService(db) {
             generatedRegisterCount: reconciliation.generatedCount,
             skippedRegisterCount: reconciliation.skippedCount,
             registerGenerationErrorCount: reconciliation.errorCount,
+            deliveryMode: queueAvailable ? 'shared_queue' : 'legacy_scheduler',
+            queuedDeliveryCount,
+            dispatchedDeliveryCount,
+            legacySchedulerDeliveryCount,
             checkedAt: now
         };
     }
@@ -324,8 +460,11 @@ function createAttendanceRegisterReminderService(db) {
             throw new Error('A valid staff member is required to deliver attendance reminders.');
         }
         const now = asIso(input.now || new Date());
+        const queueAvailable = typeof input.queueAvailable === 'boolean'
+            ? input.queueAvailable
+            : await isDeliveryQueueAvailable();
         return db.transaction(async client => {
-            await cancelObsoleteReminders(client);
+            await cancelObsoleteReminders(client, now, queueAvailable);
             const reminders = await db.all(`
                 SELECT r.id, r.register_id
                 FROM attendance_register_reminders r
@@ -354,7 +493,12 @@ function createAttendanceRegisterReminderService(db) {
                         attempt_count = attempt_count + 1, last_error = NULL
                     WHERE id = ? AND recipient_staff_id = ? AND status = 'pending'
                 `, [now, reminder.id, staffId], client);
-                if (Number(updated.changes || 0) > 0) delivered.push(reminder.id);
+                if (Number(updated.changes || 0) > 0) {
+                    delivered.push(reminder.id);
+                    // If rollout has been switched back to legacy delivery, retire any
+                    // previously queued copy so it cannot be dispatched later as a duplicate.
+                    await cancelQueuedDeliveryForReminder(reminder.id, now, client, queueAvailable);
+                }
             }
             return delivered;
         });

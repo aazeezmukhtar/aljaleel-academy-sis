@@ -35,6 +35,15 @@ function createSharedNotificationDeliveryService(db) {
         throw new Error('A shared notification database adapter is required.');
     }
 
+    async function isAvailable() {
+        try {
+            await db.get('SELECT id FROM notification_deliveries LIMIT 0');
+            return true;
+        } catch (_) {
+            return false;
+        }
+    }
+
     async function enqueue(input, client = null) {
         const schoolId = positiveInteger(input && input.schoolId, 'school');
         const recipientType = String(input && input.recipientType || '').trim().toLowerCase();
@@ -214,7 +223,7 @@ function createSharedNotificationDeliveryService(db) {
         });
     }
 
-    return { enqueue, dispatchDue, cancel, cancelSource, markFailed, listForRecipient, markRead };
+    return { isAvailable, enqueue, dispatchDue, cancel, cancelSource, markFailed, listForRecipient, markRead };
 }
 
 let defaultService = null;
@@ -225,6 +234,7 @@ function getDefaultService() {
 
 module.exports = {
     createSharedNotificationDeliveryService,
+    isAvailable: (...args) => getDefaultService().isAvailable(...args),
     enqueue: (...args) => getDefaultService().enqueue(...args),
     dispatchDue: (...args) => getDefaultService().dispatchDue(...args),
     cancel: (...args) => getDefaultService().cancel(...args),

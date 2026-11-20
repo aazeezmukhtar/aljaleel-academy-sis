@@ -95,6 +95,10 @@ ALTER TABLE attendance_registers_new RENAME TO attendance_registers;
 CREATE INDEX IF NOT EXISTS idx_attendance_registers_schedule_set
     ON attendance_registers (schedule_set_id)
     WHERE schedule_set_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_attendance_registers_section_date
+    ON attendance_registers (section_id, register_date, status);
+CREATE INDEX IF NOT EXISTS idx_attendance_registers_deadline
+    ON attendance_registers (status, submission_deadline_at);
 
 COMMIT;
 PRAGMA foreign_keys = ON;

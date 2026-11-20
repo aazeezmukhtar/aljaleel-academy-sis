@@ -374,7 +374,10 @@ function createAttendanceRegisterReminderService(db) {
         return Number(result.changes || 0) > 0;
     }
 
-    return { scheduleDueReminders, deliverDueRemindersForStaff, acknowledgeReminder };
+    const { createAttendanceSchedulerRunRecorder } = require('./attendanceSchedulerRunHistoryService');
+    const runScheduler = createAttendanceSchedulerRunRecorder(db, scheduleDueReminders);
+
+    return { scheduleDueReminders, runScheduler, deliverDueRemindersForStaff, acknowledgeReminder };
 }
 
 let defaultService = null;
@@ -386,6 +389,7 @@ function getDefaultService() {
 module.exports = {
     createAttendanceRegisterReminderService,
     scheduleDueReminders: (...args) => getDefaultService().scheduleDueReminders(...args),
+    runScheduler: (...args) => getDefaultService().runScheduler(...args),
     deliverDueRemindersForStaff: (...args) => getDefaultService().deliverDueRemindersForStaff(...args),
     acknowledgeReminder: (...args) => getDefaultService().acknowledgeReminder(...args)
 };

@@ -360,7 +360,7 @@ function createAttendanceRegisterReminderService(db) {
         });
     }
 
-    async function acknowledgeReminder(input) {
+    async function acknowledgeReminder(input, client) {
         const staffId = Number(input && input.staffId);
         const reminderId = Number(input && input.reminderId);
         if (![staffId, reminderId].every(value => Number.isSafeInteger(value) && value > 0)) {
@@ -368,9 +368,11 @@ function createAttendanceRegisterReminderService(db) {
         }
         const result = await db.run(`
             UPDATE attendance_register_reminders
-            SET status = 'acknowledged', acknowledged_at = CURRENT_TIMESTAMP
-            WHERE id = ? AND recipient_staff_id = ? AND status = 'sent'
-        `, [reminderId, staffId]);
+            SET status = 'acknowledged',
+                acknowledged_at = COALESCE(acknowledged_at, CURRENT_TIMESTAMP)
+            WHERE id = ? AND recipient_staff_id = ?
+              AND status IN ('sent', 'acknowledged')
+        `, [reminderId, staffId], client);
         return Number(result.changes || 0) > 0;
     }
 

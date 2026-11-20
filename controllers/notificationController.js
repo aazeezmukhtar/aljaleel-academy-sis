@@ -150,7 +150,7 @@ exports.getLatestNotifications = async (req, res) => {
                 const registerDate = n.register_date instanceof Date
                     ? n.register_date.toISOString().slice(0, 10)
                     : String(n.register_date || '').slice(0, 10);
-                if (n.class_id && /^\\d{4}-\\d{2}-\\d{2}$/.test(registerDate)) {
+                if (n.class_id && /^\d{4}-\d{2}-\d{2}$/.test(registerDate)) {
                     url = '/attendance/take?class_id=' + encodeURIComponent(n.class_id) +
                         '&date=' + encodeURIComponent(registerDate);
                 }

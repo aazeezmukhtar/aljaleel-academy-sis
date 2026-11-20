@@ -30,7 +30,7 @@ exports.runAttendanceReminderScheduler = async (req, res) => {
     }
 
     try {
-        const result = await attendanceRegisterReminders.scheduleDueReminders({ limit: 100 });
+        const result = await attendanceRegisterReminders.runScheduler({ limit: 100 });
         return res.status(200).json({ success: true, ...result });
     } catch (error) {
         console.error('[attendance-reminder-scheduler] Run failed:', error);

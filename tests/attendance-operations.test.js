@@ -129,9 +129,15 @@ function makeDb(options = {}) {
     assert.strictEqual(noMigration.notificationDeliveryHealth.available, false);
 
     const postgresDb = makeDb({ dbType: 'postgres' });
-    postgresDb.get = async sql => {
-        assert.ok(sql.includes('to_regclass'));
-        return { table_name: 'attendance_scheduler_runs' };
+    postgresDb.get = async (sql, params = []) => {
+        if (sql.includes('to_regclass')) {
+            const tableName = params[0];
+            return { table_name: tableName === 'public.attendance_scheduler_runs' ? 'attendance_scheduler_runs' : 'notification_deliveries' };
+        }
+        if (sql.includes('COUNT(*) AS total')) {
+            return { total: 8, queued: 3, due: 2, delivered: 2, read: 1, failed: 1, cancelled: 1, oldest_queued_at: '2026-11-20T10:00:00.000Z' };
+        }
+        throw new Error('Unexpected PostgreSQL get query: ' + sql);
     };
     const postgresHistory = await createAttendanceOperationsService(postgresDb)
         .getOperations({ schoolId: 1, now });

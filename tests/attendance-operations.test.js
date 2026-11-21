@@ -31,6 +31,7 @@ function makeDb(options = {}) {
             if (sql.includes('SELECT c.id, c.school_id, c.section_id FROM classes c')) {
                 return { id: 4, school_id: 1, section_id: 2 };
             }
+            if (sql.includes("name IN ('attendance_schedule_sets', 'attendance_schedule_days')")) return { table_count: 2 };
             if (sql.includes('sqlite_master')) {
                 const tableName = arguments[1] && arguments[1][0];
                 if (tableName === 'attendance_scheduler_runs') return options.schedulerTable === false ? undefined : { name: tableName };

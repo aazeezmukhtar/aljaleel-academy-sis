@@ -4,15 +4,56 @@
         <%- include('../partials/sidebar') %>
 
             <main class="main-content">
-                <header style="margin-bottom: 30px;">
-                    <a href="/attendance" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr;
+
+    <style>
+        .attendance-report-header { margin-bottom: 22px; }
+        .attendance-report-back { color: var(--primary); text-decoration: none; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+        .attendance-report-header h1 { margin: 10px 0 4px; }
+        .attendance-report-header p { margin: 0; color: var(--text-muted); }
+        .attendance-report-filters { margin-bottom: 22px; }
+        .attendance-report-filter-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; align-items: end; }
+        .attendance-report-filter-grid .form-group { margin: 0; min-width: 0; }
+        .attendance-report-filter-grid label { display: block; margin-bottom: 7px; font-weight: 600; }
+        .attendance-report-filter-grid .form-control { min-height: 44px; }
+        .attendance-report-submit { width: 100%; min-height: 44px; grid-column: 1 / -1; }
+        .attendance-report-summary { margin-bottom: 16px; }
+        .attendance-report-summary-meta { display: flex; gap: 12px 20px; flex-wrap: wrap; align-items: center; }
+        .attendance-report-summary-meta > span { padding: 7px 10px; border-radius: 8px; background: var(--bg-subtle,#f8fafc); font-size: .88rem; }
+        .attendance-report-summary-note { margin: 10px 0 0; font-size: .84rem; line-height: 1.5; }
+        .attendance-report-results { min-width: 0; }
+        .attendance-report-table-wrap { width: 100%; }
+        .attendance-report-table-wrap .data-table th { white-space: nowrap; font-size: .8rem; }
+        .attendance-report-table-wrap .data-table td { vertical-align: middle; }
+        .attendance-report-table-wrap .data-table tbody tr:hover { background: var(--bg-subtle,#f8fafc); }
+        .attendance-report-empty { text-align: center; padding: 36px 18px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .attendance-report-empty i { font-size: 1.8rem; opacity: .65; }
+        .attendance-report-empty strong { color: var(--text-primary); }
+        .attendance-report-empty p { margin: 0; font-size: .88rem; }
+        @media (min-width: 700px) {
+            .attendance-report-filter-grid { grid-template-columns: repeat(3,minmax(0,1fr)) auto; }
+            .attendance-report-submit { grid-column: auto; min-width: 150px; }
+        }
+        @media (max-width: 699px) {
+            .attendance-report-header { margin-bottom: 16px; }
+            .attendance-report-filters { padding: 16px; margin-bottom: 16px; }
+            .attendance-report-filter-grid { grid-template-columns: minmax(0,1fr); gap: 12px; }
+            .attendance-report-submit { grid-column: auto; }
+            .attendance-report-summary-meta { display: grid; grid-template-columns: minmax(0,1fr); gap: 8px; }
+            .attendance-report-summary-meta > span { font-size: .82rem; }
+            .attendance-report-summary-note { font-size: .8rem; }
+            .attendance-report-results { padding: 12px; }
+        }
+    </style>
+
+                <header class="attendance-report-header">
+                    <a href="/attendance" class="attendance-report-back">&larr;
                         Back to Dashboard</a>
-                    <h1 style="margin-top: 10px;">Attendance Reports</h1>
+                    <h1>Attendance Reports</h1>
                     <p>View regularity statistics for classes and students.</p>
                 </header>
 
-                <section class="card" style="margin-bottom: 30px;">
-                    <form action="/attendance/report" method="GET" class="grid-2" style="gap: 15px; align-items: end;">
+                <section class="card attendance-report-filters">
+                    <form action="/attendance/report" method="GET" class="attendance-report-filter-grid">
                         <div class="form-group">
                             <label>Class</label>
                             <% if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
@@ -37,20 +78,20 @@
                                 value="<%= filters.end_date || new Date().toISOString().split('T')[0] %>" required
                                 class="form-control">
                         </div>
-                        <button type="submit" class="btn" style="width: 100%;">Generate Report</button>
+                        <button type="submit" class="btn attendance-report-submit">Generate Report</button>
                     </form>
                 </section>
 
                 <% if (reportData) { %>
                     <% if (reportMeta) { %>
-                    <section class="card" style="margin-bottom: 16px;">
+                    <section class="card attendance-report-summary">
                         <% if (reportMeta.thresholdError) { %>
                         <div class="alert alert-warning" role="status" style="margin-bottom: 12px;">
                             <strong>Threshold alerts may be incomplete</strong>
                             <div><%= reportMeta.thresholdError %></div>
                         </div>
                         <% } %>
-                        <div style="display:flex;gap:18px;flex-wrap:wrap;">
+                        <div class="attendance-report-summary-meta">
                             <% if (reportMeta.threshold !== null) { %>
                             <span>Low-attendance threshold: <strong><%= reportMeta.threshold %>%</strong></span>
                             <% } %>
@@ -58,11 +99,11 @@
                             <span>Generated registers submitted: <strong><%= reportMeta.registerCompletion.submittedRegisters %> / <%= reportMeta.registerCompletion.generatedRegisters %></strong></span>
                             <% } %>
                         </div>
-                        <p class="text-muted" style="margin:8px 0 0;font-size:.85rem;">Present, Late and Leave count as attended days. Incomplete registers are excluded until submitted.</p>
+                        <p class="text-muted attendance-report-summary-note">Present, Late and Leave count as attended days. Incomplete registers are excluded until submitted.</p>
                     </section>
                     <% } %>
-                    <section class="card">
-                        <div class="table-container mobile-cards">
+                    <section class="card attendance-report-results">
+                        <div class="table-container mobile-cards attendance-report-table-wrap">
                             <table class="data-table">
                                 <thead>
                                     <tr>
@@ -110,8 +151,10 @@
                         </div>
                     </section>
                     <% } else if (typeof filters !== 'undefined' && filters.class_id) { %>
-                        <div class="card" style="text-align: center; padding: 40px; color: var(--text-muted);">
-                            No records found for the selected criteria.
+                        <div class="card attendance-report-empty" role="status">
+                            <i class="bi bi-clipboard2-x" aria-hidden="true"></i>
+                            <strong>No attendance records found</strong>
+                            <p>Try a different class or date range.</p>
                         </div>
                         <% } %>
             </main>

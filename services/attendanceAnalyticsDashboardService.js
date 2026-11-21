@@ -142,7 +142,11 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
                         sectionId, date, reason: error.code || 'schedule_resolution_error' });
                     continue;
                 }
-                if (!resolved.expected) continue;
+                if (!resolved.expected) {
+                    if (!resolved.configured) scheduleIssues.push({ classId: classItem.id, className: classItem.name,
+                        sectionId, date, reason: resolved.reason || 'missing_schedule' });
+                    continue;
+                }
                 if (closures.some(closure => closureCovers(closure, classItem.id, sectionId, date))) continue;
                 const key = String(classItem.id) + '|' + date;
                 if (expectedKeys.has(key)) continue;

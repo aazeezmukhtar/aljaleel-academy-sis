@@ -115,7 +115,7 @@ function createAttendanceRegisterService(db) {
             let resolvedSchedule;
             try {
                 const foundation = db.DB_TYPE === 'postgres'
-                    ? await db.get("SELECT to_regclass('public.attendance_schedule_sets') AS sets_name, to_regclass('public.attendance_schedule_days') AS days_name", [], client)
+                    ? await db.get("SELECT to_regclass('attendance_schedule_sets') AS sets_name, to_regclass('attendance_schedule_days') AS days_name", [], client)
                     : await db.get("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type = 'table' AND name IN ('attendance_schedule_sets', 'attendance_schedule_days')", [], client);
                 const available = db.DB_TYPE === 'postgres'
                     ? !!(foundation && foundation.sets_name && foundation.days_name)

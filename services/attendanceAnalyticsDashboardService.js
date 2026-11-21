@@ -1,16 +1,12 @@
 'use strict';
 
 const { normalizeDate } = require('./attendanceAnalyticsService');
+const { createAttendanceScheduleService } = require('./attendanceScheduleService');
 
 function addDays(date, amount) {
     const value = new Date(date + 'T00:00:00Z');
     value.setUTCDate(value.getUTCDate() + amount);
     return value.toISOString().slice(0, 10);
-}
-
-function isoWeekday(date) {
-    const day = new Date(date + 'T00:00:00Z').getUTCDay();
-    return day === 0 ? 7 : day;
 }
 
 function dateCovers(start, end, date) {
@@ -50,6 +46,8 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
     if (!db || !analyticsService) {
         throw new Error('Attendance dashboard service requires the database and shared analytics service.');
     }
+
+    const scheduleService = createAttendanceScheduleService(db);
 
     async function getDashboard(input) {
         const schoolId = Number(input && input.schoolId);
@@ -100,15 +98,6 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
         if (effectiveEndDate < effectiveStartDate) {
             return emptyDashboard({ schoolId, sectionId, session, term, startDate: effectiveStartDate, endDate: effectiveEndDate, classIds });
         }
-        const schedules = await db.all(`
-            SELECT sch.class_id, sch.section_id, sch.weekday, sch.effective_from, sch.effective_to
-            FROM class_attendance_schedules sch
-            WHERE sch.school_id = ? AND sch.section_id = ?
-              AND sch.class_id IN (${placeholders})
-              AND sch.effective_from <= ?
-              AND (sch.effective_to IS NULL OR sch.effective_to >= ?)
-            ORDER BY sch.class_id, sch.effective_from, sch.weekday
-        `, [schoolId, sectionId, ...classIds, effectiveEndDate, effectiveStartDate]);
         const closures = await db.all(`
             SELECT scope_type, section_id, class_id, start_date, end_date
             FROM class_attendance_closures
@@ -143,18 +132,24 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
         for (let date = effectiveStartDate; date <= effectiveEndDate; date = addDays(date, 1)) {
             const insidePeriod = periods.some(period => dateCovers(period.start_date, period.end_date, date));
             if (!insidePeriod) continue;
-            for (const schedule of schedules) {
-                if (Number(schedule.weekday) !== isoWeekday(date) ||
-                    !dateCovers(schedule.effective_from, schedule.effective_to, date)) continue;
-                if (closures.some(closure => closureCovers(closure, schedule.class_id, sectionId, date))) continue;
-                const key = String(schedule.class_id) + '|' + date;
+            for (const classItem of classes) {
+                let resolved;
+                try {
+                    resolved = await scheduleService.isExpectedSchoolDay({ schoolId, classId: Number(classItem.id), date });
+                } catch (error) {
+                    continue; // A conflicting/invalid schedule is not an expected day.
+                }
+                if (!resolved.expected) continue;
+                if (closures.some(closure => closureCovers(closure, classItem.id, sectionId, date))) continue;
+                const key = String(classItem.id) + '|' + date;
                 if (expectedKeys.has(key)) continue;
                 expectedKeys.add(key);
                 const register = registersByKey.get(key);
                 const status = !register ? 'missing' :
                     register.status === 'submitted' ? 'submitted' : 'incomplete';
-                expectedDays.push({ key, classId: schedule.class_id, date, status });
-                const classStats = classExpected.get(String(schedule.class_id));
+                expectedDays.push({ key, classId: classItem.id, date, status,
+                    scheduleSetId: resolved.scheduleSetId, scheduleSource: resolved.source });
+                const classStats = classExpected.get(String(classItem.id));
                 if (classStats) {
                     classStats.expectedClassDays += 1;
                     if (status === 'submitted') classStats.submittedRegisters += 1;

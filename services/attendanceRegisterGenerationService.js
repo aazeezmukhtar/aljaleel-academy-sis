@@ -63,7 +63,7 @@ function localDateTimeToUtc(date, time, timezone) {
 
 function createAttendanceRegisterService(db) {
     if (!db) throw new Error('An attendance register database adapter is required.');
-    const attendanceScheduleService = require('./attendanceScheduleService').createAttendanceScheduleService(db);
+    const attendanceScheduleService = require('./attendanceScheduleCompatibilityService').createAttendanceScheduleCompatibilityService(db);
     async function generateExpectedRegister(input) {
         const schoolId = Number(input && input.schoolId);
         const classId = Number(input && input.classId);
@@ -112,26 +112,12 @@ function createAttendanceRegisterService(db) {
             }
             const academicPeriod = academicPeriods[0];
 
-            let resolvedSchedule;
-            try {
-                const foundation = db.DB_TYPE === 'postgres'
-                    ? await db.get("SELECT to_regclass('attendance_schedule_sets') AS sets_name, to_regclass('attendance_schedule_days') AS days_name", [], client)
-                    : await db.get("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type = 'table' AND name IN ('attendance_schedule_sets', 'attendance_schedule_days')", [], client);
-                const available = db.DB_TYPE === 'postgres'
-                    ? !!(foundation && foundation.sets_name && foundation.days_name)
-                    : !!(foundation && Number(foundation.table_count) === 2);
-                if (!available) return { created: false, skipped: true, reason: 'schedule_foundation_unavailable' };
-                const expectedDay = await attendanceScheduleService.isExpectedSchoolDay({
-                    schoolId, classId, date: registerDate
-                }, client);
-                if (!expectedDay.configured) return { created: false, skipped: true, reason: 'missing_schedule' };
-                if (!expectedDay.expected) return { created: false, skipped: true, reason: 'not_a_scheduled_day',
-                    scheduleSetId: expectedDay.scheduleSetId, scheduleSource: expectedDay.source };
-                resolvedSchedule = expectedDay;
-            } catch (error) {
-                if (error.code === 'SCHEDULE_CONFLICT' || error.code === 'SCHEDULE_INVALID') throw error;
-                throw error;
-            }
+            const resolvedSchedule = await attendanceScheduleService.isExpectedSchoolDay({
+                schoolId, classId, sectionId: clazz.section_id, date: registerDate
+            }, client);
+            if (!resolvedSchedule.configured) return { created: false, skipped: true, reason: 'missing_schedule' };
+            if (!resolvedSchedule.expected) return { created: false, skipped: true, reason: 'not_a_scheduled_day',
+                scheduleSetId: resolvedSchedule.scheduleSetId || null, scheduleSource: resolvedSchedule.source };
 
             const closures = await db.all(`
                 SELECT id, scope_type

@@ -5,7 +5,8 @@ const Module = require('module');
 const path = require('path');
 
 const controllerPath = path.resolve(__dirname, '..', 'controllers', 'attendanceController.js');
-const calls = { generated: 0, registerContext: 0, legacyTransaction: 0, inserted: 0 };
+const calls = { generated: 0, registerContext: 0, legacyTransaction: 0, inserted: 0, absentInserts: 0 };
+const attendanceRows = new Map();
 
 const mockDb = {
     async get(sql) {
@@ -15,11 +16,25 @@ const mockDb = {
         if (sql.includes('FROM sections s')) {
             return { id: 10, current_session: '2026/2027', current_term: '1st Term' };
         }
-        if (sql.includes('FROM students s')) return { id: 30 };
+        if (sql.includes('FROM attendance')) {
+            const studentId = Number(arguments[1][0]);
+            const row = attendanceRows.get(studentId);
+            return row ? { id: studentId + 1000, class_id: row.class_id, status: row.status } : null;
+        }
+        if (sql.includes('FROM students s')) return { id: Number(arguments[1][0]) };
         return null;
     },
     async all() { return []; },
-    async run() { calls.inserted += 1; return { changes: 1 }; },
+    async run(sql, params) {
+        calls.inserted += 1;
+        if (sql.includes("'Absent'")) {
+            calls.absentInserts += 1;
+            attendanceRows.set(Number(params[0]), { class_id: Number(params[1]), status: 'Absent' });
+        } else if (sql.includes('INSERT INTO attendance')) {
+            attendanceRows.set(Number(params[0]), { class_id: Number(params[1]), status: params[4] });
+        }
+        return { changes: 1 };
+    },
     async transaction(callback) {
         calls.legacyTransaction += 1;
         return callback({});
@@ -44,7 +59,10 @@ const mocks = {
     '../utils/logger': { logAction() {} },
     '../utils/attendanceStudentHelper': {
         async getAttendanceStudents() {
-            return [{ id: 30, first_name: 'Amina', last_name: 'Adamu', status: null }];
+            return [
+                { id: 30, first_name: 'Amina', last_name: 'Adamu', status: null },
+                { id: 31, first_name: 'Bala', last_name: 'Bello', status: null }
+            ];
         }
     },
     '../utils/sessionHelper': {
@@ -109,7 +127,7 @@ function responseRecorder() {
     assert.strictEqual(pageResponse.rendered.data.readOnly, false,
         'legacy schedule/register setup must never freeze the standard attendance form');
     assert.strictEqual(pageResponse.rendered.data.canEdit, true);
-    assert.strictEqual(pageResponse.rendered.data.students.length, 1);
+    assert.strictEqual(pageResponse.rendered.data.students.length, 2);
     assert.strictEqual(calls.generated, 0);
     assert.strictEqual(calls.registerContext, 0);
 
@@ -132,10 +150,47 @@ function responseRecorder() {
         'attendance must save through the established attendance table path');
     assert.strictEqual(calls.legacyTransaction, 1);
     assert.strictEqual(calls.inserted, 1);
+    assert.strictEqual(calls.absentInserts, 0,
+        'saving a draft must not automatically mark unrecorded students Absent');
     assert.strictEqual(calls.generated, 0);
     assert.strictEqual(calls.registerContext, 0);
 
-    console.log('[attendance-controller-handlers] standard attendance remains editable and saves without invoking deferred register/schedule setup.');
+    const submitResponse = responseRecorder();
+    await controller.submitAttendanceRegister({
+        body: { class_id: '40', date: '2026-11-21' },
+        session: { staff: admin },
+        schoolId: 1,
+        ip: '127.0.0.1'
+    }, submitResponse);
+
+    assert.strictEqual(submitResponse.statusCode, 200);
+    assert.strictEqual(submitResponse.body.success, true);
+    assert.strictEqual(submitResponse.body.markedAbsentCount, 1);
+    assert.strictEqual(submitResponse.body.submittedStudentCount, 2);
+    assert.strictEqual(calls.absentInserts, 1,
+        'submission must convert each still-unrecorded roster member to Absent');
+    assert.deepStrictEqual(attendanceRows.get(30), { class_id: 40, status: 'Present' },
+        'submission must preserve students already marked Present');
+    assert.deepStrictEqual(attendanceRows.get(31), { class_id: 40, status: 'Absent' },
+        'submission must mark only students who remained unrecorded as Absent');
+
+    const repeatedSubmitResponse = responseRecorder();
+    await controller.submitAttendanceRegister({
+        body: { class_id: '40', date: '2026-11-21' },
+        session: { staff: admin },
+        schoolId: 1,
+        ip: '127.0.0.1'
+    }, repeatedSubmitResponse);
+    assert.strictEqual(repeatedSubmitResponse.body.success, true);
+    assert.strictEqual(repeatedSubmitResponse.body.markedAbsentCount, 0,
+        'repeated submission must not duplicate or overwrite existing attendance');
+    assert.strictEqual(calls.absentInserts, 1);
+
+    assert.strictEqual(calls.generated, 0);
+    assert.strictEqual(calls.registerContext, 0,
+        'submission must not depend on deferred register or schedule setup');
+
+    console.log('[attendance-controller-handlers] standard attendance remains editable, saves drafts, and marks unrecorded students absent only on explicit submission.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

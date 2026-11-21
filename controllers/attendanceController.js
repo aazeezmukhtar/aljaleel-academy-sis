@@ -520,6 +520,9 @@ const saveAttendance = async (req, res) => {
 };
 
 // POST /attendance/submit - Validate and submit a server-backed attendance register
+// POST /attendance/submit - Finalize the simplified attendance sheet.
+// Draft saves preserve unmarked students. Only this explicit submission action
+// converts remaining unmarked roster members to Absent.
 const submitAttendanceRegister = async (req, res) => {
     const { class_id, date } = req.body || {};
     const user = req.session.staff;
@@ -528,7 +531,9 @@ const submitAttendanceRegister = async (req, res) => {
     if (!user) {
         return res.status(401).json({ success: false, message: 'Session expired' });
     }
-    if (!class_id || !Number.isSafeInteger(Number(class_id)) || Number(class_id) <= 0 || !date) {
+    if (!class_id || !Number.isSafeInteger(Number(class_id)) || Number(class_id) <= 0 ||
+        typeof date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+        Number.isNaN(Date.parse(date + 'T00:00:00Z'))) {
         return res.status(400).json({ success: false, message: 'A valid class and attendance date are required.' });
     }
 
@@ -548,81 +553,70 @@ const submitAttendanceRegister = async (req, res) => {
             }
         }
 
-        if (!(await attendanceRegisterWorkflow.isFoundationAvailable())) {
+        const settings = await getAcademicSettings(Number(class_id), schoolId);
+        if (!settings.session || !settings.term) {
             return res.status(409).json({
                 success: false,
-                message: 'The attendance register foundation is not installed. The register cannot be submitted yet.'
+                message: 'The selected class has no configured academic session and term.'
             });
         }
 
-        let registerContext = await attendanceRegisterWorkflow.getRegisterContext({
-            schoolId, classId: Number(class_id), registerDate: date
-        });
-        if (registerContext && registerContext.blockedReason === 'approved_closure') {
-            return res.status(409).json({
-                success: false,
-                message: 'This date is covered by an approved closure; the register cannot be submitted.'
-            });
-        }
-        if (!registerContext) {
-            const generated = await attendanceRegisterGeneration.generateExpectedRegister({
-                schoolId,
-                classId: Number(class_id),
-                registerDate: date,
-                generatedBy: user.id
-            });
-            if (generated.skipped && [
-                'approved_closure',
-                'not_a_scheduled_day',
-                'enrollment_dates_need_review',
-                'no_academic_period',
-                'attendance_settings_missing'
-            ].includes(generated.reason)) {
-                const messages = {
-                    approved_closure: 'This date is covered by an approved closure; the register cannot be submitted.',
-                    not_a_scheduled_day: 'This class is not scheduled to open on this date; the register cannot be submitted.',
-                    enrollment_dates_need_review: 'The register cannot be submitted because one or more student enrollment dates need administrative review. Please contact the school administrator.',
-                    no_academic_period: 'The register cannot be submitted because no academic period covers this date. Please ask the school administrator to configure the section academic period.',
-                    attendance_settings_missing: 'The register cannot be submitted because attendance settings are missing for this class and date. Please ask the school administrator to configure them.'
-                };
-                return res.status(409).json({
-                    success: false,
-                    code: generated.reason,
-                    message: messages[generated.reason]
-                });
+        const roster = await getAttendanceStudents(
+            Number(class_id), settings.session, schoolId, date
+        );
+        let markedAbsentCount = 0;
+        let alreadyMarkedCount = 0;
+
+        await db.transaction(async (client) => {
+            for (const student of roster) {
+                const existing = await db.get(`
+                    SELECT id, class_id, status
+                    FROM attendance
+                    WHERE student_id = ? AND section_id = ? AND date = ? AND session = ? AND term = ?
+                `, [Number(student.id), Number(clazz.section_id), date,
+                    settings.session, settings.term], client);
+
+                if (existing) {
+                    if (Number(existing.class_id) !== Number(class_id)) {
+                        throw new Error('A student attendance record already belongs to another class in this section and period.');
+                    }
+                    alreadyMarkedCount += 1;
+                    continue;
+                }
+
+                await db.run(`
+                    INSERT INTO attendance
+                        (student_id, class_id, section_id, date, status, session, term)
+                    VALUES (?, ?, ?, ?, 'Absent', ?, ?)
+                    ON CONFLICT(student_id, section_id, date, session, term) DO NOTHING
+                `, [Number(student.id), Number(class_id), Number(clazz.section_id),
+                    date, settings.session, settings.term], client);
+                markedAbsentCount += 1;
             }
-            registerContext = await attendanceRegisterWorkflow.getRegisterContext({
-                schoolId, classId: Number(class_id), registerDate: date
-            });
-        }
-        if (registerContext && !(await hasRegisterAttendanceAuthority(user, registerContext.register, schoolId))) {
-            return res.status(403).json({
-                success: false,
-                message: 'Only an administrator or the responsible class teacher may submit this register.'
-            });
-        }
-
-        const submitted = await attendanceRegisterWorkflow.submitRegister({
-            schoolId,
-            classId: Number(class_id),
-            registerDate: date,
-            actorStaffId: user.id,
-            isAdministrator: user.role === 'Admin'
         });
-        logAction(user.id, 'SUBMIT_ATTENDANCE_REGISTER', 'ATTENDANCE_REGISTER', {
-            class_id, date, submitted_student_count: submitted.submittedStudentCount
+
+        logAction(user.id, 'SUBMIT_ATTENDANCE_REGISTER', 'ATTENDANCE', {
+            class_id: Number(class_id),
+            date,
+            session: settings.session,
+            term: settings.term,
+            marked_absent_count: markedAbsentCount,
+            already_marked_count: alreadyMarkedCount,
+            roster_count: roster.length
         }, req.ip);
 
         return res.json({
             success: true,
-            message: 'Attendance register submitted successfully.',
-            register: submitted
+            message: 'Attendance submitted successfully. All students without a recorded status have been marked Absent.',
+            submittedStudentCount: roster.length,
+            markedAbsentCount,
+            alreadyMarkedCount
         });
     } catch (err) {
         console.error('submitAttendanceRegister Error:', err);
         return res.status(409).json({
             success: false,
-            message: err.message || 'The attendance register could not be submitted.'
+            message: err.message || 'Attendance could not be submitted.'
         });
     }
 };

@@ -40,20 +40,6 @@ assert(controller.includes('attendanceRegisterAdministration.reopenRegister'));
 assert(view.includes('id="reopen-attendance-register"'));
 assert(view.includes("fetch('/attendance/reopen'"));
 assert(view.includes('register.status === \'submitted\' && isAdmin'));
-assert(controller.includes('attendanceRegisterWorkflow.submitRegister'),
-    'the legacy register submission endpoint remains available for existing register workflows');
-assert(
-    controller.includes("'enrollment_dates_need_review'") &&
-    controller.includes("code: generated.reason") &&
-    controller.includes('administrative review. Please contact the school administrator.'),
-    'register submission must return an actionable enrollment-review conflict'
-);
-assert(
-    view.includes("registerSkipReason === 'enrollment_dates_need_review'") &&
-    view.includes('Enrollment dates need review') &&
-    view.includes('school administrator confirms or corrects those dates'),
-    'attendance page must explain why enrollment-date review blocks entry'
-);
 assert(controller.includes('hasRegisterAttendanceAuthority'));
 const attendanceTakeHandler = controller.slice(
     controller.indexOf('const getTakeAttendance ='),
@@ -75,6 +61,19 @@ assert(
     !attendanceSaveHandler.includes('saveRegisterProgress'),
     'standard attendance save must write directly without deferred register setup'
 );
+const attendanceSubmitHandler = controller.slice(
+    controller.indexOf('const submitAttendanceRegister ='),
+    controller.indexOf('// POST /attendance/reopen')
+);
+assert(
+    attendanceSubmitHandler.includes("VALUES (?, ?, ?, ?, 'Absent', ?, ?)") &&
+    attendanceSubmitHandler.includes('getAttendanceStudents') &&
+    !attendanceSubmitHandler.includes('isFoundationAvailable') &&
+    !attendanceSubmitHandler.includes('generateExpectedRegister'),
+    'only explicit submission may mark unrecorded roster members absent, without register setup'
+);
+assert(view.includes('Submit Attendance'));
+assert(view.includes('Every student still marked Not recorded will be recorded as Absent.'));
 const closureController = controller.includes('attendanceClosureService.requestClosure') &&
     controller.includes('attendanceClosureService.decideClosure') &&
     controller.includes('attendanceClosureService.cancelClosure');

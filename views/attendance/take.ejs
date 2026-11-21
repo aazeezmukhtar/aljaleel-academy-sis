@@ -20,11 +20,11 @@
                     </button>
                     <% } %>
                     <button type="submit" form="attendance-form" class="btn btn-primary attendance-save-action" <%= readOnly ? 'hidden' : '' %>>
-                        <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Records' %>
+                        <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Draft' %>
                     </button>
-                    <% if (register && canEdit !== false) { %>
+                    <% if (canEdit !== false) { %>
                     <button type="button" id="submit-attendance-register" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
-                        <i class="bi bi-send-check"></i> Submit Register
+                        <i class="bi bi-send-check"></i> Submit Attendance
                     </button>
                     <% } %>
                     <% if (register && register.status === 'submitted' && isAdmin) { %>
@@ -120,7 +120,7 @@
             <div class="modal-content">
                 <div class="success-icon"><i class="bi bi-check-lg"></i></div>
                 <h2>Success!</h2>
-                <p><%= register ? 'Attendance progress has been saved. Submit the register only when every student has a deliberate status.' : 'Attendance records have been updated successfully.' %></p>
+                <p><%= register ? 'Attendance progress has been saved.' : 'Attendance draft has been saved. Unmarked students will only be recorded Absent when you submit attendance.' %></p>
                 <button class="btn btn-primary btn-block" onclick="<%= register ? "document.getElementById('feedbackModal').style.display='none'" : "window.location.href='/attendance'" %>"><%= register ? 'Continue marking' : 'Back to Dashboard' %></button>
             </div>
         </div>
@@ -133,7 +133,7 @@
             <button type="submit" form="attendance-form" class="btn btn-primary">
                 <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Records' %>
             </button>
-            <% if (register && canEdit !== false) { %>
+            <% if (canEdit !== false) { %>
             <button type="button" id="submit-attendance-register-mobile" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
                 <i class="bi bi-send-check"></i> Submit
             </button>
@@ -490,7 +490,7 @@
             return;
         }
 
-        if (!window.confirm('Submit this attendance register? Every expected student must have a deliberate status. Once submitted, the register is locked until an administrator reopens it.')) {
+        if (!window.confirm('Submit attendance for this class and date? Every student still marked Not recorded will be recorded as Absent. Students marked Present, Late or Leave will keep their selected status.')) {
             return;
         }
 
@@ -525,14 +525,14 @@
                 alert(result.message || 'The register could not be submitted.');
                 return;
             }
-            alert('Attendance register submitted successfully.');
+            alert('Attendance submitted successfully. ' + (result.markedAbsentCount || 0) + ' unmarked student(s) recorded as Absent.');
             window.location.reload();
         } catch (error) {
             alert('Submission failed. Reconnect and try again. The register has not been submitted.');
         } finally {
             buttons.forEach(button => {
                 button.disabled = !navigator.onLine;
-                button.innerHTML = '<i class="bi bi-send-check"></i> ' + (button.id.endsWith('-mobile') ? 'Submit' : 'Submit Register');
+                button.innerHTML = '<i class="bi bi-send-check"></i> ' + (button.id.endsWith('-mobile') ? 'Submit' : 'Submit Attendance');
             });
             saveButtons.forEach(button => { button.disabled = false; });
         }

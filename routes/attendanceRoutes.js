@@ -3,6 +3,8 @@ const router = express.Router();
 const attendanceController = require('../controllers/attendanceController');
 
 router.get('/', attendanceController.getIndex);
+router.get('/tracking', attendanceController.getAttendanceTracking);
+router.post('/tracking/ping', attendanceController.pingAttendanceClass);
 router.get('/take', attendanceController.getTakeAttendance);
 router.get('/yesterday', attendanceController.getPreviousDayAttendance);
 router.post('/save', attendanceController.saveAttendance);

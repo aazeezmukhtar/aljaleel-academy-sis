@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
 const setupView = fs.readFileSync(path.resolve(__dirname, '../views/attendance/setup.ejs'), 'utf8');
+const setupController = fs.readFileSync(path.resolve(__dirname, '../controllers/attendanceController.js'), 'utf8');
 ejs.compile(setupView);
 assertViewDefaults();
 function assertViewDefaults() {
@@ -20,6 +21,11 @@ function assertViewDefaults() {
     assert.ok(setupView.includes("action: 'end_schedule_set'"));
     assert.ok(setupView.includes('scheduleFoundationAvailable'));
     assert.ok(!setupView.includes('data-action="schedule"'));
+    assert.ok(setupController.includes("action === 'section_schedule' || action === 'class_schedule'"));
+    assert.ok(setupController.includes('attendanceSetupService.createScheduleSet(input)'));
+    assert.ok(setupController.includes("action === 'end_schedule_set'"));
+    assert.ok(setupController.includes('attendanceSetupService.endScheduleSet(input)'));
+    assert.ok(setupController.includes('scheduleFoundationAvailable'));
     assert.ok(setupView.includes('setup.readinessSummary.ready'));
     assert.ok(setupView.includes('setup.readinessSummary.incomplete'));
     assert.ok(setupView.includes("item.missing.join(' · ')"));

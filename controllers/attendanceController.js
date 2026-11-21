@@ -165,7 +165,9 @@ const schoolInfo = await db.get('SELECT name, phone FROM schools WHERE id = ?', 
     }
 };
 
-// GET /attendance/take - Show attendance marking form
+// GET /attendance/take - Show the standard attendance marking form.
+// The simplified attendance workflow deliberately does not depend on the deferred
+// register/schedule foundation. Current section session and term remain authoritative.
 const getTakeAttendance = async (req, res) => {
     const { class_id, date } = req.query;
     const user = req.session.staff;
@@ -183,80 +185,33 @@ const getTakeAttendance = async (req, res) => {
             if (!hasAccess) return res.redirect('/attendance?error=Access Denied');
         }
 
-        const clazz = await db.get('SELECT * FROM classes WHERE id = ? AND school_id = ?', [Number(class_id), schoolId]);
+        const clazz = await db.get(
+            'SELECT * FROM classes WHERE id = ? AND school_id = ?',
+            [Number(class_id), schoolId]
+        );
         if (!clazz) return res.redirect('/attendance?error=Class not found');
 
         const settings = await getAcademicSettings(Number(class_id), schoolId);
-        let register = null;
-        let registerFeatureAvailable = false;
-        let registerSkipReason = null;
-        let students = null;
+        const students = await getAttendanceStudents(
+            Number(class_id),
+            settings.session,
+            schoolId,
+            date
+        );
 
-        // The application remains compatible with databases where the additive
-        // attendance-register migration has not yet been applied.
-        try {
-            registerFeatureAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
-            if (registerFeatureAvailable) {
-                let context = await attendanceRegisterWorkflow.getRegisterContext({
-                    schoolId, classId: Number(class_id), registerDate: date
-                });
-                if (context) {
-                    register = context.register;
-                    students = context.students;
-                    registerSkipReason = context.blockedReason;
-                } else {
-                    const generated = await attendanceRegisterGeneration.generateExpectedRegister({
-                        schoolId,
-                        classId: Number(class_id),
-                        registerDate: date,
-                        generatedBy: user.id
-                    });
-                    if (generated.skipped) registerSkipReason = generated.reason;
-                    context = await attendanceRegisterWorkflow.getRegisterContext({
-                        schoolId, classId: Number(class_id), registerDate: date
-                    });
-                    if (context) {
-                        register = context.register;
-                        students = context.students;
-                        registerSkipReason = context.blockedReason;
-                    }
-                }
-            }
-        } catch (registerError) {
-            // Fail closed to the established attendance sheet. Do not prevent
-            // ordinary attendance entry if register setup is incomplete.
-            console.error('Attendance register preparation unavailable:', registerError);
-            registerSkipReason = 'register_preparation_unavailable';
-        }
-
-        if (!students) {
-            students = await getAttendanceStudents(
-                Number(class_id),
-                settings.session,
-                schoolId,
-                date
-            );
-        }
-
-        const registerBlocked = ['approved_closure', 'not_a_scheduled_day', 'enrollment_dates_need_review', 'no_academic_period', 'attendance_settings_missing', 'register_preparation_unavailable'].includes(registerSkipReason);
-        const locked = !!register && ['submitted', 'closed'].includes(register.status);
-        const canManageRegister = register
-            ? await hasRegisterAttendanceAuthority(user, register, schoolId)
-            : true;
-        const readOnly = registerBlocked || (!!register && (locked || !canManageRegister));
         res.render('attendance/take', {
             title: 'Mark Attendance',
             clazz,
             class_id,
             date,
             students,
-            currentTerm: register ? register.term : settings.term,
-            currentSession: register ? register.session : settings.session,
-            register,
-            registerFeatureAvailable,
-            registerSkipReason,
-            readOnly,
-            canEdit: !registerBlocked && !locked && canManageRegister,
+            currentTerm: settings.term,
+            currentSession: settings.session,
+            register: null,
+            registerFeatureAvailable: false,
+            registerSkipReason: null,
+            readOnly: false,
+            canEdit: true,
             isAdmin: user.role === 'Admin',
             hasRecords: true
         });
@@ -403,76 +358,8 @@ const saveAttendance = async (req, res) => {
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Access Denied to this class' });
         }
 
-        const registerFoundationAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
-        if (registerFoundationAvailable) {
-            let registerContext = await attendanceRegisterWorkflow.getRegisterContext({
-                schoolId, classId: Number(class_id), registerDate: date
-            });
-            if (registerContext && registerContext.blockedReason === 'approved_closure') {
-                return res.status(409).json({
-                    success: false,
-                    message: 'Attendance cannot be recorded because an approved closure covers this date.'
-                });
-            }
-            if (!registerContext) {
-                const generated = await attendanceRegisterGeneration.generateExpectedRegister({
-                    schoolId,
-                    classId: Number(class_id),
-                    registerDate: date,
-                    generatedBy: user.id
-                });
-                if (generated.skipped && [
-                    'approved_closure',
-                    'not_a_scheduled_day',
-                    'enrollment_dates_need_review',
-                    'no_academic_period',
-                    'attendance_settings_missing'
-                ].includes(generated.reason)) {
-                    const messages = {
-                        approved_closure: 'Attendance cannot be recorded because an approved closure covers this date.',
-                        not_a_scheduled_day: 'Attendance cannot be recorded because this class is not scheduled to open on this date.',
-                        enrollment_dates_need_review: 'Attendance cannot be recorded because one or more student enrollment dates need administrative review.',
-                        no_academic_period: 'Attendance cannot be recorded because no academic period covers this date. Please ask the school administrator to configure the section academic period.',
-                        attendance_settings_missing: 'Attendance cannot be recorded because attendance settings are missing for this class and date. Please ask the school administrator to configure them.'
-                    };
-                    return res.status(409).json({
-                        success: false,
-                        code: generated.reason,
-                        message: messages[generated.reason]
-                    });
-                }
-                registerContext = await attendanceRegisterWorkflow.getRegisterContext({
-                    schoolId, classId: Number(class_id), registerDate: date
-                });
-            }
-            if (registerContext) {
-                if (!(await hasRegisterAttendanceAuthority(user, registerContext.register, schoolId))) {
-                    return res.status(403).json({
-                        success: false,
-                        message: 'Only an administrator or the responsible class teacher may record this register.'
-                    });
-                }
-                const saved = await attendanceRegisterWorkflow.saveRegisterProgress({
-                    schoolId,
-                    classId: Number(class_id),
-                    registerDate: date,
-                    actorStaffId: user.id,
-                    isAdministrator: user.role === 'Admin',
-                    attendance: attendance || {},
-                    reasons: reasons || {},
-                    customReasons: custom_reasons || {}
-                });
-                logAction(user.id, 'SAVE_ATTENDANCE_PROGRESS', 'ATTENDANCE_REGISTER', {
-                    class_id, date, changed_count: saved.changedStudentCount,
-                    saved_student_count: saved.savedStudentCount
-                }, req.ip);
-                return res.json({
-                    success: true,
-                    message: 'Attendance progress saved. Submit the register when every student has a deliberate status.',
-                    register: saved
-                });
-            }
-        }
+        // Standard attendance writes directly to the attendance table.
+        // Deferred register/schedule setup must not gate the simplified workflow.
 
         const sql = `
             INSERT INTO attendance

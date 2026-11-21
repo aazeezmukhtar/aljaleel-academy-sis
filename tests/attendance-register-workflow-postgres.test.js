@@ -560,25 +560,21 @@ if (!url) {
 
     const dashboardService = createAttendanceAnalyticsDashboardService(db, analytics);
     const dashboard = await dashboardService.getDashboard({
-      schoolId: 1, sectionId: 10, session: '2026/2027', term: '1st Term',
-      startDate: '2026-11-29', endDate: '2026-12-04', classIds: [40]
+      schoolId: 1, sectionId: 10, session: '2026/2027', term: '1st Term', classIds: [40]
     });
-    assert.strictEqual(dashboard.registerCompletion.expectedClassDays, 4,
-      'effective-dated schedules and approved section closures define expected class-days');
-    assert.strictEqual(dashboard.registerCompletion.submittedRegisters, 1);
-    assert.strictEqual(dashboard.registerCompletion.incompleteRegisters, 1);
-    assert.strictEqual(dashboard.registerCompletion.missingRegisters, 2);
-    assert.strictEqual(dashboard.registerCompletion.completionRate, 25);
+    assert.strictEqual(dashboard.filters.startDate, '2026-11-20');
+    assert.strictEqual(dashboard.filters.endDate, '2026-12-20');
     assert.strictEqual(dashboard.overview.attendanceRate, 60);
+    assert.strictEqual(dashboard.overview.totalStudentDays, 5);
     assert.strictEqual(dashboard.overview.lateArrivals, 1);
     assert.strictEqual(dashboard.overview.absences, 2);
     assert.strictEqual(dashboard.overview.leaveDays, 1);
     assert.strictEqual(dashboard.lowAttendanceStudents.length, 1);
     assert.strictEqual(String(dashboard.lowAttendanceStudents[0].studentId), '31');
     assert.strictEqual(dashboard.topLateStudents[0].late, 1);
-    assert.strictEqual(dashboard.dailySummary.length, 4);
-    assert(!dashboard.dailySummary.some(day => day.date === '2026-12-04'),
-      'approved section closures must not appear as expected class-days');
+    assert.strictEqual(dashboard.dailySummary.length, 3);
+    assert(!Object.prototype.hasOwnProperty.call(dashboard, 'registerCompletion'));
+    assert(!Object.prototype.hasOwnProperty.call(dashboard, 'scheduleIssues'));
 
     const closureAudit = await db.get(
       "SELECT COUNT(*) AS count FROM attendance_foundation_audit_logs WHERE entity_type = 'attendance_closure'",

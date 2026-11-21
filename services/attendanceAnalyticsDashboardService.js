@@ -121,6 +121,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
         }));
 
         const expectedDays = [];
+        const scheduleIssues = [];
         const expectedKeys = new Set();
         const daily = new Map();
         const classExpected = new Map(classes.map(item => [String(item.id), {
@@ -137,7 +138,9 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
                 try {
                     resolved = await scheduleService.isExpectedSchoolDay({ schoolId, classId: Number(classItem.id), date });
                 } catch (error) {
-                    continue; // A conflicting/invalid schedule is not an expected day.
+                    scheduleIssues.push({ classId: classItem.id, className: classItem.name,
+                        sectionId, date, reason: error.code || 'schedule_resolution_error' });
+                    continue;
                 }
                 if (!resolved.expected) continue;
                 if (closures.some(closure => closureCovers(closure, classItem.id, sectionId, date))) continue;
@@ -293,6 +296,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
                     ? Math.round((submittedRegisters / expectedClassDays) * 1000) / 10 : null
             },
             classComparison,
+            scheduleIssues,
             dailySummary,
             lowAttendanceStudents,
             topLateStudents
@@ -311,7 +315,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
                 expectedClassDays: 0, submittedRegisters: 0,
                 incompleteRegisters: 0, missingRegisters: 0, completionRate: null
             },
-            classComparison: [], dailySummary: [], lowAttendanceStudents: [], topLateStudents: []
+            classComparison: [], scheduleIssues: [], dailySummary: [], lowAttendanceStudents: [], topLateStudents: []
         };
     }
 

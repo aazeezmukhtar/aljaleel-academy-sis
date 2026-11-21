@@ -4,7 +4,7 @@
         <%- include('../partials/sidebar') %>
 
             <main class="main-content">
-                <header class="content-header" style="margin-bottom: 30px;">
+                <header class="content-header attendance-page-header">
                     <div>
                         <h1>Attendance Management</h1>
                         <p>Track daily student attendance and regularity.</p>
@@ -15,13 +15,12 @@
                     <a href="/attendance/report" class="btn btn-outline">View Reports</a>
                 </header>
 
-                <section class="<%= (typeof user !== 'undefined' && user && user.role === 'Admin') ? 'grid-2' : '' %>" style="margin-bottom: 25px;">
-                    <div class="card">
+                <section class="attendance-launch-grid <%= (typeof user !== 'undefined' && user && user.role === 'Admin') ? 'grid-2' : '' %>">
+                    <div class="card attendance-launch-card">
                         <h3>Take Student Attendance</h3>
-                        <p style="margin-bottom: 20px; color: var(--text-muted);">Select a class and date to start
-                            marking attendance.</p>
+                        <p class="attendance-launch-description">Choose the class and date you want to record.</p>
 
-                        <form id="attendance-selection-form" action="/attendance/take" method="GET" class="enroll-form">
+                        <form id="attendance-selection-form" action="/attendance/take" method="GET" class="enroll-form attendance-launch-form">
                             <div class="form-group">
                                 <label>Select Class</label>
                                 <% if (typeof classes !== 'undefined' && classes && classes.length > 0) { %>
@@ -44,30 +43,28 @@
                                 <input type="date" name="date" value="<%= new Date().toISOString().split('T')[0] %>"
                                     required class="form-control">
                             </div>
-                            <button type="submit" class="btn" style="width: 100%; margin-top: 10px;">Start
-                                Marking</button>
-                            <button type="button" class="btn btn-outline" onclick="viewPreviousAttendance()"
-                                style="width: 100%; margin-top: 8px;">
+                            <button type="submit" class="btn attendance-start-button">Start Marking</button>
+                            <button type="button" class="btn btn-outline attendance-previous-button" onclick="viewPreviousAttendance()">
                                 <i class="bi bi-clock-history"></i> View Previous Day's Attendance
                             </button>
-                            <p class="text-muted" style="font-size:0.78rem;margin:6px 0 0;text-align:center;">
+                            <p class="text-muted attendance-previous-help">
                                 Opens yesterday's attendance for the selected class.
                             </p>
                         </form>
-                        <p id="attendance-offline-prep-status" role="status" aria-live="polite" style="margin-top:12px;font-size:0.85rem;color:var(--text-muted);">Offline attendance preparation will be checked while you are online.</p>
+                        <p id="attendance-offline-prep-status" class="attendance-offline-status" role="status" aria-live="polite">Offline attendance preparation will be checked while you are online.</p>
                     </div>
 
                     <% if (typeof user !== 'undefined' && user && user.role === 'Admin') { %>
-                    <div class="card" style="background: linear-gradient(135deg, #4f46e5, #4338ca); color: white;">
+                    <div class="card attendance-staff-card">
                         <h3>Staff Attendance</h3>
-                        <p style="margin-top: 10px; opacity: 0.9;">Manage attendance for teachers and staff members.</p>
-                        <div style="margin-top: 40px;">
+                        <p class="attendance-staff-description">Manage attendance for teachers and staff members.</p>
+                        <div class="attendance-staff-action">
                             <a href="/attendance/staff" class="btn"
-                                style="background: white; color: var(--primary); width: 100%;">
+                                class="attendance-staff-link">
                                 <i class="bi bi-calendar2-check-fill"></i> Go to Staff Attendance
                             </a>
                         </div>
-                        <div style="margin-top: 20px; text-align: center; font-size: 0.85rem; opacity: 0.8;">
+                        <div class="attendance-staff-note">
                             Includes Present, Absent, Late, and Leave statuses.
                         </div>
                     </div>
@@ -289,6 +286,38 @@
                         .attendance-risk-class > summary { padding:13px 16px; }
                         .attendance-risk-desktop .data-table { margin:0; }
                     }
+
+                    .attendance-page-header { margin-bottom: 22px; align-items: center; }
+                    .attendance-launch-grid { margin-bottom: 24px; gap: 18px; align-items: stretch; }
+                    .attendance-launch-card { display: flex; flex-direction: column; }
+                    .attendance-launch-card h3, .attendance-staff-card h3 { margin: 0; }
+                    .attendance-launch-description { margin: 8px 0 20px; color: var(--text-muted); line-height: 1.5; }
+                    .attendance-launch-form { display: grid; gap: 14px; }
+                    .attendance-launch-form .form-group { margin: 0; }
+                    .attendance-launch-form .form-group label { display: block; margin-bottom: 7px; font-weight: 600; }
+                    .attendance-launch-form .form-control { min-height: 46px; }
+                    .attendance-start-button, .attendance-previous-button { width: 100%; min-height: 44px; margin: 0; }
+                    .attendance-previous-button { margin-top: -4px; }
+                    .attendance-previous-help { font-size: .78rem; margin: -8px 0 0; text-align: center; }
+                    .attendance-offline-status { margin: 14px 0 0; font-size: .82rem; line-height: 1.45; color: var(--text-muted); }
+                    .attendance-staff-card { display: flex; flex-direction: column; background: var(--bg-subtle, #f8fafc); color: var(--text-primary, #1e293b); border: 1px solid var(--border-subtle); }
+                    .attendance-staff-description { margin: 8px 0 0; color: var(--text-muted); line-height: 1.5; }
+                    .attendance-staff-action { margin-top: auto; padding-top: 28px; }
+                    .attendance-staff-link { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; min-height: 44px; background: var(--primary, #001c2c); color: #fff; }
+                    .attendance-staff-note { margin-top: 14px; text-align: center; color: var(--text-muted); font-size: .82rem; }
+                    .attendance-launch-form .form-control:focus-visible,
+                    .attendance-start-button:focus-visible,
+                    .attendance-previous-button:focus-visible,
+                    .attendance-staff-link:focus-visible { outline: 3px solid var(--focus-ring, #fbbf24); outline-offset: 2px; }
+                    @media (max-width: 768px) {
+                        .attendance-page-header { gap: 10px; margin-bottom: 16px; }
+                        .attendance-page-header > div { min-width: 100%; }
+                        .attendance-launch-grid { gap: 12px; margin-bottom: 18px; }
+                        .attendance-launch-card, .attendance-staff-card { padding: 16px; }
+                        .attendance-launch-description { margin-bottom: 16px; }
+                        .attendance-staff-action { padding-top: 20px; }
+                    }
+
                 </style>
                 <% } %>
             </main>

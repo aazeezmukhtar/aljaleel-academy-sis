@@ -204,11 +204,12 @@ function createAttendanceRegisterService(db) {
                     school_id, class_id, section_id, academic_period_id, schedule_id, schedule_set_id,
                     responsibility_id, register_date, timezone, submission_deadline_at,
                     expected_student_count, submitted_student_count, status
-                ) VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, 0, 'expected')
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'expected')
                 ON CONFLICT (class_id, section_id, register_date) DO NOTHING
                 RETURNING id
             `, [
-                schoolId, classId, clazz.section_id, academicPeriod.id, resolvedSchedule.scheduleSetId,
+                schoolId, classId, clazz.section_id, academicPeriod.id,
+                resolvedSchedule.scheduleId || null, resolvedSchedule.scheduleSetId || null,
                 responsibility ? responsibility.id : null, registerDate, timezone,
                 deadlineAt, rosterRows.length
             ], client);
@@ -243,7 +244,8 @@ function createAttendanceRegisterService(db) {
                 JSON.stringify({
                     expected_student_count: rosterRows.length,
                     academic_period_id: academicPeriod.id,
-                    schedule_set_id: resolvedSchedule.scheduleSetId,
+                    schedule_id: resolvedSchedule.scheduleId || null,
+                    schedule_set_id: resolvedSchedule.scheduleSetId || null,
                     schedule_source: resolvedSchedule.source,
                     responsibility_id: responsibility ? responsibility.id : null,
                     submission_deadline_at: deadlineAt

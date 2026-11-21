@@ -1,37 +1,55 @@
 <%- include('../partials/header') %>
 <style>
-    .attendance-analytics .analytics-heading { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:22px; }
-    .attendance-analytics .analytics-heading h1 { margin:8px 0 6px; line-height:1.2; }
-    .attendance-analytics .analytics-heading p { margin:0; color:var(--text-muted); max-width:680px; }
-    .attendance-analytics .analytics-back { display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border:1px solid var(--border-color,#e5e7eb); border-radius:9px; text-decoration:none; font-weight:600; }
-    .attendance-analytics .analytics-panel { min-width:0; margin-bottom:20px; }
-    .attendance-analytics .analytics-filter-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; align-items:end; }
+    .attendance-analytics { min-width:0; }
+    .attendance-analytics .analytics-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:14px; margin-bottom:20px; }
+    .attendance-analytics .analytics-heading h1 { margin:10px 0 5px; line-height:1.2; }
+    .attendance-analytics .analytics-heading p { margin:0; color:var(--text-muted); max-width:720px; }
+    .attendance-analytics .analytics-back { display:inline-flex; align-items:center; gap:7px; padding:7px 10px; border:1px solid var(--border-color,#e5e7eb); border-radius:9px; text-decoration:none; font-weight:600; }
+    .attendance-analytics .analytics-panel { min-width:0; margin-bottom:18px; padding:20px; }
+    .attendance-analytics .analytics-panel h2 { margin:0 0 5px; }
+    .attendance-analytics .analytics-section-note { margin:0 0 14px; color:var(--text-muted); font-size:.86rem; line-height:1.5; }
+    .attendance-analytics .analytics-filter-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; align-items:end; }
     .attendance-analytics .analytics-filter-grid .form-group { min-width:0; margin:0; }
     .attendance-analytics .analytics-filter-grid .form-control { width:100%; min-width:0; }
-    .attendance-analytics .analytics-filter-grid .analytics-apply { grid-column:1 / -1; }
-    .attendance-analytics .analytics-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; margin-bottom:20px; }
-    .attendance-analytics .analytics-metric { min-width:0; padding:18px; }
-    .attendance-analytics .analytics-metric-label { color:var(--text-muted); font-size:.85rem; font-weight:600; }
-    .attendance-analytics .analytics-metric-value { margin:7px 0 4px; font-size:clamp(1.65rem,4vw,2rem); font-weight:750; line-height:1.15; overflow-wrap:anywhere; }
-    .attendance-analytics .analytics-metric-note { color:var(--text-muted); font-size:.8rem; line-height:1.45; }
-    .attendance-analytics .analytics-panel h2 { margin-bottom:12px; }
+    .attendance-analytics .analytics-filter-hint { margin:12px 0 0; color:var(--text-muted); font-size:.8rem; }
+    .attendance-analytics .analytics-context { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:0 0 16px; }
+    .attendance-analytics .analytics-context-item { display:inline-flex; align-items:center; gap:6px; padding:6px 10px; border:1px solid var(--border-color,#e5e7eb); border-radius:999px; color:var(--text-muted); font-size:.8rem; }
+    .attendance-analytics .analytics-summary { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+    .attendance-analytics .analytics-metric { min-width:0; padding:16px; }
+    .attendance-analytics .analytics-metric-label { color:var(--text-muted); font-size:.82rem; font-weight:650; }
+    .attendance-analytics .analytics-metric-value { margin:7px 0 4px; font-size:clamp(1.55rem,3.5vw,2rem); font-weight:750; line-height:1.15; overflow-wrap:anywhere; }
+    .attendance-analytics .analytics-metric-note { color:var(--text-muted); font-size:.78rem; line-height:1.45; }
+    .attendance-analytics .analytics-rate-track { width:100%; height:7px; margin-top:9px; overflow:hidden; border-radius:999px; background:var(--border-color,#e5e7eb); }
+    .attendance-analytics .analytics-rate-fill { height:100%; border-radius:inherit; background:var(--primary); }
+    .attendance-analytics .analytics-breakdown-bar { display:flex; width:100%; height:14px; overflow:hidden; border-radius:999px; background:var(--border-color,#e5e7eb); }
+    .attendance-analytics .analytics-breakdown-segment { height:100%; min-width:0; }
+    .attendance-analytics .analytics-breakdown-present { background:#16a34a; }
+    .attendance-analytics .analytics-breakdown-late { background:#d97706; }
+    .attendance-analytics .analytics-breakdown-absent { background:#dc2626; }
+    .attendance-analytics .analytics-breakdown-leave { background:#2563eb; }
+    .attendance-analytics .analytics-legend { display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:14px; }
+    .attendance-analytics .analytics-legend-item { display:inline-flex; align-items:center; gap:7px; color:var(--text-muted); font-size:.82rem; }
+    .attendance-analytics .analytics-legend-dot { width:9px; height:9px; flex:0 0 9px; border-radius:50%; }
     .attendance-analytics .analytics-panel .table-responsive { border:1px solid var(--border-color,#e5e7eb); border-radius:10px; }
-    .attendance-analytics .analytics-panel table { margin-bottom:0; }
-    .attendance-analytics .analytics-panel thead th { white-space:nowrap; font-size:.82rem; color:var(--text-muted); background:var(--surface-muted,rgba(127,127,127,.06)); }
+    .attendance-analytics .analytics-panel table { min-width:620px; margin-bottom:0; }
+    .attendance-analytics .analytics-panel thead th { white-space:nowrap; font-size:.8rem; color:var(--text-muted); background:var(--surface-muted,rgba(127,127,127,.06)); }
     .attendance-analytics .analytics-panel tbody td { vertical-align:middle; }
-    @media (min-width:900px) {
-        .attendance-analytics .analytics-summary { grid-template-columns:repeat(4,minmax(0,1fr)); }
-        .attendance-analytics .analytics-filter-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
-        .attendance-analytics .analytics-filter-grid .analytics-apply { grid-column:auto; }
+    .attendance-analytics .analytics-table-rate { min-width:125px; }
+    .attendance-analytics .analytics-table-rate strong { display:block; }
+    .attendance-analytics .analytics-empty { margin:0; padding:16px; border:1px dashed var(--border-color,#d1d5db); border-radius:10px; color:var(--text-muted); line-height:1.5; }
+    .attendance-analytics .analytics-low-rate { font-weight:700; }
+    @media (max-width:1000px) {
+        .attendance-analytics .analytics-filter-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
     }
     @media (max-width:600px) {
         .attendance-analytics .analytics-heading { margin-bottom:16px; }
         .attendance-analytics .analytics-filter-grid { grid-template-columns:minmax(0,1fr); gap:12px; }
-        .attendance-analytics .analytics-filter-grid .analytics-apply { grid-column:auto; }
-        .attendance-analytics .analytics-summary { gap:10px; margin-bottom:16px; }
-        .attendance-analytics .analytics-metric { padding:14px; }
-        .attendance-analytics .analytics-panel { margin-bottom:16px; }
-        .attendance-analytics .analytics-panel { padding:14px; }
+        .attendance-analytics .analytics-summary { grid-template-columns:repeat(2,minmax(0,1fr)); gap:9px; }
+        .attendance-analytics .analytics-metric { padding:13px; }
+        .attendance-analytics .analytics-panel { padding:14px; margin-bottom:14px; }
+        .attendance-analytics .analytics-context { gap:6px; }
+        .attendance-analytics .analytics-context-item { font-size:.75rem; }
+        .attendance-analytics .analytics-legend { gap:9px 13px; }
     }
 </style>
 <div class="dashboard-container">
@@ -39,9 +57,9 @@
     <main class="main-content attendance-analytics">
         <header class="analytics-heading">
             <div>
-                <a href="/attendance" class="analytics-back">&larr; Attendance</a>
+                <a href="/attendance" class="analytics-back"><i class="bi bi-arrow-left"></i> Attendance</a>
                 <h1>Attendance Analytics</h1>
-                <p>Term attendance performance and low-attendance monitoring by section and class.</p>
+                <p>Review attendance performance, compare classes, and identify students who may need follow-up.</p>
             </div>
         </header>
 
@@ -49,22 +67,16 @@
         <div class="alert alert-warning" role="alert"><%= error %></div>
         <% } %>
 
-        <section class="card analytics-panel">
+        <section class="card analytics-panel" aria-labelledby="analytics-filters-title">
+            <h2 id="analytics-filters-title" class="h5">Report filters</h2>
+            <p class="analytics-section-note">Choose an academic section, session, term, and optionally one class. The report refreshes when a selection changes.</p>
+            <% if (sections && sections.length && periods && periods.length) { %>
             <form action="/attendance/analytics" method="GET" class="analytics-filter-grid">
                 <div class="form-group">
                     <label for="analytics-section">Section</label>
                     <select id="analytics-section" name="section_id" class="form-control" required onchange="this.form.class_id.value='';this.form.session.value='';this.form.term.value='';this.form.submit()">
                         <% sections.forEach(section => { %>
                         <option value="<%= section.id %>" <%= String(filters.section_id) === String(section.id) ? 'selected' : '' %>><%= section.name %></option>
-                        <% }); %>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="analytics-class">Class</label>
-                    <select id="analytics-class" name="class_id" class="form-control" onchange="this.form.submit()">
-                        <option value="">All accessible classes</option>
-                        <% classes.forEach(clazz => { %>
-                        <option value="<%= clazz.id %>" <%= String(filters.class_id) === String(clazz.id) ? 'selected' : '' %>><%= clazz.name %></option>
                         <% }); %>
                     </select>
                 </div>
@@ -84,45 +96,111 @@
                         <% }); %>
                     </select>
                 </div>
-                <button class="btn analytics-apply" type="submit" style="width:100%;">Apply filters</button>
+                <div class="form-group">
+                    <label for="analytics-class">Class</label>
+                    <select id="analytics-class" name="class_id" class="form-control" onchange="this.form.submit()">
+                        <option value="">All accessible classes</option>
+                        <% classes.forEach(clazz => { %>
+                        <option value="<%= clazz.id %>" <%= String(filters.class_id) === String(clazz.id) ? 'selected' : '' %>><%= clazz.name %></option>
+                        <% }); %>
+                    </select>
+                </div>
             </form>
+            <% } else { %>
+            <p class="analytics-empty">There is no academic period available for this section yet, so attendance analytics cannot be displayed.</p>
+            <% } %>
         </section>
 
         <% if (dashboard) { %>
-        <section class="analytics-summary">
+        <div class="analytics-context" aria-label="Current report context">
+            <span class="analytics-context-item"><i class="bi bi-building"></i> <%= sections.find(section => String(section.id) === String(filters.section_id))?.name || 'Selected section' %></span>
+            <span class="analytics-context-item"><i class="bi bi-calendar3"></i> <%= filters.session %> · <%= filters.term %></span>
+            <span class="analytics-context-item"><i class="bi bi-calendar-range"></i> <%= dashboard.filters.startDate %> to <%= dashboard.filters.endDate %></span>
+            <span class="analytics-context-item"><i class="bi bi-people"></i> <%= filters.class_id ? (classes.find(clazz => String(clazz.id) === String(filters.class_id))?.name || 'Selected class') : 'All accessible classes' %></span>
+        </div>
+
+        <%
+            const overview = dashboard.overview;
+            const markedStudentDays = Number(overview.totalStudentDays) || 0;
+            const presentWidth = markedStudentDays ? (Number(overview.presentDays) / markedStudentDays) * 100 : 0;
+            const lateWidth = markedStudentDays ? (Number(overview.lateArrivals) / markedStudentDays) * 100 : 0;
+            const absentWidth = markedStudentDays ? (Number(overview.absences) / markedStudentDays) * 100 : 0;
+            const leaveWidth = markedStudentDays ? (Number(overview.leaveDays) / markedStudentDays) * 100 : 0;
+        %>
+        <section class="analytics-summary" aria-label="Attendance overview">
             <div class="card analytics-metric">
                 <div class="analytics-metric-label">Attendance rate</div>
-                <div class="analytics-metric-value"><%= dashboard.overview.attendanceRate === null ? '—' : dashboard.overview.attendanceRate + '%' %></div>
-                <div class="analytics-metric-note"><%= dashboard.overview.attendedStudentDays %> attended of <%= dashboard.overview.totalStudentDays %> marked student-days</div>
+                <div class="analytics-metric-value"><%= overview.attendanceRate === null ? '—' : overview.attendanceRate + '%' %></div>
+                <div class="analytics-metric-note">Based on <%= overview.totalStudentDays %> marked student-days</div>
+                <div class="analytics-rate-track" role="img" aria-label="Attendance rate <%= overview.attendanceRate === null ? 'not available' : overview.attendanceRate + ' percent' %>">
+                    <div class="analytics-rate-fill" style="width:<%= overview.attendanceRate === null ? 0 : overview.attendanceRate %>%;"></div>
+                </div>
             </div>
             <div class="card analytics-metric">
                 <div class="analytics-metric-label">Students tracked</div>
-                <div class="analytics-metric-value"><%= dashboard.overview.studentsTracked %></div>
+                <div class="analytics-metric-value"><%= overview.studentsTracked %></div>
                 <div class="analytics-metric-note">Students with attendance records in this selection</div>
             </div>
             <div class="card analytics-metric">
                 <div class="analytics-metric-label">Low-attendance students</div>
-                <div class="analytics-metric-value"><%= dashboard.overview.lowAttendanceCount %></div>
-                <div class="analytics-metric-note">Below the configured class threshold</div>
+                <div class="analytics-metric-value"><%= overview.lowAttendanceCount %></div>
+                <div class="analytics-metric-note">Below their configured class threshold</div>
             </div>
             <div class="card analytics-metric">
                 <div class="analytics-metric-label">Late arrivals</div>
-                <div class="analytics-metric-value"><%= dashboard.overview.lateArrivals %></div>
-                <div class="analytics-metric-note">Late marks in the selected period</div>
+                <div class="analytics-metric-value"><%= overview.lateArrivals %></div>
+                <div class="analytics-metric-note">Late marks in this period</div>
+            </div>
+            <div class="card analytics-metric">
+                <div class="analytics-metric-label">Absences</div>
+                <div class="analytics-metric-value"><%= overview.absences %></div>
+                <div class="analytics-metric-note">Recorded absent student-days</div>
+            </div>
+            <div class="card analytics-metric">
+                <div class="analytics-metric-label">Leave days</div>
+                <div class="analytics-metric-value"><%= overview.leaveDays %></div>
+                <div class="analytics-metric-note">Recorded leave student-days</div>
             </div>
         </section>
 
-        <section class="card analytics-panel">
-            <h2 class="h5">Class comparison</h2>
+        <section class="card analytics-panel" aria-labelledby="analytics-breakdown-title">
+            <h2 id="analytics-breakdown-title" class="h5">Attendance record breakdown</h2>
+            <p class="analytics-section-note">Present, Late, and Leave count as attended. Absent does not. This rate uses recorded student-days only; it is not a measure of expected registers.</p>
+            <% if (markedStudentDays > 0) { %>
+            <div class="analytics-breakdown-bar" role="img" aria-label="Recorded attendance statuses: <%= overview.presentDays %> present, <%= overview.lateArrivals %> late, <%= overview.absences %> absent, <%= overview.leaveDays %> leave.">
+                <% if (presentWidth > 0) { %><span class="analytics-breakdown-segment analytics-breakdown-present" style="width:<%= presentWidth %>%;"></span><% } %>
+                <% if (lateWidth > 0) { %><span class="analytics-breakdown-segment analytics-breakdown-late" style="width:<%= lateWidth %>%;"></span><% } %>
+                <% if (absentWidth > 0) { %><span class="analytics-breakdown-segment analytics-breakdown-absent" style="width:<%= absentWidth %>%;"></span><% } %>
+                <% if (leaveWidth > 0) { %><span class="analytics-breakdown-segment analytics-breakdown-leave" style="width:<%= leaveWidth %>%;"></span><% } %>
+            </div>
+            <div class="analytics-legend">
+                <span class="analytics-legend-item"><span class="analytics-legend-dot analytics-breakdown-present"></span>Present <strong><%= overview.presentDays %></strong></span>
+                <span class="analytics-legend-item"><span class="analytics-legend-dot analytics-breakdown-late"></span>Late <strong><%= overview.lateArrivals %></strong></span>
+                <span class="analytics-legend-item"><span class="analytics-legend-dot analytics-breakdown-absent"></span>Absent <strong><%= overview.absences %></strong></span>
+                <span class="analytics-legend-item"><span class="analytics-legend-dot analytics-breakdown-leave"></span>Leave <strong><%= overview.leaveDays %></strong></span>
+            </div>
+            <% } else { %>
+            <p class="analytics-empty">No attendance records have been recorded for this academic period and selection.</p>
+            <% } %>
+        </section>
+
+        <section class="card analytics-panel" aria-labelledby="analytics-class-title">
+            <h2 id="analytics-class-title" class="h5">Class comparison</h2>
+            <p class="analytics-section-note">Compare attendance rates and low-attendance counts across the selected section.</p>
             <% if (dashboard.classComparison.length) { %>
             <div class="table-responsive">
                 <table class="table align-middle">
-                    <thead><tr><th>Class</th><th>Attendance</th><th>Students tracked</th><th>Student-days</th><th>Low attendance</th><th>Threshold</th></tr></thead>
+                    <thead><tr><th>Class</th><th>Attendance rate</th><th>Students tracked</th><th>Student-days</th><th>Low attendance</th><th>Threshold</th></tr></thead>
                     <tbody>
                     <% dashboard.classComparison.forEach(item => { %>
                         <tr>
                             <td><strong><%= item.className %></strong></td>
-                            <td><%= item.attendanceRate === null ? '—' : item.attendanceRate + '%' %></td>
+                            <td class="analytics-table-rate">
+                                <strong><%= item.attendanceRate === null ? '—' : item.attendanceRate + '%' %></strong>
+                                <div class="analytics-rate-track" role="img" aria-label="Class attendance rate <%= item.attendanceRate === null ? 'not available' : item.attendanceRate + ' percent' %>">
+                                    <div class="analytics-rate-fill" style="width:<%= item.attendanceRate === null ? 0 : item.attendanceRate %>%;"></div>
+                                </div>
+                            </td>
                             <td><%= item.studentsTracked %></td>
                             <td><%= item.totalStudentDays %></td>
                             <td><%= item.lowAttendanceCount %></td>
@@ -132,11 +210,12 @@
                     </tbody>
                 </table>
             </div>
-            <% } else { %><p class="text-muted mb-0">No class data is available for this filter.</p><% } %>
+            <% } else { %><p class="analytics-empty">No class data is available for this selection.</p><% } %>
         </section>
 
-        <section class="card analytics-panel">
-            <h2 class="h5">Daily attendance trend</h2>
+        <section class="card analytics-panel" aria-labelledby="analytics-daily-title">
+            <h2 id="analytics-daily-title" class="h5">Daily attendance trend</h2>
+            <p class="analytics-section-note">Only dates with saved attendance records appear here.</p>
             <% if (dashboard.dailySummary.length) { %>
             <div class="table-responsive">
                 <table class="table align-middle">
@@ -144,11 +223,11 @@
                     <tbody>
                     <% dashboard.dailySummary.forEach(day => { %>
                         <tr>
-                            <td><%= day.date %></td>
-                            <td style="min-width:120px;">
+                            <td><strong><%= day.date %></strong></td>
+                            <td class="analytics-table-rate">
                                 <strong><%= day.attendanceRate === null ? '—' : day.attendanceRate + '%' %></strong>
-                                <div style="height:5px;background:var(--border-color,#e5e7eb);border-radius:5px;margin-top:5px;overflow:hidden;">
-                                    <div style="height:5px;width:<%= day.attendanceRate === null ? 0 : day.attendanceRate %>%;background:var(--primary);"></div>
+                                <div class="analytics-rate-track" role="img" aria-label="Daily attendance rate <%= day.attendanceRate === null ? 'not available' : day.attendanceRate + ' percent' %>">
+                                    <div class="analytics-rate-fill" style="width:<%= day.attendanceRate === null ? 0 : day.attendanceRate %>%;"></div>
                                 </div>
                             </td>
                             <td><%= day.totalStudentDays %></td>
@@ -161,11 +240,12 @@
                     </tbody>
                 </table>
             </div>
-            <% } else { %><p class="text-muted mb-0">No attendance records have been recorded for this term and selection.</p><% } %>
+            <% } else { %><p class="analytics-empty">No attendance records have been recorded for this academic period and selection.</p><% } %>
         </section>
 
-        <section class="card analytics-panel">
-            <h2 class="h5">Students below attendance threshold</h2>
+        <section class="card analytics-panel" aria-labelledby="analytics-low-title">
+            <h2 id="analytics-low-title" class="h5">Students below attendance threshold</h2>
+            <p class="analytics-section-note">These students are below the configured threshold for their class. Review their records and follow up where necessary.</p>
             <% if (dashboard.lowAttendanceStudents.length) { %>
             <div class="table-responsive">
                 <table class="table align-middle">
@@ -175,7 +255,7 @@
                         <tr>
                             <td><strong><%= student.studentName %></strong></td>
                             <td><%= student.className %></td>
-                            <td><span class="text-danger fw-bold"><%= student.attendanceRate %>%</span></td>
+                            <td><span class="analytics-low-rate"><%= student.attendanceRate %>%</span></td>
                             <td><%= student.threshold %>%</td>
                             <td><%= student.attendedDays %> / <%= student.totalDays %></td>
                             <td><%= student.absent %></td>
@@ -185,23 +265,24 @@
                     </tbody>
                 </table>
             </div>
-            <% } else { %><p class="text-muted mb-0">No students are below their configured class threshold.</p><% } %>
+            <% } else { %><p class="analytics-empty">No students are below their configured class threshold in this selection.</p><% } %>
         </section>
 
-        <section class="card analytics-panel">
-            <h2 class="h5">Most late arrivals</h2>
+        <section class="card analytics-panel" aria-labelledby="analytics-late-title">
+            <h2 id="analytics-late-title" class="h5">Students with most late arrivals</h2>
+            <p class="analytics-section-note">Top students by number of late marks in the selected academic period.</p>
             <% if (dashboard.topLateStudents.length) { %>
             <div class="table-responsive">
                 <table class="table align-middle">
                     <thead><tr><th>Student</th><th>Class</th><th>Late marks</th></tr></thead>
                     <tbody>
                     <% dashboard.topLateStudents.forEach(student => { %>
-                        <tr><td><strong><%= student.studentName %></strong></td><td><%= student.className %></td><td><%= student.late %></td></tr>
+                        <tr><td><strong><%= student.studentName %></strong></td><td><%= student.className %></td><td><strong><%= student.late %></strong></td></tr>
                     <% }); %>
                     </tbody>
                 </table>
             </div>
-            <% } else { %><p class="text-muted mb-0">No late marks in this period.</p><% } %>
+            <% } else { %><p class="analytics-empty">No late marks were recorded in this academic period.</p><% } %>
         </section>
         <% } %>
     </main>

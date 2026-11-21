@@ -826,14 +826,6 @@ const getAttendanceAnalytics = async (req, res) => {
                 ORDER BY name, id
             `, [schoolId, ...accessibleSectionIds])
             : [];
-        const foundationAvailable = await attendanceRegisterWorkflow.isFoundationAvailable();
-        if (!foundationAvailable) {
-            return res.status(409).render('attendance/analytics', {
-                title: 'Attendance Analytics', user, sections, classes: [],
-                periods: [], filters: {}, dashboard: null,
-                error: 'Attendance register foundation is not installed yet.'
-            });
-        }
         const requestedSectionId = Number(req.query.section_id);
         const selectedSection = sections.find(item => Number(item.id) === requestedSectionId) || sections[0] || null;
         if (!selectedSection) {
@@ -843,6 +835,7 @@ const getAttendanceAnalytics = async (req, res) => {
                 error: 'No attendance sections are assigned to this account.'
             });
         }
+
         const sectionClasses = classes.filter(item => String(item.section_id) === String(selectedSection.id));
         const periods = await db.all(`
             SELECT session, term, start_date, end_date
@@ -861,31 +854,14 @@ const getAttendanceAnalytics = async (req, res) => {
                 dashboard: null, error: 'No academic period is configured for this section.'
             });
         }
-        const todayParts = new Intl.DateTimeFormat('en-CA', {
-            timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
-        }).formatToParts(new Date()).reduce((result, part) => {
-            if (part.type !== 'literal') result[part.type] = part.value;
-            return result;
-        }, {});
-        const today = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
-        const periodStart = selectedPeriod.start_date instanceof Date
-            ? selectedPeriod.start_date.toISOString().slice(0, 10) : String(selectedPeriod.start_date).slice(0, 10);
-        const periodEnd = selectedPeriod.end_date instanceof Date
-            ? selectedPeriod.end_date.toISOString().slice(0, 10) : String(selectedPeriod.end_date).slice(0, 10);
-        const startDate = req.query.start_date || periodStart;
-        const defaultEndDate = today < periodStart ? periodStart : (today < periodEnd ? today : periodEnd);
-        const endDate = req.query.end_date || defaultEndDate;
+
         const requestedClassId = req.query.class_id ? Number(req.query.class_id) : null;
         const selectedClasses = requestedClassId
             ? sectionClasses.filter(item => Number(item.id) === requestedClassId)
             : sectionClasses;
         const dashboard = await attendanceAnalyticsDashboard.getDashboard({
-            schoolId,
-            sectionId: Number(selectedSection.id),
-            session: selectedPeriod.session,
-            term: selectedPeriod.term,
-            startDate,
-            endDate,
+            schoolId, sectionId: Number(selectedSection.id),
+            session: selectedPeriod.session, term: selectedPeriod.term,
             classIds: selectedClasses.map(item => item.id)
         });
         return res.render('attendance/analytics', {
@@ -895,9 +871,7 @@ const getAttendanceAnalytics = async (req, res) => {
                 section_id: selectedSection.id,
                 class_id: requestedClassId && selectedClasses.length ? requestedClassId : '',
                 session: selectedPeriod.session,
-                term: selectedPeriod.term,
-                start_date: dashboard.filters.startDate,
-                end_date: dashboard.filters.endDate
+                term: selectedPeriod.term
             },
             dashboard,
             error: requestedClassId && !selectedClasses.length

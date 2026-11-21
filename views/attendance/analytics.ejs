@@ -41,7 +41,7 @@
             <div>
                 <a href="/attendance" class="analytics-back">&larr; Attendance</a>
                 <h1>Attendance Analytics</h1>
-                <p>Attendance performance, register completion and low-attendance monitoring by section.</p>
+                <p>Term attendance performance and low-attendance monitoring by section and class.</p>
             </div>
         </header>
 
@@ -53,7 +53,7 @@
             <form action="/attendance/analytics" method="GET" class="analytics-filter-grid">
                 <div class="form-group">
                     <label for="analytics-section">Section</label>
-                    <select id="analytics-section" name="section_id" class="form-control" required onchange="this.form.class_id.value='';this.form.session.value='';this.form.term.value='';this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
+                    <select id="analytics-section" name="section_id" class="form-control" required onchange="this.form.class_id.value='';this.form.session.value='';this.form.term.value='';this.form.submit()">
                         <% sections.forEach(section => { %>
                         <option value="<%= section.id %>" <%= String(filters.section_id) === String(section.id) ? 'selected' : '' %>><%= section.name %></option>
                         <% }); %>
@@ -70,7 +70,7 @@
                 </div>
                 <div class="form-group">
                     <label for="analytics-session">Session</label>
-                    <select id="analytics-session" name="session" class="form-control" required onchange="this.form.term.value='';this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
+                    <select id="analytics-session" name="session" class="form-control" required onchange="this.form.term.value='';this.form.submit()">
                         <% Array.from(new Set(periods.map(period => period.session))).forEach(session => { %>
                         <option value="<%= session %>" <%= filters.session === session ? 'selected' : '' %>><%= session %></option>
                         <% }); %>
@@ -78,19 +78,11 @@
                 </div>
                 <div class="form-group">
                     <label for="analytics-term">Term</label>
-                    <select id="analytics-term" name="term" class="form-control" required onchange="this.form.start_date.value='';this.form.end_date.value='';this.form.submit()">
+                    <select id="analytics-term" name="term" class="form-control" required onchange="this.form.submit()">
                         <% periods.filter(period => period.session === filters.session).forEach(period => { %>
                         <option value="<%= period.term %>" <%= filters.term === period.term ? 'selected' : '' %>><%= period.term %></option>
                         <% }); %>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label for="analytics-start">Start date</label>
-                    <input id="analytics-start" type="date" name="start_date" class="form-control" value="<%= filters.start_date || '' %>" required>
-                </div>
-                <div class="form-group">
-                    <label for="analytics-end">End date</label>
-                    <input id="analytics-end" type="date" name="end_date" class="form-control" value="<%= filters.end_date || '' %>" required>
                 </div>
                 <button class="btn analytics-apply" type="submit" style="width:100%;">Apply filters</button>
             </form>
@@ -104,14 +96,14 @@
                 <div class="analytics-metric-note"><%= dashboard.overview.attendedStudentDays %> attended of <%= dashboard.overview.totalStudentDays %> marked student-days</div>
             </div>
             <div class="card analytics-metric">
-                <div class="analytics-metric-label">Register completion</div>
-                <div class="analytics-metric-value"><%= dashboard.registerCompletion.completionRate === null ? '—' : dashboard.registerCompletion.completionRate + '%' %></div>
-                <div class="analytics-metric-note"><%= dashboard.registerCompletion.submittedRegisters %> submitted of <%= dashboard.registerCompletion.expectedClassDays %> expected class-days</div>
+                <div class="analytics-metric-label">Students tracked</div>
+                <div class="analytics-metric-value"><%= dashboard.overview.studentsTracked %></div>
+                <div class="analytics-metric-note">Students with attendance records in this selection</div>
             </div>
             <div class="card analytics-metric">
                 <div class="analytics-metric-label">Low-attendance students</div>
                 <div class="analytics-metric-value"><%= dashboard.overview.lowAttendanceCount %></div>
-                <div class="analytics-metric-note">Below their class's configured threshold</div>
+                <div class="analytics-metric-note">Below the configured class threshold</div>
             </div>
             <div class="card analytics-metric">
                 <div class="analytics-metric-label">Late arrivals</div>
@@ -121,32 +113,20 @@
         </section>
 
         <section class="card analytics-panel">
-            <h2 class="h5">Expected class-day register status</h2>
-            <p class="text-muted small">Approved closures are excluded. An incomplete or missing register is not treated as student absence.</p>
-            <div class="grid-2" style="gap:12px;">
-                <div><strong><%= dashboard.registerCompletion.expectedClassDays %></strong><div class="text-muted small">Expected class-days</div></div>
-                <div><strong><%= dashboard.registerCompletion.submittedRegisters %></strong><div class="text-muted small">Submitted registers</div></div>
-                <div><strong><%= dashboard.registerCompletion.incompleteRegisters %></strong><div class="text-muted small">Incomplete / reopened registers</div></div>
-                <div><strong><%= dashboard.registerCompletion.missingRegisters %></strong><div class="text-muted small">Missing registers</div></div>
-            </div>
-        </section>
-
-        <section class="card analytics-panel">
             <h2 class="h5">Class comparison</h2>
             <% if (dashboard.classComparison.length) { %>
             <div class="table-responsive">
                 <table class="table align-middle">
-                    <thead><tr><th>Class</th><th>Attendance</th><th>Expected days</th><th>Submitted</th><th>Incomplete</th><th>Missing</th><th>Low attendance</th></tr></thead>
+                    <thead><tr><th>Class</th><th>Attendance</th><th>Students tracked</th><th>Student-days</th><th>Low attendance</th><th>Threshold</th></tr></thead>
                     <tbody>
                     <% dashboard.classComparison.forEach(item => { %>
                         <tr>
                             <td><strong><%= item.className %></strong></td>
                             <td><%= item.attendanceRate === null ? '—' : item.attendanceRate + '%' %></td>
-                            <td><%= item.expectedClassDays %></td>
-                            <td><%= item.submittedRegisters %></td>
-                            <td><%= item.incompleteRegisters %></td>
-                            <td><%= item.missingRegisters %></td>
+                            <td><%= item.studentsTracked %></td>
+                            <td><%= item.totalStudentDays %></td>
                             <td><%= item.lowAttendanceCount %></td>
+                            <td><%= item.threshold === null ? 'Not configured' : item.threshold + '%' %></td>
                         </tr>
                     <% }); %>
                     </tbody>
@@ -160,7 +140,7 @@
             <% if (dashboard.dailySummary.length) { %>
             <div class="table-responsive">
                 <table class="table align-middle">
-                    <thead><tr><th>Date</th><th>Attendance rate</th><th>Expected</th><th>Submitted</th><th>Incomplete</th><th>Missing</th><th>Present</th><th>Late</th><th>Absent</th><th>Leave</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Attendance rate</th><th>Student-days</th><th>Present</th><th>Late</th><th>Absent</th><th>Leave</th></tr></thead>
                     <tbody>
                     <% dashboard.dailySummary.forEach(day => { %>
                         <tr>
@@ -171,10 +151,7 @@
                                     <div style="height:5px;width:<%= day.attendanceRate === null ? 0 : day.attendanceRate %>%;background:var(--primary);"></div>
                                 </div>
                             </td>
-                            <td><%= day.expectedClassDays %></td>
-                            <td><%= day.submittedRegisters %></td>
-                            <td><%= day.incompleteRegisters %></td>
-                            <td><%= day.missingRegisters %></td>
+                            <td><%= day.totalStudentDays %></td>
                             <td><%= day.present %></td>
                             <td><%= day.late %></td>
                             <td><%= day.absent %></td>
@@ -184,7 +161,7 @@
                     </tbody>
                 </table>
             </div>
-            <% } else { %><p class="text-muted mb-0">No scheduled class-days fall within this date range.</p><% } %>
+            <% } else { %><p class="text-muted mb-0">No attendance records have been recorded for this term and selection.</p><% } %>
         </section>
 
         <section class="card analytics-panel">

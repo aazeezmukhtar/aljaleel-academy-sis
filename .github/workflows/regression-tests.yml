@@ -61,6 +61,8 @@ jobs:
         run: npm run test:attendance-register-workflow-postgres
       - name: Run attendance register UI regression checks
         run: npm run test:attendance-register-ui
+      - name: Run context-only attendance analytics dashboard test
+        run: npm run test:attendance-analytics-dashboard
       - name: Run attendance controller handler integration tests
         run: npm run test:attendance-controller-handlers
       - name: Run attendance current-session class access tests

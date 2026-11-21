@@ -1241,9 +1241,12 @@ const pingAttendanceClass = async (req, res) => {
             new_notifications: result.createdCount,
             delivered_count: result.deliveredCount
         }, req.ip);
-        const message = result.createdCount > 0
-            ? 'In-app ping delivered to ' + result.recipientCount + ' responsible teacher(s).'
-            : 'This ping was already sent to the responsible teacher(s); no duplicate was created.';
+        const message = result.deliveredCount === result.recipientCount
+            ? (result.createdCount > 0
+                ? 'In-app ping delivered to ' + result.deliveredCount + ' responsible teacher(s).'
+                : 'This ping was already delivered; no duplicate notification was created.')
+            : 'Ping queued for ' + result.recipientCount + ' responsible teacher(s); ' +
+                result.deliveredCount + ' delivered and ' + result.pendingCount + ' still pending.';
         return res.redirect(returnTo + '&notice=' + encodeURIComponent(message));
     } catch (err) {
         console.error('pingAttendanceClass Error:', err);

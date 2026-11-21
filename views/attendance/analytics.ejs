@@ -115,7 +115,7 @@
         <div class="analytics-context" aria-label="Current report context">
             <span class="analytics-context-item"><i class="bi bi-building"></i> <%= sections.find(section => String(section.id) === String(filters.section_id))?.name || 'Selected section' %></span>
             <span class="analytics-context-item"><i class="bi bi-calendar3"></i> <%= filters.session %> · <%= filters.term %></span>
-            <span class="analytics-context-item"><i class="bi bi-calendar-range"></i> <%= dashboard.filters.startDate %> to <%= dashboard.filters.endDate %></span>
+            <span class="analytics-context-item"><i class="bi bi-calendar-range"></i> <%= dashboard.filters.startDate && dashboard.filters.endDate ? dashboard.filters.startDate + ' to ' + dashboard.filters.endDate : 'Academic period dates unavailable' %></span>
             <span class="analytics-context-item"><i class="bi bi-people"></i> <%= filters.class_id ? (classes.find(clazz => String(clazz.id) === String(filters.class_id))?.name || 'Selected class') : 'All accessible classes' %></span>
         </div>
 

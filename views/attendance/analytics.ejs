@@ -1,6 +1,5 @@
 <%- include('../partials/header') %>
 <style>
-    .attendance-analytics { --analytics-gap: 14px; }
     .attendance-analytics .analytics-heading { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:22px; }
     .attendance-analytics .analytics-heading h1 { margin:8px 0 6px; line-height:1.2; }
     .attendance-analytics .analytics-heading p { margin:0; color:var(--text-muted); max-width:680px; }
@@ -20,7 +19,6 @@
     .attendance-analytics .analytics-panel table { margin-bottom:0; }
     .attendance-analytics .analytics-panel thead th { white-space:nowrap; font-size:.82rem; color:var(--text-muted); background:var(--surface-muted,rgba(127,127,127,.06)); }
     .attendance-analytics .analytics-panel tbody td { vertical-align:middle; }
-    .attendance-analytics .analytics-empty { padding:16px; border:1px dashed var(--border-color,#e5e7eb); border-radius:10px; color:var(--text-muted); margin:0; }
     @media (min-width:900px) {
         .attendance-analytics .analytics-summary { grid-template-columns:repeat(4,minmax(0,1fr)); }
         .attendance-analytics .analytics-filter-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
@@ -33,7 +31,7 @@
         .attendance-analytics .analytics-summary { gap:10px; margin-bottom:16px; }
         .attendance-analytics .analytics-metric { padding:14px; }
         .attendance-analytics .analytics-panel { margin-bottom:16px; }
-        .attendance-analytics .analytics-panel .card { padding:14px; }
+        .attendance-analytics .analytics-panel { padding:14px; }
     }
 </style>
 <div class="dashboard-container">

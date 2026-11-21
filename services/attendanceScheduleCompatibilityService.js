@@ -16,7 +16,7 @@ function createAttendanceScheduleCompatibilityService(db) {
 
     async function isExpectedSchoolDay(input, client) {
         if (await hasScheduleFoundation(client)) {
-            return current.isExpectedSchoolDay(input, client);
+            return { ...(await current.isExpectedSchoolDay(input, client)), scheduleFoundationAvailable: true };
         }
         const weekday = isoWeekday(input.date);
         const rows = await db.all(
@@ -34,10 +34,10 @@ function createAttendanceScheduleCompatibilityService(db) {
         }
         if (!rows.length) {
             return { configured: true, expected: false, reason: 'not_a_scheduled_day',
-                weekday, scheduleId: null, scheduleSetId: null, source: 'legacy_class_schedule' };
+                weekday, scheduleId: null, scheduleSetId: null, source: 'legacy_class_schedule', scheduleFoundationAvailable: false };
         }
         return { configured: true, expected: true, weekday, scheduleId: rows[0].id,
-            scheduleSetId: null, source: 'legacy_class_schedule' };
+            scheduleSetId: null, source: 'legacy_class_schedule', scheduleFoundationAvailable: false };
     }
 
     return { hasScheduleFoundation, isExpectedSchoolDay };

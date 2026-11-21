@@ -83,7 +83,7 @@ function makeDb() {
     assert.strictEqual(otherSection.source, 'section_default');
     assert.deepStrictEqual(otherSection.weekdays, [6, 7, 1, 2, 3]);
 
-    const expectedMonday = await service.isExpectedSchoolDay({ schoolId: 1, classId: 10, date: '2026-11-23' });
+    const expectedMonday = await service.isExpectedSchoolDay({ schoolId: 1, classId: 10, date: '2026-12-07' });
     assert.strictEqual(expectedMonday.expected, true);
     assert.strictEqual(expectedMonday.source, 'section_default');
 

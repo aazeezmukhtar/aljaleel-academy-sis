@@ -37,6 +37,7 @@ function createAttendanceRegisterReminderService(db) {
     const { createAttendanceRegisterService } =
         require('./attendanceRegisterGenerationService');
     const registerGenerator = createAttendanceRegisterService(db);
+    const scheduleCompatibility = require('./attendanceScheduleCompatibilityService').createAttendanceScheduleCompatibilityService(db);
     const notificationDelivery = createSharedNotificationDeliveryService(db);
 
     async function isDeliveryQueueAvailable() {
@@ -84,7 +85,7 @@ function createAttendanceRegisterReminderService(db) {
         for (let offset = 6; offset >= 0 && remaining > 0; offset -= 1) {
             const date = shiftDate(today, -offset);
             const candidates = await db.all(`
-                SELECT DISTINCT c.school_id, c.id AS class_id
+                SELECT DISTINCT c.school_id, c.id AS class_id, c.section_id
                 FROM classes c
                 JOIN sections sec ON sec.id = c.section_id AND sec.school_id = c.school_id
                 JOIN section_academic_periods ap
@@ -111,9 +112,25 @@ function createAttendanceRegisterReminderService(db) {
                       )
                   )
                 ORDER BY c.school_id, c.id
-                LIMIT ?
-            `, [date, date, date, date, date, date, date, remaining]);
+            `, [date, date, date, date, date, date, date]);
             for (const candidate of candidates) {
+                let expectedDay;
+                try {
+                    expectedDay = await scheduleCompatibility.isExpectedSchoolDay({
+                        schoolId: candidate.school_id, classId: candidate.class_id,
+                        sectionId: candidate.section_id, date
+                    });
+                } catch (error) {
+                    errorCount += 1;
+                    console.error('[attendance-reminder-scheduler] Schedule resolution failed:', {
+                        schoolId: candidate.school_id, classId: candidate.class_id, date,
+                        message: error.message
+                    });
+                    remaining -= 1;
+                    continue;
+                }
+                if (!expectedDay.configured || !expectedDay.expected) continue;
+                if (remaining <= 0) break;
                 try {
                     const result = await registerGenerator.generateExpectedRegister({
                         schoolId: candidate.school_id,

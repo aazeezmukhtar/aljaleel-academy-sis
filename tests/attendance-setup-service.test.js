@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const ejs = require('ejs');
 const setupView = fs.readFileSync(path.resolve(__dirname, '../views/attendance/setup.ejs'), 'utf8');
+const setupController = fs.readFileSync(path.resolve(__dirname, '../controllers/attendanceController.js'), 'utf8');
 ejs.compile(setupView);
 assertViewDefaults();
 function assertViewDefaults() {
@@ -13,6 +14,18 @@ function assertViewDefaults() {
     assert.ok(setupView.includes('attendanceTodayKey'));
     assert.ok(!setupView.includes("window.prompt('Enter the last effective date (YYYY-MM-DD):', button.dataset.start)"));
     assert.ok(setupView.includes('Setup readiness'));
+    assert.ok(setupView.includes('Section default schedule'));
+    assert.ok(setupView.includes('Class-specific override'));
+    assert.ok(setupView.includes('full class override'));
+    assert.ok(setupView.includes("formData.getAll('weekdays')"));
+    assert.ok(setupView.includes("action: 'end_schedule_set'"));
+    assert.ok(setupView.includes('scheduleFoundationAvailable'));
+    assert.ok(!setupView.includes('data-action="schedule"'));
+    assert.ok(setupController.includes("action === 'section_schedule' || action === 'class_schedule'"));
+    assert.ok(setupController.includes('attendanceSetupService.createScheduleSet(input)'));
+    assert.ok(setupController.includes("action === 'end_schedule_set'"));
+    assert.ok(setupController.includes('attendanceSetupService.endScheduleSet(input)'));
+    assert.ok(setupController.includes('scheduleFoundationAvailable'));
     assert.ok(setupView.includes('setup.readinessSummary.ready'));
     assert.ok(setupView.includes('setup.readinessSummary.incomplete'));
     assert.ok(setupView.includes("item.missing.join(' · ')"));
@@ -74,29 +87,90 @@ function makeDb() {
     }, {});
     const today = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
     const readinessDb = makeDb();
-    readinessDb.all = async sql => {
+    readinessDb.get = async (sql, params) => {
+        if (sql.includes('FROM staff WHERE id = ? AND school_id = ?')) return { id: 7, role: 'Admin' };
+        if (sql.includes('sqlite_master')) return { table_count: 2 };
+        if (sql.includes('FROM classes c')) return { id: 20, school_id: 1, section_id: 10 };
+        return null;
+    };
+    let hasDefaultSchedule = true;
+    let hasClassOverride = false;
+    let scheduleConflict = false;
+    readinessDb.all = async (sql, params) => {
         if (sql.includes('SELECT c.id, c.name, c.section_id')) return [{ id: 20, name: 'Nursery 1', section_id: 10, section_name: 'Academy' }];
         if (sql.includes('SELECT p.*')) return [{ section_id: 10, status: 'active', start_date: today, end_date: today }];
-        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_schedules')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
+        if (sql.includes('FROM attendance_schedule_sets ss JOIN sections')) {
+            const rows = [];
+            if (hasDefaultSchedule) [1, 2, 3, 4, 5].forEach(weekday => rows.push({
+                id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy',
+                class_id: null, class_name: null, effective_from: today, effective_to: null, weekday
+            }));
+            if (hasClassOverride) [4, 5, 6, 7].forEach(weekday => rows.push({
+                id: 32, scope_type: 'class', section_id: 10, section_name: 'Academy',
+                class_id: 20, class_name: 'Nursery 1', effective_from: today, effective_to: null, weekday
+            }));
+            return rows;
+        }
+        if (sql.includes('FROM attendance_schedule_sets ss') && sql.includes('LEFT JOIN attendance_schedule_days')) {
+            const scope = params[2];
+            if (scope === 'class') return hasClassOverride ? [4, 5, 6, 7].map(weekday => ({
+                schedule_set_id: 32, scope_type: 'class', effective_from: today,
+                effective_to: null, weekday
+            })) : [];
+            if (!hasDefaultSchedule) return [];
+            const rows = [1, 2, 3, 4, 5].map(weekday => ({
+                schedule_set_id: 31, scope_type: 'section', effective_from: today,
+                effective_to: null, weekday
+            }));
+            if (scheduleConflict) rows.push({ schedule_set_id: 33, scope_type: 'section',
+                effective_from: today, effective_to: null, weekday: 1 });
+            return rows;
+        }
         if (sql.includes('SELECT r.*, c.name AS class_name')) return [{ class_id: 20, section_id: 10, responsibility_type: 'primary', effective_from: today, effective_to: null }];
-        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
+        if (sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
         return [];
     };
-    const readiness = await createAttendanceSetupService(readinessDb).listSetup(base);
-    assert.strictEqual(readiness.readinessSummary.total, 1);
-    assert.strictEqual(readiness.readinessSummary.ready, 1);
-    assert.deepStrictEqual(readiness.readiness[0].missing, []);
-    readinessDb.all = async sql => {
+    const inheritedReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(inheritedReadiness.scheduleFoundationAvailable, true);
+    assert.strictEqual(inheritedReadiness.readinessSummary.total, 1);
+    assert.strictEqual(inheritedReadiness.readinessSummary.ready, 1);
+    assert.strictEqual(inheritedReadiness.readiness[0].schedule_source, 'section_default');
+    assert.deepStrictEqual(inheritedReadiness.readiness[0].schedule_weekdays, [1, 2, 3, 4, 5]);
+    assert.deepStrictEqual(inheritedReadiness.readiness[0].missing, []);
+
+    hasClassOverride = true;
+    const overrideReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(overrideReadiness.readiness[0].schedule_source, 'class_override');
+    assert.deepStrictEqual(overrideReadiness.readiness[0].schedule_weekdays, [4, 5, 6, 7]);
+
+    hasClassOverride = false;
+    scheduleConflict = true;
+    const conflictReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(conflictReadiness.readiness[0].schedule_issue, 'SCHEDULE_CONFLICT');
+    assert.ok(conflictReadiness.readiness[0].missing.includes('Schedule conflict'));
+
+    scheduleConflict = false;
+    hasDefaultSchedule = false;
+    const missingReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(missingReadiness.readinessSummary.incomplete, 1);
+    assert.deepStrictEqual(missingReadiness.readiness[0].missing, ['Opening days']);
+
+    const migrationMissingDb = makeDb();
+    migrationMissingDb.get = async sql => {
+        if (sql.includes('FROM staff WHERE id = ? AND school_id = ?')) return { id: 7, role: 'Admin' };
+        if (sql.includes('sqlite_master')) return { table_count: 1 };
+        return null;
+    };
+    migrationMissingDb.all = async sql => {
         if (sql.includes('SELECT c.id, c.name, c.section_id')) return [{ id: 20, name: 'Nursery 1', section_id: 10, section_name: 'Academy' }];
-        if (sql.includes('SELECT p.*')) return [{ section_id: 10, status: 'active', start_date: today, end_date: today }];
-        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_schedules')) return [];
-        if (sql.includes('SELECT r.*, c.name AS class_name')) return [{ class_id: 20, section_id: 10, responsibility_type: 'primary', effective_from: today, effective_to: null }];
-        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
+        if (sql.includes('SELECT p.*')) return [];
         return [];
     };
-    const incomplete = await createAttendanceSetupService(readinessDb).listSetup(base);
-    assert.strictEqual(incomplete.readinessSummary.incomplete, 1);
-    assert.deepStrictEqual(incomplete.readiness[0].missing, ['Opening days']);
+    const migrationMissing = await createAttendanceSetupService(migrationMissingDb).listSetup(base);
+    assert.strictEqual(migrationMissing.scheduleFoundationAvailable, false);
+    assert.strictEqual(migrationMissing.readiness[0].schedule_issue, 'schedule_foundation_unavailable');
+    assert.ok(migrationMissing.readiness[0].missing.includes('Schedule migration required'));
+
     await assert.rejects(
         service.createSchedule({ ...base, classId: 20, sectionId: 10, weekday: 8, startDate: '2026-09-01' }),
         /weekday/

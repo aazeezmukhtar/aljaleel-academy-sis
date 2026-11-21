@@ -200,12 +200,12 @@ function createAttendanceScheduleService(db) {
         return db.transaction(async client => {
             const { schoolId, actorStaffId } = await admin(input, client);
             const before = await db.get(
-                'SELECT ss.*, GROUP_CONCAT(sd.weekday) AS weekdays FROM attendance_schedule_sets ss ' +
-                'LEFT JOIN attendance_schedule_days sd ON sd.schedule_set_id = ss.id ' +
-                'WHERE ss.id = ? AND ss.school_id = ? GROUP BY ss.id',
+                'SELECT * FROM attendance_schedule_sets WHERE id = ? AND school_id = ?',
                 [id, schoolId], client
             );
             if (!before) throw new Error('The selected schedule set was not found in this school.');
+            const beforeDays = await db.all('SELECT weekday FROM attendance_schedule_days WHERE schedule_set_id = ? ORDER BY weekday', [id], client);
+            before.weekdays = beforeDays.map(row => Number(row.weekday));
             const start = String(before.effective_from).slice(0, 10);
             if (end < start) throw new Error('Effective to cannot be earlier than the schedule start date.');
             if (before.effective_to && String(before.effective_to).slice(0, 10) <= end) {

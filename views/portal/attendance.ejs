@@ -4,11 +4,47 @@
     <%- include('../partials/student_shell_head') %>
     <link rel="stylesheet" href="/css/academics.css">
     <link rel="stylesheet" href="/css/attendance.css">
+    <style>
+        .portal-attendance .acm-desktop-header { margin-bottom:18px; }
+        .portal-attendance .acm-greeting-title { line-height:1.2; }
+        .portal-attendance .acm-academic-ctx { min-width:0; }
+        .portal-attendance form.acm-academic-ctx { padding:12px 14px; border:1px solid var(--acm-border); border-radius:12px; background:var(--acm-surface); }
+        .portal-attendance form.acm-academic-ctx label { font-size:.88rem; font-weight:650; }
+        .portal-attendance form.acm-academic-ctx select { min-height:40px; }
+        .portal-attendance > .acm-academic-ctx:not(form) { display:flex; align-items:center; flex-wrap:wrap; gap:7px; padding:10px 13px; margin:12px 0 16px; border:1px solid var(--acm-border); border-radius:10px; background:var(--acm-surface); font-size:.88rem; }
+        .portal-attendance .acm-term-selector { display:flex; gap:8px; overflow-x:auto; padding:2px 1px 8px; margin-bottom:16px; scrollbar-width:thin; }
+        .portal-attendance .acm-term-btn { flex:0 0 auto; }
+        .portal-attendance .acm-att-hero-card { padding:clamp(16px,3vw,24px); }
+        .portal-attendance .acm-att-rate-row { align-items:flex-start; }
+        .portal-attendance .acm-att-rate-total { margin-left:auto; }
+        .portal-attendance .acm-perf-summary { display:grid; grid-template-columns:repeat(auto-fit,minmax(115px,1fr)); gap:10px; }
+        .portal-attendance .acm-metric { min-width:0; }
+        .portal-attendance .acm-section { min-width:0; }
+        .portal-attendance .acm-att-history-row { min-width:0; }
+        .portal-attendance .acm-att-date-group { min-width:0; overflow-wrap:anywhere; }
+        .portal-attendance .acm-board-filters { max-width:100%; }
+        .portal-attendance .acm-cal-wrapper { min-width:0; }
+        .portal-attendance .acm-cal-cell { min-width:0; }
+        .portal-attendance a:focus-visible,
+        .portal-attendance select:focus-visible { outline:3px solid color-mix(in srgb,var(--school-primary,var(--acm-navy)) 28%,transparent); outline-offset:2px; }
+        @media (max-width:600px) {
+            .portal-attendance .acm-desktop-header { gap:10px; }
+            .portal-attendance .acm-att-rate-number { font-size:2.25rem; }
+            .portal-attendance .acm-att-rate-total { text-align:left; margin-left:0; }
+            .portal-attendance .acm-att-history-row { align-items:flex-start; padding:12px; }
+            .portal-attendance .acm-att-date-title { font-size:.92rem; }
+            .portal-attendance .acm-cal-wrapper { padding:12px; }
+            .portal-attendance .acm-cal-table-grid { gap:3px; }
+            .portal-attendance .acm-cal-day-label { font-size:.65rem; letter-spacing:0; }
+            .portal-attendance .acm-cal-cell { font-size:.72rem; }
+        }
+    </style>
+
 </head>
 <body>
 <div class="acm-portal-shell">
     <%- include('../partials/student_shell_nav') %>
-    <main class="acm-main-content">
+    <main class="acm-main-content portal-attendance">
         <%- include('../partials/student_shell_header') %>
 
         <div class="acm-desktop-header">

@@ -1,7 +1,7 @@
 'use strict';
 
 const { normalizeDate } = require('./attendanceAnalyticsService');
-const { createAttendanceScheduleService } = require('./attendanceScheduleService');
+const { createAttendanceScheduleCompatibilityService } = require('./attendanceScheduleCompatibilityService');
 
 function addDays(date, amount) {
     const value = new Date(date + 'T00:00:00Z');
@@ -47,7 +47,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
         throw new Error('Attendance dashboard service requires the database and shared analytics service.');
     }
 
-    const scheduleService = createAttendanceScheduleService(db);
+    const scheduleService = createAttendanceScheduleCompatibilityService(db);
 
     async function getDashboard(input) {
         const schoolId = Number(input && input.schoolId);
@@ -136,7 +136,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
             for (const classItem of classes) {
                 let resolved;
                 try {
-                    resolved = await scheduleService.isExpectedSchoolDay({ schoolId, classId: Number(classItem.id), date });
+                    resolved = await scheduleService.isExpectedSchoolDay({ schoolId, classId: Number(classItem.id), sectionId, date });
                 } catch (error) {
                     scheduleIssues.push({ classId: classItem.id, className: classItem.name,
                         sectionId, date, reason: error.code || 'schedule_resolution_error' });
@@ -155,7 +155,7 @@ function createAttendanceAnalyticsDashboardService(db, analyticsService) {
                 const status = !register ? 'missing' :
                     register.status === 'submitted' ? 'submitted' : 'incomplete';
                 expectedDays.push({ key, classId: classItem.id, date, status,
-                    scheduleSetId: resolved.scheduleSetId, scheduleSource: resolved.source });
+                    scheduleSetId: resolved.scheduleSetId || null, scheduleSource: resolved.source });
                 const classStats = classExpected.get(String(classItem.id));
                 if (classStats) {
                     classStats.expectedClassDays += 1;

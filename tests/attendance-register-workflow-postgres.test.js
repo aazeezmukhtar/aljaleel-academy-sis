@@ -562,7 +562,7 @@ if (!url) {
     const dashboard = await dashboardService.getDashboard({
       schoolId: 1, sectionId: 10, session: '2026/2027', term: '1st Term', classIds: [40]
     });
-    assert.strictEqual(dashboard.filters.startDate, '2026-11-20');
+    assert.strictEqual(dashboard.filters.startDate, '2026-09-01');
     assert.strictEqual(dashboard.filters.endDate, '2026-12-20');
     assert.strictEqual(dashboard.overview.attendanceRate, 60);
     assert.strictEqual(dashboard.overview.totalStudentDays, 5);

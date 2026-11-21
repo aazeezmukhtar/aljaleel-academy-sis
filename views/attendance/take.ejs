@@ -188,20 +188,20 @@
     .attendance-status-summary {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
-        margin: 0 0 14px;
+        gap: 6px;
+        margin: 0 0 12px;
     }
 
     .attendance-status-chip {
         display: inline-flex;
         align-items: center;
         gap: 6px;
-        padding: 6px 10px;
+        padding: 4px 8px;
         border-radius: 999px;
         background: #f8fafc;
         border: 1px solid #e2e8f0;
         color: #334155;
-        font-size: 0.78rem;
+        font-size: 0.74rem;
         font-weight: 700;
     }
 
@@ -213,14 +213,14 @@
     .student-grid {
         display: grid;
         grid-template-columns: 1fr;
-        gap: 8px;
+        gap: 6px;
         margin-bottom: 60px;
     }
 
     .student-row-card {
         background: white;
-        padding: 10px 15px;
-        border-radius: 12px;
+        padding: 8px 12px;
+        border-radius: 10px;
         border: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
@@ -238,21 +238,29 @@
 
     /* Cycle Button */
     .cycle-btn {
-        width: 75px;
-        padding: 6px 4px;
+        min-width: 82px;
+        min-height: 38px;
+        padding: 6px 8px;
         border-radius: 8px;
-        border: 2px solid transparent;
+        border: 1px solid transparent;
         font-weight: 800;
-        font-size: 0.65rem;
-        display: flex;
-        flex-direction: column;
+        font-size: 0.66rem;
+        display: inline-flex;
+        flex-direction: row;
         align-items: center;
         justify-content: center;
-        gap: 2px;
+        gap: 5px;
         cursor: pointer;
-        transition: all 0.2s;
+        transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
         text-transform: uppercase;
+        white-space: nowrap;
     }
+    .cycle-btn:active:not(:disabled) { transform: scale(0.97); }
+    .cycle-btn:focus-visible {
+        outline: 3px solid rgba(0, 28, 44, 0.28);
+        outline-offset: 2px;
+    }
+    .cycle-btn:disabled { cursor: not-allowed; opacity: 0.78; }
 
     .btn-status-absent { background: #fef2f2; color: #ef4444; border-color: #fee2e2; }
     .btn-status-present { background: #f0fdf4; color: #10b981; border-color: #dcfce7; }
@@ -260,17 +268,31 @@
     .btn-status-late { background: #fffbeb; color: #f59e0b; border-color: #fef3c7; }
     .btn-status-unrecorded { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
 
-    .cycle-btn i { font-size: 1.2rem; line-height: 1; }
+    .cycle-btn i { font-size: 0.95rem; line-height: 1; }
 
     .btn-xs { padding: 4px 10px; font-size: 0.7rem; border-radius: 6px; font-weight: 700; }
 
     @media (max-width: 991px) {
-        .student-row-card { padding: 8px 10px; }
+        .student-row-card { padding: 7px 9px; gap: 8px; }
         .row-info, .row-bio { text-align: left; align-items: flex-start; }
         .row-name { font-size: 0.82rem; line-height: 1.2; }
-        .cycle-btn { width: 65px; padding: 5px 2px; font-size: 0.6rem; }
-        .cycle-btn i { font-size: 1.1rem; }
+        .cycle-btn { min-width: 76px; min-height: 36px; padding: 5px 6px; font-size: 0.59rem; }
+        .cycle-btn i { font-size: 0.9rem; }
         .sticky-attendance-header { margin: -10px -10px 15px; padding: 10px 15px; }
+    }
+
+    @media (max-width: 600px) {
+        .header-main { align-items: flex-start; gap: 8px; flex-wrap: wrap; }
+        .header-main .action-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+        .header-main .action-buttons .btn { padding: 6px 8px; font-size: 0.68rem; }
+        .header-main .action-buttons .attendance-save-action,
+        .header-main .action-buttons #submit-attendance-register { min-height: 34px; }
+        .header-meta { gap: 8px; }
+        .meta-pill { padding: 4px 8px; }
+        .attendance-status-summary { gap: 5px; }
+        .attendance-status-chip { padding: 4px 7px; font-size: 0.69rem; }
+        .student-row-card { gap: 6px; }
+        .row-info { gap: 8px; }
     }
 
     @media (max-width: 991px) {

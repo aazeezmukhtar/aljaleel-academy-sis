@@ -54,7 +54,7 @@ Only administrative responsibility for a class grants permission to mark attenda
 The accepted sources of administrative responsibility are:
 
 1. `classes.form_teacher_id` matching the signed-in staff member.
-2. A `class_assignments` row matching the staff member, class, and the class section's applicable current session.
+2. A `class_assignments` row matching the staff member, class, and the class section's applicable current session. The current session is resolved from that section's calendar; the tenant's system `current_session` setting is only a fallback when the section has no configured session. A class assignment from a previous session must not grant current attendance access. For example, if Nursery 2 is assigned in 2025/2026 and Primary 1 in 2026/2027, a 2026/2027 calendar must expose Primary 1 but not the old Nursery 2 assignment. The `classes.form_teacher_id` field remains a valid current administrative assignment because it stores the class's current form teacher, not a session history.
 
 These sources are treated as an OR relationship. Duplicate matches must not duplicate classes.
 
@@ -124,6 +124,8 @@ The existing attendance table and academic session/term fields remain the initia
 2. A class with no matching attendance rows is shown as No attendance recorded, not Closed or Expected.
 3. Academy and Tahfeez can be displayed with their own session/term contexts.
 4. Historical attendance is queried using its original session and term, not today's context.
+5. A teacher's 2025/2026 class assignment does not grant access when the applicable section calendar is 2026/2027; a matching 2026/2027 assignment does.
+6. Academy and Tahfeez assignment checks use their own section current sessions when those differ.
 5. A form teacher can open, save and view attendance for the class.
 6. A staff member with a matching session-specific class assignment can open, save and view attendance for that class.
 7. A subject-only teacher cannot see the class in the marking selector.

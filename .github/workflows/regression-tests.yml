@@ -63,6 +63,8 @@ jobs:
         run: npm run test:attendance-register-ui
       - name: Run attendance controller handler integration tests
         run: npm run test:attendance-controller-handlers
+      - name: Run attendance current-session class access tests
+        run: npm run test:attendance-current-session-access
       - name: Run attendance reminder notification handler test
         run: npm run test:attendance-reminder-notification
       - name: Run attendance scheduler run history tests

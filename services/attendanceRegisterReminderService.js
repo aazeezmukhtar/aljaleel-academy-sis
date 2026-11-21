@@ -34,7 +34,7 @@ function addMinutes(value, minutes) {
 
 function createAttendanceRegisterReminderService(db) {
     if (!db) throw new Error('An attendance reminder database adapter is required.');
-    const { createAttendanceRegisterService, isoWeekday } =
+    const { createAttendanceRegisterService } =
         require('./attendanceRegisterGenerationService');
     const registerGenerator = createAttendanceRegisterService(db);
     const notificationDelivery = createSharedNotificationDeliveryService(db);
@@ -83,38 +83,36 @@ function createAttendanceRegisterReminderService(db) {
         let remaining = limit;
         for (let offset = 6; offset >= 0 && remaining > 0; offset -= 1) {
             const date = shiftDate(today, -offset);
-            const weekday = isoWeekday(date);
             const candidates = await db.all(`
-                SELECT DISTINCT sch.school_id, sch.class_id
-                FROM class_attendance_schedules sch
+                SELECT DISTINCT c.school_id, c.id AS class_id
+                FROM classes c
+                JOIN sections sec ON sec.id = c.section_id AND sec.school_id = c.school_id
                 JOIN section_academic_periods ap
-                  ON ap.school_id = sch.school_id AND ap.section_id = sch.section_id
+                  ON ap.school_id = c.school_id AND ap.section_id = c.section_id
                  AND ap.start_date <= ? AND ap.end_date >= ?
                  AND ap.status IN ('active', 'completed')
                 JOIN class_attendance_settings cfg
-                  ON cfg.school_id = sch.school_id AND cfg.class_id = sch.class_id
-                 AND cfg.section_id = sch.section_id AND cfg.effective_from <= ?
+                  ON cfg.school_id = c.school_id AND cfg.class_id = c.id
+                 AND cfg.section_id = c.section_id AND cfg.effective_from <= ?
                  AND (cfg.effective_to IS NULL OR cfg.effective_to >= ?)
-                WHERE sch.weekday = ? AND sch.effective_from <= ?
-                  AND (sch.effective_to IS NULL OR sch.effective_to >= ?)
-                  AND NOT EXISTS (
+                WHERE NOT EXISTS (
                     SELECT 1 FROM attendance_registers ar
-                    WHERE ar.school_id = sch.school_id AND ar.class_id = sch.class_id
-                      AND ar.section_id = sch.section_id AND ar.register_date = ?
-                  )
+                    WHERE ar.school_id = c.school_id AND ar.class_id = c.id
+                      AND ar.section_id = c.section_id AND ar.register_date = ?
+                )
                   AND NOT EXISTS (
                     SELECT 1 FROM class_attendance_closures cl
-                    WHERE cl.school_id = sch.school_id AND cl.status = 'approved'
+                    WHERE cl.school_id = c.school_id AND cl.status = 'approved'
                       AND cl.start_date <= ? AND cl.end_date >= ?
                       AND (
                         cl.scope_type = 'school'
-                        OR (cl.scope_type = 'section' AND cl.section_id = sch.section_id)
-                        OR (cl.scope_type = 'class' AND cl.section_id = sch.section_id AND cl.class_id = sch.class_id)
+                        OR (cl.scope_type = 'section' AND cl.section_id = c.section_id)
+                        OR (cl.scope_type = 'class' AND cl.section_id = c.section_id AND cl.class_id = c.id)
                       )
                   )
-                ORDER BY sch.school_id, sch.class_id
+                ORDER BY c.school_id, c.id
                 LIMIT ?
-            `, [date, date, date, date, weekday, date, date, date, date, date, remaining]);
+            `, [date, date, date, date, date, date, date, remaining]);
             for (const candidate of candidates) {
                 try {
                     const result = await registerGenerator.generateExpectedRegister({

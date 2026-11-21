@@ -88,23 +88,37 @@ function makeDb() {
         return null;
     };
     let hasDefaultSchedule = true;
+    let hasClassOverride = false;
+    let scheduleConflict = false;
     readinessDb.all = async (sql, params) => {
         if (sql.includes('SELECT c.id, c.name, c.section_id')) return [{ id: 20, name: 'Nursery 1', section_id: 10, section_name: 'Academy' }];
         if (sql.includes('SELECT p.*')) return [{ section_id: 10, status: 'active', start_date: today, end_date: today }];
-        if (sql.includes('FROM attendance_schedule_sets ss JOIN sections')) return hasDefaultSchedule
-            ? [{ id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 1 },
-               { id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 2 },
-               { id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 3 },
-               { id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 4 },
-               { id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 5 }]
-            : [];
+        if (sql.includes('FROM attendance_schedule_sets ss JOIN sections')) {
+            const rows = [];
+            if (hasDefaultSchedule) [1, 2, 3, 4, 5].forEach(weekday => rows.push({
+                id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy',
+                class_id: null, class_name: null, effective_from: today, effective_to: null, weekday
+            }));
+            if (hasClassOverride) [4, 5, 6, 7].forEach(weekday => rows.push({
+                id: 32, scope_type: 'class', section_id: 10, section_name: 'Academy',
+                class_id: 20, class_name: 'Nursery 1', effective_from: today, effective_to: null, weekday
+            }));
+            return rows;
+        }
         if (sql.includes('FROM attendance_schedule_sets ss') && sql.includes('LEFT JOIN attendance_schedule_days')) {
             const scope = params[2];
-            if (scope === 'class') return [];
-            return hasDefaultSchedule ? [1, 2, 3, 4, 5].map(weekday => ({
-                schedule_set_id: 31, scope_type: 'section', effective_from: today,
+            if (scope === 'class') return hasClassOverride ? [4, 5, 6, 7].map(weekday => ({
+                schedule_set_id: 32, scope_type: 'class', effective_from: today,
                 effective_to: null, weekday
             })) : [];
+            if (!hasDefaultSchedule) return [];
+            const rows = [1, 2, 3, 4, 5].map(weekday => ({
+                schedule_set_id: 31, scope_type: 'section', effective_from: today,
+                effective_to: null, weekday
+            }));
+            if (scheduleConflict) rows.push({ schedule_set_id: 33, scope_type: 'section',
+                effective_from: today, effective_to: null, weekday: 1 });
+            return rows;
         }
         if (sql.includes('SELECT r.*, c.name AS class_name')) return [{ class_id: 20, section_id: 10, responsibility_type: 'primary', effective_from: today, effective_to: null }];
         if (sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
@@ -118,6 +132,18 @@ function makeDb() {
     assert.deepStrictEqual(inheritedReadiness.readiness[0].schedule_weekdays, [1, 2, 3, 4, 5]);
     assert.deepStrictEqual(inheritedReadiness.readiness[0].missing, []);
 
+    hasClassOverride = true;
+    const overrideReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(overrideReadiness.readiness[0].schedule_source, 'class_override');
+    assert.deepStrictEqual(overrideReadiness.readiness[0].schedule_weekdays, [4, 5, 6, 7]);
+
+    hasClassOverride = false;
+    scheduleConflict = true;
+    const conflictReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(conflictReadiness.readiness[0].schedule_issue, 'SCHEDULE_CONFLICT');
+    assert.ok(conflictReadiness.readiness[0].missing.includes('Schedule conflict'));
+
+    scheduleConflict = false;
     hasDefaultSchedule = false;
     const missingReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
     assert.strictEqual(missingReadiness.readinessSummary.incomplete, 1);

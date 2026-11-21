@@ -93,3 +93,26 @@ Files:
 This additive/manual migration creates the section academic-period, class schedule, staff responsibility, class settings, closure, register, expected-student snapshot, event, reminder, and audit tables. It leaves the existing `attendance` table and all existing attendance rows unchanged. It relies on the previously introduced `student_enrollment_periods` table for dated roster membership. No historical dates or schedules are inferred. It is not wired into startup.
 
 Run the SQLite disposable migration test with `npm run test:attendance-register-sqlite`. Run PostgreSQL only against a disposable PostgreSQL 17.6 database with `PG_TEST_URL` set, using `npm run test:attendance-register-postgres`. Never point that test at production Supabase. See the dedicated migration note for invariants, application work still required, and production safety gates.
+
+
+## Attendance section defaults and class overrides (2026-11-21)
+
+Files:
+
+- \`20261121_attendance_schedule_sets.postgres.sql\`
+- \`20261121_attendance_schedule_sets.sqlite.sql\`
+- \`20261121_attendance_schedule_sets.md\`
+- \`20261121_attendance_schedule_sets_preflight.postgres.sql\`
+- \`20261121_attendance_schedule_sets_preflight.sqlite.sql\`
+
+This additive/manual migration introduces normalized section/class schedule sets and weekday rows. New registers can reference the exact schedule set used at generation while legacy registers retain their original \`schedule_id\`. The SQLite variant rebuilds \`attendance_registers\` to make the legacy reference nullable and preserve dependent child-table references. Neither migration seeds actual schedules or academic periods, alters the legacy \`attendance\` table, or runs at application startup.
+
+The shared resolution and validation service is \`services/attendanceScheduleService.js\`. Its tests cover inherited defaults, full class replacement, date-scoped fallback, section isolation, expected-day checks and fail-closed conflict detection.
+
+Run:
+
+\`\`\`sh
+npm run test:attendance-schedule
+\`\`\`
+
+Production execution remains a separate approval step after read-only preflight, verified backup/restore, and disposable PostgreSQL 17.6 validation. Do not execute either migration against production without separate explicit approval.

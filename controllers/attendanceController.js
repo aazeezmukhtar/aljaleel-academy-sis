@@ -15,62 +15,18 @@ const attendanceAnalyticsDashboard = createAttendanceAnalyticsDashboardService(d
 const { createAttendanceOperationsService } = require('../services/attendanceOperationsService');
 const attendanceOperations = createAttendanceOperationsService(db);
 
-// Helper: get classes assigned to a staff member
-const getAssignedClasses = async (user, schoolId) => {
-    if (!schoolId) return [];
-    if (user.role === 'Admin') {
-        return await db.all(`
-            SELECT c.*, s.name AS section_name
-            FROM classes c
-            LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
-            WHERE c.school_id = ?
-            ORDER BY s.name ASC, c.name ASC
-        `, [schoolId]);
-    }
-    const staffId = Number(user.id);
-    const hasRegisterFoundation = await attendanceRegisterWorkflow.isFoundationAvailable();
-    const responsibilityClause = hasRegisterFoundation
-        ? `OR EXISTS (
-            SELECT 1 FROM class_attendance_responsibilities cr
-            WHERE cr.school_id = c.school_id AND cr.class_id = c.id
-              AND cr.section_id = c.section_id AND cr.staff_id = ?
-              AND cr.effective_from <= ? AND (cr.effective_to IS NULL OR cr.effective_to >= ?)
-        )`
-        : '';
-    const todayParts = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
-    }).formatToParts(new Date()).reduce((result, part) => {
-        if (part.type !== 'literal') result[part.type] = part.value;
-        return result;
-    }, {});
-    const schoolDate = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
-    const params = [staffId, staffId, staffId];
-    if (hasRegisterFoundation) params.push(staffId, schoolDate, schoolDate);
-    params.push(schoolId);
-    return await db.all(`
-        SELECT DISTINCT c.*, s.name AS section_name
-        FROM classes c
-        LEFT JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
-        LEFT JOIN class_assignments ca ON c.id = ca.class_id AND ca.staff_id = ?
-        LEFT JOIN subject_assignments sa ON c.id = sa.class_id AND sa.teacher_id = ?
-        WHERE (c.form_teacher_id = ? OR ca.staff_id IS NOT NULL OR sa.teacher_id IS NOT NULL ${responsibilityClause})
-          AND c.school_id = ?
-        ORDER BY s.name ASC, c.name ASC
-    `, params);
-};
+// Attendance access is based only on current administrative responsibility.
+const { createAttendanceClassAccessService } = require('../services/attendanceClassAccessService');
+const attendanceClassAccess = createAttendanceClassAccessService({ db, sessionHelper });
 
-// Only an administrator or the responsible teacher snapshotted on the register
-// may record, correct or submit register attendance.
+const getAssignedClasses = (user, schoolId) =>
+    attendanceClassAccess.getAssignedClasses(user, schoolId);
+
+// Register snapshots do not preserve access after a teacher's assignment moves
+// to another class/session. Re-check the current class responsibility each time.
 const hasRegisterAttendanceAuthority = async (user, register, schoolId) => {
-    if (user && user.role === 'Admin') return true;
-    if (!user || !register || !register.responsibility_id) return false;
-    const responsible = await db.get(`
-        SELECT r.staff_id
-        FROM class_attendance_responsibilities r
-        JOIN staff s ON s.id = r.staff_id AND s.school_id = r.school_id
-        WHERE r.id = ? AND r.school_id = ?
-    `, [register.responsibility_id, schoolId]);
-    return !!responsible && String(responsible.staff_id) === String(user.id);
+    if (!register || !register.class_id) return false;
+    return attendanceClassAccess.hasClassAttendanceAuthority(user, register.class_id, schoolId);
 };
 
 // Resolve academic settings from the class's own section when it belongs to one.

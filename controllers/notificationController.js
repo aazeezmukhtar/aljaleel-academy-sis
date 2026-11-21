@@ -127,8 +127,32 @@ exports.getLatestNotifications = async (req, res) => {
             reminderNotifications = reminderNotifications.slice(0, 15);
         }
 
+        // Manual class-attendance pings use the shared in-app queue independently
+        // of the deferred attendance-register foundation.
+        let classAttendancePings = [];
+        if (req.session.staff && await sharedNotificationDelivery.isAvailable()) {
+            const deliveries = await sharedNotificationDelivery.listForRecipient({
+                schoolId,
+                recipientType: 'staff',
+                recipientId: userId,
+                limit: 100
+            });
+            classAttendancePings = deliveries
+                .filter(item => item.source_type === 'attendance_class_ping')
+                .map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    type: 'Attendance Ping',
+                    source_type: 'attendance_class_ping',
+                    created_at: item.delivered_at || item.created_at,
+                    date: null,
+                    url: item.destination || '/attendance',
+                    isRead: Number(item.is_read) === 1 || item.status === 'read'
+                }));
+        }
+
         // 2. Merge and Sort
-        let rawNotifications = [...announcements, ...assignments, ...reminderNotifications]
+        let rawNotifications = [...announcements, ...assignments, ...reminderNotifications, ...classAttendancePings]
             .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
             .slice(0, 15);
 
@@ -182,6 +206,8 @@ exports.getLatestNotifications = async (req, res) => {
                 } else {
                     url = userType === 'student' ? '/portal#class-board' : '/staff/board';
                 }
+            } else if (n.source_type === 'attendance_class_ping') {
+                if (n.url && n.url !== '#') url = n.url;
             } else if (n.source_type === 'attendance_register_reminder') {
                 // Shared deliveries already carry a validated internal destination.
                 if (n.url && n.url !== '#') url = n.url;
@@ -225,7 +251,17 @@ exports.markAsRead = async (req, res) => {
             ON CONFLICT (user_id, user_type, source_id, source_type) DO NOTHING
         `, readParams, client);
 
-        if (req.session.staff && source_type === 'attendance_register_reminder') {
+        if (req.session.staff && source_type === 'attendance_class_ping') {
+            const schoolId = req.schoolId || req.session.staff.school_id;
+            const marked = await sharedNotificationDelivery.markRead({
+                schoolId,
+                recipientType: 'staff',
+                recipientId: userId,
+                deliveryId: source_id
+            });
+            if (!marked) return res.status(404).json({ error: 'Attendance ping notification not found.' });
+            await insertRead();
+        } else if (req.session.staff && source_type === 'attendance_register_reminder') {
             const schoolId = req.schoolId || req.session.staff.school_id;
             const queueAvailable = await sharedNotificationDelivery.isAvailable();
             const acknowledged = await db.transaction(async client => {

@@ -42,7 +42,6 @@ const createAttendanceClassAccessService = ({ db, sessionHelper }) => {
     };
 
     const hasClassAttendanceAuthority = async (user, classId, schoolId) => {
-        if (user && user.role === 'Admin') return true;
         if (!user || !classId || !schoolId) return false;
         const classes = await getAssignedClasses(user, schoolId);
         return classes.some(item => Number(item.id) === Number(classId));

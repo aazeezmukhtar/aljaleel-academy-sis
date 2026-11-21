@@ -99,16 +99,24 @@ const db = {
       'utf8'
     );
     sqlite.exec(notificationMigration);
+    const scheduleMigration = fs.readFileSync(
+      path.join(__dirname, '..', 'database', 'migrations', '20261121_attendance_schedule_sets.sqlite.sql'),
+      'utf8'
+    );
+    sqlite.exec(scheduleMigration);
     sqlite.prepare(`
       INSERT INTO section_academic_periods
         (school_id, section_id, session, term, start_date, end_date, status)
       VALUES (1, 10, '2026/2027', '1st Term', '2026-09-01', '2026-12-20', 'active')
     `).run();
-    sqlite.prepare(`
-      INSERT INTO class_attendance_schedules
-        (school_id, class_id, section_id, weekday, effective_from, created_by)
-      VALUES (1, 40, 10, ?, '2026-09-01', 20)
-    `).run(isoWeekday('2026-11-19'));
+    const sectionScheduleSet = sqlite.prepare(`
+      INSERT INTO attendance_schedule_sets
+        (school_id, section_id, class_id, scope_type, effective_from, created_by)
+      VALUES (1, 10, NULL, 'section', '2026-09-01', 20)
+    `).run().lastInsertRowid;
+    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?), (?, ?), (?, ?), (?, ?), (?, ?), (?, ?), (?, ?)')
+      .run(sectionScheduleSet, 1, sectionScheduleSet, 2, sectionScheduleSet, 3,
+        sectionScheduleSet, 4, sectionScheduleSet, 5, sectionScheduleSet, 6, sectionScheduleSet, 7);
     sqlite.prepare(`
       INSERT INTO class_attendance_settings
         (school_id, class_id, section_id, effective_from, submission_deadline_time,
@@ -604,6 +612,14 @@ const db = {
         (student_id, class_id, section_id, date, status, session, term)
       VALUES (31, 40, 10, '2026-12-02', 'Absent', '2026/2027', '1st Term')
     `);
+
+    const analyticsOverride = sqlite.prepare(`
+      INSERT INTO attendance_schedule_sets
+        (school_id, section_id, class_id, scope_type, effective_from, effective_to, created_by)
+      VALUES (1, 10, 40, 'class', '2026-11-29', '2026-12-03', 20)
+    `).run().lastInsertRowid;
+    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?), (?, ?), (?, ?), (?, ?)')
+      .run(analyticsOverride, 7, analyticsOverride, 1, analyticsOverride, 2, analyticsOverride, 3);
 
     const dashboardService = createAttendanceAnalyticsDashboardService(db, analytics);
     const dashboard = await dashboardService.getDashboard({

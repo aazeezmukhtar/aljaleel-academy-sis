@@ -1,0 +1,162 @@
+<%- include('../partials/header') %>
+
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+    <main class="main-content">
+        <header class="content-header" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+            <div>
+                <h1>Attendance Tracking</h1>
+                <p>See which classes have attendance recorded for a selected date and academic context.</p>
+            </div>
+            <a href="/attendance" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Attendance</a>
+        </header>
+
+        <% if (notice) { %>
+            <div class="alert alert-success" role="status" style="margin-bottom:16px;"><%= notice %></div>
+        <% } %>
+        <% if (error) { %>
+            <div class="alert alert-danger" role="alert" style="margin-bottom:16px;"><%= error %></div>
+        <% } %>
+
+        <section class="card" style="margin-bottom:20px;">
+            <form id="attendance-tracking-filter" method="GET" action="/attendance/tracking"
+                style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;align-items:end;">
+                <div class="form-group" style="margin:0;">
+                    <label for="tracking-date">Date</label>
+                    <input class="form-control" id="tracking-date" type="date" name="date" value="<%= tracking.date %>" required>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="tracking-section">Section</label>
+                    <select class="form-control" id="tracking-section" name="section_id" required>
+                        <% tracking.sections.forEach(section => { %>
+                            <option value="<%= section.id %>"
+                                data-session="<%= section.academicContext.session || '' %>"
+                                data-term="<%= section.academicContext.term || '' %>"
+                                <%= Number(tracking.sectionId) === Number(section.id) ? 'selected' : '' %>>
+                                <%= section.name %>
+                            </option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="tracking-session">Session</label>
+                    <select class="form-control" id="tracking-session" name="session">
+                        <% tracking.sessionOptions.forEach(sessionOption => { %>
+                            <option value="<%= sessionOption %>" <%= tracking.session === sessionOption ? 'selected' : '' %>><%= sessionOption %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label for="tracking-term">Term</label>
+                    <select class="form-control" id="tracking-term" name="term">
+                        <% tracking.terms.forEach(termOption => { %>
+                            <option value="<%= termOption %>" <%= tracking.term === termOption ? 'selected' : '' %>><%= termOption %></option>
+                        <% }); %>
+                    </select>
+                </div>
+                <button class="btn btn-primary" type="submit"><i class="bi bi-filter"></i> View</button>
+            </form>
+            <% if (tracking.selectedSection) { %>
+                <p style="margin:14px 0 0;color:var(--text-muted);font-size:.85rem;">
+                    Showing <strong><%= tracking.selectedSection.name %></strong> ·
+                    <strong><%= tracking.session || 'Session not configured' %></strong> ·
+                    <strong><%= tracking.term || 'Term not configured' %></strong>
+                    <% if (!tracking.isCurrentContext) { %>
+                        <span style="margin-left:6px;">Historical context — pings are available only for the current section context.</span>
+                    <% } %>
+                </p>
+            <% } %>
+        </section>
+
+        <% if (!tracking.notificationAvailable) { %>
+            <div class="alert alert-warning" role="status" style="margin-bottom:16px;">
+                In-app notification delivery is not available in this database yet. Tracking remains available, but ping actions are disabled.
+            </div>
+        <% } %>
+
+        <% if (!tracking.selectedSection) { %>
+            <section class="card"><p>No sections are configured for this school.</p></section>
+        <% } else if (!tracking.classes.length) { %>
+            <section class="card"><p>No classes are assigned to <strong><%= tracking.selectedSection.name %></strong>.</p></section>
+        <% } else { %>
+            <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px;">
+                <% tracking.classes.forEach(clazz => { %>
+                    <article class="card" style="margin:0;min-width:0;">
+                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                            <div>
+                                <h3 style="margin:0 0 6px;"><%= clazz.name %></h3>
+                                <p style="margin:0;color:var(--text-muted);font-size:.82rem;">
+                                    <%= clazz.recorded ? (clazz.studentCount + ' student record(s)') : 'No attendance rows for this context' %>
+                                </p>
+                            </div>
+                            <span style="white-space:nowrap;padding:5px 9px;border-radius:20px;font-size:.76rem;font-weight:700;<%= clazz.recorded ? 'background:#dcfce7;color:#166534;' : 'background:#f1f5f9;color:#475569;' %>">
+                                <%= clazz.recorded ? 'Recorded' : 'No attendance recorded' %>
+                            </span>
+                        </div>
+
+                        <% if (!clazz.recorded) { %>
+                            <div style="margin-top:16px;border-top:1px solid var(--border-color,#e2e8f0);padding-top:12px;">
+                                <% if (clazz.pingHistory.length) { %>
+                                    <p style="font-size:.84rem;font-weight:700;margin:0 0 8px;">Ping history</p>
+                                    <% clazz.pingHistory.forEach(ping => { %>
+                                        <div style="display:flex;justify-content:space-between;gap:10px;font-size:.8rem;padding:5px 0;">
+                                            <span><%= ping.first_name %> <%= ping.last_name %></span>
+                                            <span style="color:var(--text-muted);"><%= ping.status %><% if (ping.delivered_at) { %> · <%= new Date(ping.delivered_at).toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'short', timeStyle: 'short' }) %><% } %></span>
+                                        </div>
+                                    <% }); %>
+                                <% } %>
+
+                                <% if (!tracking.notificationAvailable) { %>
+                                    <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 0;">Ping unavailable.</p>
+                                <% } else if (!tracking.isCurrentContext) { %>
+                                    <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 0;">Select the current section session and term to send a ping.</p>
+                                <% } else if (!clazz.recipients.length) { %>
+                                    <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 0;">No active administrative class teacher is assigned.</p>
+                                <% } else if (clazz.pingHistory.length) { %>
+                                    <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 0;">A ping already exists for this class, date and academic context. Duplicate notifications are prevented.</p>
+                                <% } else { %>
+                                    <form method="POST" action="/attendance/tracking/ping" style="margin-top:12px;">
+                                        <input type="hidden" name="class_id" value="<%= clazz.id %>">
+                                        <input type="hidden" name="section_id" value="<%= tracking.sectionId %>">
+                                        <input type="hidden" name="date" value="<%= tracking.date %>">
+                                        <input type="hidden" name="session" value="<%= tracking.session %>">
+                                        <input type="hidden" name="term" value="<%= tracking.term %>">
+                                        <button type="submit" class="btn btn-outline" style="width:100%;"
+                                            onclick="return confirm('Send an in-app attendance reminder to the responsible class teacher(s)?');">
+                                            <i class="bi bi-bell"></i> Ping class teacher
+                                        </button>
+                                        <p style="font-size:.75rem;color:var(--text-muted);margin:7px 0 0;">
+                                            Recipients: <%= clazz.recipients.map(person => person.first_name + ' ' + person.last_name).join(', ') %>
+                                        </p>
+                                    </form>
+                                <% } %>
+                            </div>
+                        <% } %>
+                    </article>
+                <% }); %>
+            </section>
+        <% } %>
+    </main>
+</div>
+
+<script>
+    (function () {
+        const sectionSelect = document.getElementById('tracking-section');
+        const sessionSelect = document.getElementById('tracking-session');
+        const termSelect = document.getElementById('tracking-term');
+        if (!sectionSelect || !sessionSelect || !termSelect) return;
+        sectionSelect.addEventListener('change', function () {
+            const option = sectionSelect.options[sectionSelect.selectedIndex];
+            const currentSession = option.dataset.session || '';
+            const currentTerm = option.dataset.term || '';
+            if (currentSession && Array.from(sessionSelect.options).some(item => item.value === currentSession)) {
+                sessionSelect.value = currentSession;
+            }
+            if (currentTerm && Array.from(termSelect.options).some(item => item.value === currentTerm)) {
+                termSelect.value = currentTerm;
+            }
+        });
+    })();
+</script>
+
+<%- include('../partials/footer') %>

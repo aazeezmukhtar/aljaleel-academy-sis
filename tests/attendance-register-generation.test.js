@@ -68,19 +68,25 @@ const db = {
       'utf8'
     );
     sqlite.exec(migration);
+    const scheduleMigration = fs.readFileSync(
+      path.join(__dirname, '..', 'database', 'migrations', '20261121_attendance_schedule_sets.sqlite.sql'),
+      'utf8'
+    );
+    sqlite.exec(scheduleMigration);
 
     sqlite.prepare(`
       INSERT INTO section_academic_periods
         (school_id, section_id, session, term, start_date, end_date, status)
       VALUES (1, 10, '2026/2027', '1st Term', '2026-09-01', '2026-12-20', 'active')
     `).run();
-    sqlite.prepare(`
-      INSERT INTO class_attendance_schedules
-        (school_id, class_id, section_id, weekday, effective_from, created_by)
-      VALUES (1, 40, 10, ?, '2026-09-01', 20),
-             (1, 40, 10, ?, '2026-09-01', 20),
-             (1, 40, 10, ?, '2026-09-01', 20)
-    `).run(isoWeekday('2026-11-19'), isoWeekday('2026-11-20'), isoWeekday('2026-11-21'));
+    const scheduleSet = sqlite.prepare(`
+      INSERT INTO attendance_schedule_sets
+        (school_id, section_id, class_id, scope_type, effective_from, created_by)
+      VALUES (1, 10, NULL, 'section', '2026-09-01', 20)
+    `).run().lastInsertRowid;
+    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?), (?, ?), (?, ?)')
+      .run(scheduleSet, isoWeekday('2026-11-19'), scheduleSet, isoWeekday('2026-11-20'),
+        scheduleSet, isoWeekday('2026-11-21'));
     sqlite.prepare(`
       INSERT INTO class_attendance_settings
         (school_id, class_id, section_id, effective_from, submission_deadline_time,
@@ -99,6 +105,9 @@ const db = {
       schoolId: 1, classId: 40, registerDate: '2026-11-19', generatedBy: 20
     });
     assert.strictEqual(generated.created, true);
+    const generatedSchedule = sqlite.prepare('SELECT schedule_id, schedule_set_id FROM attendance_registers WHERE id = ?').get(generated.registerId);
+    assert.strictEqual(generatedSchedule.schedule_id, null, 'new registers must not reference legacy schedule rows');
+    assert.strictEqual(generatedSchedule.schedule_set_id, scheduleSet, 'new registers retain the exact resolved schedule set');
     assert.strictEqual(generated.expectedStudentCount, 2);
     assert.strictEqual(generated.responsibleStaffId, 21, 'active substitute takes precedence over primary');
     assert.strictEqual(generated.deadlineAt, '2026-11-19T13:00:00.000Z', '14:00 Africa/Lagos must be stored as 13:00 UTC');

@@ -135,6 +135,9 @@ function makeDb(options = {}) {
 
     const postgresDb = makeDb({ dbType: 'postgres' });
     postgresDb.get = async (sql, params = []) => {
+        if (sql.includes('SELECT c.id, c.school_id, c.section_id FROM classes c')) {
+            return { id: 4, school_id: 1, section_id: 2 };
+        }
         if (sql.includes('to_regclass')) {
             const tableName = params[0];
             return { table_name: tableName === 'public.attendance_scheduler_runs' ? 'attendance_scheduler_runs' : 'notification_deliveries' };

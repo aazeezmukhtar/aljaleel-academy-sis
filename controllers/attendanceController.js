@@ -1168,9 +1168,21 @@ const saveAttendanceSetup = async (req, res) => {
         const action = String(req.body.action || '');
         let result;
         if (action === 'academic_period') result = await attendanceSetupService.createAcademicPeriod(input);
-        else if (action === 'schedule') result = await attendanceSetupService.createSchedule(input);
+        else if (action === 'section_schedule' || action === 'class_schedule') {
+            if (!(await attendanceSetupService.listSetup({ schoolId, actorStaffId: user.id })).scheduleFoundationAvailable) {
+                return res.status(409).json({ success: false, message: 'The schedule-set database migration has not been installed. No schedule was saved.' });
+            }
+            input.scopeType = action === 'section_schedule' ? 'section' : 'class';
+            result = await attendanceSetupService.createScheduleSet(input);
+        }
         else if (action === 'responsibility') result = await attendanceSetupService.createResponsibility(input);
         else if (action === 'settings') result = await attendanceSetupService.createSettings(input);
+        else if (action === 'end_schedule_set') {
+            if (!(await attendanceSetupService.listSetup({ schoolId, actorStaffId: user.id })).scheduleFoundationAvailable) {
+                return res.status(409).json({ success: false, message: 'The schedule-set database migration has not been installed.' });
+            }
+            result = await attendanceSetupService.endScheduleSet(input);
+        }
         else if (action === 'end') result = await attendanceSetupService.endConfiguration(input);
         else return res.status(400).json({ success: false, message: 'Choose a valid attendance setup action.' });
         logAction(user.id, 'MANAGE_ATTENDANCE_SETUP', 'ATTENDANCE_SETUP', {

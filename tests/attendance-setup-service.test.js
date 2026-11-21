@@ -13,6 +13,13 @@ function assertViewDefaults() {
     assert.ok(setupView.includes('attendanceTodayKey'));
     assert.ok(!setupView.includes("window.prompt('Enter the last effective date (YYYY-MM-DD):', button.dataset.start)"));
     assert.ok(setupView.includes('Setup readiness'));
+    assert.ok(setupView.includes('Section default schedule'));
+    assert.ok(setupView.includes('Class-specific override'));
+    assert.ok(setupView.includes('full class override'));
+    assert.ok(setupView.includes("formData.getAll('weekdays')"));
+    assert.ok(setupView.includes("action: 'end_schedule_set'"));
+    assert.ok(setupView.includes('scheduleFoundationAvailable'));
+    assert.ok(!setupView.includes('data-action="schedule"'));
     assert.ok(setupView.includes('setup.readinessSummary.ready'));
     assert.ok(setupView.includes('setup.readinessSummary.incomplete'));
     assert.ok(setupView.includes("item.missing.join(' · ')"));
@@ -74,29 +81,47 @@ function makeDb() {
     }, {});
     const today = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
     const readinessDb = makeDb();
-    readinessDb.all = async sql => {
+    readinessDb.get = async (sql, params) => {
+        if (sql.includes('FROM staff WHERE id = ? AND school_id = ?')) return { id: 7, role: 'Admin' };
+        if (sql.includes('sqlite_master')) return { name: 'attendance_schedule_sets' };
+        if (sql.includes('FROM classes c')) return { id: 20, school_id: 1, section_id: 10 };
+        return null;
+    };
+    let hasDefaultSchedule = true;
+    readinessDb.all = async (sql, params) => {
         if (sql.includes('SELECT c.id, c.name, c.section_id')) return [{ id: 20, name: 'Nursery 1', section_id: 10, section_name: 'Academy' }];
         if (sql.includes('SELECT p.*')) return [{ section_id: 10, status: 'active', start_date: today, end_date: today }];
-        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_schedules')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
+        if (sql.includes('FROM attendance_schedule_sets ss JOIN sections')) return hasDefaultSchedule
+            ? [{ id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 1 },
+               { id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 2 },
+               { id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 3 },
+               { id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 4 },
+               { id: 31, scope_type: 'section', section_id: 10, section_name: 'Academy', class_id: null, class_name: null, effective_from: today, effective_to: null, weekday: 5 }]
+            : [];
+        if (sql.includes('FROM attendance_schedule_sets ss') && sql.includes('LEFT JOIN attendance_schedule_days')) {
+            const scope = params[2];
+            if (scope === 'class') return [];
+            return hasDefaultSchedule ? [1, 2, 3, 4, 5].map(weekday => ({
+                schedule_set_id: 31, scope_type: 'section', effective_from: today,
+                effective_to: null, weekday
+            })) : [];
+        }
         if (sql.includes('SELECT r.*, c.name AS class_name')) return [{ class_id: 20, section_id: 10, responsibility_type: 'primary', effective_from: today, effective_to: null }];
-        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
+        if (sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
         return [];
     };
-    const readiness = await createAttendanceSetupService(readinessDb).listSetup(base);
-    assert.strictEqual(readiness.readinessSummary.total, 1);
-    assert.strictEqual(readiness.readinessSummary.ready, 1);
-    assert.deepStrictEqual(readiness.readiness[0].missing, []);
-    readinessDb.all = async sql => {
-        if (sql.includes('SELECT c.id, c.name, c.section_id')) return [{ id: 20, name: 'Nursery 1', section_id: 10, section_name: 'Academy' }];
-        if (sql.includes('SELECT p.*')) return [{ section_id: 10, status: 'active', start_date: today, end_date: today }];
-        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_schedules')) return [];
-        if (sql.includes('SELECT r.*, c.name AS class_name')) return [{ class_id: 20, section_id: 10, responsibility_type: 'primary', effective_from: today, effective_to: null }];
-        if (sql.includes('SELECT a.*, c.name AS class_name') && sql.includes('class_attendance_settings')) return [{ class_id: 20, section_id: 10, effective_from: today, effective_to: null }];
-        return [];
-    };
-    const incomplete = await createAttendanceSetupService(readinessDb).listSetup(base);
-    assert.strictEqual(incomplete.readinessSummary.incomplete, 1);
-    assert.deepStrictEqual(incomplete.readiness[0].missing, ['Opening days']);
+    const inheritedReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(inheritedReadiness.scheduleFoundationAvailable, true);
+    assert.strictEqual(inheritedReadiness.readinessSummary.total, 1);
+    assert.strictEqual(inheritedReadiness.readinessSummary.ready, 1);
+    assert.strictEqual(inheritedReadiness.readiness[0].schedule_source, 'section_default');
+    assert.deepStrictEqual(inheritedReadiness.readiness[0].schedule_weekdays, [1, 2, 3, 4, 5]);
+    assert.deepStrictEqual(inheritedReadiness.readiness[0].missing, []);
+
+    hasDefaultSchedule = false;
+    const missingReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
+    assert.strictEqual(missingReadiness.readinessSummary.incomplete, 1);
+    assert.deepStrictEqual(missingReadiness.readiness[0].missing, ['Opening days']);
     await assert.rejects(
         service.createSchedule({ ...base, classId: 20, sectionId: 10, weekday: 8, startDate: '2026-09-01' }),
         /weekday/

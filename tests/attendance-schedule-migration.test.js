@@ -8,7 +8,7 @@ const Database = require('better-sqlite3');
 const db = new Database(':memory:');
 try {
     db.pragma('foreign_keys = ON');
-    db.exec(\`
+    db.exec(`
         CREATE TABLE schools(id INTEGER PRIMARY KEY);
         CREATE TABLE sections(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id));
         CREATE TABLE classes(id INTEGER PRIMARY KEY, school_id INTEGER REFERENCES schools(id), section_id INTEGER REFERENCES sections(id));
@@ -60,7 +60,7 @@ try {
         INSERT INTO attendance_register_students VALUES (7, 6, 8);
         INSERT INTO attendance_register_events VALUES (9, 6);
         INSERT INTO attendance_register_reminders VALUES (10, 6);
-    \`);
+    `);
 
     const migration = fs.readFileSync(path.join(__dirname, '..', 'database', 'migrations',
         '20261121_attendance_schedule_sets.sqlite.sql'), 'utf8');

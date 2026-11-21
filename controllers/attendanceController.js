@@ -1238,6 +1238,8 @@ const pingAttendanceClass = async (req, res) => {
             session,
             term,
             recipient_count: result.recipientCount,
+            recipient_staff_ids: result.history.map(item => Number(item.recipient_id)),
+            delivery_statuses: result.history.map(item => ({ staff_id: Number(item.recipient_id), status: item.status })),
             new_notifications: result.createdCount,
             delivered_count: result.deliveredCount
         }, req.ip);

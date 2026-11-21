@@ -15,7 +15,7 @@ No schedules, overrides, academic periods or school data are seeded. The migrati
 
 - \`20261121_attendance_schedule_sets.postgres.sql\`
 - \`20261121_attendance_schedule_sets.sqlite.sql\`
-- Read-only preflight and postflight scripts are provided separately.
+- Read-only preflight and postflight scripts are provided for PostgreSQL and SQLite.
 
 ## Important SQLite note
 

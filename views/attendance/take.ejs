@@ -131,7 +131,7 @@
                 <i class="bi bi-arrow-left"></i>
             </a>
             <button type="submit" form="attendance-form" class="btn btn-primary">
-                <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Records' %>
+                <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Draft' %>
             </button>
             <% if (canEdit !== false) { %>
             <button type="button" id="submit-attendance-register-mobile" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
@@ -507,12 +507,46 @@
 
         try {
             const form = document.getElementById('attendance-form');
+            const formData = new FormData(form);
+            const draftData = {
+                class_id: formData.get('class_id'),
+                date: formData.get('date'),
+                session: formData.get('session'),
+                term: formData.get('term'),
+                attendance: {},
+                reasons: {},
+                custom_reasons: {}
+            };
+
+            for (const [key, value] of formData.entries()) {
+                const match = key.match(/^(attendance|reasons|custom_reasons)\[(\d+)\]$/);
+                if (match) draftData[match[1]][match[2]] = value;
+            }
+
+            // Persist the teacher's current selections before finalizing the register.
+            // This ensures Submit never discards unsaved Present/Late/Leave choices.
+            const draftResponse = await fetch('/attendance/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify(draftData)
+            });
+            const draftResult = await draftResponse.json().catch(() => ({}));
+            if (draftResponse.redirected || draftResponse.url.includes('/auth/login')) {
+                alert('Session expired. Please log in again.');
+                window.location.href = '/auth/login';
+                return;
+            }
+            if (!draftResponse.ok || !draftResult.success) {
+                alert(draftResult.message || 'Your draft could not be saved. Attendance has not been submitted.');
+                return;
+            }
+
             const response = await fetch('/attendance/submit', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify({
-                    class_id: form.querySelector('[name="class_id"]').value,
-                    date: form.querySelector('[name="date"]').value
+                    class_id: draftData.class_id,
+                    date: draftData.date
                 })
             });
             if (response.redirected || response.url.includes('/auth/login')) {

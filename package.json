@@ -44,7 +44,8 @@
     "test:attendance-schedule-migration": "node tests/attendance-schedule-migration.test.js",
     "test:attendance-schedule": "npm run test:attendance-schedule-service && npm run test:attendance-schedule-migration",
     "test:attendance-schedule-postgres": "node tests/attendance-schedule-migration-postgres.test.js",
-    "test:attendance-schedule-setup": "npm run test:attendance-schedule-service && npm run test:attendance-setup-service"
+    "test:attendance-schedule-setup": "npm run test:attendance-schedule-service && npm run test:attendance-setup-service",
+    "test:attendance-schedule-consumers": "npm run test:attendance-register-generation && npm run test:attendance-register-workflow && npm run test:attendance-operations"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

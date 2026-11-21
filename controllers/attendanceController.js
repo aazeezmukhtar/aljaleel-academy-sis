@@ -360,6 +360,7 @@ const saveAttendance = async (req, res) => {
 
         // Standard attendance writes directly to the attendance table.
         // Deferred register/schedule setup must not gate the simplified workflow.
+        const registerFoundationAvailable = false; // Legacy register audit hooks are intentionally inactive here.
 
         const sql = `
             INSERT INTO attendance

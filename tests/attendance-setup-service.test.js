@@ -89,7 +89,7 @@ function makeDb() {
     const readinessDb = makeDb();
     readinessDb.get = async (sql, params) => {
         if (sql.includes('FROM staff WHERE id = ? AND school_id = ?')) return { id: 7, role: 'Admin' };
-        if (sql.includes('sqlite_master')) return { name: 'attendance_schedule_sets' };
+        if (sql.includes('sqlite_master')) return { table_count: 2 };
         if (sql.includes('FROM classes c')) return { id: 20, school_id: 1, section_id: 10 };
         return null;
     };
@@ -154,6 +154,23 @@ function makeDb() {
     const missingReadiness = await createAttendanceSetupService(readinessDb).listSetup(base);
     assert.strictEqual(missingReadiness.readinessSummary.incomplete, 1);
     assert.deepStrictEqual(missingReadiness.readiness[0].missing, ['Opening days']);
+
+    const migrationMissingDb = makeDb();
+    migrationMissingDb.get = async sql => {
+        if (sql.includes('FROM staff WHERE id = ? AND school_id = ?')) return { id: 7, role: 'Admin' };
+        if (sql.includes('sqlite_master')) return { table_count: 1 };
+        return null;
+    };
+    migrationMissingDb.all = async sql => {
+        if (sql.includes('SELECT c.id, c.name, c.section_id')) return [{ id: 20, name: 'Nursery 1', section_id: 10, section_name: 'Academy' }];
+        if (sql.includes('SELECT p.*')) return [];
+        return [];
+    };
+    const migrationMissing = await createAttendanceSetupService(migrationMissingDb).listSetup(base);
+    assert.strictEqual(migrationMissing.scheduleFoundationAvailable, false);
+    assert.strictEqual(migrationMissing.readiness[0].schedule_issue, 'schedule_foundation_unavailable');
+    assert.ok(migrationMissing.readiness[0].missing.includes('Schedule migration required'));
+
     await assert.rejects(
         service.createSchedule({ ...base, classId: 20, sectionId: 10, weekday: 8, startDate: '2026-09-01' }),
         /weekday/

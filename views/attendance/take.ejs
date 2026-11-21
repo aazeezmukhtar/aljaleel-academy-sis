@@ -519,7 +519,7 @@
             };
 
             for (const [key, value] of formData.entries()) {
-                const match = key.match(/^(attendance|reasons|custom_reasons)\\[(\\d+)\\]$/);
+                const match = key.match(/^(attendance|reasons|custom_reasons)\[(\d+)\]$/);
                 if (match) draftData[match[1]][match[2]] = value;
             }
 

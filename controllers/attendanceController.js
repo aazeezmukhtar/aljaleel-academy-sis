@@ -532,7 +532,7 @@ const submitAttendanceRegister = async (req, res) => {
         return res.status(401).json({ success: false, message: 'Session expired' });
     }
     if (!class_id || !Number.isSafeInteger(Number(class_id)) || Number(class_id) <= 0 ||
-        typeof date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(date) ||
+        typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
         Number.isNaN(Date.parse(date + 'T00:00:00Z'))) {
         return res.status(400).json({ success: false, message: 'A valid class and attendance date are required.' });
     }

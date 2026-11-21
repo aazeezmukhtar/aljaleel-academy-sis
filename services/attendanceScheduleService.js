@@ -105,8 +105,9 @@ function createAttendanceScheduleService(db) {
         if (![schoolId, classId].every(n => Number.isSafeInteger(n) && n > 0)) {
             throw new Error('A valid school and class are required to resolve an attendance schedule.');
         }
-        const clazz = await db.get('SELECT id, school_id, section_id FROM classes WHERE id = ? AND school_id = ?',
-            [classId, schoolId], client);
+        const clazz = await db.get('SELECT c.id, c.school_id, c.section_id FROM classes c ' +
+            'JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id ' +
+            'WHERE c.id = ? AND c.school_id = ?', [classId, schoolId], client);
         if (!clazz) throw scheduleError('CLASS_NOT_FOUND', 'The selected class does not belong to this school.');
 
         const classSets = await findEffectiveSets(schoolId, clazz.section_id, 'class', classId, date, client);

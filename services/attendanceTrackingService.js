@@ -1,6 +1,6 @@
 'use strict';
 
-const DATE_PATTERN = /^\\d{4}-\\d{2}-\\d{2}$/;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function normalizeDate(value) {
     const date = String(value || '').trim();

@@ -117,8 +117,9 @@ const db = {
     // The scheduler fixture intentionally has one expected school day:
     // Wednesday, 25 November. Later analytics assertions use their own
     // effective-dated class override.
-    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?)')
-      .run(sectionScheduleSet, isoWeekday('2026-11-25'));
+    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?), (?, ?)')
+      .run(sectionScheduleSet, isoWeekday('2026-11-19'),
+        sectionScheduleSet, isoWeekday('2026-11-25'));
     sqlite.prepare(`
       INSERT INTO class_attendance_settings
         (school_id, class_id, section_id, effective_from, submission_deadline_time,

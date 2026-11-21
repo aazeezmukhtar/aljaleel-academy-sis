@@ -6,6 +6,19 @@ const { createAttendanceAnalyticsDashboardService } =
 
 async function main() {
     const queries = [];
+    const fs = require('fs');
+    const path = require('path');
+    const analyticsView = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'analytics.ejs'), 'utf8');
+    assert(analyticsView.includes('Attendance record breakdown'));
+    assert(analyticsView.includes('Present, Late, and Leave count as attended. Absent does not.'));
+    assert(analyticsView.includes('recorded student-days only'));
+    assert(analyticsView.includes('Students tracked'));
+    assert(analyticsView.includes('Leave days'));
+    assert(analyticsView.includes('Only dates with saved attendance records appear here.'));
+    assert(!analyticsView.includes('Apply filters'), 'filter changes should not have a redundant manual apply button');
+    assert(analyticsView.includes('analytics-summary'));
+    assert(analyticsView.includes('analytics-breakdown-bar'));
+
     const db = {
         async all(sql, params) {
             queries.push(sql);

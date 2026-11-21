@@ -209,7 +209,7 @@ function createAttendanceTrackingService({ db, sessionHelper, notificationDelive
                 sourceType: 'attendance_class_ping',
                 sourceId: classId,
                 idempotencyKey: prefix + recipient.id,
-                title: 'Attendance not yet recorded',
+                title: 'Attendance not recorded: ' + clazz.name,
                 body: 'Please record attendance for ' + clazz.name + ' on ' + date +
                     ' (' + term + ', ' + session + ') if the class opened.',
                 destination: '/attendance/take?class_id=' + classId + '&date=' + encodeURIComponent(date)

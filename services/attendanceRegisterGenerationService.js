@@ -199,17 +199,22 @@ function createAttendanceRegisterService(db) {
 
             const timezone = 'Africa/Lagos';
             const deadlineAt = localDateTimeToUtc(registerDate, settings.submission_deadline_time, timezone);
+            const hasScheduleFoundation = resolvedSchedule.scheduleFoundationAvailable === true;
+            const scheduleColumns = hasScheduleFoundation ? 'schedule_id, schedule_set_id' : 'schedule_id';
+            const scheduleValues = hasScheduleFoundation ? '?, ?' : '?';
+            const scheduleReferences = hasScheduleFoundation
+                ? [null, resolvedSchedule.scheduleSetId || null]
+                : [resolvedSchedule.scheduleId || null];
             const inserted = await db.get(`
                 INSERT INTO attendance_registers (
-                    school_id, class_id, section_id, academic_period_id, schedule_id, schedule_set_id,
+                    school_id, class_id, section_id, academic_period_id, ${scheduleColumns},
                     responsibility_id, register_date, timezone, submission_deadline_at,
                     expected_student_count, submitted_student_count, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'expected')
+                ) VALUES (?, ?, ?, ?, ${scheduleValues}, ?, ?, ?, ?, ?, 0, 'expected')
                 ON CONFLICT (class_id, section_id, register_date) DO NOTHING
                 RETURNING id
             `, [
-                schoolId, classId, clazz.section_id, academicPeriod.id,
-                resolvedSchedule.scheduleId || null, resolvedSchedule.scheduleSetId || null,
+                schoolId, classId, clazz.section_id, academicPeriod.id, ...scheduleReferences,
                 responsibility ? responsibility.id : null, registerDate, timezone,
                 deadlineAt, rosterRows.length
             ], client);

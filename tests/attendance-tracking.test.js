@@ -137,6 +137,17 @@ const { createAttendanceTrackingService } = require('../services/attendanceTrack
         });
         assert.strictEqual(duplicate.createdCount, 0, 'repeated pings must be idempotent');
 
+        await db.run(`
+            INSERT INTO attendance VALUES (2, 501, 10, 'Present', '2026-11-21', '2026/2027', '1st Term')
+        `);
+        const afterAttendance = await service.getTrackingPage({
+            schoolId: 1, date: '2026-11-21', sectionId: 1
+        });
+        const nurseryAfterPing = afterAttendance.classes.find(row => row.id === 10);
+        assert.strictEqual(nurseryAfterPing.recorded, true);
+        assert.strictEqual(nurseryAfterPing.pingHistory.length, 2,
+            'ping history remains available after attendance is later recorded');
+
         await assert.rejects(() => service.sendManualPing({
             schoolId: 1, actorStaffId: 1, classId: 11, sectionId: 1,
             date: '2026-11-21', session: '2026/2027', term: '1st Term'

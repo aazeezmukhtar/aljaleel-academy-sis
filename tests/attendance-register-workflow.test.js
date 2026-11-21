@@ -488,14 +488,14 @@ const db = {
     await db.run("INSERT INTO classes(id, school_id, section_id, name) VALUES (41, 1, 11, 'Tahfeez 1')");
     const analyticsRegister = await db.get(`
       INSERT INTO attendance_registers
-        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+        (school_id, class_id, section_id, academic_period_id, schedule_id, schedule_set_id, responsibility_id,
          register_date, timezone, submission_deadline_at, status, expected_student_count,
          submitted_student_count, first_submitted_at, last_submitted_at, submitted_by)
-      VALUES (1, 40, 10, ?, ?, ?, '2026-11-30', 'Africa/Lagos',
+      VALUES (1, 40, 10, ?, NULL, ?, ?, '2026-11-30', 'Africa/Lagos',
               '2026-11-30T13:00:00.000Z', 'submitted', 2, 2,
               '2026-11-30T13:10:00.000Z', '2026-11-30T13:10:00.000Z', 20)
       RETURNING id
-    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_set_id, registerTemplate.responsibility_id]);
     await db.run(`
       INSERT INTO attendance_register_students (register_id, student_id, enrollment_period_id)
       VALUES (?, 30, 100)

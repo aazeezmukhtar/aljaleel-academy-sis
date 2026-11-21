@@ -1,19 +1,48 @@
 <%- include('../partials/header') %>
+<style>
+    .attendance-setup .setup-heading { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:20px; }
+    .attendance-setup .setup-heading h1 { margin:8px 0 6px; line-height:1.2; }
+    .attendance-setup .setup-heading p { max-width:760px; line-height:1.5; }
+    .attendance-setup .setup-back { display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border:1px solid var(--border-color,#e5e7eb); border-radius:9px; text-decoration:none; font-weight:600; }
+    .attendance-setup .setup-panel { min-width:0; padding:20px; margin-bottom:16px !important; }
+    .attendance-setup .setup-panel > h2 { margin-bottom:8px; }
+    .attendance-setup .setup-panel > p { max-width:850px; line-height:1.5; }
+    .attendance-setup .setup-panel h3 { margin-bottom:10px; }
+    .attendance-setup .setup-panel .form-label { font-weight:600; font-size:.9rem; }
+    .attendance-setup .setup-panel .form-control,
+    .attendance-setup .setup-panel .form-select { min-width:0; }
+    .attendance-setup .setup-panel .form-check { margin-bottom:0; }
+    .attendance-setup .setup-panel .border.rounded { border-color:var(--border-color,#e5e7eb) !important; }
+    .attendance-setup .setup-panel .table-responsive { border:1px solid var(--border-color,#e5e7eb); border-radius:10px; }
+    .attendance-setup .setup-panel table { margin-bottom:0; }
+    .attendance-setup .setup-panel thead th { white-space:nowrap; color:var(--text-muted); font-size:.82rem; background:var(--surface-muted,rgba(127,127,127,.06)); }
+    .attendance-setup .setup-panel tbody td { vertical-align:middle; }
+    .attendance-setup .setup-panel .btn { white-space:nowrap; }
+    .attendance-setup #setup-feedback { scroll-margin-top:16px; }
+    @media (max-width:600px) {
+        .attendance-setup .setup-heading { margin-bottom:16px; }
+        .attendance-setup .setup-panel { padding:14px; margin-bottom:12px !important; }
+        .attendance-setup .setup-panel .form-check { margin-right:2px; }
+        .attendance-setup .setup-panel form > [class*="col-"] { min-width:0; }
+        .attendance-setup .setup-panel form button { min-height:40px; }
+        .attendance-setup .setup-panel .table-responsive { margin-left:-2px; margin-right:-2px; }
+    }
+</style>
 <div class="dashboard-container">
     <%- include('../partials/sidebar') %>
-    <main class="main-content">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <main class="main-content attendance-setup">
+        <header class="setup-heading">
             <div>
-                <a href="/attendance" class="text-decoration-none">← Attendance</a>
+                <a href="/attendance" class="setup-back">← Attendance</a>
                 <h1 class="h3 mt-2 mb-1">Attendance setup</h1>
                 <p class="text-muted mb-0">Configure section academic periods, inherited opening-day schedules, class overrides, responsible teachers and attendance rules.</p>
             </div>
-        </div>
+        </header>
         <% if (error) { %><div class="alert alert-warning" role="alert"><%= error %></div><% } %>
         <% if (setup) { %>
         <% const attendanceTodayParts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date()).reduce((result, part) => { if (part.type !== 'literal') result[part.type] = part.value; return result; }, {}); const attendanceTodayKey = attendanceTodayParts.year + '-' + attendanceTodayParts.month + '-' + attendanceTodayParts.day; %>
         <div id="setup-feedback" class="alert d-none" role="status" aria-live="polite"></div>
-        <section class="card p-3 mb-3" aria-labelledby="readiness-heading">
+        <section class="card setup-panel" aria-labelledby="readiness-heading">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                 <div>
                     <h2 class="h5 mb-1" id="readiness-heading">Setup readiness</h2>
@@ -50,7 +79,7 @@
             </div>
             <% } %>
         </section>
-        <section class="card p-3 mb-3">
+        <section class="card setup-panel">
             <h2 class="h5">1. Section academic periods</h2>
             <p class="text-muted small">Each section needs exactly one period covering an attendance date. Periods in the same section cannot overlap.</p>
             <form class="row g-2 setup-form" data-action="academic_period">
@@ -67,7 +96,7 @@
             </tbody></table></div>
         </section>
 
-        <section class="card p-3 mb-3">
+        <section class="card setup-panel">
             <h2 class="h5">2. Weekly opening-day schedules</h2>
             <p class="text-muted small">Set opening days once for each section. Classes inherit that schedule unless a complete class override is active. An override replaces the section days; it never adds to them. Changes are effective-dated and historical sets are retained.</p>
             <% if (!setup.scheduleFoundationAvailable) { %>
@@ -116,7 +145,7 @@
             </tbody></table></div>
         </section>
 
-        <section class="card p-3 mb-3">
+        <section class="card setup-panel">
             <h2 class="h5">3. Responsible and substitute teachers</h2>
             <p class="text-muted small">One primary and one substitute assignment may be effective for a class at a time. A substitute takes precedence while active.</p>
             <form class="row g-2 setup-form" data-action="responsibility">
@@ -134,7 +163,7 @@
             </tbody></table></div>
         </section>
 
-        <section class="card p-3 mb-4">
+        <section class="card setup-panel">
             <h2 class="h5">4. Class attendance settings</h2>
             <p class="text-muted small">Settings are effective-dated. Reminder intervals are minutes after the first reminder, entered as comma-separated whole numbers.</p>
             <form class="row g-2 setup-form" data-action="settings">

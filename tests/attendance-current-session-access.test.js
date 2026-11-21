@@ -27,6 +27,12 @@ const { createAttendanceClassAccessService } = require('../services/attendanceCl
                 class_id INTEGER NOT NULL,
                 session TEXT NOT NULL
             );
+            CREATE TABLE subject_assignments (
+                id INTEGER PRIMARY KEY,
+                teacher_id INTEGER NOT NULL,
+                class_id INTEGER NOT NULL,
+                session TEXT NOT NULL
+            );
             INSERT INTO sections VALUES
                 (1, 1, 'Academy', '2026/2027'),
                 (2, 1, 'Tahfeez', '2025/2026');
@@ -34,11 +40,13 @@ const { createAttendanceClassAccessService } = require('../services/attendanceCl
                 (10, 1, 1, 'Nursery 2', NULL),
                 (11, 1, 1, 'Primary 1', NULL),
                 (12, 1, 2, 'F 2', NULL),
-                (13, 1, 1, 'Primary 2', 20);
+                (13, 1, 1, 'Primary 2', 20),
+                (14, 1, 1, 'Primary 3', NULL);
             INSERT INTO class_assignments VALUES
                 (1, 20, 10, '2025/2026'),
                 (2, 20, 11, '2026/2027'),
                 (3, 20, 12, '2025/2026');
+            INSERT INTO subject_assignments VALUES (1, 20, 14, '2026/2027');
         `);
 
         const db = {
@@ -63,15 +71,8 @@ const { createAttendanceClassAccessService } = require('../services/attendanceCl
         assert.strictEqual(await service.hasClassAttendanceAuthority({ id: 99, role: 'Admin' }, 10, 1), true,
             'administrators retain school-wide access');
 
-        const subjectOnlyDb = {
-            all: async () => [],
-        };
-        const subjectOnlyService = createAttendanceClassAccessService({
-            db: subjectOnlyDb,
-            sessionHelper: { getCurrentSession: async () => '2026/2027' }
-        });
-        assert.strictEqual(await subjectOnlyService.hasClassAttendanceAuthority(teacher, 10, 1), false,
-            'subject assignments are not queried and cannot grant attendance access');
+        assert.strictEqual(await service.hasClassAttendanceAuthority(teacher, 14, 1), false,
+            'a subject-only assignment must not grant attendance access');
         console.log('Attendance current-session access tests passed.');
     } finally {
         sqlite.close();

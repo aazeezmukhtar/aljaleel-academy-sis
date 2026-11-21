@@ -35,9 +35,11 @@ function createAttendanceSetupService(db) {
         let scheduleFoundationAvailable = false;
         try {
             const foundation = db.DB_TYPE === 'postgres'
-                ? await db.get("SELECT to_regclass('public.attendance_schedule_sets') AS name")
-                : await db.get("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'attendance_schedule_sets'");
-            scheduleFoundationAvailable = !!(foundation && foundation.name);
+                ? await db.get("SELECT to_regclass('public.attendance_schedule_sets') AS sets_name, to_regclass('public.attendance_schedule_days') AS days_name")
+                : await db.get("SELECT COUNT(*) AS table_count FROM sqlite_master WHERE type = 'table' AND name IN ('attendance_schedule_sets', 'attendance_schedule_days')");
+            scheduleFoundationAvailable = db.DB_TYPE === 'postgres'
+                ? !!(foundation && foundation.sets_name && foundation.days_name)
+                : !!(foundation && Number(foundation.table_count) === 2);
         } catch (_) {
             scheduleFoundationAvailable = false;
         }

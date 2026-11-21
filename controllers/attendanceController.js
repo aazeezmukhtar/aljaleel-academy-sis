@@ -14,6 +14,9 @@ const { createAttendanceAnalyticsDashboardService } = require('../services/atten
 const attendanceAnalyticsDashboard = createAttendanceAnalyticsDashboardService(db, attendanceAnalytics);
 const { createAttendanceOperationsService } = require('../services/attendanceOperationsService');
 const attendanceOperations = createAttendanceOperationsService(db);
+const sharedNotificationDelivery = require('../services/sharedNotificationDeliveryService');
+const { createAttendanceTrackingService } = require('../services/attendanceTrackingService');
+const attendanceTracking = createAttendanceTrackingService({ db, sessionHelper, notificationDelivery: sharedNotificationDelivery });
 
 // Attendance access is based only on current administrative responsibility.
 const { createAttendanceClassAccessService } = require('../services/attendanceClassAccessService');
@@ -1167,5 +1170,91 @@ const getAttendanceOperations = async (req, res) => {
         return res.status(500).render('attendance/operations', { title: 'Attendance Operations', user, operations: null, error: err.message || 'Could not load attendance operations.' });
     }
 };
-module.exports = { getAttendanceOperations, getAttendanceSetup, saveAttendanceSetup, getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getAttendanceAnalytics, getStaffAttendance, saveStaffAttendance };
+
+function getSchoolLocalDate() {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date()).reduce((result, item) => {
+        if (item.type !== 'literal') result[item.type] = item.value;
+        return result;
+    }, {});
+    return parts.year + '-' + parts.month + '-' + parts.day;
+}
+
+// GET /attendance/tracking - administrator's simplified daily activity tracker
+const getAttendanceTracking = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
+    if (!user) return res.status(401).send('Session expired');
+    if (user.role !== 'Admin') return res.status(403).send('Only an administrator may view attendance tracking.');
+
+    try {
+        const tracking = await attendanceTracking.getTrackingPage({
+            schoolId,
+            date: req.query.date || getSchoolLocalDate(),
+            sectionId: req.query.section_id,
+            session: req.query.session,
+            term: req.query.term
+        });
+        return res.render('attendance/tracking', {
+            title: 'Attendance Tracking',
+            user,
+            tracking,
+            notice: req.query.notice || null,
+            error: req.query.error || null
+        });
+    } catch (err) {
+        console.error('getAttendanceTracking Error:', err);
+        return res.status(400).send(err.message || 'Could not load attendance tracking.');
+    }
+};
+
+// POST /attendance/tracking/ping - manual, administrator-triggered in-app ping
+const pingAttendanceClass = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : (user ? user.school_id : 1));
+    if (!user) return res.status(401).send('Session expired');
+    if (user.role !== 'Admin') return res.status(403).send('Only an administrator may ping a class teacher.');
+
+    const { class_id, section_id, date, session, term } = req.body;
+    const returnTo = '/attendance/tracking?date=' + encodeURIComponent(String(date || getSchoolLocalDate())) +
+        '&section_id=' + encodeURIComponent(String(section_id || '')) +
+        '&session=' + encodeURIComponent(String(session || '')) +
+        '&term=' + encodeURIComponent(String(term || ''));
+
+    try {
+        const result = await attendanceTracking.sendManualPing({
+            schoolId,
+            actorStaffId: user.id,
+            classId: class_id,
+            sectionId: section_id,
+            date,
+            session,
+            term
+        });
+        await logAction(user.id, 'PING_ATTENDANCE_CLASS_TEACHER', 'ATTENDANCE', {
+            class_id: Number(class_id),
+            date,
+            session,
+            term,
+            recipient_count: result.recipientCount,
+            recipient_staff_ids: result.history.map(item => Number(item.recipient_id)),
+            delivery_statuses: result.history.map(item => ({ staff_id: Number(item.recipient_id), status: item.status })),
+            new_notifications: result.createdCount,
+            delivered_count: result.deliveredCount
+        }, req.ip);
+        const message = result.deliveredCount === result.recipientCount
+            ? (result.createdCount > 0
+                ? 'In-app ping delivered to ' + result.deliveredCount + ' responsible teacher(s).'
+                : 'This ping was already delivered; no duplicate notification was created.')
+            : 'Ping queued for ' + result.recipientCount + ' responsible teacher(s); ' +
+                result.deliveredCount + ' delivered and ' + result.pendingCount + ' still pending.';
+        return res.redirect(returnTo + '&notice=' + encodeURIComponent(message));
+    } catch (err) {
+        console.error('pingAttendanceClass Error:', err);
+        return res.redirect(returnTo + '&error=' + encodeURIComponent(err.message || 'The ping could not be sent.'));
+    }
+};
+
+module.exports = { getAttendanceTracking, pingAttendanceClass, getAttendanceOperations, getAttendanceSetup, saveAttendanceSetup, getIndex, getTakeAttendance, getPreviousDayAttendance, saveAttendance, submitAttendanceRegister, reopenAttendanceRegister, getAttendanceClosures, requestAttendanceClosure, decideAttendanceClosure, cancelAttendanceClosure, getReport, getAttendanceAnalytics, getStaffAttendance, saveStaffAttendance };
 

@@ -1,6 +1,6 @@
 # Simplified Attendance Tracking Specification
 
-Status: proposed implementation specification
+Status: implementation in progress (Phase C)
 Scope: initial simplified attendance workflow for Al-Jaleel Academy
 Production changes: none
 
@@ -27,7 +27,7 @@ Attendance records remain associated with their existing `session` and `term` va
 - The tracking page must make the date and academic context visible.
 - Academy and Tahfeez may have different current session/term values at the same time.
 - The implementation must not assume one school-wide session/term applies to every section.
-- For a selected section, its configured current session and term may be used as the default context.
+- For a selected section, its configured current session and term are the default context; each section resolves its own calendar before falling back to the school setting.
 - Historical tracking must use an explicitly selected session/term context or a reliable existing academic-period source; it must not relabel historical attendance using today's section settings.
 - Attendance marking must preserve the established class/section/session/term ownership rules and existing attendance history.
 
@@ -88,6 +88,7 @@ Initial channel: in-app notification only. No WhatsApp, SMS, email, or external 
 - Record actor, recipients, class/date/session/term source context and delivery status through existing notification/audit facilities where available.
 - Repeated clicks must not create duplicate notifications for the same recipient and class/date/session/term. The UI should show the existing ping rather than imply another notification was sent.
 - The notification destination should open the relevant attendance marking flow for that class and date.
+- Pings are enabled only when the selected session and term match that section's currently configured context; historical contexts remain view-only.
 - No automatic pings or background reminder schedule in this phase.
 
 If the existing in-app notification foundation is unavailable, the action must fail clearly and safely; it must not claim a ping was sent.
@@ -126,17 +127,19 @@ The existing attendance table and academic session/term fields remain the initia
 4. Historical attendance is queried using its original session and term, not today's context.
 5. A teacher's 2025/2026 class assignment does not grant access when the applicable section calendar is 2026/2027; a matching 2026/2027 assignment does.
 6. Academy and Tahfeez assignment checks use their own section current sessions when those differ.
-5. A form teacher can open, save and view attendance for the class.
-6. A staff member with a matching session-specific class assignment can open, save and view attendance for that class.
-7. A subject-only teacher cannot see the class in the marking selector.
-8. A subject-only teacher is rejected on direct GET, POST save, previous-day, and register write routes.
-9. A teacher assigned administratively to one class and academically to other classes sees only the administratively assigned class(es).
-10. Admin retains existing school-wide access.
-11. An administrator can manually ping eligible administrative assignees when no attendance is recorded.
-12. Subject-only teachers are not ping recipients.
-13. Duplicate pings for the same recipient and class/date/session/term are prevented and the prior ping is displayed.
-14. If notification delivery is unavailable, the UI reports failure and does not claim success.
-15. No schedule configuration, schedule-based expected-register generation, automatic reminder, or production migration is required for the simplified workflow.
+7. Historical contexts remain view-only for ping actions.
+8. A ping's delivery history remains visible after attendance is subsequently recorded.
+9. A form teacher can open, save and view attendance for the class.
+10. A staff member with a matching session-specific class assignment can open, save and view attendance for that class.
+11. A subject-only teacher cannot see the class in the marking selector.
+12. A subject-only teacher is rejected on direct GET, POST save, previous-day, and register write routes.
+13. A teacher assigned administratively to one class and academically to other classes sees only the administratively assigned class(es).
+14. Admin retains existing school-wide access.
+15. An administrator can manually ping eligible administrative assignees when no attendance is recorded.
+16. Subject-only teachers are not ping recipients.
+17. Duplicate pings for the same recipient and class/date/session/term are prevented and the prior ping is displayed.
+18. If notification delivery is unavailable, the UI reports failure and does not claim success.
+19. No schedule configuration, schedule-based expected-register generation, automatic reminder, or production migration is required for the simplified workflow.
 
 ## 10. Delivery plan
 

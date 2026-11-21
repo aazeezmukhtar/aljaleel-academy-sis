@@ -151,7 +151,7 @@
                     item.innerHTML = `
                         <a href="${n.url}" style="display: flex; gap: 10px; align-items: start; text-decoration: none; color: inherit; width: 100%;">
                             <i class="bi ${iconClass}" style="margin-top: 3px; font-size: 1.1rem; color: #6366f1;"></i>
-                            <div style="flex: 1;">
+                            <div class="notification-content" style="flex: 1;">
                                 <h4 style="margin: 0 0 2px;">${n.title}</h4>
                                 <span style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: #94a3b8;">${n.type || 'Update'}</span>
                                 ${n.countdown ? `<br><span class="event-countdown-badge" style="${badgeStyle}">${n.countdown}</span>` : ''}
@@ -159,6 +159,13 @@
                             </div>
                         </a>
                     `;
+                    if (n.body && n.type === 'Attendance Ping') {
+                        const detail = document.createElement('p');
+                        detail.textContent = n.body;
+                        detail.style.cssText = 'font-size:0.76rem;color:#64748b;line-height:1.4;margin:5px 0 0;';
+                        const content = item.querySelector('.notification-content');
+                        if (content) content.appendChild(detail);
+                    }
                     list.appendChild(item);
                 });
             });

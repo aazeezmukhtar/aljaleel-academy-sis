@@ -1,21 +1,50 @@
 <%- include('../partials/header') %>
+<style>
+    .attendance-closures .closures-heading { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:20px; }
+    .attendance-closures .closures-heading h1 { margin:8px 0 6px; line-height:1.2; }
+    .attendance-closures .closures-heading p { margin:0; max-width:680px; }
+    .attendance-closures .closures-back { display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border:1px solid var(--border-color,#e5e7eb); border-radius:9px; text-decoration:none; font-weight:600; }
+    .attendance-closures .closures-panel { min-width:0; padding:20px; margin-bottom:18px; }
+    .attendance-closures .closures-panel > h2 { margin-bottom:6px; }
+    .attendance-closures .closures-intro { max-width:760px; line-height:1.5; }
+    .attendance-closures .closures-form { margin-top:16px; }
+    .attendance-closures .closures-form .form-control,
+    .attendance-closures .closures-form .form-select { min-width:0; }
+    .attendance-closures .closures-submit { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+    .attendance-closures .closures-list-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:14px; }
+    .attendance-closures .closures-count { padding:5px 9px; border-radius:999px; background:var(--surface-muted,rgba(127,127,127,.08)); font-size:.82rem; font-weight:600; }
+    .attendance-closures .closures-table-wrap { border:1px solid var(--border-color,#e5e7eb); border-radius:10px; }
+    .attendance-closures .closures-table { margin:0; }
+    .attendance-closures .closures-table thead th { white-space:nowrap; color:var(--text-muted); font-size:.82rem; background:var(--surface-muted,rgba(127,127,127,.06)); }
+    .attendance-closures .closures-table tbody td { vertical-align:middle; }
+    .attendance-closures .closures-table .closures-reason { min-width:180px; max-width:360px; white-space:normal; overflow-wrap:anywhere; }
+    .attendance-closures .closures-actions { display:flex; flex-wrap:wrap; gap:6px; }
+    .attendance-closures .closures-empty { padding:18px; border:1px dashed var(--border-color,#e5e7eb); border-radius:10px; color:var(--text-muted); }
+    @media (max-width:600px) {
+        .attendance-closures .closures-panel { padding:14px; margin-bottom:14px; }
+        .attendance-closures .closures-heading { margin-bottom:16px; }
+        .attendance-closures .closures-submit { align-items:stretch; flex-direction:column; }
+        .attendance-closures .closures-submit .btn { width:100%; }
+        .attendance-closures .closures-submit #closure-request-feedback { margin:0 !important; }
+    }
+</style>
 <div class="dashboard-container">
     <%- include('../partials/sidebar') %>
-    <main class="main-content">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <main class="main-content attendance-closures">
+        <header class="closures-heading">
             <div>
-                <a href="/attendance" class="text-decoration-none"><i class="bi bi-arrow-left"></i> Attendance</a>
+                <a href="/attendance" class="closures-back"><i class="bi bi-arrow-left"></i> Attendance</a>
                 <h1 class="h3 mt-2">Attendance closures</h1>
                 <p class="text-muted mb-0">Request a closure or review requests before they affect attendance registers.</p>
             </div>
-        </div>
+        </header>
 
         <% if (error) { %><div class="alert alert-warning" role="alert"><%= error %></div><% } %>
 
-        <section class="card p-3 mb-4">
+        <section class="card closures-panel">
             <h2 class="h5">Request a closure</h2>
-            <p class="text-muted small">Requests remain pending until an administrator approves them. Pending requests do not stop attendance register generation.</p>
-            <form id="closure-request-form" class="row g-3">
+            <p class="text-muted small closures-intro">Requests remain pending until an administrator approves them. Pending requests do not stop attendance register generation.</p>
+            <form id="closure-request-form" class="row g-3 closures-form">
                 <div class="col-md-4">
                     <label class="form-label" for="closure-scope">Scope</label>
                     <select class="form-select" id="closure-scope" name="scope_type" required>
@@ -56,23 +85,23 @@
                     <label class="form-label" for="closure-reason">Reason</label>
                     <textarea class="form-control" id="closure-reason" name="reason" rows="2" maxlength="500" required placeholder="Explain why attendance should be suspended for this period"></textarea>
                 </div>
-                <div class="col-12">
+                <div class="col-12 closures-submit">
                     <button class="btn btn-primary" type="submit">Submit closure request</button>
                     <span id="closure-request-feedback" class="small ms-2" role="status" aria-live="polite"></span>
                 </div>
             </form>
         </section>
 
-        <section class="card p-3">
-            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <section class="card closures-panel">
+            <div class="closures-list-header">
                 <h2 class="h5 mb-0">Closure requests</h2>
-                <span class="text-muted small"><%= closures.length %> request(s)</span>
+                <span class="closures-count"><%= closures.length %> request(s)</span>
             </div>
             <% if (!closures.length) { %>
-                <p class="text-muted mb-0">There are no closure requests yet.</p>
+                <p class="closures-empty mb-0">There are no closure requests yet.</p>
             <% } else { %>
-                <div class="table-responsive">
-                    <table class="table align-middle">
+                <div class="table-responsive closures-table-wrap">
+                    <table class="table align-middle closures-table">
                         <thead><tr><th>Scope</th><th>Dates</th><th>Reason</th><th>Requested by</th><th>Status</th><th>Action</th></tr></thead>
                         <tbody>
                         <% closures.forEach(item => {
@@ -82,12 +111,12 @@
                             <tr>
                                 <td><strong><%= scopeLabel %></strong></td>
                                 <td><%= item.start_date %><% if (item.end_date !== item.start_date) { %> – <%= item.end_date %><% } %></td>
-                                <td style="min-width:180px"><%= item.reason %></td>
+                                <td class="closures-reason"><%= item.reason %></td>
                                 <td><%= item.requester_first_name %> <%= item.requester_last_name %></td>
                                 <td><span class="badge <%= item.status === 'approved' ? 'bg-success' : item.status === 'pending' ? 'bg-warning text-dark' : 'bg-secondary' %>"><%= item.status %></span></td>
                                 <td>
                                     <% if (isAdmin && item.status === 'pending') { %>
-                                    <div class="d-flex gap-1 flex-wrap">
+                                    <div class="closures-actions">
                                         <button class="btn btn-sm btn-success" type="button" data-closure-action="approved" data-closure-id="<%= item.id %>">Approve</button>
                                         <button class="btn btn-sm btn-outline-danger" type="button" data-closure-action="rejected" data-closure-id="<%= item.id %>">Reject</button>
                                     </div>

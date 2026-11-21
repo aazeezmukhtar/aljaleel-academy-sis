@@ -94,18 +94,20 @@
                             </span>
                         </div>
 
+                        <% if (clazz.pingHistory.length) { %>
+                            <div style="margin-top:16px;border-top:1px solid var(--border-color,#e2e8f0);padding-top:12px;">
+                                <p style="font-size:.84rem;font-weight:700;margin:0 0 8px;">Ping history</p>
+                                <% clazz.pingHistory.forEach(ping => { %>
+                                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:.8rem;padding:5px 0;">
+                                        <span><%= ping.first_name %> <%= ping.last_name %></span>
+                                        <span style="color:var(--text-muted);"><%= ping.status %><% if (ping.delivered_at) { %> · <%= new Date(ping.delivered_at).toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'short', timeStyle: 'short' }) %><% } %></span>
+                                    </div>
+                                <% }); %>
+                            </div>
+                        <% } %>
+
                         <% if (!clazz.recorded) { %>
                             <div style="margin-top:16px;border-top:1px solid var(--border-color,#e2e8f0);padding-top:12px;">
-                                <% if (clazz.pingHistory.length) { %>
-                                    <p style="font-size:.84rem;font-weight:700;margin:0 0 8px;">Ping history</p>
-                                    <% clazz.pingHistory.forEach(ping => { %>
-                                        <div style="display:flex;justify-content:space-between;gap:10px;font-size:.8rem;padding:5px 0;">
-                                            <span><%= ping.first_name %> <%= ping.last_name %></span>
-                                            <span style="color:var(--text-muted);"><%= ping.status %><% if (ping.delivered_at) { %> · <%= new Date(ping.delivered_at).toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'short', timeStyle: 'short' }) %><% } %></span>
-                                        </div>
-                                    <% }); %>
-                                <% } %>
-
                                 <% if (!tracking.notificationAvailable) { %>
                                     <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 0;">Ping unavailable.</p>
                                 <% } else if (!tracking.isCurrentContext) { %>

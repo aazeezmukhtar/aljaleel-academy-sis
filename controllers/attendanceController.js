@@ -845,7 +845,7 @@ const getAttendanceAnalytics = async (req, res) => {
         `, [schoolId, selectedSection.id]);
         const requestedPeriod = periods.find(item =>
             item.session === req.query.session && item.term === req.query.term
-        );
+        ) || periods.find(item => item.session === req.query.session);
         const selectedPeriod = requestedPeriod || periods[0] || null;
         if (!selectedPeriod) {
             return res.render('attendance/analytics', {

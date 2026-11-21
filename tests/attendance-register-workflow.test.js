@@ -515,12 +515,12 @@ const db = {
     `);
     const incompleteAnalyticsRegister = await db.get(`
       INSERT INTO attendance_registers
-        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+        (school_id, class_id, section_id, academic_period_id, schedule_id, schedule_set_id, responsibility_id,
          register_date, timezone, submission_deadline_at, status, expected_student_count, submitted_student_count)
-      VALUES (1, 40, 10, ?, ?, ?, '2026-12-01', 'Africa/Lagos',
+      VALUES (1, 40, 10, ?, NULL, ?, ?, '2026-12-01', 'Africa/Lagos',
               '2026-12-01T13:00:00.000Z', 'in_progress', 2, 0)
       RETURNING id
-    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_set_id, registerTemplate.responsibility_id]);
     await db.run(`
       INSERT INTO attendance
         (student_id, class_id, section_id, date, status, session, term)

@@ -1,6 +1,6 @@
 'use strict';
 
-const { createAttendanceScheduleService } = require('./attendanceScheduleService');
+const { createAttendanceScheduleCompatibilityService } = require('./attendanceScheduleCompatibilityService');
 
 function dateKeyInNigeria(value = new Date()) {
     const parts = new Intl.DateTimeFormat('en-CA', {
@@ -167,7 +167,7 @@ function createAttendanceOperationsService(db) {
         };
     }
 
-    const scheduleService = createAttendanceScheduleService(db);
+    const scheduleService = createAttendanceScheduleCompatibilityService(db);
 
     async function getOperations(input) {
         const schoolId = Number(input && input.schoolId);
@@ -230,7 +230,7 @@ function createAttendanceOperationsService(db) {
                 let resolved;
                 try {
                     resolved = await scheduleService.isExpectedSchoolDay({
-                        schoolId, classId: Number(classInfo.class_id), date
+                        schoolId, classId: Number(classInfo.class_id), sectionId: Number(classInfo.section_id), date
                     });
                 } catch (error) {
                     scheduleIssues.push({ classId: classInfo.class_id, className: classInfo.class_name,
@@ -255,7 +255,7 @@ function createAttendanceOperationsService(db) {
                     key: id, classId: classInfo.class_id, className: classInfo.class_name,
                     sectionId: classInfo.section_id, sectionName: classInfo.section_name,
                     date, session: period.session, term: period.term,
-                    status, overdue: isOverdue, scheduleSetId: resolved.scheduleSetId,
+                    status, overdue: isOverdue, scheduleSetId: resolved.scheduleSetId || null,
                     scheduleSource: resolved.source,
                     registerId: register ? register.id : null,
                     deadline: register ? register.submission_deadline_at : null,

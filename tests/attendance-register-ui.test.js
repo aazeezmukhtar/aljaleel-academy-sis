@@ -40,8 +40,8 @@ assert(controller.includes('attendanceRegisterAdministration.reopenRegister'));
 assert(view.includes('id="reopen-attendance-register"'));
 assert(view.includes("fetch('/attendance/reopen'"));
 assert(view.includes('register.status === \'submitted\' && isAdmin'));
-assert(controller.includes('attendanceRegisterWorkflow.saveRegisterProgress'));
-assert(controller.includes('attendanceRegisterWorkflow.submitRegister'));
+assert(controller.includes('attendanceRegisterWorkflow.submitRegister'),
+    'the legacy register submission endpoint remains available for existing register workflows');
 assert(
     controller.includes("'enrollment_dates_need_review'") &&
     controller.includes("code: generated.reason") &&
@@ -54,18 +54,6 @@ assert(
     view.includes('school administrator confirms or corrects those dates'),
     'attendance page must explain why enrollment-date review blocks entry'
 );
-assert(
-    controller.includes("'no_academic_period'") &&
-    controller.includes("'attendance_settings_missing'") &&
-    controller.includes('registerBlocked'),
-    'missing academic periods and attendance settings must block the attendance page'
-);
-assert(
-    view.includes("registerSkipReason === 'no_academic_period'") &&
-    view.includes("registerSkipReason === 'attendance_settings_missing'") &&
-    view.includes('Attendance entry and saving are disabled'),
-    'attendance page must explain incomplete academic-period and settings setup'
-);
 assert(controller.includes('hasRegisterAttendanceAuthority'));
 const attendanceTakeHandler = controller.slice(
     controller.indexOf('const getTakeAttendance ='),
@@ -76,15 +64,16 @@ const attendanceSaveHandler = controller.slice(
     controller.indexOf('// POST /attendance/submit')
 );
 assert(
-    attendanceTakeHandler.includes("'enrollment_dates_need_review'") &&
-    attendanceTakeHandler.includes('readOnly'),
-    'attendance page must be read-only when dated enrollment needs review'
+    attendanceTakeHandler.includes('readOnly: false') &&
+    attendanceTakeHandler.includes('register: null') &&
+    !attendanceTakeHandler.includes('generateExpectedRegister'),
+    'standard attendance page must remain editable without register or schedule setup'
 );
 assert(
-    attendanceSaveHandler.includes("'enrollment_dates_need_review'") &&
-    attendanceSaveHandler.includes('res.status(409)') &&
-    attendanceSaveHandler.includes('code: generated.reason'),
-    'attendance save API must reject dated-enrollment review cases with HTTP 409'
+    attendanceSaveHandler.includes('INSERT INTO attendance') &&
+    !attendanceSaveHandler.includes('generateExpectedRegister') &&
+    !attendanceSaveHandler.includes('saveRegisterProgress'),
+    'standard attendance save must write directly without deferred register setup'
 );
 const closureController = controller.includes('attendanceClosureService.requestClosure') &&
     controller.includes('attendanceClosureService.decideClosure') &&

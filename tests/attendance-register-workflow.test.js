@@ -346,7 +346,7 @@ const db = {
     assert.strictEqual(cancelledClosure.status, 'cancelled');
     const reminderService = createAttendanceRegisterReminderService(db);
     const registerTemplate = await db.get(
-      'SELECT academic_period_id, schedule_id, responsibility_id FROM attendance_registers WHERE school_id = ? AND class_id = ? ORDER BY id LIMIT 1',
+      'SELECT academic_period_id, schedule_id, schedule_set_id, responsibility_id FROM attendance_registers WHERE school_id = ? AND class_id = ? ORDER BY id LIMIT 1',
       [1, 40]
     );
     await db.run(`
@@ -450,13 +450,14 @@ const db = {
     );
     const pendingRegister = await db.get(`
       INSERT INTO attendance_registers
-        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+        (school_id, class_id, section_id, academic_period_id, schedule_id, schedule_set_id, responsibility_id,
          register_date, timezone, submission_deadline_at, expected_student_count,
          submitted_student_count, status)
-      VALUES (1, 40, 10, ?, ?, ?, '2026-11-26', 'Africa/Lagos',
+      VALUES (1, 40, 10, ?, ?, ?, ?, '2026-11-26', 'Africa/Lagos',
               '2026-11-26T13:00:00.000Z', 2, 0, 'expected')
       RETURNING id
-    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id,
+      registerTemplate.schedule_set_id, registerTemplate.responsibility_id]);
     await reminderService.scheduleDueReminders({ now: '2026-11-26T13:00:00.000Z' });
     await db.run(`
       UPDATE attendance_registers

@@ -2,8 +2,43 @@
 
 <div class="dashboard-container">
     <%- include('../partials/sidebar') %>
-    <main class="main-content">
-        <header class="content-header" style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px;">
+    <main class="main-content attendance-tracking-page">
+        <style>
+            .attendance-tracking-page .tracking-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+            .attendance-tracking-page .tracking-header h1{margin-bottom:5px}
+            .attendance-tracking-page .tracking-header p{margin:0;color:var(--text-muted)}
+            .attendance-tracking-page .tracking-filter{padding:18px}
+            .attendance-tracking-page .tracking-filter-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:14px;align-items:end}
+            .attendance-tracking-page .tracking-context{margin:14px 0 0;color:var(--text-muted);font-size:.85rem;line-height:1.6}
+            .attendance-tracking-page .tracking-explainer{margin:6px 0 0;color:var(--text-muted);font-size:.78rem;line-height:1.5}
+            .attendance-tracking-page .tracking-class-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px}
+            .attendance-tracking-page .tracking-class-card{margin:0;min-width:0;padding:18px}
+            .attendance-tracking-page .tracking-class-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+            .attendance-tracking-page .tracking-class-name{margin:0 0 6px;font-size:1.05rem}
+            .attendance-tracking-page .tracking-class-meta{margin:0;color:var(--text-muted);font-size:.82rem;line-height:1.45}
+            .attendance-tracking-page .tracking-status{display:inline-flex;align-items:center;gap:5px;white-space:normal;text-align:center;padding:6px 10px;border-radius:999px;font-size:.74rem;font-weight:700;line-height:1.25}
+            .attendance-tracking-page .tracking-status.is-recorded{background:#dcfce7;color:#166534}
+            .attendance-tracking-page .tracking-status.is-missing{background:#f1f5f9;color:#475569}
+            .attendance-tracking-page .tracking-card-section{margin-top:16px;border-top:1px solid var(--border-color,#e2e8f0);padding-top:13px}
+            .attendance-tracking-page .tracking-section-title{font-size:.84rem;font-weight:700;margin:0 0 8px}
+            .attendance-tracking-page .tracking-ping-row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;font-size:.8rem;padding:7px 0;border-bottom:1px solid var(--border-color,#e2e8f0)}
+            .attendance-tracking-page .tracking-ping-row:last-child{border-bottom:0}
+            .attendance-tracking-page .tracking-ping-time{color:var(--text-muted);text-align:right}
+            .attendance-tracking-page .tracking-helper{font-size:.8rem;color:var(--text-muted);line-height:1.5;margin:8px 0 0}
+            .attendance-tracking-page .tracking-ping-button{width:100%;margin-top:10px}
+            .attendance-tracking-page .tracking-recipients{font-size:.75rem;color:var(--text-muted);line-height:1.5;margin:8px 0 0;overflow-wrap:anywhere}
+            @media(max-width:600px){
+                .attendance-tracking-page .tracking-header{gap:12px;margin-bottom:16px}
+                .attendance-tracking-page .tracking-header .btn{width:100%;justify-content:center}
+                .attendance-tracking-page .tracking-filter{padding:14px}
+                .attendance-tracking-page .tracking-filter-grid{grid-template-columns:1fr;gap:11px}
+                .attendance-tracking-page .tracking-class-grid{grid-template-columns:1fr;gap:11px}
+                .attendance-tracking-page .tracking-class-card{padding:15px}
+                .attendance-tracking-page .tracking-class-top{gap:8px}
+                .attendance-tracking-page .tracking-status{max-width:48%}
+            }
+        </style>
+        <header class="content-header tracking-header">
             <div>
                 <h1>Attendance Tracking</h1>
                 <p>See which classes have attendance recorded for a selected date and academic context.</p>
@@ -18,9 +53,8 @@
             <div class="alert alert-danger" role="alert" style="margin-bottom:16px;"><%= error %></div>
         <% } %>
 
-        <section class="card" style="margin-bottom:20px;">
-            <form id="attendance-tracking-filter" method="GET" action="/attendance/tracking"
-                style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;align-items:end;">
+        <section class="card tracking-filter" style="margin-bottom:20px;">
+            <form id="attendance-tracking-filter" class="tracking-filter-grid" method="GET" action="/attendance/tracking">
                 <div class="form-group" style="margin:0;">
                     <label for="tracking-date">Date</label>
                     <input class="form-control" id="tracking-date" type="date" name="date" value="<%= tracking.date %>" required>
@@ -57,7 +91,7 @@
                 <button class="btn btn-primary" type="submit"><i class="bi bi-filter"></i> View</button>
             </form>
             <% if (tracking.selectedSection) { %>
-                <p style="margin:14px 0 0;color:var(--text-muted);font-size:.85rem;">
+                <p class="tracking-context">
                     Showing <strong><%= tracking.selectedSection.name %></strong> ·
                     <strong><%= tracking.session || 'Session not configured' %></strong> ·
                     <strong><%= tracking.term || 'Term not configured' %></strong>
@@ -65,7 +99,7 @@
                         <span style="margin-left:6px;">Historical context — pings are available only for the current section context.</span>
                     <% } %>
                 </p>
-                <p style="margin:6px 0 0;color:var(--text-muted);font-size:.78rem;">
+                <p class="tracking-explainer">
                     “Recorded” means at least one student attendance row exists; the count does not certify that the full class register is complete.
                 </p>
             <% } %>
@@ -82,37 +116,38 @@
         <% } else if (!tracking.classes.length) { %>
             <section class="card"><p>No classes are assigned to <strong><%= tracking.selectedSection.name %></strong>.</p></section>
         <% } else { %>
-            <section style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:14px;">
+            <section class="tracking-class-grid">
                 <% tracking.classes.forEach(clazz => { %>
-                    <article class="card" style="margin:0;min-width:0;">
-                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                    <article class="card tracking-class-card">
+                        <div class="tracking-class-top">
                             <div>
-                                <h3 style="margin:0 0 6px;"><%= clazz.name %></h3>
-                                <p style="margin:0;color:var(--text-muted);font-size:.82rem;">
+                                <h3 class="tracking-class-name"><%= clazz.name %></h3>
+                                <p class="tracking-class-meta">
                                     <%= clazz.recorded ? (clazz.studentCount + ' student record(s)') : 'No attendance rows for this context' %>
                                 </p>
                             </div>
-                            <span style="white-space:nowrap;padding:5px 9px;border-radius:20px;font-size:.76rem;font-weight:700;<%= clazz.recorded ? 'background:#dcfce7;color:#166534;' : 'background:#f1f5f9;color:#475569;' %>">
+                            <span class="tracking-status <%= clazz.recorded ? 'is-recorded' : 'is-missing' %>">
+                                <i class="bi <%= clazz.recorded ? 'bi-check-circle-fill' : 'bi-circle' %>" aria-hidden="true"></i>
                                 <%= clazz.recorded ? 'Recorded' : 'No attendance recorded' %>
                             </span>
                         </div>
 
                         <% if (clazz.pingHistory.length) { %>
-                            <div style="margin-top:16px;border-top:1px solid var(--border-color,#e2e8f0);padding-top:12px;">
-                                <p style="font-size:.84rem;font-weight:700;margin:0 0 8px;">Ping history</p>
+                            <div class="tracking-card-section">
+                                <p class="tracking-section-title">Ping history</p>
                                 <% clazz.pingHistory.forEach(ping => { %>
-                                    <div style="display:flex;justify-content:space-between;gap:10px;font-size:.8rem;padding:5px 0;">
+                                    <div class="tracking-ping-row">
                                         <span><%= ping.first_name %> <%= ping.last_name %></span>
-                                        <span style="color:var(--text-muted);"><%= ping.status %><% if (ping.delivered_at) { %> · <%= new Date(ping.delivered_at).toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'short', timeStyle: 'short' }) %><% } %></span>
+                                        <span class="tracking-ping-time"><%= ping.status %><% if (ping.delivered_at) { %> · <%= new Date(ping.delivered_at).toLocaleString('en-NG', { timeZone: 'Africa/Lagos', dateStyle: 'short', timeStyle: 'short' }) %><% } %></span>
                                     </div>
                                 <% }); %>
                             </div>
                         <% } %>
 
                         <% if (!clazz.recorded) { %>
-                            <div style="margin-top:16px;border-top:1px solid var(--border-color,#e2e8f0);padding-top:12px;">
+                            <div class="tracking-card-section">
                                 <% if (!tracking.notificationAvailable) { %>
-                                    <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 0;">Ping unavailable.</p>
+                                    <p class="tracking-helper">Ping unavailable.</p>
                                 <% } else if (!tracking.isCurrentContext) { %>
                                     <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 0;">Select the current section session and term to send a ping.</p>
                                 <% } else if (!clazz.recipients.length) { %>
@@ -120,17 +155,17 @@
                                 <% } else if (clazz.pingHistory.length) { %>
                                     <p style="font-size:.82rem;color:var(--text-muted);margin:8px 0 0;">A ping already exists for this class, date and academic context. Duplicate notifications are prevented.</p>
                                 <% } else { %>
-                                    <form method="POST" action="/attendance/tracking/ping" style="margin-top:12px;">
+                                    <form method="POST" action="/attendance/tracking/ping">
                                         <input type="hidden" name="class_id" value="<%= clazz.id %>">
                                         <input type="hidden" name="section_id" value="<%= tracking.sectionId %>">
                                         <input type="hidden" name="date" value="<%= tracking.date %>">
                                         <input type="hidden" name="session" value="<%= tracking.session %>">
                                         <input type="hidden" name="term" value="<%= tracking.term %>">
-                                        <button type="submit" class="btn btn-outline" style="width:100%;"
+                                        <button type="submit" class="btn btn-outline tracking-ping-button"
                                             onclick="return confirm('Send an in-app attendance reminder to the responsible class teacher(s)?');">
                                             <i class="bi bi-bell"></i> Ping class teacher
                                         </button>
-                                        <p style="font-size:.75rem;color:var(--text-muted);margin:7px 0 0;">
+                                        <p class="tracking-recipients">
                                             Recipients: <%= clazz.recipients.map(person => person.first_name + ' ' + person.last_name).join(', ') %>
                                         </p>
                                     </form>

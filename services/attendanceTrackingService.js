@@ -146,9 +146,9 @@ function createAttendanceTrackingService({ db, sessionHelper, notificationDelive
             FROM notification_deliveries d
             JOIN staff st ON st.id = d.recipient_id AND st.school_id = d.school_id
             WHERE d.school_id = ? AND d.source_type = 'attendance_class_ping'
-              AND d.source_id = ? AND d.idempotency_key LIKE ?
+              AND d.source_id = ? AND substr(d.idempotency_key, 1, length(?)) = ?
             ORDER BY d.id
-        `, [schoolId, classId, prefix + '%']);
+        `, [schoolId, classId, prefix, prefix]);
     }
 
     async function sendManualPing(input) {
@@ -216,13 +216,15 @@ function createAttendanceTrackingService({ db, sessionHelper, notificationDelive
             if (queued.created) createdCount += 1;
         }
 
-        const dispatched = await notificationDelivery.dispatchDue({ limit: 100 });
+        const dispatched = await notificationDelivery.dispatchDue({ limit: 500 });
         const history = await getPingHistory({ schoolId, classId, date, session, term });
+        const deliveredRecipientCount = history.filter(item => ['delivered', 'read'].includes(item.status)).length;
         return {
             className: clazz.name,
             recipientCount: recipients.length,
             createdCount,
-            deliveredCount: dispatched.deliveredCount,
+            deliveredCount: deliveredRecipientCount,
+            pendingCount: history.filter(item => item.status === 'queued').length,
             history
         };
     }

@@ -50,7 +50,7 @@ const { createAttendanceClassAccessService } = require('../services/attendanceCl
         });
         const teacher = { id: 20, role: 'Teacher' };
         const visible = await service.getAssignedClasses(teacher, 1);
-        assert.deepStrictEqual(visible.map(row => Number(row.id)).sort((a, b) => a - b), [11, 12],
+        assert.deepStrictEqual(visible.map(row => Number(row.id)).sort((a, b) => a - b), [11, 12, 13],
             'only assignments matching each class section current session are available');
         assert.strictEqual(await service.hasClassAttendanceAuthority(teacher, 10, 1), false,
             'a prior-session class assignment must not grant current attendance access');

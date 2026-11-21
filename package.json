@@ -39,7 +39,11 @@
     "test:attendance-operations": "node tests/attendance-operations.test.js",
     "test:attendance-scheduler-run-history": "node tests/attendance-scheduler-run-history.test.js",
     "test:shared-notification-sqlite": "node tests/shared-notification-delivery-sqlite.test.js",
-    "test:shared-notification-postgres": "node tests/shared-notification-delivery-postgres.test.js"
+    "test:shared-notification-postgres": "node tests/shared-notification-delivery-postgres.test.js",
+    "test:attendance-schedule-service": "node tests/attendance-schedule-service.test.js",
+    "test:attendance-schedule-migration": "node tests/attendance-schedule-migration.test.js",
+    "test:attendance-schedule": "npm run test:attendance-schedule-service && npm run test:attendance-schedule-migration",
+    "test:attendance-schedule-postgres": "node tests/attendance-schedule-migration-postgres.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

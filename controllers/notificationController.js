@@ -142,6 +142,7 @@ exports.getLatestNotifications = async (req, res) => {
                 .map(item => ({
                     id: item.id,
                     title: item.title,
+                    body: item.body,
                     type: 'Attendance Ping',
                     source_type: 'attendance_class_ping',
                     created_at: item.delivered_at || item.created_at,

@@ -23,6 +23,9 @@ const { createAttendanceTrackingService } = require('../services/attendanceTrack
             CREATE TABLE class_assignments (
                 id INTEGER PRIMARY KEY, staff_id INTEGER NOT NULL, class_id INTEGER NOT NULL, session TEXT NOT NULL
             );
+            CREATE TABLE subject_assignments (
+                id INTEGER PRIMARY KEY, teacher_id INTEGER NOT NULL, class_id INTEGER NOT NULL, session TEXT NOT NULL
+            );
             CREATE TABLE attendance (
                 id INTEGER PRIMARY KEY, student_id INTEGER NOT NULL, class_id INTEGER NOT NULL,
                 status TEXT NOT NULL, date TEXT NOT NULL, session TEXT NOT NULL, term TEXT NOT NULL
@@ -34,20 +37,26 @@ const { createAttendanceTrackingService } = require('../services/attendanceTrack
                 idempotency_key TEXT NOT NULL, status TEXT NOT NULL,
                 created_at TEXT NOT NULL, delivered_at TEXT, title TEXT NOT NULL, body TEXT, destination TEXT
             );
-            INSERT INTO sections VALUES (1, 1, 'Academy', '2026/2027', '1st Term');
+            INSERT INTO sections VALUES
+                (1, 1, 'Academy', '2026/2027', '1st Term'),
+                (2, 1, 'Tahfeez', '2025/2026', '3rd Term');
             INSERT INTO classes VALUES
                 (10, 1, 1, 'Nursery 2', 20),
-                (11, 1, 1, 'Primary 1', NULL);
+                (11, 1, 1, 'Primary 1', NULL),
+                (12, 1, 2, 'F 2', NULL);
             INSERT INTO staff VALUES
                 (20, 1, 'active', 'Aisha', 'Teacher'),
                 (21, 1, 'active', 'Bello', 'Teacher'),
                 (22, 1, 'active', 'Old', 'Assignment'),
-                (23, 1, 'inactive', 'Inactive', 'Teacher');
+                (23, 1, 'inactive', 'Inactive', 'Teacher'),
+                (24, 1, 'active', 'Subject', 'Only');
             INSERT INTO class_assignments VALUES
                 (1, 20, 10, '2026/2027'),
                 (2, 21, 10, '2026/2027'),
                 (3, 22, 10, '2025/2026'),
-                (4, 23, 10, '2026/2027');
+                (4, 23, 10, '2026/2027'),
+                (5, 24, 12, '2025/2026');
+            INSERT INTO subject_assignments VALUES (1, 24, 10, '2026/2027');
             INSERT INTO attendance VALUES
                 (1, 500, 11, 'Present', '2026-11-21', '2026/2027', '1st Term');
         `);
@@ -105,6 +114,14 @@ const { createAttendanceTrackingService } = require('../services/attendanceTrack
         assert.deepStrictEqual(page.classes.find(row => row.id === 10).recipients.map(row => row.id), [20, 21],
             'only active form teacher and current-session administrative assignments are recipients');
 
+        const tahfeezPage = await service.getTrackingPage({
+            schoolId: 1, date: '2026-11-21', sectionId: 2
+        });
+        assert.strictEqual(tahfeezPage.session, '2025/2026');
+        assert.strictEqual(tahfeezPage.term, '3rd Term');
+        assert.strictEqual(tahfeezPage.isCurrentContext, true,
+            'Tahfeez uses its own current session and term rather than Academy or school settings');
+
         const sent = await service.sendManualPing({
             schoolId: 1, actorStaffId: 1, classId: 10, sectionId: 1,
             date: '2026-11-21', session: '2026/2027', term: '1st Term'
@@ -130,7 +147,22 @@ const { createAttendanceTrackingService } = require('../services/attendanceTrack
             date: '2026-11-21', session: '2025/2026', term: '3rd Term'
         }), /currently configured session and term/i);
 
-        console.log('[attendance-tracking] context, recorded status, current assignees and idempotent in-app pings passed.');
+        const unavailableService = createAttendanceTrackingService({
+            db,
+            sessionHelper: {
+                async getCurrentSession() { return '2026/2027'; },
+                async getCurrentTerm() { return '1st Term'; },
+                async getAvailableSessions() { return ['2026/2027']; },
+                getAvailableTerms() { return ['1st Term', '2nd Term', '3rd Term']; }
+            },
+            notificationDelivery: { async isAvailable() { return false; } }
+        });
+        await assert.rejects(() => unavailableService.sendManualPing({
+            schoolId: 1, actorStaffId: 1, classId: 10, sectionId: 1,
+            date: '2026-11-22', session: '2026/2027', term: '1st Term'
+        }), error => error.code === 'notification_unavailable');
+
+        console.log('[attendance-tracking] section contexts, recorded status, administrative recipients, idempotency and unavailable-notification handling passed.');
     } finally {
         sqlite.close();
     }

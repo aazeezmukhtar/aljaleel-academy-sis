@@ -9,6 +9,7 @@ function date(value, label) {
 function overlaps(a, b, c, d) { return a <= (d || '9999-12-31') && c <= (b || '9999-12-31'); }
 function createAttendanceSetupService(db) {
     if (!db) throw new Error('Attendance setup database adapter is required.');
+    const attendanceScheduleService = require('./attendanceScheduleService').createAttendanceScheduleService(db);
     const sql = parts => parts.join(' ');
     async function admin(input, client) {
         const schoolId = Number(input.schoolId), actorStaffId = Number(input.actorStaffId);
@@ -31,15 +32,44 @@ function createAttendanceSetupService(db) {
         const schoolId = Number(input.schoolId), actorStaffId = Number(input.actorStaffId);
         const a = await db.get('SELECT id, role FROM staff WHERE id = ? AND school_id = ?', [actorStaffId, schoolId]);
         if (!a || a.role !== 'Admin') throw new Error('Only a school administrator may view attendance setup.');
-        const [sections, classes, staff, periods, schedules, responsibilities, settings] = await Promise.all([
+        let scheduleFoundationAvailable = false;
+        try {
+            const foundation = db.DB_TYPE === 'postgres'
+                ? await db.get("SELECT to_regclass('public.attendance_schedule_sets') AS name")
+                : await db.get("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'attendance_schedule_sets'");
+            scheduleFoundationAvailable = !!(foundation && foundation.name);
+        } catch (_) {
+            scheduleFoundationAvailable = false;
+        }
+        const [sections, classes, staff, periods, scheduleRows, responsibilities, settings] = await Promise.all([
             db.all('SELECT id, name FROM sections WHERE school_id = ? ORDER BY name', [schoolId]),
             db.all('SELECT c.id, c.name, c.section_id, s.name AS section_name FROM classes c JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id WHERE c.school_id = ? ORDER BY s.name, c.name', [schoolId]),
             db.all("SELECT id, first_name, last_name, role FROM staff WHERE school_id = ? AND (status = 'active' OR status IS NULL) ORDER BY first_name, last_name", [schoolId]),
             db.all('SELECT p.*, s.name AS section_name FROM section_academic_periods p JOIN sections s ON s.id = p.section_id WHERE p.school_id = ? ORDER BY p.start_date DESC, p.id DESC', [schoolId]),
-            db.all('SELECT a.*, c.name AS class_name, s.name AS section_name FROM class_attendance_schedules a JOIN classes c ON c.id = a.class_id JOIN sections s ON s.id = a.section_id WHERE a.school_id = ? ORDER BY a.effective_from DESC, a.class_id, a.weekday', [schoolId]),
+            scheduleFoundationAvailable ? db.all(
+                'SELECT ss.*, c.name AS class_name, s.name AS section_name, sd.weekday ' +
+                'FROM attendance_schedule_sets ss JOIN sections s ON s.id = ss.section_id ' +
+                'LEFT JOIN classes c ON c.id = ss.class_id ' +
+                'LEFT JOIN attendance_schedule_days sd ON sd.schedule_set_id = ss.id ' +
+                'WHERE ss.school_id = ? ORDER BY ss.effective_from DESC, s.name, c.name, ss.id, sd.weekday',
+                [schoolId]
+            ) : Promise.resolve([]),
             db.all('SELECT r.*, c.name AS class_name, s.name AS section_name, st.first_name, st.last_name FROM class_attendance_responsibilities r JOIN classes c ON c.id = r.class_id JOIN sections s ON s.id = r.section_id JOIN staff st ON st.id = r.staff_id WHERE r.school_id = ? ORDER BY r.effective_from DESC, r.class_id', [schoolId]),
             db.all('SELECT a.*, c.name AS class_name, s.name AS section_name FROM class_attendance_settings a JOIN classes c ON c.id = a.class_id JOIN sections s ON s.id = a.section_id WHERE a.school_id = ? ORDER BY a.effective_from DESC, a.class_id', [schoolId])
         ]);
+        const scheduleSetsById = new Map();
+        for (const row of scheduleRows) {
+            const key = String(row.id);
+            if (!scheduleSetsById.has(key)) scheduleSetsById.set(key, {
+                id: row.id, scope_type: row.scope_type, section_id: row.section_id,
+                section_name: row.section_name, class_id: row.class_id, class_name: row.class_name,
+                effective_from: row.effective_from, effective_to: row.effective_to, weekdays: []
+            });
+            if (row.weekday !== null && row.weekday !== undefined) {
+                scheduleSetsById.get(key).weekdays.push(Number(row.weekday));
+            }
+        }
+        const scheduleSets = Array.from(scheduleSetsById.values());
         const todayParts = new Intl.DateTimeFormat('en-CA', {
             timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
         }).formatToParts(new Date()).reduce((result, part) => {
@@ -49,13 +79,23 @@ function createAttendanceSetupService(db) {
         const today = todayParts.year + '-' + todayParts.month + '-' + todayParts.day;
         const isEffective = row => String(row.effective_from).slice(0, 10) <= today
             && (!row.effective_to || String(row.effective_to).slice(0, 10) >= today);
-        const readiness = classes.map(clazz => {
+        const readiness = await Promise.all(classes.map(async clazz => {
             const period = periods.find(row => Number(row.section_id) === Number(clazz.section_id)
                 && row.status === 'active'
                 && String(row.start_date).slice(0, 10) <= today
                 && String(row.end_date).slice(0, 10) >= today);
-            const hasSchedule = schedules.some(row => Number(row.class_id) === Number(clazz.id)
-                && Number(row.section_id) === Number(clazz.section_id) && isEffective(row));
+            let resolved = { configured: false, source: null, weekdays: [], reason: scheduleFoundationAvailable ? 'missing_schedule' : 'schedule_foundation_unavailable' };
+            if (scheduleFoundationAvailable) {
+                try {
+                    resolved = await attendanceScheduleService.resolveSchedule({
+                        schoolId, classId: clazz.id, date: today
+                    });
+                } catch (error) {
+                    resolved = { configured: false, source: null, weekdays: [],
+                        reason: error.code || 'schedule_resolution_error', scheduleError: error.message };
+                }
+            }
+            const hasSchedule = !!resolved.configured;
             const hasSettings = settings.some(row => Number(row.class_id) === Number(clazz.id)
                 && Number(row.section_id) === Number(clazz.section_id) && isEffective(row));
             const hasPrimaryTeacher = responsibilities.some(row => Number(row.class_id) === Number(clazz.id)
@@ -63,18 +103,22 @@ function createAttendanceSetupService(db) {
                 && row.responsibility_type === 'primary' && isEffective(row));
             const missing = [];
             if (!period) missing.push('Academic period');
-            if (!hasSchedule) missing.push('Opening days');
+            if (!hasSchedule) missing.push(resolved.reason === 'SCHEDULE_CONFLICT' ? 'Schedule conflict'
+                : resolved.reason === 'schedule_foundation_unavailable' ? 'Schedule migration required' : 'Opening days');
             if (!hasSettings) missing.push('Attendance settings');
             if (!hasPrimaryTeacher) missing.push('Primary teacher');
             return {
                 class_id: clazz.id, class_name: clazz.name, section_id: clazz.section_id,
                 section_name: clazz.section_name, period: !!period, schedule: hasSchedule,
+                schedule_source: resolved.source, schedule_weekdays: resolved.weekdays || [],
+                schedule_error: resolved.scheduleError || null, schedule_issue: resolved.reason || null,
+                schedule_set_id: resolved.scheduleSetId || null,
                 settings: hasSettings, primary_teacher: hasPrimaryTeacher,
                 ready: missing.length === 0, missing
             };
-        });
+        }));
         return {
-            sections, classes, staff, periods, schedules, responsibilities, settings,
+            sections, classes, staff, periods, schedules: scheduleSets, scheduleSets, scheduleFoundationAvailable, responsibilities, settings,
             readiness, readinessSummary: {
                 total: readiness.length,
                 ready: readiness.filter(row => row.ready).length,
@@ -169,7 +213,7 @@ function createAttendanceSetupService(db) {
             return { id, endDate: end };
         });
     }
-    return { listSetup, createAcademicPeriod, createSchedule, createResponsibility, createSettings, endConfiguration };
+    return { listSetup, createAcademicPeriod, createSchedule, createScheduleSet: attendanceScheduleService.createScheduleSet, endScheduleSet: attendanceScheduleService.endScheduleSet, createResponsibility, createSettings, endConfiguration };
 }
 let singleton;
 function service() { if (!singleton) singleton = createAttendanceSetupService(require('../utils/db')); return singleton; }
@@ -178,6 +222,8 @@ module.exports = {
     listSetup: (...a) => service().listSetup(...a),
     createAcademicPeriod: (...a) => service().createAcademicPeriod(...a),
     createSchedule: (...a) => service().createSchedule(...a),
+    createScheduleSet: (...a) => service().createScheduleSet(...a),
+    endScheduleSet: (...a) => service().endScheduleSet(...a),
     createResponsibility: (...a) => service().createResponsibility(...a),
     createSettings: (...a) => service().createSettings(...a),
     endConfiguration: (...a) => service().endConfiguration(...a)

@@ -49,6 +49,8 @@ jobs:
         run: npm run test:attendance-register-sqlite
       - name: Run PostgreSQL attendance register foundation migration test
         run: npm run test:attendance-register-postgres
+      - name: Run attendance schedule migration compatibility tests
+        run: npm run test:attendance-schedule-compatibility
       - name: Run attendance register generation service tests (SQLite)
         run: npm run test:attendance-register-generation
       - name: Run attendance register generation service tests (PostgreSQL)

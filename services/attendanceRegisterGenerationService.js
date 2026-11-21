@@ -61,8 +61,9 @@ function localDateTimeToUtc(date, time, timezone) {
     return resolved.toISOString();
 }
 
-function createAttendanceRegisterService(db) { 
+function createAttendanceRegisterService(db) {
     if (!db) throw new Error('An attendance register database adapter is required.');
+    const attendanceScheduleService = require('./attendanceScheduleCompatibilityService').createAttendanceScheduleCompatibilityService(db);
     async function generateExpectedRegister(input) {
         const schoolId = Number(input && input.schoolId);
         const classId = Number(input && input.classId);
@@ -111,22 +112,12 @@ function createAttendanceRegisterService(db) {
             }
             const academicPeriod = academicPeriods[0];
 
-            const weekday = isoWeekday(registerDate);
-            const schedules = await db.all(`
-                SELECT id, weekday
-                FROM class_attendance_schedules
-                WHERE school_id = ? AND class_id = ? AND section_id = ?
-                  AND weekday = ? AND effective_from <= ?
-                  AND (effective_to IS NULL OR effective_to >= ?)
-                ORDER BY effective_from DESC, id DESC
-            `, [schoolId, classId, clazz.section_id, weekday, registerDate, registerDate], client);
-            if (schedules.length === 0) {
-                return { created: false, skipped: true, reason: 'not_a_scheduled_day' };
-            }
-            if (schedules.length !== 1) {
-                throw new Error('Overlapping attendance schedules cover this class and date.');
-            }
-            const schedule = schedules[0];
+            const resolvedSchedule = await attendanceScheduleService.isExpectedSchoolDay({
+                schoolId, classId, sectionId: clazz.section_id, date: registerDate
+            }, client);
+            if (!resolvedSchedule.configured) return { created: false, skipped: true, reason: 'missing_schedule' };
+            if (!resolvedSchedule.expected) return { created: false, skipped: true, reason: 'not_a_scheduled_day',
+                scheduleSetId: resolvedSchedule.scheduleSetId || null, scheduleSource: resolvedSchedule.source };
 
             const closures = await db.all(`
                 SELECT id, scope_type
@@ -208,16 +199,22 @@ function createAttendanceRegisterService(db) {
 
             const timezone = 'Africa/Lagos';
             const deadlineAt = localDateTimeToUtc(registerDate, settings.submission_deadline_time, timezone);
+            const hasScheduleFoundation = resolvedSchedule.scheduleFoundationAvailable === true;
+            const scheduleColumns = hasScheduleFoundation ? 'schedule_id, schedule_set_id' : 'schedule_id';
+            const scheduleValues = hasScheduleFoundation ? '?, ?' : '?';
+            const scheduleReferences = hasScheduleFoundation
+                ? [null, resolvedSchedule.scheduleSetId || null]
+                : [resolvedSchedule.scheduleId || null];
             const inserted = await db.get(`
                 INSERT INTO attendance_registers (
-                    school_id, class_id, section_id, academic_period_id, schedule_id,
+                    school_id, class_id, section_id, academic_period_id, ${scheduleColumns},
                     responsibility_id, register_date, timezone, submission_deadline_at,
                     expected_student_count, submitted_student_count, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 'expected')
+                ) VALUES (?, ?, ?, ?, ${scheduleValues}, ?, ?, ?, ?, ?, 0, 'expected')
                 ON CONFLICT (class_id, section_id, register_date) DO NOTHING
                 RETURNING id
             `, [
-                schoolId, classId, clazz.section_id, academicPeriod.id, schedule.id,
+                schoolId, classId, clazz.section_id, academicPeriod.id, ...scheduleReferences,
                 responsibility ? responsibility.id : null, registerDate, timezone,
                 deadlineAt, rosterRows.length
             ], client);
@@ -252,7 +249,9 @@ function createAttendanceRegisterService(db) {
                 JSON.stringify({
                     expected_student_count: rosterRows.length,
                     academic_period_id: academicPeriod.id,
-                    schedule_id: schedule.id,
+                    schedule_id: resolvedSchedule.scheduleId || null,
+                    schedule_set_id: resolvedSchedule.scheduleSetId || null,
+                    schedule_source: resolvedSchedule.source,
                     responsibility_id: responsibility ? responsibility.id : null,
                     submission_deadline_at: deadlineAt
                 })

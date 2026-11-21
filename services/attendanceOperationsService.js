@@ -1,5 +1,7 @@
 'use strict';
 
+const { createAttendanceScheduleCompatibilityService } = require('./attendanceScheduleCompatibilityService');
+
 function dateKeyInNigeria(value = new Date()) {
     const parts = new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Africa/Lagos', year: 'numeric', month: '2-digit', day: '2-digit'
@@ -18,11 +20,6 @@ function shiftDate(date, amount) {
 
 function key(value) {
     return value instanceof Date ? value.toISOString().slice(0, 10) : String(value || '').slice(0, 10);
-}
-
-function weekday(date) {
-    const day = new Date(date + 'T00:00:00Z').getUTCDay();
-    return day === 0 ? 7 : day;
 }
 
 function covers(start, end, date) {
@@ -170,6 +167,8 @@ function createAttendanceOperationsService(db) {
         };
     }
 
+    const scheduleService = createAttendanceScheduleCompatibilityService(db);
+
     async function getOperations(input) {
         const schoolId = Number(input && input.schoolId);
         if (!Number.isSafeInteger(schoolId) || schoolId <= 0) throw new Error('A valid school is required.');
@@ -177,7 +176,7 @@ function createAttendanceOperationsService(db) {
         const startDate = shiftDate(today, -13);
         const nowIso = input && input.now ? new Date(input.now).toISOString() : new Date().toISOString();
 
-        const [classes, periods, schedules, closures, registers] = await Promise.all([
+        const [classes, periods, closures, registers] = await Promise.all([
             db.all(`SELECT c.id AS class_id, c.name AS class_name, c.section_id, s.name AS section_name
                 FROM classes c JOIN sections s ON s.id = c.section_id AND s.school_id = c.school_id
                 WHERE c.school_id = ? ORDER BY s.name, c.name`, [schoolId]),
@@ -185,10 +184,6 @@ function createAttendanceOperationsService(db) {
                 FROM section_academic_periods
                 WHERE school_id = ? AND status IN ('active', 'completed')
                   AND start_date <= ? AND end_date >= ?`, [schoolId, today, startDate]),
-            db.all(`SELECT class_id, section_id, weekday, effective_from, effective_to
-                FROM class_attendance_schedules
-                WHERE school_id = ? AND effective_from <= ?
-                  AND (effective_to IS NULL OR effective_to >= ?)`, [schoolId, today, startDate]),
             db.all(`SELECT scope_type, section_id, class_id, start_date, end_date
                 FROM class_attendance_closures
                 WHERE school_id = ? AND status = 'approved'
@@ -226,16 +221,29 @@ function createAttendanceOperationsService(db) {
         }
 
         const expected = new Map();
+        const scheduleIssues = [];
         for (let date = startDate; date <= today; date = shiftDate(date, 1)) {
-            for (const schedule of schedules) {
-                if (Number(schedule.weekday) !== weekday(date) ||
-                    !covers(schedule.effective_from, schedule.effective_to, date)) continue;
-                const classInfo = classMap.get(String(schedule.class_id));
-                if (!classInfo || String(classInfo.section_id) !== String(schedule.section_id)) continue;
-                const period = periods.find(item => String(item.section_id) === String(schedule.section_id) &&
+            for (const classInfo of classes) {
+                const period = periods.find(item => String(item.section_id) === String(classInfo.section_id) &&
                     covers(item.start_date, item.end_date, date));
-                if (!period || closures.some(item => closureApplies(item, schedule.class_id, schedule.section_id, date))) continue;
-                const id = String(schedule.class_id) + '|' + date;
+                if (!period || closures.some(item => closureApplies(item, classInfo.class_id, classInfo.section_id, date))) continue;
+                let resolved;
+                try {
+                    resolved = await scheduleService.isExpectedSchoolDay({
+                        schoolId, classId: Number(classInfo.class_id), sectionId: Number(classInfo.section_id), date
+                    });
+                } catch (error) {
+                    scheduleIssues.push({ classId: classInfo.class_id, className: classInfo.class_name,
+                        sectionId: classInfo.section_id, date, reason: error.code || 'schedule_resolution_error' });
+                    continue;
+                }
+                if (!resolved.expected) {
+                    if (!resolved.configured) scheduleIssues.push({ classId: classInfo.class_id,
+                        className: classInfo.class_name, sectionId: classInfo.section_id, date,
+                        reason: resolved.reason || 'missing_schedule' });
+                    continue;
+                }
+                const id = String(classInfo.class_id) + '|' + date;
                 if (expected.has(id)) continue;
                 const register = registerMap.get(id) || null;
                 const status = !register ? 'missing' : register.status === 'submitted' ? 'submitted' : 'incomplete';
@@ -247,7 +255,8 @@ function createAttendanceOperationsService(db) {
                     key: id, classId: classInfo.class_id, className: classInfo.class_name,
                     sectionId: classInfo.section_id, sectionName: classInfo.section_name,
                     date, session: period.session, term: period.term,
-                    status, overdue: isOverdue,
+                    status, overdue: isOverdue, scheduleSetId: resolved.scheduleSetId || null,
+                    scheduleSource: resolved.source,
                     registerId: register ? register.id : null,
                     deadline: register ? register.submission_deadline_at : null,
                     responsibleTeacher: register
@@ -279,7 +288,7 @@ function createAttendanceOperationsService(db) {
             failedReminders: reminders.filter(item => item.status === 'failed').length,
             escalations: reminders.filter(item => item.reminder_type === 'administrator_escalation').length
         };
-        return { startDate, endDate: today, summary, rows, reminderHistory: reminders, schedulerHistory, notificationDeliveryHealth };
+        return { startDate, endDate: today, summary, rows, scheduleIssues, reminderHistory: reminders, schedulerHistory, notificationDeliveryHealth };
     }
 
     return { getOperations };

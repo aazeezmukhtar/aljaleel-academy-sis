@@ -99,16 +99,27 @@ const db = {
       'utf8'
     );
     sqlite.exec(notificationMigration);
+    const scheduleMigration = fs.readFileSync(
+      path.join(__dirname, '..', 'database', 'migrations', '20261121_attendance_schedule_sets.sqlite.sql'),
+      'utf8'
+    );
+    sqlite.exec(scheduleMigration);
     sqlite.prepare(`
       INSERT INTO section_academic_periods
         (school_id, section_id, session, term, start_date, end_date, status)
       VALUES (1, 10, '2026/2027', '1st Term', '2026-09-01', '2026-12-20', 'active')
     `).run();
-    sqlite.prepare(`
-      INSERT INTO class_attendance_schedules
-        (school_id, class_id, section_id, weekday, effective_from, created_by)
-      VALUES (1, 40, 10, ?, '2026-09-01', 20)
-    `).run(isoWeekday('2026-11-19'));
+    const sectionScheduleSet = sqlite.prepare(`
+      INSERT INTO attendance_schedule_sets
+        (school_id, section_id, class_id, scope_type, effective_from, created_by)
+      VALUES (1, 10, NULL, 'section', '2026-09-01', 20)
+    `).run().lastInsertRowid;
+    // The scheduler fixture intentionally has one expected school day:
+    // Wednesday, 25 November. Later analytics assertions use their own
+    // effective-dated class override.
+    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?), (?, ?)')
+      .run(sectionScheduleSet, isoWeekday('2026-11-19'),
+        sectionScheduleSet, isoWeekday('2026-11-25'));
     sqlite.prepare(`
       INSERT INTO class_attendance_settings
         (school_id, class_id, section_id, effective_from, submission_deadline_time,
@@ -335,7 +346,7 @@ const db = {
     assert.strictEqual(cancelledClosure.status, 'cancelled');
     const reminderService = createAttendanceRegisterReminderService(db);
     const registerTemplate = await db.get(
-      'SELECT academic_period_id, schedule_id, responsibility_id FROM attendance_registers WHERE school_id = ? AND class_id = ? ORDER BY id LIMIT 1',
+      'SELECT academic_period_id, schedule_id, schedule_set_id, responsibility_id FROM attendance_registers WHERE school_id = ? AND class_id = ? ORDER BY id LIMIT 1',
       [1, 40]
     );
     await db.run(`
@@ -439,13 +450,14 @@ const db = {
     );
     const pendingRegister = await db.get(`
       INSERT INTO attendance_registers
-        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+        (school_id, class_id, section_id, academic_period_id, schedule_id, schedule_set_id, responsibility_id,
          register_date, timezone, submission_deadline_at, expected_student_count,
          submitted_student_count, status)
-      VALUES (1, 40, 10, ?, ?, ?, '2026-11-26', 'Africa/Lagos',
+      VALUES (1, 40, 10, ?, ?, ?, ?, '2026-11-26', 'Africa/Lagos',
               '2026-11-26T13:00:00.000Z', 2, 0, 'expected')
       RETURNING id
-    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id,
+      registerTemplate.schedule_set_id, registerTemplate.responsibility_id]);
     await reminderService.scheduleDueReminders({ now: '2026-11-26T13:00:00.000Z' });
     await db.run(`
       UPDATE attendance_registers
@@ -476,14 +488,14 @@ const db = {
     await db.run("INSERT INTO classes(id, school_id, section_id, name) VALUES (41, 1, 11, 'Tahfeez 1')");
     const analyticsRegister = await db.get(`
       INSERT INTO attendance_registers
-        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+        (school_id, class_id, section_id, academic_period_id, schedule_id, schedule_set_id, responsibility_id,
          register_date, timezone, submission_deadline_at, status, expected_student_count,
          submitted_student_count, first_submitted_at, last_submitted_at, submitted_by)
-      VALUES (1, 40, 10, ?, ?, ?, '2026-11-30', 'Africa/Lagos',
+      VALUES (1, 40, 10, ?, NULL, ?, ?, '2026-11-30', 'Africa/Lagos',
               '2026-11-30T13:00:00.000Z', 'submitted', 2, 2,
               '2026-11-30T13:10:00.000Z', '2026-11-30T13:10:00.000Z', 20)
       RETURNING id
-    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_set_id, registerTemplate.responsibility_id]);
     await db.run(`
       INSERT INTO attendance_register_students (register_id, student_id, enrollment_period_id)
       VALUES (?, 30, 100)
@@ -503,12 +515,12 @@ const db = {
     `);
     const incompleteAnalyticsRegister = await db.get(`
       INSERT INTO attendance_registers
-        (school_id, class_id, section_id, academic_period_id, schedule_id, responsibility_id,
+        (school_id, class_id, section_id, academic_period_id, schedule_id, schedule_set_id, responsibility_id,
          register_date, timezone, submission_deadline_at, status, expected_student_count, submitted_student_count)
-      VALUES (1, 40, 10, ?, ?, ?, '2026-12-01', 'Africa/Lagos',
+      VALUES (1, 40, 10, ?, NULL, ?, ?, '2026-12-01', 'Africa/Lagos',
               '2026-12-01T13:00:00.000Z', 'in_progress', 2, 0)
       RETURNING id
-    `, [registerTemplate.academic_period_id, registerTemplate.schedule_id, registerTemplate.responsibility_id]);
+    `, [registerTemplate.academic_period_id, registerTemplate.schedule_set_id, registerTemplate.responsibility_id]);
     await db.run(`
       INSERT INTO attendance
         (student_id, class_id, section_id, date, status, session, term)
@@ -604,6 +616,14 @@ const db = {
         (student_id, class_id, section_id, date, status, session, term)
       VALUES (31, 40, 10, '2026-12-02', 'Absent', '2026/2027', '1st Term')
     `);
+
+    const analyticsOverride = sqlite.prepare(`
+      INSERT INTO attendance_schedule_sets
+        (school_id, section_id, class_id, scope_type, effective_from, effective_to, created_by)
+      VALUES (1, 10, 40, 'class', '2026-11-29', '2026-12-03', 20)
+    `).run().lastInsertRowid;
+    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?), (?, ?), (?, ?), (?, ?)')
+      .run(analyticsOverride, 7, analyticsOverride, 1, analyticsOverride, 2, analyticsOverride, 3);
 
     const dashboardService = createAttendanceAnalyticsDashboardService(db, analytics);
     const dashboard = await dashboardService.getDashboard({

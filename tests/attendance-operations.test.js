@@ -28,6 +28,10 @@ function makeDb(options = {}) {
     return {
         DB_TYPE: options.dbType || 'sqlite',
         async get(sql) {
+            if (sql.includes('SELECT c.id, c.school_id, c.section_id FROM classes c')) {
+                return { id: 4, school_id: 1, section_id: 2 };
+            }
+            if (sql.includes("name IN ('attendance_schedule_sets', 'attendance_schedule_days')")) return { table_count: 2 };
             if (sql.includes('sqlite_master')) {
                 const tableName = arguments[1] && arguments[1][0];
                 if (tableName === 'attendance_scheduler_runs') return options.schedulerTable === false ? undefined : { name: tableName };
@@ -37,15 +41,17 @@ function makeDb(options = {}) {
             if (sql.includes('COUNT(*) AS total')) return { total: 8, queued: 3, due: 2, delivered: 2, read: 1, failed: 1, cancelled: 1, oldest_queued_at: '2026-11-20T10:00:00.000Z' };
             throw new Error('Unexpected get query: ' + sql);
         },
-        async all(sql) {
+        async all(sql, params = []) {
+            if (sql.includes('FROM attendance_schedule_sets ss')) {
+                return params[2] === 'section'
+                    ? [{ schedule_set_id: 55, scope_type: 'section', effective_from: '2026-11-01', effective_to: null, weekday: 5 }]
+                    : [];
+            }
             if (sql.includes('FROM classes c JOIN sections')) {
                 return [{ class_id: 4, class_name: 'Primary 1', section_id: 2, section_name: 'Academy' }];
             }
             if (sql.includes('FROM section_academic_periods')) {
                 return [{ id: 1, section_id: 2, session: '2026/2027', term: 'First Term', start_date: '2026-11-01', end_date: '2026-11-30' }];
-            }
-            if (sql.includes('FROM class_attendance_schedules')) {
-                return [{ class_id: 4, section_id: 2, weekday: 5, effective_from: '2026-11-01', effective_to: null }];
             }
             if (sql.includes('FROM class_attendance_closures')) return [];
             if (sql.includes('FROM attendance_registers ar')) {
@@ -130,6 +136,12 @@ function makeDb(options = {}) {
 
     const postgresDb = makeDb({ dbType: 'postgres' });
     postgresDb.get = async (sql, params = []) => {
+        if (sql.includes('SELECT c.id, c.school_id, c.section_id FROM classes c')) {
+            return { id: 4, school_id: 1, section_id: 2 };
+        }
+        if (sql.includes("to_regclass('attendance_schedule_sets')")) {
+            return { sets_name: 'attendance_schedule_sets', days_name: 'attendance_schedule_days' };
+        }
         if (sql.includes('to_regclass')) {
             const tableName = params[0];
             return { table_name: tableName === 'public.attendance_scheduler_runs' ? 'attendance_scheduler_runs' : 'notification_deliveries' };

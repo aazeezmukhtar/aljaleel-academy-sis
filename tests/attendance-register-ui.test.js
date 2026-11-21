@@ -17,6 +17,7 @@ const portalController = fs.readFileSync(path.join(__dirname, '..', 'controllers
 const portalAttendanceView = fs.readFileSync(path.join(__dirname, '..', 'views', 'portal', 'attendance.ejs'), 'utf8');
 const attendanceReportView = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'report.ejs'), 'utf8');
 const dashboardService = fs.readFileSync(path.join(__dirname, '..', 'services', 'attendanceAnalyticsDashboardService.js'), 'utf8');
+const scheduleCompatibilityService = fs.readFileSync(path.join(__dirname, '..', 'services', 'attendanceScheduleCompatibilityService.js'), 'utf8');
 const analyticsController = fs.readFileSync(path.join(__dirname, '..', 'controllers', 'attendanceController.js'), 'utf8');
 const analyticsView = fs.readFileSync(path.join(__dirname, '..', 'views', 'attendance', 'analytics.ejs'), 'utf8');
 
@@ -137,7 +138,8 @@ assert(!attendanceReportView.includes('row.late * 0.5'));
 assert(analyticsController.includes('attendanceAnalyticsDashboard.getDashboard'));
 assert(routes.includes("router.get('/analytics', attendanceController.getAttendanceAnalytics);"));
 assert(view.includes('href="/attendance/analytics"'));
-assert(dashboardService.includes('class_attendance_schedules'));
+assert(dashboardService.includes('createAttendanceScheduleCompatibilityService'));
+assert(scheduleCompatibilityService.includes('class_attendance_schedules'));
 assert(dashboardService.includes("status = 'approved'"));
 assert(dashboardService.includes("register.status === 'submitted'"));
 assert(analyticsView.includes('Expected class-days'));

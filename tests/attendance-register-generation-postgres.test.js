@@ -23,6 +23,7 @@ if (!url) {
     return sql.replace(/\?/g, () => '$' + (++index));
   };
   const db = {
+    DB_TYPE: 'postgres',
     all: async (sql, params = [], tx = null) => (await (tx || client).query(convert(sql), params)).rows,
     get: async (sql, params = [], tx = null) => {
       const result = await (tx || client).query(convert(sql), params);
@@ -87,16 +88,19 @@ if (!url) {
       'utf8'
     );
     await client.query(migration);
+    const scheduleMigration = fs.readFileSync(
+      path.join(__dirname, '..', 'database', 'migrations', '20261121_attendance_schedule_sets.postgres.sql'),
+      'utf8'
+    );
+    await client.query(scheduleMigration);
 
     await client.query(`
       INSERT INTO section_academic_periods
         (school_id, section_id, session, term, start_date, end_date, status)
       VALUES (1, 10, '2026/2027', '1st Term', '2026-09-01', '2026-12-20', 'active');
-      INSERT INTO class_attendance_schedules
-        (school_id, class_id, section_id, weekday, effective_from, created_by)
-      VALUES (1, 40, 10, ${isoWeekday('2026-11-19')}, '2026-09-01', 20),
-             (1, 40, 10, ${isoWeekday('2026-11-20')}, '2026-09-01', 20),
-             (1, 40, 10, ${isoWeekday('2026-11-21')}, '2026-09-01', 20);
+      INSERT INTO attendance_schedule_sets
+        (school_id, section_id, class_id, scope_type, effective_from, created_by)
+      VALUES (1, 10, NULL, 'section', '2026-09-01', 20);
       INSERT INTO class_attendance_settings
         (school_id, class_id, section_id, effective_from, submission_deadline_time,
          subsequent_reminder_intervals_minutes, low_attendance_threshold, created_by)
@@ -107,6 +111,13 @@ if (!url) {
              (1, 40, 10, 21, 'substitute', '2026-11-19', 20);
     `);
 
+    const scheduleSet = await client.query("SELECT id FROM attendance_schedule_sets WHERE school_id = 1 AND section_id = 10 AND scope_type = 'section'");
+    await client.query(`
+      INSERT INTO attendance_schedule_days (schedule_set_id, weekday)
+      VALUES (${scheduleSet.rows[0].id}, ${isoWeekday('2026-11-19')}),
+             (${scheduleSet.rows[0].id}, ${isoWeekday('2026-11-20')}),
+             (${scheduleSet.rows[0].id}, ${isoWeekday('2026-11-21')})
+    `);
     const service = createAttendanceRegisterService(db);
     const generated = await service.generateExpectedRegister({
       schoolId: 1, classId: 40, registerDate: '2026-11-19', generatedBy: 20

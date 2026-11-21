@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function normalizeDate(value) {
@@ -134,8 +135,8 @@ function createAttendanceTrackingService({ db, sessionHelper, notificationDelive
     }
 
     function pingKeyPrefix(classId, date, session, term) {
-        return 'attendance-class-ping:' + classId + ':' + date + ':' +
-            encodeURIComponent(session) + ':' + encodeURIComponent(term) + ':';
+        const contextHash = crypto.createHash('sha256').update(session + '|' + term).digest('hex');
+        return 'attendance-class-ping:' + classId + ':' + date + ':' + contextHash + ':';
     }
 
     async function getPingHistory({ schoolId, classId, date, session, term }) {

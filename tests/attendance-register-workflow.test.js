@@ -114,9 +114,11 @@ const db = {
         (school_id, section_id, class_id, scope_type, effective_from, created_by)
       VALUES (1, 10, NULL, 'section', '2026-09-01', 20)
     `).run().lastInsertRowid;
-    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?), (?, ?), (?, ?), (?, ?), (?, ?), (?, ?), (?, ?)')
-      .run(sectionScheduleSet, 1, sectionScheduleSet, 2, sectionScheduleSet, 3,
-        sectionScheduleSet, 4, sectionScheduleSet, 5, sectionScheduleSet, 6, sectionScheduleSet, 7);
+    // The scheduler fixture intentionally has one expected school day:
+    // Wednesday, 25 November. Later analytics assertions use their own
+    // effective-dated class override.
+    sqlite.prepare('INSERT INTO attendance_schedule_days (schedule_set_id, weekday) VALUES (?, ?)')
+      .run(sectionScheduleSet, isoWeekday('2026-11-25'));
     sqlite.prepare(`
       INSERT INTO class_attendance_settings
         (school_id, class_id, section_id, effective_from, submission_deadline_time,

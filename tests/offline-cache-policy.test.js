@@ -206,6 +206,14 @@ check('login and logout routes are not served from offline page cache', () => {
   assert.match(source, /Sign-in and sign-out require an internet connection/);
 });
 
+check('prepared attendance sheets recover from IndexedDB after CacheStorage eviction', () => {
+  assert.match(source, /async function getDurablePreparedAttendanceResponse/);
+  assert.match(source, /attendance_prepared/);
+  assert.match(source, /new URL\(item\.url, self\.location\.origin\)/);
+  assert.match(source, /X-AcadMe-Offline-Recovered/);
+  assert.match(source, /clearDurablePreparedAttendanceForOwner/);
+});
+
 check('expired-session redirects preserve prepared sheets only for the same authenticated account', () => {
   assert.match(source, /async function clearPrivatePageCache\(cache\)/);
   assert.match(source, /if \(AUTH_PATHS\.has\(url\.pathname\) \|\| LOGOUT_PATHS\.has\(url\.pathname\)\)/);

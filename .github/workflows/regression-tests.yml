@@ -81,6 +81,8 @@ jobs:
         run: npm run test:attendance-setup-service
       - name: Run attendance operations monitoring tests
         run: npm run test:attendance-operations
+      - name: Run staff information migration checks
+        run: npm run test:staff-information-migration
       - name: Run staff information self-service checks
         run: npm run test:staff-information-self-service
       - name: Run recovery and schema smoke checks

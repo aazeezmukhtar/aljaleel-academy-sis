@@ -408,10 +408,10 @@
 
     async function restoreAttendanceDraft() {
         const offline = window.AcadMeOffline || window.NexusOffline;
-        if (!offline || typeof offline.getQueuedAttendanceRecord !== 'function') return;
+        if (!offline || typeof offline.getSavedAttendanceDraft !== 'function') return;
         try {
             const form = document.getElementById('attendance-form');
-            const record = await offline.getQueuedAttendanceRecord(
+            const record = await offline.getSavedAttendanceDraft(
                 form.querySelector('[name="class_id"]').value,
                 form.querySelector('[name="date"]').value
             );
@@ -482,6 +482,7 @@
             btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
         });
         try {
+            window.clearTimeout(attendanceAutosaveTimer);
             const offline = window.AcadMeOffline || window.NexusOffline;
             if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
                 throw new Error('Durable offline storage is unavailable. Do not close this page until storage is available.');
@@ -525,6 +526,7 @@
         });
         saveButtons.forEach(button => { button.disabled = true; });
         try {
+            window.clearTimeout(attendanceAutosaveTimer);
             const offline = window.AcadMeOffline || window.NexusOffline;
             if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
                 throw new Error('Durable offline storage is unavailable. The register was not submitted.');

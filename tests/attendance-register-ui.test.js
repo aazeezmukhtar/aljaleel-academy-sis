@@ -24,10 +24,11 @@ const analyticsView = fs.readFileSync(path.join(__dirname, '..', 'views', 'atten
 
 assert(view.includes("const STATUS_CYCLE = ['Not recorded', 'Present', 'Late', 'Leave', 'Absent']"));
 assert(view.includes("const currentStatus = student.status || 'Not recorded';"));
+assert(view.includes(String.raw`key.match(/^(attendance|reasons|custom_reasons)\[(\d+)\]$/)`));
 assert(!view.includes("btn.dataset.state === 'Not recorded'") || !view.includes("btn.dataset.state = 'Absent'"));
-assert(view.includes("id=\"submit-attendance-register\""));
-assert(offline.includes("fetch('/attendance/submit'"));
-assert(view.includes("submitAfterSync: true"));
+assert(!view.includes('id="submit-attendance-register"'));
+assert(!offline.includes("fetch('/attendance/submit'"));
+assert(!view.includes("submitAfterSync: true"));
 assert(!view.includes("if (!navigator.onLine)"), "Submit must remain available offline");
 assert(view.includes("Pending submission"));
 assert(offline.includes("getPendingAttendanceCount"));
@@ -73,8 +74,8 @@ assert(
     !attendanceSubmitHandler.includes('generateExpectedRegister'),
     'only explicit submission may mark unrecorded roster members absent, without register setup'
 );
-assert(view.includes('Submit Attendance'));
-assert(view.includes('Every student still marked Not recorded will be recorded as Absent.'));
+assert(!view.includes('Submit Attendance'));
+assert(!view.includes('Every student still marked Not recorded will be recorded as Absent.'));
 const closureController = controller.includes('attendanceClosureService.requestClosure') &&
     controller.includes('attendanceClosureService.decideClosure') &&
     controller.includes('attendanceClosureService.cancelClosure');

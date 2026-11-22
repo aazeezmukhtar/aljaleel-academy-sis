@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v20';
+const CACHE_NAME = 'aljaleel-sis-v21';
 
 const STATIC_ASSETS = [
     '/css/main.css',

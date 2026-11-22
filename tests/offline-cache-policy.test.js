@@ -22,7 +22,7 @@ check('service worker script parses as JavaScript', () => {
 });
 
 check('cache version is bumped to retire previous broad-navigation cache', () => {
-  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v19'/);
+  assert.match(source, /const CACHE_NAME = 'aljaleel-sis-v20'/);
 });
 
 check('only explicit approved paths qualify for offline page caching', () => {
@@ -59,6 +59,26 @@ check('unprepared results selections fall back only to the cached unfiltered sel
   assert.match(source, /X-AcadMe-Offline-Selection/);
   assert.match(source, /This selected class, subject, session and term sheet is not prepared for offline use/);
   assert.match(source, /prepare this exact sheet while connected/);
+});
+
+check('result drafts have a dedicated durable IndexedDB store and context-keyed recovery API', () => {
+  const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
+  assert.match(handler, /const DB_VERSION = 5/);
+  assert.match(handler, /createObjectStore\('results_drafts', \{ keyPath: 'id' \}\)/);
+  assert.match(handler, /async function saveResultDraftLocal/);
+  assert.match(handler, /async function getSavedResultDraft/);
+  assert.match(handler, /async function clearSavedResultDraft/);
+  assert.match(handler, /getResultContextKey/);
+  assert.match(handler, /queue\.put\(record\)/);
+  assert.match(handler, /drafts\.put\(/);
+  assert.match(handler, /clearSavedResultDraft\(context, _savedAt\)/);
+  const worker = fs.readFileSync(path.join(__dirname, '..', 'public', 'sw.js'), 'utf8');
+  assert.match(worker, /const OFFLINE_DB_VERSION = 5/);
+  assert.match(worker, /createObjectStore\('results_drafts', \{ keyPath: 'id' \}\)/);
+  const manager = fs.readFileSync(path.join(__dirname, '..', 'views', 'results', 'manager.ejs'), 'utf8');
+  assert.match(manager, /restoreSavedResultDraft/);
+  assert.match(manager, /saveResultDraftLocal/);
+  assert.match(manager, /Recovered .* student result row/);
 });
 
 check('prepared dataset registry distinguishes fresh, stale, expired and missing cached sheets', () => {

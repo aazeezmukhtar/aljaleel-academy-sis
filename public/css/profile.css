@@ -649,3 +649,11 @@ textarea.acm-form-control {
         animation: none !important;
     }
 }
+
+@media (min-width: 1024px) {
+    .acm-main-content {
+        width: auto;
+        margin-inline-start: 260px;
+        margin-inline-end: auto;
+    }
+}

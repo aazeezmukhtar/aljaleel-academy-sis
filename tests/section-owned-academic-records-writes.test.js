@@ -20,7 +20,7 @@ function responseRecorder() {
 }
 
 async function withMockedDb(fn) {
-  const original = { get: db.get, run: db.run, transaction: db.transaction };
+  const original = { all: db.all, get: db.get, run: db.run, transaction: db.transaction };
   try { await fn(); } finally { Object.assign(db, original); }
 }
 

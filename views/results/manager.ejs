@@ -700,8 +700,14 @@
                 // Persist locally before attempting the network. This protects the
                 // teacher's work from a tab close, refresh, or dropped connection.
                 if (offline && typeof offline.saveResultDraftLocal === 'function') {
-                    const localSave = await offline.saveResultDraftLocal({ ...payload, status: 'draft' });
-                    localDraftSavedAt = localSave.savedAt;
+                    try {
+                        const localSave = await offline.saveResultDraftLocal({ ...payload, status: 'draft' });
+                        localDraftSavedAt = localSave.savedAt;
+                    } catch (localError) {
+                        // Online saving must remain available if this browser cannot
+                        // provide a durable local identity/storage context.
+                        console.warn('[AcadMe] Local result draft backup unavailable:', localError);
+                    }
                 }
                 if (btn) {
                     btn.innerHTML = 'Saving...';
@@ -795,7 +801,9 @@
                         const input = row.querySelector('.' + key);
                         if (input && !input.disabled && item[key] !== undefined && item[key] !== null) input.value = item[key];
                     });
-                    updateRow(row);
+                    row.querySelectorAll('.score-input').forEach(input => {
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                    });
                     restored++;
                 });
                 if (restored) {

@@ -32,6 +32,9 @@ function openDB() {
             if (!db.objectStoreNames.contains('attendance_prepared')) {
                 db.createObjectStore('attendance_prepared', { keyPath: 'id' });
             }
+            if (!db.objectStoreNames.contains('attendance_drafts')) {
+                db.createObjectStore('attendance_drafts', { keyPath: 'id' });
+            }
         };
 
         req.onsuccess = (e) => {
@@ -220,8 +223,9 @@ async function saveAttendanceOffline(data, options = {}) {
     if (!ownerKey) throw new Error('Offline account identity is unavailable. Reconnect before saving work on this device.');
     const submitAfterSync = options.submitAfterSync === true;
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(['attendance_sync'], 'readwrite');
+        const tx = db.transaction(['attendance_sync', 'attendance_drafts'], 'readwrite');
         const store = tx.objectStore('attendance_sync');
+        const drafts = tx.objectStore('attendance_drafts');
         const request = store.getAll();
         request.onsuccess = () => {
             const existing = request.result.find(item =>
@@ -229,9 +233,11 @@ async function saveAttendanceOffline(data, options = {}) {
                 String(item.class_id) === String(data.class_id) &&
                 String(item.date) === String(data.date)
             );
-            const record = { ...data, _ownerKey: ownerKey, _savedAt: new Date().toISOString(), _submitAfterSync: submitAfterSync || !!(existing && existing._submitAfterSync) };
+            const savedAt = new Date().toISOString();
+            const record = { ...data, _ownerKey: ownerKey, _savedAt: savedAt, _submitAfterSync: submitAfterSync || !!(existing && existing._submitAfterSync) };
             if (existing) record.id = existing.id;
             store.put(record);
+            drafts.put({ ...data, id: ownerKey + '::' + String(data.class_id) + '::' + String(data.date), _ownerKey: ownerKey, _savedAt: savedAt, _submitAfterSync: record._submitAfterSync, _serverSubmittedAt: null });
         };
         request.onerror = () => { try { tx.abort(); } catch (error) {} };
         tx.oncomplete = () => {
@@ -249,6 +255,36 @@ async function getQueuedAttendanceRecord(classId, date) {
     if (!ownerKey) return null;
     const records = await getAllQueued('attendance_sync');
     return records.find(item => item._ownerKey === ownerKey && String(item.class_id) === String(classId) && String(item.date) === String(date)) || null;
+}
+
+async function getSavedAttendanceDraft(classId, date) {
+    const ownerKey = getOfflineOwnerKey();
+    if (!ownerKey) return null;
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const id = ownerKey + '::' + String(classId) + '::' + String(date);
+        const request = db.transaction(['attendance_drafts'], 'readonly').objectStore('attendance_drafts').get(id);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function updateSavedAttendanceDraft(classId, date, updates) {
+    const ownerKey = getOfflineOwnerKey();
+    if (!ownerKey) return;
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(['attendance_drafts'], 'readwrite');
+        const store = tx.objectStore('attendance_drafts');
+        const id = ownerKey + '::' + String(classId) + '::' + String(date);
+        const request = store.get(id);
+        request.onsuccess = () => {
+            if (request.result) store.put({ ...request.result, ...updates });
+        };
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('Could not update local attendance draft status.'));
+    });
 }
 
 async function saveResultOffline(data) {
@@ -387,6 +423,9 @@ async function syncData() {
                             const submitResult = await submitResponse.json().catch(() => ({}));
                             if (!submitResponse.ok || !submitResult.success) { failCount++; continue; }
                         }
+                        await updateSavedAttendanceDraft(payload.class_id, payload.date, _submitAfterSync
+                            ? { _submitAfterSync: false, _serverSubmittedAt: new Date().toISOString(), _syncedAt: new Date().toISOString() }
+                            : { _submitAfterSync: false, _syncedAt: new Date().toISOString() });
                         await deleteQueued('attendance_sync', id);
                         successCount++;
                     } else {
@@ -560,6 +599,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.AcadMeOffline = window.NexusOffline = {
     saveAttendanceOffline,
     getQueuedAttendanceRecord,
+    getSavedAttendanceDraft,
     saveResultOffline,
     syncData,
     getPendingCount,

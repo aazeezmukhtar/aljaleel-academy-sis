@@ -424,6 +424,56 @@ function openOfflineSnapshotDB() {
     });
 }
 
+async function persistPreparedAttendanceSnapshot(request, response) {
+    let db;
+    try {
+        const url = new URL(request.url);
+        if (url.pathname !== '/attendance/take') return false;
+        const classId = url.searchParams.get('class_id');
+        const date = url.searchParams.get('date');
+        if (!classId || !date) return false;
+
+        const html = await response.clone().text();
+        const ownerKey = getOfflineOwnerFromHtml(html);
+        if (!ownerKey) throw new Error('Prepared attendance page has no authenticated owner metadata.');
+        const now = new Date();
+        const id = ownerKey + '::attendance:' + classId + ':' + date;
+        const savedAt = now.toISOString();
+        const manifest = {
+            id,
+            datasetKey: 'attendance:' + classId + ':' + date,
+            datasetType: 'attendance',
+            schoolId: ownerKey.split(':')[0],
+            principalType: ownerKey.split(':')[1],
+            principalId: ownerKey.split(':').slice(2).join(':'),
+            preparedAt: savedAt,
+            lastSuccessfulRefreshAt: savedAt,
+            retainedUntil: new Date(now.getTime() + 7 * 86400000).toISOString(),
+            url: url.pathname + url.search
+        };
+        db = await openOfflineSnapshotDB();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(['offline_manifest', 'attendance_prepared'], 'readwrite');
+            tx.objectStore('offline_manifest').put(manifest);
+            tx.objectStore('attendance_prepared').put({
+                id,
+                url: url.pathname + url.search,
+                html,
+                contentType: response.headers.get('Content-Type') || 'text/html; charset=utf-8',
+                cachedAt: response.headers.get('X-AcadMe-Cached-At') || savedAt,
+                ownerKey,
+                savedAt
+            });
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error || new Error('Prepared attendance snapshot transaction failed.'));
+            tx.onabort = () => reject(tx.error || new Error('Prepared attendance snapshot transaction was aborted.'));
+        });
+        return true;
+    } finally {
+        if (db) db.close();
+    }
+}
+
 async function getDurablePreparedAttendanceResponse(requestedUrl) {
     let db;
     try {
@@ -674,6 +724,12 @@ self.addEventListener('fetch', (event) => {
                             });
                         }
                         await cache.put(cacheKey, responseToCache);
+                        if (isOfflineEntryPath(url.pathname) && url.pathname === '/attendance/take') {
+                            // Persist the exact prepared HTML in IndexedDB before confirming
+                            // preparation to the page. This closes the page-close race between
+                            // CacheStorage completion and the client-side registry write.
+                            await persistPreparedAttendanceSnapshot(request, responseToCache);
+                        }
                         cachedSuccessfully = true;
                     } catch (cacheError) {
                         console.warn('[SW] Could not cache approved offline page:', url.pathname, cacheError);

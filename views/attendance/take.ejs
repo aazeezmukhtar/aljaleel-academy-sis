@@ -60,7 +60,7 @@
 
             <div id="attendance-local-save-status" class="alert alert-light" role="status" aria-live="polite" style="padding:8px 12px;margin:0 0 10px;font-size:.85rem;">Changes are saved locally as you mark students.</div>
             <div id="attendance-local-submit-notice" class="alert alert-warning" role="status" aria-live="polite" hidden>
-                This completed register is stored on this device and is <strong>Pending submission</strong>. Keep this account signed in on this device and reconnect to send it to the school server.
+                This attendance draft is stored on this device and is <strong>Pending synchronization</strong>. Reconnect to send the marked statuses to the school server.
             </div>
             <div id="attendance-status-summary" class="attendance-status-summary" role="status" aria-live="polite" aria-atomic="true"></div>
 
@@ -278,7 +278,6 @@
         .header-main .action-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
         .header-main .action-buttons .btn { padding: 6px 8px; font-size: 0.68rem; }
         .header-main .action-buttons .attendance-save-action,
-        .header-main .action-buttons #submit-attendance-register { min-height: 34px; }
         .header-meta { gap: 8px; }
         .meta-pill { padding: 4px 8px; }
         .attendance-status-summary { gap: 5px; }
@@ -412,7 +411,7 @@
             updateAttendanceSummary();
             const status = document.getElementById('attendance-local-save-status');
             if (status) status.textContent = record._submitAfterSync
-                ? 'Completed register saved on this device — pending submission sync'
+                ? 'Attendance saved on this device — pending synchronization'
                 : record._serverSubmittedAt
                     ? 'Previously submitted register restored from this device'
                     : record._syncedAt

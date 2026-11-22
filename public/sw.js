@@ -417,6 +417,7 @@ function openOfflineSnapshotDB() {
             if (!db.objectStoreNames.contains('results_sync')) db.createObjectStore('results_sync', { keyPath: 'id', autoIncrement: true });
             if (!db.objectStoreNames.contains('offline_manifest')) db.createObjectStore('offline_manifest', { keyPath: 'id' });
             if (!db.objectStoreNames.contains('attendance_prepared')) db.createObjectStore('attendance_prepared', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('attendance_drafts')) db.createObjectStore('attendance_drafts', { keyPath: 'id' });
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
@@ -466,9 +467,10 @@ async function clearDurablePreparedAttendanceForOwner(owner) {
     try {
         db = await openOfflineSnapshotDB();
         await new Promise((resolve, reject) => {
-            const tx = db.transaction(['attendance_prepared', 'offline_manifest'], 'readwrite');
+            const tx = db.transaction(['attendance_prepared', 'offline_manifest', 'attendance_drafts'], 'readwrite');
             const snapshots = tx.objectStore('attendance_prepared');
             const manifests = tx.objectStore('offline_manifest');
+            const drafts = tx.objectStore('attendance_drafts');
             const request = snapshots.getAll();
             request.onsuccess = () => {
                 (request.result || []).forEach(item => {
@@ -476,6 +478,12 @@ async function clearDurablePreparedAttendanceForOwner(owner) {
                         snapshots.delete(item.id);
                         manifests.delete(item.id);
                     }
+                });
+                drafts.getAll().onsuccess = event => {
+                    (event.target.result || []).forEach(item => {
+                        if (!owner || item._ownerKey !== owner) drafts.delete(item.id);
+                    });
+                
                 });
             };
             tx.oncomplete = resolve;

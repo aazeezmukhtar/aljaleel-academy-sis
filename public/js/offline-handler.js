@@ -244,7 +244,7 @@ async function saveAttendanceOffline(data, options = {}) {
         request.onerror = () => { try { tx.abort(); } catch (error) {} };
         tx.oncomplete = () => {
             updateSyncUI();
-            requestBackgroundSync();
+            if (!options.deferSync) requestBackgroundSync();
             resolve({ submitAfterSync });
         };
         tx.onerror = () => reject(tx.error || request.error || new Error('Offline attendance could not be stored.'));

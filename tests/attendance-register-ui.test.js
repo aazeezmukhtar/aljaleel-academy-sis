@@ -30,7 +30,7 @@ assert(!view.includes('id="submit-attendance-register"'));
 assert(!offline.includes("fetch('/attendance/submit'"));
 assert(!view.includes("submitAfterSync: true"));
 assert(!view.includes("if (!navigator.onLine)"), "Submit must remain available offline");
-assert(view.includes("Pending submission"));
+assert(view.includes("Pending synchronization"));
 assert(offline.includes("getPendingAttendanceCount"));
 assert(offline.includes('async function getPendingAttendanceCount()'));
 assert(offline.includes('    getPendingAttendanceCount,'));

@@ -1,7 +1,22 @@
 'use strict';
 const db = require('../utils/db');
 const clean = (v, n=500) => v == null || String(v).trim()==='' ? null : String(v).trim().slice(0,n);
-const date = v => !v ? null : (/^\d{4}-\d{2}-\d{2}$/.test(String(v)) && !Number.isNaN(Date.parse(v)) ? String(v) : null);
+const date = v => {
+ if (!v) return null;
+ const value = String(v).trim();
+ const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+ if (!match) return null;
+ const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
+ const parsed=new Date(Date.UTC(year,month-1,day));
+ return parsed.getUTCFullYear()===year && parsed.getUTCMonth()===month-1 && parsed.getUTCDate()===day ? value : null;
+};
+const dateInputValue = value => {
+ if (!value) return '';
+ if (value instanceof Date) return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0,10);
+ const text=String(value).trim();
+ const match=text.match(/^(\d{4}-\d{2}-\d{2})/);
+ return match && date(match[1]) ? match[1] : '';
+};
 const sid = req => Number(req.schoolId || req.session.staff.school_id || 1);
 const me = req => Number(req.session.staff.id);
 
@@ -12,7 +27,12 @@ async function render(req,res,id,own) {
  let personal=null,employment=null,contacts=[],qualifications=[],migrationRequired=false;
  try {
   personal=await db.get('SELECT * FROM staff_personal_details WHERE staff_id=? AND school_id=?',[id,school]);
+  if (personal) personal.date_of_birth_input=dateInputValue(personal.date_of_birth);
   employment=await db.get('SELECT * FROM staff_employment_details WHERE staff_id=? AND school_id=?',[id,school]);
+  if (employment) {
+   employment.employment_start_date_input=dateInputValue(employment.employment_start_date);
+   employment.employment_end_date_input=dateInputValue(employment.employment_end_date);
+  }
   contacts=await db.all('SELECT * FROM staff_emergency_contacts WHERE staff_id=? AND school_id=? ORDER BY is_primary DESC,id',[id,school]);
   qualifications=await db.all('SELECT q.*,v.first_name AS verifier_first_name,v.last_name AS verifier_last_name FROM staff_qualifications q LEFT JOIN staff v ON v.id=q.verified_by AND v.school_id=q.school_id WHERE q.staff_id=? AND q.school_id=? ORDER BY q.award_year DESC,q.id DESC',[id,school]);
  } catch(e) {
@@ -25,11 +45,11 @@ exports.getMyProfile=async(req,res)=>{try{return await render(req,res,me(req),tr
 exports.getStaffInformation=async(req,res)=>{const id=Number(req.params.id);if(!Number.isInteger(id)||id<1)return res.status(400).send('Invalid staff ID');try{return await render(req,res,id,false)}catch(e){console.error('getStaffInformation',e);return res.status(500).send('Unable to load staff information')}};
 
 exports.savePersonalDetails=async(req,res)=>{
- const b=req.body||{},d=date(b.date_of_birth);
- if(b.date_of_birth&&!d)return res.redirect('/staff/my-profile?error=Enter a valid date of birth');
+ const b=req.body||{},rawDob=typeof b.date_of_birth==='string'?b.date_of_birth.trim():'',d=date(rawDob),clearDob=b.clear_date_of_birth==='1';
+ if(rawDob&&!d)return res.redirect('/staff/my-profile?error=Enter a valid date of birth');
  try{
-  await db.run('INSERT INTO staff_personal_details (school_id,staff_id,date_of_birth,gender,phone,alternate_phone,personal_email,residential_address,nationality,marital_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT (staff_id) DO UPDATE SET date_of_birth=excluded.date_of_birth,gender=excluded.gender,phone=excluded.phone,alternate_phone=excluded.alternate_phone,personal_email=excluded.personal_email,residential_address=excluded.residential_address,nationality=excluded.nationality,marital_status=excluded.marital_status,updated_at=CURRENT_TIMESTAMP',
-  [sid(req),me(req),d,clean(b.gender,40),clean(b.phone,40),clean(b.alternate_phone,40),clean(b.personal_email,160),clean(b.residential_address,1000),clean(b.nationality,80),clean(b.marital_status,40)]);
+  await db.run('INSERT INTO staff_personal_details (school_id,staff_id,date_of_birth,gender,phone,alternate_phone,personal_email,residential_address,nationality,marital_status,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT (staff_id) DO UPDATE SET date_of_birth=CASE WHEN ? THEN NULL WHEN excluded.date_of_birth IS NOT NULL THEN excluded.date_of_birth ELSE staff_personal_details.date_of_birth END,gender=excluded.gender,phone=excluded.phone,alternate_phone=excluded.alternate_phone,personal_email=excluded.personal_email,residential_address=excluded.residential_address,nationality=excluded.nationality,marital_status=excluded.marital_status,updated_at=CURRENT_TIMESTAMP',
+  [sid(req),me(req),d,clean(b.gender,40),clean(b.phone,40),clean(b.alternate_phone,40),clean(b.personal_email,160),clean(b.residential_address,1000),clean(b.nationality,80),clean(b.marital_status,40),clearDob]);
   res.redirect('/staff/my-profile?success=Personal details saved');
  }catch(e){console.error('savePersonalDetails',e);res.redirect('/staff/my-profile?error=Could not save. The staff information migration may not be installed.')}
 };

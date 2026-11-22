@@ -105,6 +105,7 @@ check('the service worker can recover prepared attendance from IndexedDB and enf
     assert.match(serviceWorker, /X-AcadMe-Offline-Recovered/);
     assert.match(serviceWorker, /async function persistPreparedAttendanceSnapshot/);
     assert.ok(serviceWorker.indexOf('await persistPreparedAttendanceSnapshot(request, responseToCache)') < serviceWorker.indexOf("headers.set('X-AcadMe-Offline-Cached', '1')"));
+    assert.match(serviceWorker, /cache\.put\(cacheKey, responseToCache\.clone\(\)\)/);
 });
 
 

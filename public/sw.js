@@ -436,7 +436,7 @@ async function getDurablePreparedAttendanceResponse(requestedUrl) {
         const record = records.find(item => {
             if (!item || !item.url || !item.html) return false;
             try {
-                return matchesOfflineEntryContext(requestedUrl, new URL(item.url));
+                return matchesOfflineEntryContext(requestedUrl, new URL(item.url, self.location.origin));
             } catch { return false; }
         });
         if (!record) return null;

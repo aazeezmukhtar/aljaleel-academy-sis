@@ -731,7 +731,11 @@
                 const data = await res.json();
                 if (data.success) {
                     if (offline && typeof offline.clearSavedResultDraft === 'function' && localDraftSavedAt) {
-                        await offline.clearSavedResultDraft(payload, localDraftSavedAt);
+                        try {
+                            await offline.clearSavedResultDraft(payload, localDraftSavedAt, true);
+                        } catch (cleanupError) {
+                            console.warn('[AcadMe] Server save succeeded, but local draft cleanup was deferred:', cleanupError);
+                        }
                     }
                     alert(data.message);
                     if (status === 'submitted') location.reload();

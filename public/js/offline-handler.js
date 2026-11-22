@@ -397,7 +397,7 @@ async function clearSavedResultDraft(context, expectedSavedAt, clearQueued = fal
             const queuedRequest = queue.getAll();
             queuedRequest.onsuccess = () => {
                 queuedRequest.result.forEach(item => {
-                    if (getResultContextKey(item, item._ownerKey) === id) queue.delete(item.id);
+                    if (getResultContextKey(item, item._ownerKey) === id && (!expectedSavedAt || String(item._savedAt || '') <= String(expectedSavedAt))) queue.delete(item.id);
                 });
             };
         }

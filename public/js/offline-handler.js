@@ -567,7 +567,7 @@ async function syncData() {
 
         for (const item of resultItems) {
             try {
-                const { id, _savedAt, ...payload } = item;
+                const { id, _savedAt, _ownerKey, ...payload } = item;
                 const res = await fetch('/results/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -581,6 +581,13 @@ async function syncData() {
                     const data = await res.json().catch(() => ({}));
                     if (data.success) {
                         await deleteQueued('results_sync', id);
+                        const context = {
+                            class_id: payload.class_id,
+                            subject_id: payload.subject_id,
+                            session: payload.session,
+                            term: payload.term
+                        };
+                        await clearSavedResultDraft(context, _savedAt);
                         successCount++;
                     } else {
                         failCount++;
@@ -718,6 +725,9 @@ window.AcadMeOffline = window.NexusOffline = {
     getQueuedAttendanceRecord,
     getSavedAttendanceDraft,
     saveResultOffline,
+    saveResultDraftLocal,
+    getSavedResultDraft,
+    clearSavedResultDraft,
     syncData,
     getPendingCount,
     getPendingAttendanceCount,

@@ -5,7 +5,7 @@
  */
 
 const DB_NAME = 'AcadMeSIS_OfflineDB';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 let _idb = null;
 
@@ -28,6 +28,12 @@ function openDB() {
             // Additive migration only: never delete or recreate existing queues.
             if (!db.objectStoreNames.contains('offline_manifest')) {
                 db.createObjectStore('offline_manifest', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('attendance_prepared')) {
+                db.createObjectStore('attendance_prepared', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('attendance_drafts')) {
+                db.createObjectStore('attendance_drafts', { keyPath: 'id' });
             }
         };
 
@@ -92,10 +98,17 @@ async function getPreparedDatasetStatus(datasetKey, url) {
 
     // A manifest entry is never proof that the actual HTML response still exists.
     const cached = await caches.match(url, { ignoreSearch: false });
-    if (!cached) return { status: 'missing', available: false };
+    const snapshot = await new Promise((resolve, reject) => {
+        openDB().then(db => {
+            const request = db.transaction(['attendance_prepared'], 'readonly').objectStore('attendance_prepared').get(id);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        }).catch(reject);
+    });
+    if (!cached && !snapshot) return { status: 'missing', available: false };
 
     const recordedAt = Date.parse(record.preparedAt || '');
-    const cachedAt = Date.parse(cached.headers.get('X-AcadMe-Cached-At') || '');
+    const cachedAt = Date.parse((cached && cached.headers.get('X-AcadMe-Cached-At')) || (snapshot && snapshot.cachedAt) || '');
     const referenceTime = Number.isFinite(cachedAt) ? cachedAt : recordedAt;
     if (!Number.isFinite(referenceTime)) {
         return { status: 'stale', available: true, record, ageMs: null, retainedUntil: record.retainedUntil || null };
@@ -125,10 +138,10 @@ async function recordPreparedDataset(datasetKey, datasetType, url) {
     const id = getManifestId(datasetKey);
     const principal = getOfflinePrincipal();
     if (!id || !principal) throw new Error('Authenticated offline identity is unavailable; preparation metadata was not saved.');
-    if (!('caches' in window) || !(await caches.match(url, { ignoreSearch: false }))) {
-        throw new Error('The prepared response is not present in browser cache.');
-    }
-
+    if (!('caches' in window)) throw new Error('Browser cache is unavailable.');
+    const cached = await caches.match(url, { ignoreSearch: false });
+    if (!cached) throw new Error('The prepared response is not present in browser cache.');
+    const snapshotHtml = await cached.clone().text();
     const now = new Date();
     const retentionUntil = new Date(now.getTime() + OFFLINE_RETENTION_DAYS * 86400000);
     const record = {
@@ -146,8 +159,11 @@ async function recordPreparedDataset(datasetKey, datasetType, url) {
 
     const db = await openDB();
     await new Promise((resolve, reject) => {
-        const tx = db.transaction(['offline_manifest'], 'readwrite');
+        const tx = db.transaction(datasetType === 'attendance' ? ['offline_manifest', 'attendance_prepared'] : ['offline_manifest'], 'readwrite');
         tx.objectStore('offline_manifest').put(record);
+        if (datasetType === 'attendance') {
+            tx.objectStore('attendance_prepared').put({ id, url: String(url), html: snapshotHtml, contentType: cached.headers.get('Content-Type') || 'text/html; charset=utf-8', cachedAt: cached.headers.get('X-AcadMe-Cached-At') || now.toISOString(), ownerKey: getOfflineOwnerKey(), savedAt: now.toISOString() });
+        }
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error || new Error('Could not save offline preparation metadata.'));
         tx.onabort = () => reject(tx.error || new Error('Offline preparation metadata write was aborted.'));
@@ -203,25 +219,73 @@ async function requestBackgroundSync() {
     return false;
 }
 
-async function saveAttendanceOffline(data) {
+async function saveAttendanceOffline(data, options = {}) {
     const db = await openDB();
+    const ownerKey = getOfflineOwnerKey();
+    if (!ownerKey) throw new Error('Offline account identity is unavailable. Reconnect before saving work on this device.');
+    const submitAfterSync = options.submitAfterSync === true;
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(['attendance_sync'], 'readwrite');
+        const tx = db.transaction(['attendance_sync', 'attendance_drafts'], 'readwrite');
         const store = tx.objectStore('attendance_sync');
-        const ownerKey = getOfflineOwnerKey();
-        if (!ownerKey) {
-            tx.abort();
-            reject(new Error('Offline account identity is unavailable. Reconnect before saving work on this device.'));
-            return;
-        }
-        const req = store.add({ ...data, _ownerKey: ownerKey, _savedAt: new Date().toISOString() });
+        const drafts = tx.objectStore('attendance_drafts');
+        const request = store.getAll();
+        request.onsuccess = () => {
+            const existing = request.result.find(item =>
+                item._ownerKey === ownerKey &&
+                String(item.class_id) === String(data.class_id) &&
+                String(item.date) === String(data.date)
+            );
+            const savedAt = new Date().toISOString();
+            const record = { ...data, _ownerKey: ownerKey, _savedAt: savedAt, _submitAfterSync: submitAfterSync || !!(existing && existing._submitAfterSync) };
+            if (existing) record.id = existing.id;
+            store.put(record);
+            drafts.put({ ...data, id: ownerKey + '::' + String(data.class_id) + '::' + String(data.date), _ownerKey: ownerKey, _savedAt: savedAt, _submitAfterSync: record._submitAfterSync, _serverSubmittedAt: null });
+        };
+        request.onerror = () => { try { tx.abort(); } catch (error) {} };
         tx.oncomplete = () => {
             updateSyncUI();
-            requestBackgroundSync();
-            resolve();
+            if (!options.deferSync) requestBackgroundSync();
+            resolve({ submitAfterSync });
         };
-        tx.onerror = () => reject(tx.error || req.error || new Error('Offline attendance could not be stored.'));
+        tx.onerror = () => reject(tx.error || request.error || new Error('Offline attendance could not be stored.'));
         tx.onabort = () => reject(tx.error || new Error('Offline attendance storage was aborted.'));
+    });
+}
+
+async function getQueuedAttendanceRecord(classId, date) {
+    const ownerKey = getOfflineOwnerKey();
+    if (!ownerKey) return null;
+    const records = await getAllQueued('attendance_sync');
+    return records.find(item => item._ownerKey === ownerKey && String(item.class_id) === String(classId) && String(item.date) === String(date)) || null;
+}
+
+async function getSavedAttendanceDraft(classId, date) {
+    const ownerKey = getOfflineOwnerKey();
+    if (!ownerKey) return null;
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const id = ownerKey + '::' + String(classId) + '::' + String(date);
+        const request = db.transaction(['attendance_drafts'], 'readonly').objectStore('attendance_drafts').get(id);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function updateSavedAttendanceDraft(classId, date, updates) {
+    const ownerKey = getOfflineOwnerKey();
+    if (!ownerKey) return;
+    const db = await openDB();
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(['attendance_drafts'], 'readwrite');
+        const store = tx.objectStore('attendance_drafts');
+        const id = ownerKey + '::' + String(classId) + '::' + String(date);
+        const request = store.get(id);
+        request.onsuccess = () => {
+            if (request.result) store.put({ ...request.result, ...updates });
+        };
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('Could not update local attendance draft status.'));
     });
 }
 
@@ -338,7 +402,7 @@ async function syncData() {
 
         for (const item of attendanceItems) {
             try {
-                const { id, _savedAt, _ownerKey, ...payload } = item;
+                const { id, _savedAt, _ownerKey, _submitAfterSync, ...payload } = item;
                 const res = await fetch('/attendance/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -351,14 +415,25 @@ async function syncData() {
                 if (res.ok) {
                     const data = await res.json().catch(() => ({}));
                     if (data.success) {
+                        if (_submitAfterSync) {
+                            const submitResponse = await fetch('/attendance/submit', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                                body: JSON.stringify({ class_id: payload.class_id, date: payload.date })
+                            });
+                            if (submitResponse.redirected) { failCount++; continue; }
+                            const submitResult = await submitResponse.json().catch(() => ({}));
+                            if (!submitResponse.ok || !submitResult.success) { failCount++; continue; }
+                        }
+                        await updateSavedAttendanceDraft(payload.class_id, payload.date, _submitAfterSync
+                            ? { _submitAfterSync: false, _serverSubmittedAt: new Date().toISOString(), _syncedAt: new Date().toISOString() }
+                            : { _submitAfterSync: false, _syncedAt: new Date().toISOString() });
                         await deleteQueued('attendance_sync', id);
                         successCount++;
                     } else {
-                        // Keep conflicts and validation failures queued for explicit review.
                         failCount++;
                     }
                 } else {
-                    // Never treat an HTTP conflict or server error as proof of success.
                     failCount++;
                 }
             } catch (err) {
@@ -525,6 +600,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.AcadMeOffline = window.NexusOffline = {
     saveAttendanceOffline,
+    getQueuedAttendanceRecord,
+    getSavedAttendanceDraft,
     saveResultOffline,
     syncData,
     getPendingCount,

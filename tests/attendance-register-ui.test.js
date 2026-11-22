@@ -26,9 +26,11 @@ assert(view.includes("const STATUS_CYCLE = ['Not recorded', 'Present', 'Late', '
 assert(view.includes("const currentStatus = student.status || 'Not recorded';"));
 assert(!view.includes("btn.dataset.state === 'Not recorded'") || !view.includes("btn.dataset.state = 'Absent'"));
 assert(view.includes("id=\"submit-attendance-register\""));
-assert(view.includes("fetch('/attendance/submit'"));
-assert(view.includes("if (!navigator.onLine)"));
-assert(view.includes("getPendingAttendanceCount"));
+assert(offline.includes("fetch('/attendance/submit'"));
+assert(view.includes("submitAfterSync: true"));
+assert(!view.includes("if (!navigator.onLine)"), "Submit must remain available offline");
+assert(view.includes("Pending submission"));
+assert(offline.includes("getPendingAttendanceCount"));
 assert(offline.includes('async function getPendingAttendanceCount()'));
 assert(offline.includes('    getPendingAttendanceCount,'));
 assert(offline.includes('if (!ownerKey) return attendanceItems.length;'));
@@ -143,4 +145,4 @@ assert(analyticsView.includes('Daily attendance trend'));
 
 
 
-console.log('[attendance-register-ui] unmarked default, deliberate status cycle, online-only submission, pending-sync guard and responsible-teacher route checks passed.');
+console.log('[attendance-register-ui] unmarked default, deliberate status cycle, offline submission intent, pending-sync guard and responsible-teacher route checks passed.');

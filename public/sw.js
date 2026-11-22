@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v18';
+const CACHE_NAME = 'aljaleel-sis-v19';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -405,6 +405,98 @@ async function clearPrivatePageCache(cache) {
     }));
 }
 
+const OFFLINE_DB_NAME = 'AcadMeSIS_OfflineDB';
+const OFFLINE_DB_VERSION = 4;
+
+function openOfflineSnapshotDB() {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(OFFLINE_DB_NAME, OFFLINE_DB_VERSION);
+        request.onupgradeneeded = event => {
+            const db = event.target.result;
+            if (!db.objectStoreNames.contains('attendance_sync')) db.createObjectStore('attendance_sync', { keyPath: 'id', autoIncrement: true });
+            if (!db.objectStoreNames.contains('results_sync')) db.createObjectStore('results_sync', { keyPath: 'id', autoIncrement: true });
+            if (!db.objectStoreNames.contains('offline_manifest')) db.createObjectStore('offline_manifest', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('attendance_prepared')) db.createObjectStore('attendance_prepared', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('attendance_drafts')) db.createObjectStore('attendance_drafts', { keyPath: 'id' });
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function getDurablePreparedAttendanceResponse(requestedUrl) {
+    let db;
+    try {
+        db = await openOfflineSnapshotDB();
+        const records = await new Promise((resolve, reject) => {
+            const request = db.transaction(['attendance_prepared'], 'readonly').objectStore('attendance_prepared').getAll();
+            request.onsuccess = () => resolve(request.result || []);
+            request.onerror = () => reject(request.error);
+        });
+        const record = records.find(item => {
+            if (!item || !item.url || !item.html) return false;
+            try {
+                return matchesOfflineEntryContext(requestedUrl, new URL(item.url, self.location.origin));
+            } catch { return false; }
+        });
+        if (!record) return null;
+        const savedAt = Date.parse(record.cachedAt || record.savedAt || '');
+        if (!Number.isFinite(savedAt) || Date.now() - savedAt > 7 * 86400000) return null;
+        const owner = getOfflineOwnerFromHtml(record.html);
+        if (!owner || owner !== record.ownerKey) return null;
+        return new Response(record.html, {
+            status: 200,
+            headers: {
+                'Content-Type': record.contentType || 'text/html; charset=utf-8',
+                'Cache-Control': 'no-store',
+                'X-AcadMe-Cached-At': new Date(savedAt).toISOString(),
+                'X-AcadMe-Offline-Owner': owner,
+                'X-AcadMe-Offline-Recovered': 'indexeddb'
+            }
+        });
+    } catch (error) {
+        console.warn('[SW] Durable attendance snapshot recovery failed:', error);
+        return null;
+    } finally {
+        if (db) db.close();
+    }
+}
+
+async function clearDurablePreparedAttendanceForOwner(owner) {
+    let db;
+    try {
+        db = await openOfflineSnapshotDB();
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(['attendance_prepared', 'offline_manifest', 'attendance_drafts'], 'readwrite');
+            const snapshots = tx.objectStore('attendance_prepared');
+            const manifests = tx.objectStore('offline_manifest');
+            const drafts = tx.objectStore('attendance_drafts');
+            const snapshotRequest = snapshots.getAll();
+            const draftRequest = drafts.getAll();
+            snapshotRequest.onsuccess = () => {
+                (snapshotRequest.result || []).forEach(item => {
+                    if (!owner || item.ownerKey !== owner) {
+                        snapshots.delete(item.id);
+                        manifests.delete(item.id);
+                    }
+                });
+            };
+            draftRequest.onsuccess = () => {
+                (draftRequest.result || []).forEach(item => {
+                    if (!owner || item._ownerKey !== owner) drafts.delete(item.id);
+                });
+            };
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+            tx.onabort = () => reject(tx.error || new Error('Offline privacy cleanup aborted.'));
+        });
+    } catch (error) {
+        console.warn('[SW] Could not apply durable offline account boundary:', error);
+    } finally {
+        if (db) db.close();
+    }
+}
+
 // ─── Install ──────────────────────────────────────────────────────────────
 
 self.addEventListener('install', (event) => {
@@ -504,6 +596,7 @@ self.addEventListener('fetch', (event) => {
                 if (!(await privateCacheBelongsToOwner(cache, authenticatedOwner))) {
                     await clearPrivatePageCache(cache);
                 }
+                await clearDurablePreparedAttendanceForOwner(authenticatedOwner);
             }
             return response;
         }));
@@ -550,6 +643,7 @@ self.addEventListener('fetch', (event) => {
                 if (AUTH_PATHS.has(url.pathname) || LOGOUT_PATHS.has(url.pathname)) {
                     const cache = await caches.open(CACHE_NAME);
                     await clearPrivatePageCache(cache);
+                    if (LOGOUT_PATHS.has(url.pathname)) await clearDurablePreparedAttendanceForOwner(null);
                 }
 
                 const isPreparation = isOfflinePreparationRequest(request, url);
@@ -617,7 +711,10 @@ self.addEventListener('fetch', (event) => {
                         if (studentDirectoryResponse) return studentDirectoryResponse;
                     }
 
-                    const exact = await cache.match(request);
+                    let exact = await cache.match(request);
+                    if (!exact && url.pathname === '/attendance/take') {
+                        exact = await getDurablePreparedAttendanceResponse(url);
+                    }
                     const hasRequiredEntryContext = url.pathname === '/attendance/take'
                         ? ['class_id', 'date'].every((key) => {
                             const value = url.searchParams.get(key);
@@ -643,6 +740,10 @@ self.addEventListener('fetch', (event) => {
                     // Match only the same entry context. Query parameter order may
                     // differ, but class/date or class/subject/session/term must not.
                     if (url.pathname === '/attendance/take' || url.pathname === '/results/manage') {
+                        if (url.pathname === '/attendance/take') {
+                            const durable = await getDurablePreparedAttendanceResponse(url);
+                            if (durable) return buildPreparedEntryResponse(durable);
+                        }
                         const keys = await cache.keys();
                         for (const key of keys) {
                             const cachedUrl = new URL(key.url);

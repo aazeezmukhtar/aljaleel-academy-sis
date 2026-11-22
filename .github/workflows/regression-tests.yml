@@ -2,7 +2,7 @@ name: Recovery Baseline Checks
 
 on:
   pull_request:
-    branches: [master, test/attendance-controller-handler-integration, feat/attendance-register-generation, feat/attendance-register-submission, feat/attendance-register-administration, feat/attendance-closure-approval, feat/attendance-reminder-scheduling, feat/attendance-analytics-engine, feat/attendance-analytics-dashboard, feat/attendance-offline-register-sync, feat/student-portal-attendance-consistency]
+    branches: [master, feat/staff-profile-self-service, test/attendance-controller-handler-integration, feat/attendance-register-generation, feat/attendance-register-submission, feat/attendance-register-administration, feat/attendance-closure-approval, feat/attendance-reminder-scheduling, feat/attendance-analytics-engine, feat/attendance-analytics-dashboard, feat/attendance-offline-register-sync, feat/student-portal-attendance-consistency]
   push:
     branches: [audit/recovery-test-alignment]
 
@@ -81,6 +81,10 @@ jobs:
         run: npm run test:attendance-setup-service
       - name: Run attendance operations monitoring tests
         run: npm run test:attendance-operations
+      - name: Run staff information migration checks
+        run: npm run test:staff-information-migration
+      - name: Run staff information self-service checks
+        run: npm run test:staff-information-self-service
       - name: Run recovery and schema smoke checks
         run: npm run test:regression
       - name: Run offline cache policy and entry-context tests

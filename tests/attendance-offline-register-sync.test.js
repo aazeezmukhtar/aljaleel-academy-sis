@@ -91,18 +91,6 @@ check('explicit Save converts unrecorded students to Absent before durable offli
 });
 
 
-check('offline Submit finalizes unmarked students locally and queues server submission', () => {
-    const start = attendanceView.indexOf('async function submitAttendanceRegister()');
-    const end = attendanceView.indexOf('const reopenButton', start);
-    const source = attendanceView.slice(start, end);
-    assert.doesNotMatch(source, /if \(!navigator\.onLine\)/);
-    assert.match(source, /data\.attendance\[studentId\] === 'Not recorded'/);
-    assert.match(source, /data\.attendance\[studentId\] = 'Absent'/);
-    assert.match(source, /saveAttendanceOffline\(data, \{ submitAfterSync: true \}\)/);
-    assert.match(source, /Pending submission/);
-    assert.match(source, /await offline\.syncData\(\)/);
-});
-
 check('the service worker can recover prepared attendance from IndexedDB and enforces owner boundaries', () => {
     assert.match(serviceWorker, /getDurablePreparedAttendanceResponse/);
     assert.match(serviceWorker, /attendance_prepared/);

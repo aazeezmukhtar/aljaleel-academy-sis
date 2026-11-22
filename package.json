@@ -51,7 +51,8 @@
     "test:attendance-schedule-compatibility": "node tests/attendance-schedule-compatibility.test.js",
     "test:attendance-analytics-dashboard": "node tests/attendance-analytics-dashboard.test.js",
     "test:staff-admin-presentation": "node tests/staff-admin-presentation.test.js",
-    "test:staff-information-migration": "node tests/staff-information-migration.test.js"
+    "test:staff-information-migration": "node tests/staff-information-migration.test.js",
+    "test:staff-information-self-service": "node tests/staff-information-self-service.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

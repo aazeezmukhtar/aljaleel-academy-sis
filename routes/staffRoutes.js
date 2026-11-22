@@ -8,10 +8,12 @@ const multer = require('multer');
 
 // Memory storage — buffer sent to Supabase Storage in prod, written to disk in dev
 const upload = multer({ storage: multer.memoryStorage() });
+const avatarUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 }, fileFilter: (req, file, cb) => cb(null, /^image\/(jpeg|png|webp|gif)$/.test(file.mimetype || '')) });
 
 
 router.get('/my-profile', informationController.getMyProfile);
 router.post('/my-profile/personal', informationController.savePersonalDetails);
+router.post('/my-profile/photo', avatarUpload.single('avatar_image'), informationController.updateOwnAvatar);
 router.post('/my-profile/emergency-contacts', informationController.addEmergencyContact);
 router.post('/my-profile/emergency-contacts/:id/delete', informationController.deleteEmergencyContact);
 router.post('/my-profile/qualifications', informationController.addQualification);

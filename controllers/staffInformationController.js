@@ -4,7 +4,7 @@ const clean = (v, n=500) => v == null || String(v).trim()==='' ? null : String(v
 const date = v => {
  if (!v) return null;
  const value = String(v).trim();
- const match = value.match(/^(\\d{4})-(\\d{2})-(\\d{2})$/);
+ const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
  if (!match) return null;
  const year=Number(match[1]),month=Number(match[2]),day=Number(match[3]);
  const parsed=new Date(Date.UTC(year,month-1,day));
@@ -14,7 +14,7 @@ const dateInputValue = value => {
  if (!value) return '';
  if (value instanceof Date) return Number.isNaN(value.getTime()) ? '' : value.toISOString().slice(0,10);
  const text=String(value).trim();
- const match=text.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+ const match=text.match(/^(\d{4}-\d{2}-\d{2})/);
  return match && date(match[1]) ? match[1] : '';
 };
 const sid = req => Number(req.schoolId || req.session.staff.school_id || 1);

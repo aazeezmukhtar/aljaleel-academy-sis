@@ -159,9 +159,11 @@ async function recordPreparedDataset(datasetKey, datasetType, url) {
 
     const db = await openDB();
     await new Promise((resolve, reject) => {
-        const tx = db.transaction(['offline_manifest', 'attendance_prepared'], 'readwrite');
+        const tx = db.transaction(datasetType === 'attendance' ? ['offline_manifest', 'attendance_prepared'] : ['offline_manifest'], 'readwrite');
         tx.objectStore('offline_manifest').put(record);
-        tx.objectStore('attendance_prepared').put({ id, url: String(url), html: snapshotHtml, contentType: cached.headers.get('Content-Type') || 'text/html; charset=utf-8', cachedAt: cached.headers.get('X-AcadMe-Cached-At') || now.toISOString(), ownerKey: getOfflineOwnerKey(), savedAt: now.toISOString() });
+        if (datasetType === 'attendance') {
+            tx.objectStore('attendance_prepared').put({ id, url: String(url), html: snapshotHtml, contentType: cached.headers.get('Content-Type') || 'text/html; charset=utf-8', cachedAt: cached.headers.get('X-AcadMe-Cached-At') || now.toISOString(), ownerKey: getOfflineOwnerKey(), savedAt: now.toISOString() });
+        }
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error || new Error('Could not save offline preparation metadata.'));
         tx.onabort = () => reject(tx.error || new Error('Offline preparation metadata write was aborted.'));

@@ -373,10 +373,12 @@ check('service worker preserves prior prepared pages when upgrading its cache ve
 
 check('offline IndexedDB migration adds a manifest without deleting attendance or results queues', () => {
   const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
-  assert.match(handler, /const DB_VERSION = 3/);
+  assert.match(handler, /const DB_VERSION = 4/);
   assert.match(handler, /createObjectStore\('offline_manifest'/);
   assert.match(handler, /createObjectStore\('attendance_sync'/);
   assert.match(handler, /createObjectStore\('results_sync'/);
+  assert.match(handler, /createObjectStore\('attendance_prepared'/);
+  assert.match(handler, /createObjectStore\('attendance_drafts'/);
   assert.doesNotMatch(handler, /deleteObjectStore/);
 });
 
@@ -393,7 +395,7 @@ check('offline preparation registry is persistent and verifies the actual cached
 check('new offline queue records are owned by the authenticated principal and sync is scoped', () => {
   const handler = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'offline-handler.js'), 'utf8');
   assert.match(handler, /window\.ACADME_OFFLINE_CONTEXT/);
-  assert.strictEqual((handler.match(/_ownerKey: ownerKey/g) || []).length, 2);
+  assert.ok((handler.match(/_ownerKey: ownerKey/g) || []).length >= 3);
   assert.ok((handler.match(/item\._ownerKey === ownerKey/g) || []).length >= 2);
   assert.match(handler, /tx\.oncomplete = \(\) =>/);
 });

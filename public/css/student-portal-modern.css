@@ -1,0 +1,397 @@
+/*
+ * AcadMe Student Portal — unified presentation layer
+ * Shared by every /portal page. Presentation only; no route/data changes.
+ */
+.acm-main-content {
+    width: 100%;
+    max-width: 1320px;
+    min-width: 0;
+    margin-inline: auto;
+    box-sizing: border-box;
+}
+.acm-desktop-header {
+    gap: 16px;
+    align-items: center;
+    margin-bottom: 24px;
+}
+.acm-greeting-title {
+    letter-spacing: -0.035em;
+}
+.acm-greeting-meta {
+    line-height: 1.5;
+}
+.acm-section {
+    min-width: 0;
+}
+.acm-card,
+.acm-quick-card,
+.acm-quick-grid > a,
+.acm-announcement-card,
+.acm-attention-card {
+    border-radius: 18px;
+}
+.acm-card {
+    border: 1px solid var(--acm-border);
+    box-shadow: var(--acm-shadow-xs);
+}
+.acm-card-link,
+.acm-shortcut-item,
+.acm-post-item,
+.acm-subject-item,
+.acm-report-item,
+.acm-notif-card,
+.acm-attachment-card,
+.acm-detail-shell {
+    transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+.acm-card-link:hover,
+.acm-shortcut-item:hover,
+.acm-post-item:hover,
+.acm-notif-card:hover {
+    border-color: color-mix(in srgb, var(--school-primary,var(--acm-navy)) 24%, var(--acm-border));
+    box-shadow: var(--acm-shadow-md);
+}
+.acm-card-link:focus-visible,
+.acm-shortcut-item:focus-visible,
+.acm-post-item:focus-visible,
+.acm-filter-btn:focus-visible,
+.acm-academic-nav-item:focus-visible,
+.acm-report-btn:focus-visible,
+.acm-detail-back-link:focus-visible,
+.acm-mark-all-btn:focus-visible {
+    outline: 3px solid color-mix(in srgb,var(--school-secondary,#FBBA00) 75%,white);
+    outline-offset: 3px;
+}
+.acm-quick-grid {
+    gap: 12px;
+}
+.acm-quick-card {
+    min-width: 0;
+    border: 1px solid var(--acm-border);
+    box-shadow: var(--acm-shadow-xs);
+    padding: 16px;
+}
+.acm-quick-value {
+    overflow-wrap: anywhere;
+}
+.acm-academic-ctx {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 14px;
+    margin: 0 0 14px;
+    border: 1px solid var(--acm-border);
+    border-radius: 12px;
+    background: var(--acm-surface);
+    color: var(--acm-text-secondary);
+    font-size: var(--acm-text-sm);
+}
+.acm-academic-nav-wrap {
+    max-width: 100%;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+.acm-academic-nav {
+    display: flex;
+    gap: 6px;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 3px 2px 9px;
+    scrollbar-width: thin;
+    -webkit-overflow-scrolling: touch;
+}
+.acm-academic-nav-item,
+.acm-filter-btn,
+.acm-term-btn {
+    flex: 0 0 auto;
+    min-height: 40px;
+    border-radius: 999px;
+    padding: 9px 14px;
+    white-space: nowrap;
+}
+.acm-academic-nav-item.is-active,
+.acm-filter-btn.is-active,
+.acm-term-btn.is-active {
+    box-shadow: 0 2px 8px color-mix(in srgb,var(--school-primary,var(--acm-navy)) 15%,transparent);
+}
+.acm-perf-summary {
+    gap: 12px;
+}
+.acm-metric {
+    min-width: 0;
+    border: 1px solid var(--acm-border);
+    border-radius: 16px;
+    padding: 16px;
+    background: var(--acm-surface);
+}
+.acm-metric-value {
+    overflow-wrap: anywhere;
+    letter-spacing: -.03em;
+}
+.acm-shortcut-list,
+.acm-post-list,
+.acm-notif-list,
+.acm-subject-list,
+.acm-report-list {
+    gap: 12px;
+}
+.acm-shortcut-item,
+.acm-post-item,
+.acm-notif-card,
+.acm-subject-item,
+.acm-report-item {
+    min-width: 0;
+    border: 1px solid var(--acm-border);
+    border-radius: 16px;
+    background: var(--acm-surface);
+    padding: 15px 16px;
+    box-shadow: var(--acm-shadow-xs);
+}
+.acm-post-body,
+.acm-notif-content,
+.acm-subject-info,
+.acm-report-info {
+    min-width: 0;
+}
+.acm-post-title,
+.acm-notif-title,
+.acm-subject-title {
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+}
+.acm-post-meta,
+.acm-notif-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    line-height: 1.5;
+}
+.acm-board-filters-wrap {
+    max-width: 100%;
+    overflow: hidden;
+}
+.acm-board-filters {
+    max-width: 100%;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 3px 2px 9px;
+    -webkit-overflow-scrolling: touch;
+}
+.acm-results-wrapper {
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid var(--acm-border);
+    border-radius: 16px;
+    background: var(--acm-surface);
+}
+.acm-results-table {
+    min-width: 560px;
+}
+.acm-results-table th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.acm-report-item {
+    gap: 12px;
+    align-items: center;
+}
+.acm-report-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.acm-report-btn {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border-radius: 10px;
+    padding: 9px 13px;
+    text-decoration: none;
+    text-align: center;
+}
+.acm-empty {
+    border: 1px dashed var(--acm-border);
+    border-radius: 18px;
+    background: var(--acm-surface);
+    padding: 36px 18px;
+}
+.acm-detail-back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 8px 0;
+}
+.acm-detail-shell {
+    max-width: 900px;
+    margin-inline: auto;
+    overflow: hidden;
+    border: 1px solid var(--acm-border);
+    border-radius: 20px;
+    background: var(--acm-surface);
+    box-shadow: var(--acm-shadow-xs);
+}
+.acm-detail-title {
+    overflow-wrap: anywhere;
+    letter-spacing: -.025em;
+    line-height: 1.25;
+}
+.acm-detail-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 14px;
+    line-height: 1.6;
+}
+.acm-detail-body {
+    overflow-wrap: anywhere;
+    line-height: 1.75;
+}
+.acm-attachment-card {
+    border: 1px solid var(--acm-border);
+    border-radius: 14px;
+    padding: 14px;
+}
+.acm-notif-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.acm-mark-all-btn {
+    min-height: 42px;
+    border-radius: 999px;
+}
+.portal-calendar-page {
+    max-width: 1100px;
+    margin-inline: auto;
+}
+.portal-calendar-page .acm-profile-card {
+    padding: clamp(16px,3vw,24px);
+}
+.portal-calendar-page .data-table {
+    width: 100%;
+}
+.portal-calendar-page .data-table th {
+    background: var(--acm-bg);
+    color: var(--acm-text-secondary);
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+.portal-calendar-page .data-table td,
+.portal-calendar-page .data-table th {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--acm-border);
+    text-align: start;
+}
+@media (min-width: 768px) {
+    .acm-main-content {
+        padding: 24px;
+    }
+    .acm-dashboard-grid {
+        gap: 22px;
+    }
+}
+@media (max-width: 767px) {
+    .acm-main-content {
+        padding: 14px;
+        padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    }
+    .acm-desktop-header {
+        margin-bottom: 16px;
+    }
+    .acm-greeting-title {
+        font-size: clamp(1.25rem,5vw,1.6rem);
+    }
+    .acm-dashboard-grid {
+        gap: 16px;
+    }
+    .acm-report-item {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+    .acm-report-actions,
+    .acm-report-btn {
+        width: 100%;
+    }
+    .acm-detail-shell {
+        border-radius: 16px;
+    }
+    .acm-detail-title {
+        font-size: clamp(1.25rem,5vw,1.65rem);
+    }
+}
+@media (max-width: 380px) {
+    .acm-main-content { padding-inline: 10px; }
+    .acm-quick-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .acm-quick-card { padding: 12px; }
+    .acm-post-item,
+    .acm-notif-card,
+    .acm-shortcut-item { padding: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .acm-card-link,
+    .acm-shortcut-item,
+    .acm-post-item,
+    .acm-subject-item,
+    .acm-report-item,
+    .acm-notif-card,
+    .acm-attachment-card,
+    .acm-detail-shell { transition: none !important; }
+}
+
+.acm-profile-card {
+    min-width: 0;
+    padding: clamp(16px,3vw,24px);
+    border: 1px solid var(--acm-border);
+    border-radius: 18px;
+    background: var(--acm-surface);
+    box-shadow: var(--acm-shadow-xs);
+}
+.acm-profile-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--acm-border);
+}
+.acm-profile-card-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    color: var(--acm-text-primary);
+    font-size: var(--acm-text-base);
+    font-weight: var(--acm-fw-bold);
+}
+.acm-profile-card-subtitle {
+    color: var(--acm-text-muted);
+    font-size: var(--acm-text-xs);
+    white-space: nowrap;
+}
+.acm-status-chip--general {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: color-mix(in srgb,var(--school-primary,var(--acm-navy)) 8%,white);
+    color: var(--school-primary,var(--acm-navy));
+    font-size: .72rem;
+    font-weight: 700;
+}
+.acm-bottom-nav .acm-nav-item {
+    min-width: 0;
+    font-size: clamp(.58rem,2.1vw,.72rem);
+}
+.acm-bottom-nav .acm-nav-item i {
+    font-size: clamp(1.05rem,4vw,1.25rem);
+}
+@media (max-width: 380px) {
+    .acm-bottom-nav { padding-inline: 1px; }
+    .acm-bottom-nav .acm-nav-item { gap: 2px; }
+}

@@ -374,6 +374,7 @@ exports.getCalendar = async (req, res) => {
         const events = await db.all('SELECT * FROM term_events WHERE school_id = ? ORDER BY event_date ASC', [schoolId]);
         res.render('portal/calendar', {
             title: 'School Calendar',
+            path: '/portal/calendar',
             student: req.session.student,
             events: events || [],
             school: await getSettings(schoolId)

@@ -91,24 +91,37 @@ function getManifestRecord(id) {
 
 async function getPreparedDatasetStatus(datasetKey, url) {
     const id = getManifestId(datasetKey);
-    if (!id || !url || !('caches' in window)) return { status: 'missing', available: false };
+    if (!id || !url) return { status: 'missing', available: false };
 
     const record = await getManifestRecord(id);
     if (!record) return { status: 'missing', available: false };
 
-    // A manifest entry is never proof that the actual HTML response still exists.
-    const cached = await caches.match(url, { ignoreSearch: false });
-    const snapshot = await new Promise((resolve, reject) => {
-        openDB().then(db => {
-            const request = db.transaction(['attendance_prepared'], 'readonly').objectStore('attendance_prepared').get(id);
+    // Attendance snapshots in IndexedDB are authoritative. CacheStorage is only
+    // a compatibility fallback for older prepared records and other dataset types.
+    let snapshot = null;
+    if (record.datasetType === 'attendance') {
+        const db = await openDB();
+        snapshot = await new Promise((resolve, reject) => {
+            const request = db.transaction(['attendance_prepared'], 'readonly')
+                .objectStore('attendance_prepared').get(id);
             request.onsuccess = () => resolve(request.result || null);
             request.onerror = () => reject(request.error);
-        }).catch(reject);
-    });
+        });
+        if (snapshot && (snapshot.ownerKey !== getOfflineOwnerKey() ||
+            String(snapshot.url) !== String(url))) snapshot = null;
+    }
+
+    let cached = null;
+    if (!snapshot && 'caches' in window) {
+        try { cached = await caches.match(url, { ignoreSearch: false }); } catch (error) {
+            console.warn('[AcadMeOffline] CacheStorage lookup failed; durable snapshot remains authoritative.', error);
+        }
+    }
     if (!cached && !snapshot) return { status: 'missing', available: false };
 
     const recordedAt = Date.parse(record.preparedAt || '');
-    const cachedAt = Date.parse((cached && cached.headers.get('X-AcadMe-Cached-At')) || (snapshot && snapshot.cachedAt) || '');
+    const cachedAt = Date.parse((snapshot && snapshot.cachedAt) ||
+        (cached && cached.headers.get('X-AcadMe-Cached-At')) || '');
     const referenceTime = Number.isFinite(cachedAt) ? cachedAt : recordedAt;
     if (!Number.isFinite(referenceTime)) {
         return { status: 'stale', available: true, record, ageMs: null, retainedUntil: record.retainedUntil || null };
@@ -121,13 +134,11 @@ async function getPreparedDatasetStatus(datasetKey, url) {
         ? record.retainedUntil
         : new Date(referenceTime + retentionMs).toISOString();
 
-    if (age > retentionMs) {
-        return { status: 'expired', available: false, record, ageMs: age, retainedUntil };
-    }
-
+    if (age > retentionMs) return { status: 'expired', available: false, record, ageMs: age, retainedUntil };
     return {
         status: age <= freshnessMs ? 'fresh' : 'stale',
         available: true,
+        source: snapshot ? 'indexeddb' : 'cache',
         record,
         ageMs: age,
         retainedUntil
@@ -138,12 +149,45 @@ async function recordPreparedDataset(datasetKey, datasetType, url) {
     const id = getManifestId(datasetKey);
     const principal = getOfflinePrincipal();
     if (!id || !principal) throw new Error('Authenticated offline identity is unavailable; preparation metadata was not saved.');
-    if (!('caches' in window)) throw new Error('Browser cache is unavailable.');
-    const cached = await caches.match(url, { ignoreSearch: false });
-    if (!cached) throw new Error('The prepared response is not present in browser cache.');
-    const snapshotHtml = await cached.clone().text();
+
+    let cached = null;
+    if ('caches' in window) {
+        try { cached = await caches.match(url, { ignoreSearch: false }); } catch (error) {
+            console.warn('[AcadMeOffline] CacheStorage lookup failed:', error);
+        }
+    }
+    let snapshot = null;
+    const db = await openDB();
+    if (datasetType === 'attendance') {
+        snapshot = await new Promise((resolve, reject) => {
+            const request = db.transaction(['attendance_prepared'], 'readonly')
+                .objectStore('attendance_prepared').get(id);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+    }
+
+    // The service worker writes the durable copy before returning its preparation
+    // acknowledgement. Never manufacture a "ready" record from metadata alone.
+    if (datasetType === 'attendance') {
+        if (!snapshot || snapshot.ownerKey !== getOfflineOwnerKey() ||
+            String(snapshot.url) !== String(url) || typeof snapshot.html !== 'string' || !snapshot.html.length) {
+            if (!cached) throw new Error('The durable attendance snapshot could not be verified. Retry preparation while online.');
+            const html = await cached.clone().text();
+            if (!html) throw new Error('The prepared attendance sheet was empty.');
+            const savedAt = new Date().toISOString();
+            snapshot = {
+                id, url: String(url), html,
+                contentType: cached.headers.get('Content-Type') || 'text/html; charset=utf-8',
+                cachedAt: cached.headers.get('X-AcadMe-Cached-At') || savedAt,
+                ownerKey: getOfflineOwnerKey(), savedAt
+            };
+        }
+    } else if (!cached) {
+        throw new Error('The prepared response is not present in browser cache.');
+    }
+
     const now = new Date();
-    const retentionUntil = new Date(now.getTime() + OFFLINE_RETENTION_DAYS * 86400000);
     const record = {
         id,
         datasetKey: String(datasetKey),
@@ -153,21 +197,31 @@ async function recordPreparedDataset(datasetKey, datasetType, url) {
         principalId: principal.principalId,
         preparedAt: now.toISOString(),
         lastSuccessfulRefreshAt: now.toISOString(),
-        retentionUntil: retentionUntil.toISOString(),
+        retainedUntil: new Date(now.getTime() + OFFLINE_RETENTION_DAYS * 86400000).toISOString(),
         url: String(url)
     };
 
-    const db = await openDB();
     await new Promise((resolve, reject) => {
-        const tx = db.transaction(datasetType === 'attendance' ? ['offline_manifest', 'attendance_prepared'] : ['offline_manifest'], 'readwrite');
+        const stores = datasetType === 'attendance' ? ['offline_manifest', 'attendance_prepared'] : ['offline_manifest'];
+        const tx = db.transaction(stores, 'readwrite');
         tx.objectStore('offline_manifest').put(record);
-        if (datasetType === 'attendance') {
-            tx.objectStore('attendance_prepared').put({ id, url: String(url), html: snapshotHtml, contentType: cached.headers.get('Content-Type') || 'text/html; charset=utf-8', cachedAt: cached.headers.get('X-AcadMe-Cached-At') || now.toISOString(), ownerKey: getOfflineOwnerKey(), savedAt: now.toISOString() });
-        }
+        if (datasetType === 'attendance') tx.objectStore('attendance_prepared').put(snapshot);
         tx.oncomplete = resolve;
         tx.onerror = () => reject(tx.error || new Error('Could not save offline preparation metadata.'));
         tx.onabort = () => reject(tx.error || new Error('Offline preparation metadata write was aborted.'));
     });
+
+    if (datasetType === 'attendance') {
+        const verified = await new Promise((resolve, reject) => {
+            const request = db.transaction(['attendance_prepared'], 'readonly')
+                .objectStore('attendance_prepared').get(id);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+        });
+        if (!verified || verified.ownerKey !== getOfflineOwnerKey() || verified.html !== snapshot.html) {
+            throw new Error('The prepared attendance snapshot failed its read-back verification.');
+        }
+    }
     return record;
 }
 

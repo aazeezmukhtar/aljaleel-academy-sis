@@ -20,7 +20,7 @@ function responseRecorder() {
 }
 
 async function withMockedDb(fn) {
-  const original = { get: db.get, run: db.run, transaction: db.transaction };
+  const original = { all: db.all, get: db.get, run: db.run, transaction: db.transaction };
   try { await fn(); } finally { Object.assign(db, original); }
 }
 
@@ -36,7 +36,13 @@ async function testResultWriteOwnsSelectedClass() {
       throw new Error('Unexpected lookup: ' + sql);
     };
     db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
-    db.transaction = async callback => callback();
+    db.all = async (sql, params = []) => {
+      if (sql.includes('SELECT student_id, status FROM results')) {
+        return params.slice(4).map(student_id => ({ student_id: Number(student_id), status: 'draft' }));
+      }
+      throw new Error('Unexpected query: ' + sql);
+    };
+    db.transaction = async callback => callback(null);
 
     const res = responseRecorder();
     await controller.saveResults({

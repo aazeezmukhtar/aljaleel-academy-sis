@@ -362,11 +362,15 @@ const saveResults = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
 
-    if (!results || results.length === 0) {
-        return res.json({ success: false, message: 'No results to save.' });
+    if (!Array.isArray(results) || results.length === 0) {
+        return res.status(400).json({ success: false, message: 'No results to save.' });
     }
 
     try {
+        const normalizedStatus = String(status || 'draft').trim().toLowerCase();
+        if (!['draft', 'submitted'].includes(normalizedStatus)) {
+            return res.status(400).json({ success: false, message: 'Invalid result status. Only draft and submitted are accepted.' });
+        }
         // Validate the complete academic context before any writes.
         if (!class_id || !subject_id || !term || !session || !Array.isArray(results)) {
             return res.status(400).json({ success: false, message: 'Class, subject, term, session, and a results list are required.' });
@@ -451,29 +455,32 @@ const saveResults = async (req, res) => {
             teacher_remark=excluded.teacher_remark, status=excluded.status
         `;
 
-        await db.transaction(async () => {
+        // Use the transaction-scoped PostgreSQL client for every write and the
+        // verification query. Pool-level calls here would escape the transaction.
+        await db.transaction(async (client) => {
             for (const item of results) {
-                // Tenant ownership and class enrollment were validated for every
-                // submitted student before opening this transaction.
                 const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
                 await db.run(sql, [
-                    item.student_id,
-                    class_id,
-                    subject_id,
-                    term,
-                    session,
-                    item.ca1 || 0,
-                    item.ca2 || 0,
-                    item.exam || 0,
-                    total,
-                    grade,
-                    (item.remark || '').trim(),
-                    status || 'draft'
-                ]);
+                    item.student_id, class_id, subject_id, term, session,
+                    item.ca1 || 0, item.ca2 || 0, item.exam || 0,
+                    total, grade, (item.remark || '').trim(), normalizedStatus
+                ], client);
+            }
+
+            const placeholders = submittedStudentIds.map(() => '?').join(',');
+            const persistedRows = await db.all(`
+                SELECT student_id, status FROM results
+                WHERE class_id = ? AND subject_id = ? AND term = ? AND session = ?
+                  AND student_id IN (${placeholders})
+            `, [class_id, subject_id, term, session, ...submittedStudentIds], client);
+            const persistedByStudent = new Map(persistedRows.map(row => [Number(row.student_id), String(row.status || '').toLowerCase()]));
+            if (persistedRows.length !== submittedStudentIds.length ||
+                !submittedStudentIds.every(studentId => persistedByStudent.get(studentId) === normalizedStatus)) {
+                throw new Error('Result batch verification failed; transaction rolled back.');
             }
         });
 
-        res.json({ success: true, message: `Results ${status === 'submitted' ? 'submitted' : 'saved'} successfully.` });
+        res.json({ success: true, message: `Results ${normalizedStatus === 'submitted' ? 'submitted' : 'saved'} successfully.`, savedCount: submittedStudentIds.length });
     } catch (err) {
         console.error('Save Results Error:', err.message);
         res.status(500).json({ success: false, message: 'Failed to save results.' });

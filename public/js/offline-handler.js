@@ -5,7 +5,7 @@
  */
 
 const DB_NAME = 'AcadMeSIS_OfflineDB';
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 
 let _idb = null;
 
@@ -34,6 +34,9 @@ function openDB() {
             }
             if (!db.objectStoreNames.contains('attendance_drafts')) {
                 db.createObjectStore('attendance_drafts', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('results_drafts')) {
+                db.createObjectStore('results_drafts', { keyPath: 'id' });
             }
         };
 
@@ -343,24 +346,95 @@ async function updateSavedAttendanceDraft(classId, date, updates) {
     });
 }
 
-async function saveResultOffline(data) {
+function getResultContextKey(data, ownerKey = getOfflineOwnerKey()) {
+    if (!ownerKey || !data || !data.class_id || !data.subject_id || !data.session || !data.term) return null;
+    return [ownerKey, data.class_id, data.subject_id, data.session, data.term].map(String).join('::');
+}
+
+async function getSavedResultDraft(context) {
+    const id = getResultContextKey(context);
+    if (!id) return null;
     const db = await openDB();
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(['results_sync'], 'readwrite');
-        const store = tx.objectStore('results_sync');
-        const ownerKey = getOfflineOwnerKey();
-        if (!ownerKey) {
-            tx.abort();
-            reject(new Error('Offline account identity is unavailable. Reconnect before saving work on this device.'));
-            return;
+        const request = db.transaction(['results_drafts'], 'readonly').objectStore('results_drafts').get(id);
+        request.onsuccess = () => resolve(request.result || null);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+async function saveResultDraftLocal(data) {
+    const ownerKey = getOfflineOwnerKey();
+    const id = getResultContextKey(data, ownerKey);
+    if (!id) throw new Error('Offline account identity or result context is unavailable.');
+    const db = await openDB();
+    const savedAt = new Date().toISOString();
+    const record = { ...data, id, _ownerKey: ownerKey, _savedAt: savedAt };
+    await new Promise((resolve, reject) => {
+        const tx = db.transaction(['results_drafts'], 'readwrite');
+        tx.objectStore('results_drafts').put(record);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error || new Error('Result draft could not be saved on this device.'));
+        tx.onabort = () => reject(tx.error || new Error('Result draft storage was aborted.'));
+    });
+    return { savedAt };
+}
+
+async function clearSavedResultDraft(context, expectedSavedAt, clearQueued = false) {
+    const id = getResultContextKey(context);
+    if (!id) return false;
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+        const stores = clearQueued ? ['results_drafts', 'results_sync'] : ['results_drafts'];
+        const tx = db.transaction(stores, 'readwrite');
+        const store = tx.objectStore('results_drafts');
+        const request = store.get(id);
+        request.onsuccess = () => {
+            const current = request.result;
+            if (current && (!expectedSavedAt || current._savedAt === expectedSavedAt)) store.delete(id);
+        };
+        if (clearQueued) {
+            const queue = tx.objectStore('results_sync');
+            const queuedRequest = queue.getAll();
+            queuedRequest.onsuccess = () => {
+                queuedRequest.result.forEach(item => {
+                    if (getResultContextKey(item, item._ownerKey) === id && (!expectedSavedAt || String(item._savedAt || '') <= String(expectedSavedAt))) queue.delete(item.id);
+                });
+            };
         }
-        const req = store.add({ ...data, _ownerKey: ownerKey, _savedAt: new Date().toISOString() });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error || new Error('Could not update saved result draft.'));
+        tx.onabort = () => reject(tx.error || new Error('Could not update saved result draft.'));
+    });
+}
+
+async function saveResultOffline(data) {
+    const db = await openDB();
+    const ownerKey = getOfflineOwnerKey();
+    const contextId = getResultContextKey(data, ownerKey);
+    if (!contextId) throw new Error('Offline account identity or result context is unavailable. Reconnect before saving work on this device.');
+    const savedAt = new Date().toISOString();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(['results_sync', 'results_drafts'], 'readwrite');
+        const queue = tx.objectStore('results_sync');
+        const drafts = tx.objectStore('results_drafts');
+        const request = queue.getAll();
+        request.onsuccess = () => {
+            const matching = request.result.filter(item => getResultContextKey(item, item._ownerKey) === contextId);
+            const record = { ...data, _ownerKey: ownerKey, _savedAt: savedAt };
+            if (matching.length) {
+                record.id = matching[0].id;
+                matching.slice(1).forEach(item => queue.delete(item.id));
+            }
+            queue.put(record);
+            drafts.put({ ...data, id: contextId, _ownerKey: ownerKey, _savedAt: savedAt });
+        };
+        request.onerror = () => { try { tx.abort(); } catch (error) {} };
         tx.oncomplete = () => {
             updateSyncUI();
             requestBackgroundSync();
-            resolve();
+            resolve({ savedAt });
         };
-        tx.onerror = () => reject(tx.error || req.error || new Error('Offline results could not be stored.'));
+        tx.onerror = () => reject(tx.error || request.error || new Error('Offline results could not be stored.'));
         tx.onabort = () => reject(tx.error || new Error('Offline results storage was aborted.'));
     });
 }
@@ -506,7 +580,7 @@ async function syncData() {
 
         for (const item of resultItems) {
             try {
-                const { id, _savedAt, ...payload } = item;
+                const { id, _savedAt, _ownerKey, ...payload } = item;
                 const res = await fetch('/results/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -520,6 +594,13 @@ async function syncData() {
                     const data = await res.json().catch(() => ({}));
                     if (data.success) {
                         await deleteQueued('results_sync', id);
+                        const context = {
+                            class_id: payload.class_id,
+                            subject_id: payload.subject_id,
+                            session: payload.session,
+                            term: payload.term
+                        };
+                        await clearSavedResultDraft(context, _savedAt);
                         successCount++;
                     } else {
                         failCount++;
@@ -657,6 +738,9 @@ window.AcadMeOffline = window.NexusOffline = {
     getQueuedAttendanceRecord,
     getSavedAttendanceDraft,
     saveResultOffline,
+    saveResultDraftLocal,
+    getSavedResultDraft,
+    clearSavedResultDraft,
     syncData,
     getPendingCount,
     getPendingAttendanceCount,

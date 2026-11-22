@@ -151,10 +151,52 @@ async function testRejectsSubjectNotAssignedToClass() {
   });
 }
 
+
+async function testRejectsInvalidResultStatus() {
+  await withMockedDb(async () => {
+    let lookupCount = 0;
+    db.get = async () => { lookupCount++; return null; };
+    db.run = async () => { throw new Error('No writes expected'); };
+    const res = responseRecorder();
+    await resultController.saveResults({ schoolId: 1, session: { staff: { id: 7, role: 'Admin' } }, body: { class_id: '10', subject_id: '20', term: '2nd Term', session: '2026/2027', status: 'published', results: [{ student_id: 101, ca1: 10, ca2: 10, exam: 50 }] } }, res);
+    assert.strictEqual(res.statusCode, 400);
+    assert.match(res.body.message, /invalid result status/i);
+    assert.strictEqual(lookupCount, 0);
+  });
+}
+async function testResultBatchUsesTransactionClientAndVerifiesEveryRow() {
+  await withMockedDb(async () => {
+    const writes = [], transactionClient = { transactionScoped: true };
+    db.get = async (sql, params = []) => {
+      if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
+      if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
+      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
+      throw new Error('Unexpected database lookup: ' + sql);
+    };
+    db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
+    db.all = async (sql, params, client) => {
+      assert.match(sql, /SELECT student_id, status FROM results/);
+      assert.strictEqual(client, transactionClient);
+      return params.slice(4).map(student_id => ({ student_id, status: 'draft' }));
+    };
+    db.transaction = async callback => callback(transactionClient);
+    const res = responseRecorder();
+    await resultController.saveResults({ schoolId: 1, session: { staff: { id: 7, role: 'Admin' } }, body: { class_id: '10', subject_id: '20', term: '2nd Term', session: '2026/2027', status: 'draft', results: [{ student_id: 101, ca1: 10, ca2: 10, exam: 50 }, { student_id: 102, ca1: 12, ca2: 13, exam: 51 }] } }, res);
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.savedCount, 2);
+    assert.strictEqual(writes.length, 2);
+    writes.forEach(write => assert.strictEqual(write[2], transactionClient));
+  });
+}
+
 (async () => {
   await testRejectsBatchIfAnyStudentIsNotEnrolled();
   await testRejectsSubjectNotAssignedToClass();
   await testRejectsBatchWhenAnyExistingResultIsProtected();
+  await testRejectsInvalidResultStatus();
+  await testResultBatchUsesTransactionClientAndVerifiesEveryRow();
   process.stdout.write('PASS: Result context integrity regression tests\\n');
 })().catch(error => {
   console.error(error);

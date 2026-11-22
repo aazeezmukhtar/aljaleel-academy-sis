@@ -693,8 +693,22 @@
                 subject_id,
                 status
             };
+            const offline = window.AcadMeOffline || window.NexusOffline;
+            let localDraftSavedAt = null;
 
             try {
+                // Persist locally before attempting the network. This protects the
+                // teacher's work from a tab close, refresh, or dropped connection.
+                if (offline && typeof offline.saveResultDraftLocal === 'function') {
+                    try {
+                        const localSave = await offline.saveResultDraftLocal({ ...payload, status: 'draft' });
+                        localDraftSavedAt = localSave.savedAt;
+                    } catch (localError) {
+                        // Online saving must remain available if this browser cannot
+                        // provide a durable local identity/storage context.
+                        console.warn('[AcadMe] Local result draft backup unavailable:', localError);
+                    }
+                }
                 if (btn) {
                     btn.innerHTML = 'Saving...';
                     btn.disabled = true;
@@ -716,6 +730,13 @@
                 }
                 const data = await res.json();
                 if (data.success) {
+                    if (offline && typeof offline.clearSavedResultDraft === 'function' && localDraftSavedAt) {
+                        try {
+                            await offline.clearSavedResultDraft(payload, localDraftSavedAt, true);
+                        } catch (cleanupError) {
+                            console.warn('[AcadMe] Server save succeeded, but local draft cleanup was deferred:', cleanupError);
+                        }
+                    }
                     alert(data.message);
                     if (status === 'submitted') location.reload();
                 } else {
@@ -762,6 +783,43 @@
                 }
             }
         }
+
+        async function restoreSavedResultDraft() {
+            const grid = document.getElementById('resultGrid');
+            if (!grid) return;
+            const context = {};
+            for (const key of ['class_id', 'subject_id', 'session', 'term']) {
+                const field = document.querySelector('[name="' + key + '"]');
+                context[key] = field ? field.value.trim() : '';
+            }
+            const offline = window.AcadMeOffline || window.NexusOffline;
+            if (!offline || typeof offline.getSavedResultDraft !== 'function') return;
+            try {
+                const draft = await offline.getSavedResultDraft(context);
+                if (!draft || !Array.isArray(draft.results)) return;
+                let restored = 0;
+                draft.results.forEach(item => {
+                    const row = grid.querySelector('tr[data-student="' + String(item.student_id).replace(/[^0-9]/g, '') + '"]');
+                    if (!row) return;
+                    ['ca1', 'ca2', 'exam'].forEach(key => {
+                        const input = row.querySelector('.' + key);
+                        if (input && !input.disabled && item[key] !== undefined && item[key] !== null) input.value = item[key];
+                    });
+                    row.querySelectorAll('.score-input').forEach(input => {
+                        input.dispatchEvent(new Event('input', { bubbles: true }));
+                    });
+                    restored++;
+                });
+                if (restored) {
+                    const notice = document.getElementById('resultsOfflinePreparationStatus');
+                    if (notice) notice.textContent = 'Recovered ' + restored + ' student result row(s) from this device, saved ' + new Date(draft._savedAt).toLocaleString() + '. Save Draft or Submit Results to confirm the changes.';
+                }
+            } catch (error) {
+                console.warn('[AcadMe] Could not recover local result draft:', error);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', restoreSavedResultDraft);
 
         async function updateStatus(type) {
             if (!confirm(`Are you sure you want to ${type.toUpperCase()} these results?`)) return;

@@ -74,7 +74,7 @@ check('existing staff/admin route mounts and role-specific access boundaries rem
   const sidebar = read('views/partials/sidebar.ejs');
   assert.match(sidebar, /user\.role==='Admin'/);
   assert.match(sidebar, /user\.role === 'Admin' \|\| user\.role === 'Bursar'/);
-  assert.match(sidebar, /user\\.role\\s*===\\s*'Teacher'/);
+  assert.match(sidebar, /user\.role\s*===\s*'Teacher'/);
 });
 
 check('shared shell, dashboard templates and notification partial compile as EJS', () => {

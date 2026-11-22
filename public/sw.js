@@ -723,7 +723,9 @@ self.addEventListener('fetch', (event) => {
                                 headers: cacheHeaders
                             });
                         }
-                        await cache.put(cacheKey, responseToCache);
+                        // Cache Storage consumes the response body; keep the original
+                        // response readable for the IndexedDB snapshot transaction below.
+                        await cache.put(cacheKey, responseToCache.clone());
                         if (isOfflineEntryPath(url.pathname) && url.pathname === '/attendance/take') {
                             // Persist the exact prepared HTML in IndexedDB before confirming
                             // preparation to the page. This closes the page-close race between

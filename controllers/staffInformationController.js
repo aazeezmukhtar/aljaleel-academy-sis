@@ -71,3 +71,16 @@ exports.verifyQualification=async(req,res)=>{
  try{const result=await db.run("UPDATE staff_qualifications SET verification_status=?,verified_by=?,verified_at=CASE WHEN ?='pending' THEN NULL ELSE CURRENT_TIMESTAMP END,updated_at=CURRENT_TIMESTAMP WHERE id=? AND school_id=?",[status,status==='pending'?null:me(req),status,id,sid(req)]);if(!result.changes)return res.status(404).send('Qualification not found');res.redirect(req.get('referer')||'/staff')}
  catch(e){console.error('verifyQualification',e);res.status(500).send('Could not update qualification review')}
 };
+
+exports.updateOwnAvatar=async(req,res)=>{
+ if(!req.file)return res.redirect('/staff/my-profile?error=Choose an image first');
+ if(!/^image\/(jpeg|png|webp|gif)$/.test(req.file.mimetype||''))return res.redirect('/staff/my-profile?error=Use a JPG, PNG, WEBP or GIF image');
+ try{
+  const {uploadFile}=require('../utils/storageHelper');
+  const url=await uploadFile(req.file,'staff');
+  if(!url)return res.redirect('/staff/my-profile?error=Image upload failed');
+  await db.run('UPDATE staff SET avatar_image=? WHERE id=? AND school_id=?',[url,me(req),sid(req)]);
+  req.session.staff.avatar_image=url;
+  res.redirect('/staff/my-profile?success=Profile photo updated');
+ }catch(e){console.error('updateOwnAvatar',e);res.redirect('/staff/my-profile?error=Could not update profile photo')}
+};

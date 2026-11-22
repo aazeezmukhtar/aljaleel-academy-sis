@@ -426,7 +426,11 @@
             const status = document.getElementById('attendance-local-save-status');
             if (status) status.textContent = record._submitAfterSync
                 ? 'Completed register saved on this device — pending submission sync'
-                : 'Restored unsynced draft from this device';
+                : record._serverSubmittedAt
+                    ? 'Previously submitted register restored from this device'
+                    : record._syncedAt
+                        ? 'Restored latest draft from this device — last synchronized online'
+                        : 'Restored unsynced draft from this device';
             if (record._submitAfterSync) {
                 const notice = document.getElementById('attendance-local-submit-notice');
                 if (notice) notice.hidden = false;

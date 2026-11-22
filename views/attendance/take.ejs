@@ -386,24 +386,20 @@
         btn.setAttribute('aria-label', 'Attendance status for ' + card.querySelector('.row-name').textContent.trim() + ': ' + nextState + '. Activate to change status.');
     }
 
-    let attendanceAutosaveTimer = null;
     let restoringAttendanceDraft = false;
-    function scheduleAttendanceLocalSave() {
+    async function scheduleAttendanceLocalSave() {
         if (restoringAttendanceDraft) return;
-        window.clearTimeout(attendanceAutosaveTimer);
-        attendanceAutosaveTimer = window.setTimeout(async () => {
-            try {
-                const offline = window.AcadMeOffline || window.NexusOffline;
-                if (!offline || typeof offline.saveAttendanceOffline !== 'function') return;
-                await offline.saveAttendanceOffline(collectAttendanceFormData());
-                const status = document.getElementById('attendance-local-save-status');
-                if (status) status.textContent = 'Changes saved on this device';
-            } catch (error) {
-                console.error('[AcadMe Offline] Attendance autosave failed:', error);
-                const status = document.getElementById('attendance-local-save-status');
-                if (status) status.textContent = 'Local save failed — keep this page open and check storage';
-            }
-        }, 350);
+        try {
+            const offline = window.AcadMeOffline || window.NexusOffline;
+            if (!offline || typeof offline.saveAttendanceOffline !== 'function') return;
+            await offline.saveAttendanceOffline(collectAttendanceFormData(), { deferSync: true });
+            const status = document.getElementById('attendance-local-save-status');
+            if (status) status.textContent = 'Changes saved on this device';
+        } catch (error) {
+            console.error('[AcadMe Offline] Attendance autosave failed:', error);
+            const status = document.getElementById('attendance-local-save-status');
+            if (status) status.textContent = 'Local save failed — keep this page open and check storage';
+        }
     }
 
     async function restoreAttendanceDraft() {
@@ -411,10 +407,11 @@
         if (!offline || typeof offline.getSavedAttendanceDraft !== 'function') return;
         try {
             const form = document.getElementById('attendance-form');
-            const record = await offline.getSavedAttendanceDraft(
-                form.querySelector('[name="class_id"]').value,
-                form.querySelector('[name="date"]').value
-            );
+            const classId = form.querySelector('[name="class_id"]').value;
+            const date = form.querySelector('[name="date"]').value;
+            const pending = typeof offline.getQueuedAttendanceRecord === 'function'
+                ? await offline.getQueuedAttendanceRecord(classId, date) : null;
+            const record = pending || (!navigator.onLine ? await offline.getSavedAttendanceDraft(classId, date) : null);
             if (!record) return;
             restoringAttendanceDraft = true;
             document.querySelectorAll('.student-row-card').forEach(card => {
@@ -474,6 +471,10 @@
         scheduleAttendanceLocalSave();
     }
 
+    document.querySelectorAll('#attendance-form input[name^="reasons["], #attendance-form input[name^="custom_reasons["], #attendance-form textarea[name^="reasons["], #attendance-form textarea[name^="custom_reasons["]').forEach(input => {
+        input.addEventListener('input', scheduleAttendanceLocalSave);
+        input.addEventListener('change', scheduleAttendanceLocalSave);
+    });
     updateAttendanceSummary();
     restoreAttendanceDraft();
 
@@ -486,7 +487,6 @@
             btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
         });
         try {
-            window.clearTimeout(attendanceAutosaveTimer);
             const offline = window.AcadMeOffline || window.NexusOffline;
             if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
                 throw new Error('Durable offline storage is unavailable. Do not close this page until storage is available.');

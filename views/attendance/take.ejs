@@ -20,11 +20,6 @@
                     <button type="submit" form="attendance-form" class="btn btn-primary attendance-save-action" <%= readOnly ? 'hidden' : '' %>>
                         <i class="bi bi-cloud-check-fill"></i> Submit
                     </button>
-                    <% if (canEdit !== false) { %>
-                    <button type="button" id="submit-attendance-register" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
-                        <i class="bi bi-send-check"></i> Submit Attendance
-                    </button>
-                    <% } %>
                     <% if (register && register.status === 'submitted' && isAdmin) { %>
                     <button type="button" id="reopen-attendance-register" class="btn btn-outline" aria-label="Reopen register for correction">
                         <i class="bi bi-unlock"></i> Reopen for Correction
@@ -135,11 +130,6 @@
             <button type="submit" form="attendance-form" class="btn btn-primary">
                 <i class="bi bi-cloud-check-fill"></i> Submit
             </button>
-            <% if (canEdit !== false) { %>
-            <button type="button" id="submit-attendance-register-mobile" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
-                <i class="bi bi-send-check"></i> Submit
-            </button>
-            <% } %>
         </div>
     </main>
 </div>
@@ -343,7 +333,7 @@
 
         const editButton = document.getElementById('edit-attendance-btn');
         if (editButton) editButton.hidden = true;
-        document.querySelectorAll('.attendance-save-action, .attendance-mobile-save, .mark-all-present-action, #submit-attendance-register, #submit-attendance-register-mobile')
+        document.querySelectorAll('.attendance-save-action, .attendance-mobile-save, .mark-all-present-action')
             .forEach(element => { element.hidden = false; });
 
         const notice = document.querySelector('.attendance-container .alert');
@@ -369,7 +359,7 @@
             custom_reasons: {}
         };
         for (const [key, value] of formData.entries()) {
-            const match = key.match(/^(attendance|reasons|custom_reasons)\\[(\\d+)\\]$/);
+            const match = key.match(/^(attendance|reasons|custom_reasons)\[(\d+)\]$/);
             if (match) data[match[1]][match[2]] = value;
         }
         return data;
@@ -517,61 +507,6 @@
         }
     });
 
-    async function submitAttendanceRegister() {
-        if (!window.confirm('Complete this attendance register? Every student still marked Not recorded will be recorded as Absent. Your selected Present, Late and Leave statuses will be preserved. If offline, the completed register will be saved on this device and submitted automatically when the connection returns.')) return;
-        const buttons = [
-            document.getElementById('submit-attendance-register'),
-            document.getElementById('submit-attendance-register-mobile')
-        ].filter(Boolean);
-        const saveButtons = Array.from(document.querySelectorAll('button[form="attendance-form"]'));
-        buttons.forEach(button => {
-            button.disabled = true;
-            button.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving submission...';
-        });
-        saveButtons.forEach(button => { button.disabled = true; });
-        try {
-            const offline = window.AcadMeOffline || window.NexusOffline;
-            if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
-                throw new Error('Durable offline storage is unavailable. The register was not submitted.');
-            }
-            const data = collectAttendanceFormData();
-            Object.keys(data.attendance).forEach(studentId => {
-                if (data.attendance[studentId] === 'Not recorded') data.attendance[studentId] = 'Absent';
-            });
-            await offline.saveAttendanceOffline(data, { submitAfterSync: true });
-            document.querySelectorAll('.student-row-card').forEach(card => {
-                if (card.querySelector('.cycle-btn').dataset.state === 'Not recorded') setStudentStatus(card, 'Absent');
-            });
-            updateAttendanceSummary();
-            const status = document.getElementById('attendance-local-save-status');
-            if (navigator.onLine) {
-                await offline.syncData();
-            }
-            const form = document.getElementById('attendance-form');
-            const queued = await offline.getQueuedAttendanceRecord(
-                form.querySelector('[name="class_id"]').value,
-                form.querySelector('[name="date"]').value
-            );
-            if (!queued) {
-                alert('Attendance submitted successfully to the school server.');
-                window.location.reload();
-            } else {
-                if (status) status.textContent = 'Completed register saved on this device — pending submission sync';
-                const notice = document.getElementById('attendance-local-submit-notice');
-                if (notice) notice.hidden = false;
-                alert('Attendance has been completed and saved on this device. It is marked Pending submission and will be sent automatically when the connection returns. The school server has not confirmed it yet.');
-            }
-        } catch (error) {
-            alert('Could not save the completed register locally: ' + error.message + '. Your register has not been submitted.');
-        } finally {
-            buttons.forEach(button => {
-                button.disabled = false;
-                button.innerHTML = '<i class="bi bi-send-check"></i> ' + (button.id.endsWith('-mobile') ? 'Submit' : 'Submit Attendance');
-            });
-            saveButtons.forEach(button => { button.disabled = false; });
-        }
-    }
-
     const reopenButton = document.getElementById('reopen-attendance-register');
     if (reopenButton) {
         reopenButton.addEventListener('click', async () => {
@@ -610,13 +545,6 @@
         });
     }
 
-    ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
-        const button = document.getElementById(id);
-        if (button) {
-            button.disabled = false;
-            button.addEventListener('click', submitAttendanceRegister);
-        }
-    });
 </script>
 
 

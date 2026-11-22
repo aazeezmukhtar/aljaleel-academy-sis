@@ -116,3 +116,15 @@ npm run test:attendance-schedule
 \`\`\`
 
 Production execution remains a separate approval step after read-only preflight, verified backup/restore, and disposable PostgreSQL 17.6 validation. Do not execute either migration against production without separate explicit approval.
+
+## Staff profile data foundation (2026-11-22)
+
+Files:
+
+- `20261122_staff_profile_data.sqlite.sql`
+- `20261122_staff_profile_data.postgres.sql`
+- `20261122_staff_profile_data.md`
+
+This additive/manual migration creates nullable personal-details, employment-details, qualifications, and emergency-contact tables linked to existing staff accounts. It does not alter the existing `staff` table, seed profile values, or run at application startup. Only child-row identity and staff ownership are required; all profile attributes remain nullable.
+
+Run `npm run test:staff-profile-data-migration` for the in-memory SQLite schema, nullability, foreign-key, repeatable-record and rerun checks. Production execution requires separate disposable PostgreSQL 17.6 validation, read-only preflight, a verified recovery plan and explicit approval.

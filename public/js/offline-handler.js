@@ -379,18 +379,28 @@ async function saveResultDraftLocal(data) {
     return { savedAt };
 }
 
-async function clearSavedResultDraft(context, expectedSavedAt) {
+async function clearSavedResultDraft(context, expectedSavedAt, clearQueued = false) {
     const id = getResultContextKey(context);
     if (!id) return false;
     const db = await openDB();
     return new Promise((resolve, reject) => {
-        const tx = db.transaction(['results_drafts'], 'readwrite');
+        const stores = clearQueued ? ['results_drafts', 'results_sync'] : ['results_drafts'];
+        const tx = db.transaction(stores, 'readwrite');
         const store = tx.objectStore('results_drafts');
         const request = store.get(id);
         request.onsuccess = () => {
             const current = request.result;
             if (current && (!expectedSavedAt || current._savedAt === expectedSavedAt)) store.delete(id);
         };
+        if (clearQueued) {
+            const queue = tx.objectStore('results_sync');
+            const queuedRequest = queue.getAll();
+            queuedRequest.onsuccess = () => {
+                queuedRequest.result.forEach(item => {
+                    if (getResultContextKey(item, item._ownerKey) === id) queue.delete(item.id);
+                });
+            };
+        }
         tx.oncomplete = () => resolve(true);
         tx.onerror = () => reject(tx.error || new Error('Could not update saved result draft.'));
         tx.onabort = () => reject(tx.error || new Error('Could not update saved result draft.'));
@@ -409,9 +419,12 @@ async function saveResultOffline(data) {
         const drafts = tx.objectStore('results_drafts');
         const request = queue.getAll();
         request.onsuccess = () => {
-            const existing = request.result.find(item => getResultContextKey(item, item._ownerKey) === contextId);
+            const matching = request.result.filter(item => getResultContextKey(item, item._ownerKey) === contextId);
             const record = { ...data, _ownerKey: ownerKey, _savedAt: savedAt };
-            if (existing) record.id = existing.id;
+            if (matching.length) {
+                record.id = matching[0].id;
+                matching.slice(1).forEach(item => queue.delete(item.id));
+            }
             queue.put(record);
             drafts.put({ ...data, id: contextId, _ownerKey: ownerKey, _savedAt: savedAt });
         };

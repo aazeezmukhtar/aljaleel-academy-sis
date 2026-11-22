@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS staff_personal_details (
     id BIGSERIAL PRIMARY KEY,
     school_id BIGINT NOT NULL,
-    staff_id BIGINT NOT NULL UNIQUE REFERENCES staff(id) ON DELETE CASCADE,
+    staff_id INTEGER NOT NULL UNIQUE REFERENCES staff(id) ON DELETE CASCADE,
     date_of_birth DATE,
     gender TEXT,
     phone TEXT,
@@ -19,7 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_staff_personal_details_school ON staff_personal_d
 CREATE TABLE IF NOT EXISTS staff_employment_details (
     id BIGSERIAL PRIMARY KEY,
     school_id BIGINT NOT NULL,
-    staff_id BIGINT NOT NULL UNIQUE REFERENCES staff(id) ON DELETE CASCADE,
+    staff_id INTEGER NOT NULL UNIQUE REFERENCES staff(id) ON DELETE CASCADE,
     department TEXT,
     employment_type TEXT,
     employment_start_date DATE,
@@ -36,7 +36,7 @@ CREATE INDEX IF NOT EXISTS idx_staff_employment_details_school ON staff_employme
 CREATE TABLE IF NOT EXISTS staff_emergency_contacts (
     id BIGSERIAL PRIMARY KEY,
     school_id BIGINT NOT NULL,
-    staff_id BIGINT NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+    staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
     contact_name TEXT NOT NULL,
     relationship TEXT,
     phone TEXT NOT NULL,
@@ -54,7 +54,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_staff_emergency_contact_primary
 CREATE TABLE IF NOT EXISTS staff_qualifications (
     id BIGSERIAL PRIMARY KEY,
     school_id BIGINT NOT NULL,
-    staff_id BIGINT NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
+    staff_id INTEGER NOT NULL REFERENCES staff(id) ON DELETE CASCADE,
     qualification TEXT NOT NULL,
     field_of_study TEXT,
     institution TEXT,

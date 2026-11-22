@@ -386,3 +386,274 @@ textarea.acm-form-control {
     color: var(--acm-error, #991b1b);
     border: 1px solid rgba(153, 27, 27, 0.2);
 }
+
+
+/* ==========================================================
+   Profile refresh — compact, mobile-first student experience
+   ========================================================== */
+
+.acm-main-content {
+    width: 100%;
+    max-width: 1240px;
+    margin-inline: auto;
+    box-sizing: border-box;
+}
+
+.acm-profile-hero {
+    align-items: center;
+    flex-direction: row;
+    text-align: start;
+    gap: clamp(14px, 3vw, 28px);
+    padding: clamp(16px, 3vw, 28px);
+    margin-bottom: 20px;
+    border-radius: 20px;
+    box-shadow: var(--acm-shadow-xs);
+    overflow: hidden;
+}
+
+.acm-avatar-container {
+    margin: 0;
+}
+
+.acm-profile-avatar,
+.acm-avatar-initials {
+    width: clamp(68px, 12vw, 104px);
+    height: clamp(68px, 12vw, 104px);
+}
+
+.acm-profile-name {
+    font-size: clamp(1.15rem, 3.2vw, 1.75rem);
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    margin-bottom: 8px;
+}
+
+.acm-profile-meta {
+    justify-content: flex-start;
+    gap: 6px 9px;
+    font-size: var(--acm-text-xs);
+}
+
+.acm-profile-id-badge {
+    padding: 4px 9px;
+    background: color-mix(in srgb, var(--school-primary, var(--acm-navy)) 7%, var(--acm-surface));
+}
+
+.acm-avatar-upload-btn {
+    width: 30px;
+    height: 30px;
+    bottom: 0;
+    right: 0;
+    inset-inline-end: 0;
+}
+
+.acm-profile-sections-grid {
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.acm-profile-card {
+    min-width: 0;
+    padding: clamp(16px, 2.5vw, 24px);
+    border-radius: 18px;
+    box-shadow: var(--acm-shadow-xs);
+}
+
+.acm-profile-card-header {
+    gap: 12px;
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+}
+
+.acm-profile-card-title {
+    font-size: var(--acm-text-base);
+    gap: 9px;
+}
+
+.acm-profile-card-subtitle {
+    white-space: nowrap;
+}
+
+.acm-field-list {
+    gap: 0;
+}
+
+.acm-field-row {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: start;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--acm-border) 72%, transparent);
+}
+
+.acm-field-row:last-child {
+    border-bottom: 0;
+}
+
+.acm-field-label {
+    font-size: 0.68rem;
+    line-height: 1.45;
+    letter-spacing: 0.035em;
+    text-transform: none;
+    font-weight: var(--acm-fw-semibold);
+}
+
+.acm-field-value {
+    min-width: 0;
+    text-align: end;
+    font-size: var(--acm-text-sm);
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+.acm-field-value strong {
+    font-weight: var(--acm-fw-bold);
+}
+
+.acm-profile-card > p {
+    padding-top: 12px;
+    border-top: 1px solid var(--acm-border);
+    line-height: 1.5;
+}
+
+#contactViewMode .acm-field-row {
+    padding: 10px 0;
+}
+
+#contactViewMode .acm-field-row > * {
+    min-width: 0;
+}
+
+#contactViewMode .acm-field-row[style*="border-top"] {
+    margin-top: 10px !important;
+    padding-top: 14px !important;
+}
+
+#contactViewMode .acm-field-row[style*="margin-top"] {
+    margin-top: 0 !important;
+}
+
+#contactViewMode .acm-field-row[style*="border-top"] .acm-field-label,
+#contactViewMode .acm-field-row[style*="border-top"] .acm-field-value {
+    /* Keep guardian details aligned with the student details. */
+}
+
+#editBtn {
+    min-height: 40px;
+    padding: 8px 14px !important;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.acm-form-group {
+    margin-bottom: 14px;
+}
+
+.acm-form-control {
+    min-height: 46px;
+    border-radius: 12px;
+}
+
+.acm-form-actions {
+    position: sticky;
+    bottom: 0;
+    background: var(--acm-surface);
+    padding: 14px 0 max(8px, env(safe-area-inset-bottom));
+    z-index: 2;
+}
+
+.acm-section {
+    margin-top: 8px;
+    gap: 12px;
+}
+
+.acm-section-title {
+    font-size: 0.72rem;
+}
+
+.acm-account-list {
+    gap: 10px;
+}
+
+.acm-account-item {
+    min-height: 64px;
+    padding: 14px 16px;
+    border-radius: 14px;
+    box-shadow: var(--acm-shadow-xs);
+}
+
+.acm-account-item:focus-visible,
+.acm-btn:focus-visible,
+.acm-avatar-upload-btn:focus-visible,
+#editBtn:focus-visible {
+    outline: 3px solid var(--school-secondary, #FBBA00);
+    outline-offset: 3px;
+}
+
+@media (max-width: 420px) {
+    .acm-main-content {
+        padding: 12px;
+        padding-bottom: calc(88px + env(safe-area-inset-bottom));
+    }
+
+    .acm-profile-hero {
+        gap: 12px;
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .acm-profile-name {
+        font-size: 1.05rem;
+    }
+
+    .acm-profile-meta {
+        font-size: 0.72rem;
+    }
+
+    .acm-profile-card {
+        padding: 14px;
+        border-radius: 16px;
+    }
+
+    .acm-field-row {
+        grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr);
+        gap: 8px;
+    }
+
+    .acm-field-label {
+        font-size: 0.64rem;
+    }
+
+    .acm-field-value {
+        font-size: 0.84rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .acm-profile-sections-grid {
+        gap: 22px;
+        align-items: stretch;
+    }
+
+    .acm-profile-card {
+        padding: 24px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .acm-profile-hero *,
+    .acm-profile-card *,
+    .acm-account-item {
+        transition: none !important;
+        animation: none !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .acm-main-content {
+        width: auto;
+        margin-inline-start: 260px;
+        margin-inline-end: auto;
+    }
+}

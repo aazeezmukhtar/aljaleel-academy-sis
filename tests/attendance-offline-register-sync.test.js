@@ -43,7 +43,9 @@ check('prepared attendance HTML is verified from IndexedDB independently of Cach
     assert.match(offline, /snapshot\.ownerKey !== getOfflineOwnerKey\(\)/);
     assert.match(offline, /verified\.html !== snapshot\.html/);
     assert.match(offline, /durable attendance snapshot could not be verified/i);
-    assert.doesNotMatch(offline.slice(offline.indexOf('async function getPreparedDatasetStatus'), offline.indexOf('async function recordPreparedDataset')), /if \(!cached && !snapshot\)/);
+    const statusSource = offline.slice(offline.indexOf('async function getPreparedDatasetStatus'), offline.indexOf('async function recordPreparedDataset'));
+    assert.ok(statusSource.indexOf("get('attendance_prepared')") < statusSource.indexOf("caches.match(url"));
+    assert.match(statusSource, /if \(!cached && !snapshot\) return \{ status: 'missing', available: false \}/);
 });
 
 

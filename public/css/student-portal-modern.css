@@ -342,3 +342,56 @@
     .acm-attachment-card,
     .acm-detail-shell { transition: none !important; }
 }
+
+.acm-profile-card {
+    min-width: 0;
+    padding: clamp(16px,3vw,24px);
+    border: 1px solid var(--acm-border);
+    border-radius: 18px;
+    background: var(--acm-surface);
+    box-shadow: var(--acm-shadow-xs);
+}
+.acm-profile-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--acm-border);
+}
+.acm-profile-card-title {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    color: var(--acm-text-primary);
+    font-size: var(--acm-text-base);
+    font-weight: var(--acm-fw-bold);
+}
+.acm-profile-card-subtitle {
+    color: var(--acm-text-muted);
+    font-size: var(--acm-text-xs);
+    white-space: nowrap;
+}
+.acm-status-chip--general {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: color-mix(in srgb,var(--school-primary,var(--acm-navy)) 8%,white);
+    color: var(--school-primary,var(--acm-navy));
+    font-size: .72rem;
+    font-weight: 700;
+}
+.acm-bottom-nav .acm-nav-item {
+    min-width: 0;
+    font-size: clamp(.58rem,2.1vw,.72rem);
+}
+.acm-bottom-nav .acm-nav-item i {
+    font-size: clamp(1.05rem,4vw,1.25rem);
+}
+@media (max-width: 380px) {
+    .acm-bottom-nav { padding-inline: 1px; }
+    .acm-bottom-nav .acm-nav-item { gap: 2px; }
+}

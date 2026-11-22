@@ -20,7 +20,7 @@
     "test:student-enrollment-ui": "node tests/student-enrollment-ui.test.js",
     "test:student-departure-ui": "node tests/student-departure-ui.test.js",
     "test:student-departure-reenrollment": "node tests/student-departure-and-reenrollment.test.js",
-    "test:ui-shell": "node tests/ui-shell-accessibility.test.js && node tests/student-portal-presentation.test.js",
+    "test:ui-shell": "node tests/ui-shell-accessibility.test.js && node tests/student-portal-presentation.test.js && npm run test:staff-admin-presentation",
     "test:enrollment-periods-migration": "node tests/student-enrollment-periods-migration.test.js",
     "test:bulk-import-visibility": "node tests/bulk-import-visibility.test.js",
     "test:attendance-section": "node tests/section-aware-attendance-migration.test.js",
@@ -49,7 +49,8 @@
     "test:attendance-schedule-setup": "npm run test:attendance-schedule-service && npm run test:attendance-setup-service",
     "test:attendance-schedule-consumers": "npm run test:attendance-schedule-compatibility && npm run test:attendance-register-generation && npm run test:attendance-register-workflow && npm run test:attendance-operations",
     "test:attendance-schedule-compatibility": "node tests/attendance-schedule-compatibility.test.js",
-    "test:attendance-analytics-dashboard": "node tests/attendance-analytics-dashboard.test.js"
+    "test:attendance-analytics-dashboard": "node tests/attendance-analytics-dashboard.test.js",
+    "test:staff-admin-presentation": "node tests/staff-admin-presentation.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

@@ -24,12 +24,20 @@ const analyticsView = fs.readFileSync(path.join(__dirname, '..', 'views', 'atten
 
 assert(view.includes("const STATUS_CYCLE = ['Not recorded', 'Present', 'Late', 'Leave', 'Absent']"));
 assert(view.includes("const currentStatus = student.status || 'Not recorded';"));
-assert(!view.includes("btn.dataset.state === 'Not recorded'") || !view.includes("btn.dataset.state = 'Absent'"));
-assert(view.includes("id=\"submit-attendance-register\""));
-assert(offline.includes("fetch('/attendance/submit'"));
-assert(view.includes("submitAfterSync: true"));
+assert(!view.includes('id="submit-attendance-register"'));
+assert(!offline.includes("fetch('/attendance/submit'"));
+assert(!view.includes('submitAfterSync: true'));
+assert(view.includes('function replaceUnrecordedWithAbsent()'));
+assert(view.includes("if (btn && btn.dataset.state === 'Not recorded')"));
+assert(view.includes("setStudentStatus(card, 'Absent')"));
+assert(view.includes('replaceUnrecordedWithAbsent();'));
+assert(view.includes('await offline.saveAttendanceOffline(collectAttendanceFormData())'));
+
+
+
+
 assert(!view.includes("if (!navigator.onLine)"), "Submit must remain available offline");
-assert(view.includes("Pending submission"));
+
 assert(offline.includes("getPendingAttendanceCount"));
 assert(offline.includes('async function getPendingAttendanceCount()'));
 assert(offline.includes('    getPendingAttendanceCount,'));
@@ -73,8 +81,8 @@ assert(
     !attendanceSubmitHandler.includes('generateExpectedRegister'),
     'only explicit submission may mark unrecorded roster members absent, without register setup'
 );
-assert(view.includes('Submit Attendance'));
-assert(view.includes('Every student still marked Not recorded will be recorded as Absent.'));
+
+
 const closureController = controller.includes('attendanceClosureService.requestClosure') &&
     controller.includes('attendanceClosureService.decideClosure') &&
     controller.includes('attendanceClosureService.cancelClosure');
@@ -145,4 +153,4 @@ assert(analyticsView.includes('Daily attendance trend'));
 
 
 
-console.log('[attendance-register-ui] unmarked default, deliberate status cycle, offline submission intent, pending-sync guard and responsible-teacher route checks passed.');
+console.log('[attendance-register-ui] explicit-save auto-absent, draft preservation, offline save and responsible-teacher route checks passed.');

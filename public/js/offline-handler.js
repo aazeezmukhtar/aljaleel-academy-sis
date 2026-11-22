@@ -531,6 +531,7 @@ async function syncData() {
         for (const item of attendanceItems) {
             try {
                 const { id, _savedAt, _ownerKey, _submitAfterSync, ...payload } = item;
+                // Ignore legacy finalization flags: sync only the statuses the teacher marked.
                 const res = await fetch('/attendance/save', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -543,19 +544,7 @@ async function syncData() {
                 if (res.ok) {
                     const data = await res.json().catch(() => ({}));
                     if (data.success) {
-                        if (_submitAfterSync) {
-                            const submitResponse = await fetch('/attendance/submit', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                                body: JSON.stringify({ class_id: payload.class_id, date: payload.date })
-                            });
-                            if (submitResponse.redirected) { failCount++; continue; }
-                            const submitResult = await submitResponse.json().catch(() => ({}));
-                            if (!submitResponse.ok || !submitResult.success) { failCount++; continue; }
-                        }
-                        await updateSavedAttendanceDraft(payload.class_id, payload.date, _submitAfterSync
-                            ? { _submitAfterSync: false, _serverSubmittedAt: new Date().toISOString(), _syncedAt: new Date().toISOString() }
-                            : { _submitAfterSync: false, _syncedAt: new Date().toISOString() });
+                        await updateSavedAttendanceDraft(payload.class_id, payload.date, { _submitAfterSync: false, _syncedAt: new Date().toISOString() });
                         await deleteQueued('attendance_sync', id);
                         successCount++;
                     } else {

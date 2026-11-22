@@ -38,11 +38,12 @@ check('offline attendance writes are owner-scoped, idempotent per class/date, an
     assert.match(source, /tx\.onabort/);
 });
 
-check('prepared attendance HTML is duplicated into durable IndexedDB storage', () => {
-    assert.match(offline, /attendance_prepared/);
-    assert.match(offline, /snapshotHtml/);
-    assert.match(offline, /html: snapshotHtml/);
-    assert.match(offline, /if \(!cached && !snapshot\)/);
+check('prepared attendance HTML is verified from IndexedDB independently of CacheStorage', () => {
+    assert.match(offline, /source: snapshot \? 'indexeddb' : 'cache'/);
+    assert.match(offline, /snapshot\.ownerKey !== getOfflineOwnerKey\(\)/);
+    assert.match(offline, /verified\.html !== snapshot\.html/);
+    assert.match(offline, /durable attendance snapshot could not be verified/i);
+    assert.doesNotMatch(offline.slice(offline.indexOf('async function getPreparedDatasetStatus'), offline.indexOf('async function recordPreparedDataset')), /if \(!cached && !snapshot\)/);
 });
 
 
@@ -102,6 +103,8 @@ check('the service worker can recover prepared attendance from IndexedDB and enf
     assert.match(serviceWorker, /matchesOfflineEntryContext\(requestedUrl/);
     assert.match(serviceWorker, /item\.ownerKey !== owner/);
     assert.match(serviceWorker, /X-AcadMe-Offline-Recovered/);
+    assert.match(serviceWorker, /async function persistPreparedAttendanceSnapshot/);
+    assert.ok(serviceWorker.indexOf('await persistPreparedAttendanceSnapshot(request, responseToCache)') < serviceWorker.indexOf("headers.set('X-AcadMe-Offline-Cached', '1')"));
 });
 
 

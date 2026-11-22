@@ -62,8 +62,8 @@ check('attendance sync saves only the statuses finalized by the teacher', () => 
     const end = offline.indexOf('let resultItems', start);
     const source = offline.slice(start, end);
     assert.match(source, /const \{ id, _savedAt, _ownerKey, _submitAfterSync, \.\.\.payload \} = item/);
-    assert.match(source, /fetch\('\\/attendance\\/save'/);
-    assert.doesNotMatch(source, /fetch\('\\/attendance\\/submit'/);
+    assert.ok(source.includes("fetch('/attendance/save'"));
+    assert.ok(!source.includes("fetch('/attendance/submit'"));
     assert.match(source, /updateSavedAttendanceDraft\(/);
     assert.match(source, /deleteQueued\('attendance_sync', id\)/);
 });

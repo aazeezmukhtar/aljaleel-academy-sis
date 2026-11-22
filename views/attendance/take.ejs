@@ -530,7 +530,6 @@
         });
         saveButtons.forEach(button => { button.disabled = true; });
         try {
-            window.clearTimeout(attendanceAutosaveTimer);
             const offline = window.AcadMeOffline || window.NexusOffline;
             if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
                 throw new Error('Durable offline storage is unavailable. The register was not submitted.');

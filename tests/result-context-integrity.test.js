@@ -42,15 +42,11 @@ async function testRejectsBatchWhenAnyExistingResultIsProtected() {
     await resultController.saveResults({
       schoolId: 1,
       session: { staff: { id: 7, role: 'Admin' } },
-      body: {
-        class_id: '10', subject_id: '20', term: '2nd Term',
-        session: '2026/2027', status: 'published',
-        results: [{ student_id: 101, ca1: 10, ca2: 10, exam: 50 }]
-      }
+      body: { class_id: '10', subject_id: '20', term: '2nd Term', session: '2026/2027', status: 'published', results: [{ student_id: 101, ca1: 10, ca2: 10, exam: 50 }] }
     }, res);
     assert.strictEqual(res.statusCode, 400);
     assert.match(res.body.message, /invalid result status/i);
-    assert.strictEqual(lookupCount, 0, 'Invalid status must be rejected before database lookups or writes');
+    assert.strictEqual(lookupCount, 0);
   });
 }
 
@@ -68,30 +64,21 @@ async function testResultBatchUsesTransactionClientAndVerifiesEveryRow() {
     db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
     db.all = async (sql, params, client) => {
       assert.match(sql, /SELECT student_id, status FROM results/);
-      assert.strictEqual(client, transactionClient, 'Verification must use the same transaction client as writes');
+      assert.strictEqual(client, transactionClient);
       return params.slice(4).map(student_id => ({ student_id, status: 'draft' }));
     };
     db.transaction = async callback => callback(transactionClient);
-
     const res = responseRecorder();
     await resultController.saveResults({
       schoolId: 1,
       session: { staff: { id: 7, role: 'Admin' } },
-      body: {
-        class_id: '10', subject_id: '20', term: '2nd Term',
-        session: '2026/2027', status: 'draft',
-        results: [
-          { student_id: 101, ca1: 10, ca2: 10, exam: 50 },
-          { student_id: 102, ca1: 12, ca2: 13, exam: 51 }
-        ]
-      }
+      body: { class_id: '10', subject_id: '20', term: '2nd Term', session: '2026/2027', status: 'draft', results: [{ student_id: 101, ca1: 10, ca2: 10, exam: 50 }, { student_id: 102, ca1: 12, ca2: 13, exam: 51 }] }
     }, res);
-
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(res.body.success, true);
     assert.strictEqual(res.body.savedCount, 2);
     assert.strictEqual(writes.length, 2);
-    writes.forEach(write => assert.strictEqual(write[2], transactionClient, 'Every write must use the transaction client'));
+    writes.forEach(write => assert.strictEqual(write[2], transactionClient));
   });
 }
 

@@ -37,6 +37,14 @@ const sqlite = new Database(dbPath);
 try {
   sqlite.pragma('foreign_keys = ON');
   sqlite.exec(schema);
+
+  // Mirror the section-owned academic-records production migration in this
+  // disposable fixture only. Production migrations remain separately reviewed.
+  const resultColumns = sqlite.prepare("PRAGMA table_info(results)").all();
+  if (!resultColumns.some(column => column.name === 'class_id')) {
+    sqlite.exec('ALTER TABLE results ADD COLUMN class_id INTEGER REFERENCES classes(id)');
+  }
+  sqlite.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_results_student_class_subject_context ON results(student_id, class_id, subject_id, term, session)');
 } finally {
   sqlite.close();
 }

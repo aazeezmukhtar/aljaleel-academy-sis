@@ -1,367 +1,189 @@
 <%- include('partials/header') %>
-
-    <div class="dashboard-container">
-        <%- include('partials/sidebar') %>
-
-            <!-- Main Content -->
-            <main class="main-content">
-                <header class="content-header">
-                    <div>
-                        <h1>Welcome Back, Admin</h1>
-                        <p class="text-muted">Today is <%= new Date().toLocaleDateString('en-US', { weekday: 'long' ,
-                                year: 'numeric' , month: 'long' , day: 'numeric' }) %>
-                        </p>
-                    </div>
-                    <div class="header-actions">
-                        <div class="notification-bell-container" role="button" tabindex="0" aria-label="Open notifications" aria-haspopup="true" aria-expanded="false" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleNotificationDropdown(event); }" onclick="toggleNotificationDropdown(event)" style="background: rgba(99, 102, 241, 0.1); border: 1px solid rgba(99, 102, 241, 0.2); border-radius: 12px; padding: 10px;">
-                            <i class="bi bi-bell-fill" style="color: #6366f1; font-size: 1.4rem;"></i>
-                            <span class="notification-badge">0</span>
-                            <div class="notification-dropdown">
-                                <div class="notification-header">
-                                    <strong>Notifications</strong>
-                                    <span class="text-muted">Recent Updates</span>
-                                </div>
-                                <div class="notification-list"></div>
-                            </div>
-                        </div>
-                        <span class="badge badge-primary">Admin</span>
-                    </div>
-                </header>
-
-                <section class="stats-grid" aria-label="School summary statistics">
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
-                            <i class="bi bi-people-fill"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3>
-                                <%= stats.totalStudents %>
-                            </h3>
-                            <p>Total Students</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
-                            <i class="bi bi-person-badge-fill"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3>
-                                <%= stats.activeStaff %>
-                            </h3>
-                            <p>Active Staff</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
-                            <i class="bi bi-calendar-check-fill"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3>
-                                <%= stats.attendance === 'N/A' ? '—' : stats.attendance %>
-                            </h3>
-                            <p>Attendance Today</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #10b981, #059669);">
-                            <i class="bi bi-wallet-fill"></i>
-                        </div>
-                        <div class="stat-content" style="width: 100%;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <h3 style="font-size: 1.5rem; margin: 0;">
-                                    <%= stats.revenuePercentage %>%
-                                </h3>
-                                <small class="text-muted">Collected</small>
-                            </div>
-                            <div role="progressbar" aria-label="Revenue collection progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= Math.min(100, Math.max(0, Number(stats.revenuePercentage) || 0)) %>" style="height: 6px; background: rgba(16, 185, 129, 0.1); border-radius: 10px; overflow: hidden;">
-                                <div style="height: 100%; width: <%= Math.min(100, Math.max(0, Number(stats.revenuePercentage) || 0)) %>%; background: #10b981; border-radius: 10px;"></div>
-                            </div>
-                            <p style="margin-top: 5px;">Revenue Collection</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #6366f1, #4f46e5);">
-                            <i class="bi bi-book-half"></i>
-                        </div>
-                        <div class="stat-content">
-                            <h3>
-                                <%= stats.totalSubjects %>
-                            </h3>
-                            <p>Active Subjects</p>
-                        </div>
-                    </div>
-
-                    <div class="stat-card">
-                        <div class="stat-icon" style="background: linear-gradient(135deg, #ec4899, #db2777);">
-                            <i class="bi bi-gender-ambiguous"></i>
-                        </div>
-                        <div class="stat-content">
-                            <div style="display: flex; gap: 10px; align-items: baseline;">
-                                <h3 title="Male">
-                                    <%= stats.genderSummary.Male %> M
-                                </h3>
-                                <h3 title="Female" style="font-size: 1.2rem; opacity: 0.8;">
-                                    <%= stats.genderSummary.Female %> F
-                                </h3>
-                            </div>
-                            <p>Students by Gender</p>
-                        </div>
-                    </div>
-                </section>
-
-                <section class="admin-quick-actions" aria-labelledby="adminQuickActionsHeading" style="margin-bottom: 40px;">
-                    <h2 id="adminQuickActionsHeading" style="margin-bottom: 24px; font-size: 1.25rem;">Quick Actions</h2>
-                    <div class="grid-4">
-                        <a href="/attendance" class="card"
-                            style="padding: 24px; text-align: center; display: block; text-decoration: none;">
-                            <div
-                                style="width: 54px; height: 54px; background: #ecf3ff; color: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-                                <i class="bi bi-calendar-check" style="font-size: 1.5rem;"></i>
-                            </div>
-                            <span
-                                style="display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;">Mark
-                                Attendance</span>
-                            <small style="color: var(--text-muted);">Daily presence tracking</small>
-                        </a>
-                        <a href="/fees/manager" class="card"
-                            style="padding: 24px; text-align: center; display: block; text-decoration: none;">
-                            <div
-                                style="width: 54px; height: 54px; background: #fff7ed; color: #f59e0b; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-                                <i class="bi bi-wallet2" style="font-size: 1.5rem;"></i>
-                            </div>
-                            <span
-                                style="display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;">Record
-                                Fees</span>
-                            <small style="color: var(--text-muted);">Manage student payments</small>
-                        </a>
-                        <a href="/students/enroll" class="card"
-                            style="padding: 24px; text-align: center; display: block; text-decoration: none;">
-                            <div
-                                style="width: 54px; height: 54px; background: #ecfdf5; color: #10b981; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-                                <i class="bi bi-person-plus-fill" style="font-size: 1.5rem;"></i>
-                            </div>
-                            <span
-                                style="display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;">New
-                                Admission</span>
-                            <small style="color: var(--text-muted);">Enroll new students</small>
-                        </a>
-                        <a href="/results" class="card"
-                            style="padding: 24px; text-align: center; display: block; text-decoration: none;">
-                            <div
-                                style="width: 54px; height: 54px; background: #fef2f2; color: #ef4444; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
-                                <i class="bi bi-file-earmark-bar-graph" style="font-size: 1.5rem;"></i>
-                            </div>
-                            <span
-                                style="display: block; font-weight: 700; color: var(--text-primary); margin-bottom: 5px;">Result
-                                Entry</span>
-                            <small style="color: var(--text-muted);">Input student scores</small>
-                        </a>
-                    </div>
-                </section>
-
-                <div class="grid-main-aside admin-dashboard-panels">
-                    <!-- Recent Activity -->
-                    <div class="card">
-                        <div
-                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <h3>Recent Enrollments</h3>
-                            <a href="/students" style="font-size: 0.9rem; font-weight: 600; text-decoration: none;">View
-                                All</a>
-                        </div>
-
-                        <div class="feed">
-                            <% if (recentEnrollments && recentEnrollments.length> 0) { %>
-                                <% recentEnrollments.forEach(enrollment=> { %>
-                                    <div
-                                        style="padding: 15px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 15px;">
-                                        <div
-                                            style="width: 40px; height: 40px; background: #e0e7ff; color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                            <i class="bi bi-person-plus-fill"></i>
-                                        </div>
-                                        <div>
-                                            <strong style="display: block;">
-                                                <%= enrollment.first_name %>
-                                                    <%= enrollment.last_name %>
-                                            </strong>
-                                            <small class="text-muted">
-                                                <%= enrollment.class_name || 'Unassigned' %> • <%= new
-                                                        Date(enrollment.admission_date).toLocaleDateString() %>
-                                            </small>
-                                        </div>
-                                    </div>
-                                    <% }); %>
-                                        <% } else { %>
-                                            <div style="padding: 30px; text-align: center; color: var(--text-muted);">
-                                                <i class="bi bi-inbox"
-                                                    style="font-size: 2rem; display: block; margin-bottom: 10px;"></i>
-                                                No recent enrollments found.
-                                            </div>
-                                            <% } %>
-                        </div>
-                    </div>
-
-                    <!-- System Status -->
-                    <div style="display: flex; flex-direction: column; gap: 20px;">
-                        <div class="card">
-                            <h3>Finance &amp; Fees</h3>
-                            <p class="text-muted" style="margin: 8px 0 0; font-size: 0.85rem;">Manage fee structures, payments and outstanding balances.</p>
-                            <div style="margin-top: 15px;">
-                                <a href="/fees/setup" class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">
-                                    <i class="bi bi-gear-wide-connected"></i> Fee Setup
-                                </a>
-                                <a href="/fees/manager" class="btn btn-outline" style="width: 100%;">
-                                    <i class="bi bi-list-check"></i> View Balances
-                                </a>
-                            </div>
-                        </div>
-
-                        <!-- School Activity Feed (Cloned from Student Portal) -->
-                        <div class="card" style="border-top: 4px solid #6366f1;">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h3 id="adminSchoolActivityHeading"><i class="bi bi-app-indicator" style="color: #6366f1;" aria-hidden="true"></i> School Activity</h3>
-                                <a href="/announcements" class="btn btn-sm btn-outline">Manage</a>
-                            </div>
-                            <div class="list-group" id="adminActivityFeed" aria-labelledby="adminSchoolActivityHeading">
-                                <% if (announcements && announcements.length > 0) { %>
-                                    <% announcements.forEach((post, index) => { %>
-                                        <a href="/announcements/view/<%= post.id %>" class="activity-item announcement-card <%= index >= 3 ? 'hidden' : '' %>" data-id="<%= post.id %>" style="display: block; text-decoration: none; margin-bottom: 15px; padding: 15px; border-radius: 12px; border: 1px solid #f1f5f9; transition: all 0.2s; background: white;">
-                                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
-                                                <span style="font-size: 0.7rem; color: #94a3b8; font-weight: 700; text-transform: uppercase;"><%= new Date(post.created_at).toLocaleDateString() %></span>
-                                                <% if(post.type === 'Event') { %>
-                                                    <span style="font-size: 0.7rem; background: #fee2e2; color: #ef4444; padding: 2px 8px; border-radius: 20px; font-weight: 800; letter-spacing: 0.05em;">EVENT</span>
-                                                <% } else { %>
-                                                    <span style="font-size: 0.7rem; background: #e0f2fe; color: #0284c7; padding: 2px 8px; border-radius: 20px; font-weight: 800; letter-spacing: 0.05em;">UPDATE</span>
-                                                <% } %>
-                                            </div>
-                                            <h4 class="post-title" style="margin: 0 0 8px; font-size: 1rem; color: #1e293b; transition: color 0.2s;"><%= post.title %></h4>
-                                            <p class="line-clamp-2 post-content" style="margin: 0; font-size: 0.85rem; color: #64748b; line-height: 1.5;"><%= post.content %></p>
-                                            <% if(post.type === 'Event' && post.event_date) { %>
-                                                <p style="margin-top: 10px; font-size: 0.75rem; color: #ef4444; font-weight: 600;">
-                                                    <i class="bi bi-clock-fill"></i> Scheduled: <%= new Date(post.event_date).toLocaleDateString() %>
-                                                </p>
-                                            <% } %>
-                                        </a>
-                                    <% }); %>
-                                    <% if (announcements.length > 3) { %>
-                                        <div class="view-more-container">
-                                            <button type="button" class="btn-view-more" aria-expanded="false" aria-controls="adminActivityFeed" onclick="toggleViewMore('adminActivityFeed', this)">View More</button>
-                                        </div>
-                                    <% } %>
-                                <% } else { %>
-                                    <p class="text-muted" style="padding: 20px; text-align: center;">No recent activities.</p>
-                                <% } %>
-                            </div>
-                        </div>
-
-                        <!-- Term Calendar Integration -->
-                        <div class="card" style="border-top: 4px solid #f59e0b;">
-                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                                <h3><i class="bi bi-calendar-event" style="color: #f59e0b;"></i> Term Calendar</h3>
-                                <a href="/calendar" class="btn btn-sm btn-outline">View All</a>
-                            </div>
-                            <div class="list-group">
-                                <% if (locals.upcomingEvents && upcomingEvents.length > 0) { %>
-                                    <% upcomingEvents.forEach(event => { %>
-                                        <div class="event-item" style="display: flex; gap: 15px; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dotted #e2e8f0;">
-                                            <div style="background: #fff7ed; color: #f59e0b; padding: 10px; border-radius: 10px; text-align: center; min-width: 60px;">
-                                                <span style="display: block; font-size: 0.7rem; font-weight: 800; text-transform: uppercase;">
-                                                    <%= new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' }) %>
-                                                </span>
-                                                <span style="display: block; font-size: 1.2rem; font-weight: 900;">
-                                                    <%= new Date(event.event_date).getDate() %>
-                                                </span>
-                                            </div>
-                                            <div>
-                                                <h4 style="margin: 0; font-size: 0.95rem; color: #1e293b;"><%= event.title %></h4>
-                                                <span style="font-size: 0.75rem; color: #64748b; font-weight: 600;">
-                                                    <% if(event.type === 'Exam') { %>
-                                                        <i class="bi bi-pencil-square" style="color: #ef4444;"></i> Exam
-                                                    <% } else if(event.type === 'Holiday') { %>
-                                                        <i class="bi bi-sun" style="color: #10b981;"></i> Holiday
-                                                    <% } else if(event.type === 'Deadline') { %>
-                                                        <i class="bi bi-exclamation-circle" style="color: #f59e0b;"></i> Deadline
-                                                    <% } else { %>
-                                                        <i class="bi bi-info-circle" style="color: #3b82f6;"></i> Event
-                                                    <% } %>
-                                                </span>
-                                            </div>
-                                        </div>
-                                    <% }); %>
-                                <% } else { %>
-                                    <p class="text-muted" style="text-align: center; padding: 20px;">No upcoming events scheduled.</p>
-                                <% } %>
-                            </div>
-                        </div>
+<%
+    const attendanceAvailable = stats.attendance !== 'N/A' && stats.attendance !== 'Pending';
+    const attendanceValue = attendanceAvailable ? Math.min(100, Math.max(0, Number.parseFloat(stats.attendance) || 0)) : 0;
+    const revenueValue = Math.min(100, Math.max(0, Number(stats.revenuePercentage) || 0));
+    const maleCount = Number(stats.genderSummary.Male) || 0;
+    const femaleCount = Number(stats.genderSummary.Female) || 0;
+    const genderTotal = maleCount + femaleCount;
+    const maleShare = genderTotal ? (maleCount / genderTotal) * 100 : 0;
+%>
+<div class="dashboard-container admin-dashboard">
+    <%- include('partials/sidebar') %>
+    <main class="main-content admin-dashboard-main">
+        <header class="admin-welcome-header">
+            <div class="admin-welcome-copy">
+                <span class="admin-eyebrow">ADMIN</span>
+                <h1>Welcome back, Admin</h1>
+                <p><%= new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+            </div>
+            <div class="admin-dashboard-tools">
+                <div class="notification-bell-container" role="button" tabindex="0" aria-label="Open notifications" aria-haspopup="true" aria-expanded="false" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleNotificationDropdown(event); }" onclick="toggleNotificationDropdown(event)">
+                    <i class="bi bi-bell-fill" aria-hidden="true"></i>
+                    <span class="notification-badge">0</span>
+                    <div class="notification-dropdown">
+                        <div class="notification-header"><strong>Notifications</strong><span class="text-muted">Recent Updates</span></div>
+                        <div class="notification-list"></div>
                     </div>
                 </div>
-            </main>
-    </div>
+            </div>
+        </header>
 
-    <style>
-        .admin-dashboard-panels > div,
-        .admin-quick-actions .card,
-        .stats-grid .stat-card { min-width: 0; }
-        .admin-quick-actions .card {
-            min-height: 170px;
-            transition: transform 0.18s ease, box-shadow 0.18s ease;
-        }
-        .admin-quick-actions .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px -4px rgba(0,0,0,0.08);
-        }
-        .admin-quick-actions .card:focus-visible,
-        .announcement-card:focus-visible,
-        .admin-dashboard-panels a:focus-visible {
-            outline: 3px solid var(--primary);
-            outline-offset: 3px;
-        }
-        .admin-dashboard-panels .list-group { min-width: 0; }
-        .announcement-card.read {
-            opacity: 0.7;
-            background: #f8fafc !important;
-            border-color: #f1f5f9;
-        }
-        .announcement-card.read .post-title { color: #64748b !important; font-weight: 500; }
-        @media (max-width: 640px) {
-            .stats-grid .stat-card { padding: 16px; gap: 12px; }
-            .admin-quick-actions .card { min-height: 0; padding: 20px 14px !important; }
-            .admin-dashboard-panels { gap: 16px; }
-            .admin-dashboard-panels .card-header { flex-wrap: wrap; gap: 10px; }
-            .admin-dashboard-panels .event-item { align-items: flex-start; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-            .admin-quick-actions .card { transition: none; }
-            .admin-quick-actions .card:hover { transform: none; }
-        }
-    </style>
+        <section class="admin-attendance-hero" aria-label="Today's attendance">
+            <div class="admin-attendance-copy">
+                <span>Attendance today</span>
+                <strong><%= attendanceAvailable ? stats.attendance : '—' %></strong>
+                <a href="/attendance">View attendance</a>
+            </div>
+            <div class="admin-attendance-ring" role="img" aria-label="<%= attendanceAvailable ? stats.attendance + ' attendance' : 'Attendance not available' %>" style="--attendance-progress: <%= attendanceValue %>%;">
+                <span><%= attendanceAvailable ? Math.round(attendanceValue) + '%' : '—' %></span>
+            </div>
+        </section>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            let readPosts = [];
-            try {
-                const stored = JSON.parse(localStorage.getItem('read_announcements') || '[]');
-                if (Array.isArray(stored)) readPosts = stored.map(String);
-            } catch (error) {
-                // Announcements remain usable when browser storage is unavailable.
-            }
-            document.querySelectorAll('.announcement-card').forEach(card => {
-                const postId = String(card.dataset.id || '');
-                if (readPosts.includes(postId)) card.classList.add('read');
-                card.addEventListener('click', () => {
-                    if (!postId || readPosts.includes(postId)) return;
-                    readPosts.push(postId);
-                    try {
-                        localStorage.setItem('read_announcements', JSON.stringify(readPosts));
-                    } catch (error) {
-                        // Opening an announcement must not depend on writable browser storage.
-                    }
-                });
-            });
+        <section class="admin-overview-grid" aria-label="School overview">
+            <article class="admin-overview-card">
+                <span class="admin-overview-icon admin-icon-amber"><i class="bi bi-people" aria-hidden="true"></i></span>
+                <strong><%= stats.totalStudents %></strong>
+                <span>Total students</span>
+            </article>
+            <article class="admin-overview-card">
+                <span class="admin-overview-icon admin-icon-green"><i class="bi bi-person-vcard" aria-hidden="true"></i></span>
+                <strong><%= stats.activeStaff %></strong>
+                <span>Active staff</span>
+            </article>
+            <article class="admin-overview-card">
+                <span class="admin-overview-icon admin-icon-violet"><i class="bi bi-book" aria-hidden="true"></i></span>
+                <strong><%= stats.totalSubjects %></strong>
+                <span>Active subjects</span>
+            </article>
+            <article class="admin-overview-card admin-revenue-card">
+                <div class="admin-revenue-heading">
+                    <span class="admin-overview-icon admin-icon-green"><i class="bi bi-credit-card" aria-hidden="true"></i></span>
+                    <small>Collected</small>
+                </div>
+                <strong><%= revenueValue %>%</strong>
+                <div class="admin-revenue-track" role="progressbar" aria-label="Revenue collection" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= revenueValue %>">
+                    <span style="width: <%= revenueValue %>%"></span>
+                </div>
+                <span>Revenue collection</span>
+            </article>
+        </section>
+
+        <section class="admin-gender-card" aria-label="Students by gender">
+            <div class="admin-gender-heading"><span>Students by gender</span><span><%= stats.totalStudents %> total</span></div>
+            <div class="admin-gender-counts">
+                <strong class="admin-male-count"><%= maleCount %> M</strong>
+                <strong class="admin-female-count"><%= femaleCount %> F</strong>
+            </div>
+            <div class="admin-gender-track" role="img" aria-label="<%= maleCount %> male and <%= femaleCount %> female students">
+                <span class="admin-gender-male" style="width: <%= maleShare %>%"></span>
+                <span class="admin-gender-female" style="width: <%= 100 - maleShare %>%"></span>
+            </div>
+        </section>
+
+        <section class="admin-quick-actions" aria-labelledby="adminQuickActionsHeading">
+            <h2 id="adminQuickActionsHeading">Quick actions</h2>
+            <div class="admin-actions-grid">
+                <a href="/attendance" class="admin-action-card">
+                    <span class="admin-action-icon admin-action-blue"><i class="bi bi-calendar2-check" aria-hidden="true"></i></span>
+                    <strong>Mark attendance</strong><small>Daily presence tracking</small>
+                </a>
+                <a href="/fees/manager" class="admin-action-card">
+                    <span class="admin-action-icon admin-action-amber"><i class="bi bi-credit-card" aria-hidden="true"></i></span>
+                    <strong>Record fees</strong><small>Manage student payments</small>
+                </a>
+                <a href="/students/enroll" class="admin-action-card">
+                    <span class="admin-action-icon admin-action-green"><i class="bi bi-person-plus" aria-hidden="true"></i></span>
+                    <strong>New admission</strong><small>Enroll new students</small>
+                </a>
+                <a href="/results" class="admin-action-card">
+                    <span class="admin-action-icon admin-action-red"><i class="bi bi-bar-chart" aria-hidden="true"></i></span>
+                    <strong>Result entry</strong><small>Input student scores</small>
+                </a>
+            </div>
+        </section>
+
+        <div class="admin-dashboard-lower-grid">
+            <section class="admin-dashboard-panel admin-enrollments-panel">
+                <div class="admin-panel-heading"><h2>Recent enrollments</h2><a href="/students">View all</a></div>
+                <div class="admin-enrollment-list">
+                    <% if (recentEnrollments && recentEnrollments.length > 0) { %>
+                        <% recentEnrollments.forEach(enrollment => { %>
+                            <div class="admin-enrollment-row">
+                                <span class="admin-enrollment-avatar"><%= (enrollment.first_name || '?').charAt(0).toUpperCase() %><%= (enrollment.last_name || '').charAt(0).toUpperCase() %></span>
+                                <span class="admin-enrollment-details">
+                                    <strong><%= enrollment.first_name %> <%= enrollment.last_name %></strong>
+                                    <small><%= enrollment.class_name || 'Unassigned' %> · <%= enrollment.admission_date ? new Date(enrollment.admission_date).toLocaleDateString() : 'Date unavailable' %></small>
+                                </span>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <p class="admin-empty-message"><i class="bi bi-inbox" aria-hidden="true"></i>No recent enrollments found.</p>
+                    <% } %>
+                </div>
+            </section>
+
+            <div class="admin-dashboard-side-panels">
+                <section class="admin-dashboard-panel">
+                    <div class="admin-panel-heading"><h2>Finance &amp; fees</h2><a href="/fees/setup">Setup</a></div>
+                    <p class="admin-panel-description">Manage fee structures, payments and outstanding balances.</p>
+                    <a class="admin-panel-link" href="/fees/manager"><i class="bi bi-arrow-right-circle" aria-hidden="true"></i> View balances</a>
+                </section>
+                <section class="admin-dashboard-panel">
+                    <div class="admin-panel-heading"><h2>School activity</h2><a href="/announcements">Manage</a></div>
+                    <div class="admin-activity-list" id="adminActivityFeed">
+                        <% if (announcements && announcements.length > 0) { %>
+                            <% announcements.forEach((post, index) => { %>
+                                <a href="/announcements/view/<%= post.id %>" class="admin-activity-item announcement-card <%= index >= 3 ? 'hidden' : '' %>" data-id="<%= post.id %>">
+                                    <span class="admin-activity-meta"><%= new Date(post.created_at).toLocaleDateString() %> · <%= post.type === 'Event' ? 'EVENT' : 'UPDATE' %></span>
+                                    <strong class="post-title"><%= post.title %></strong>
+                                    <span class="post-content"><%= post.content %></span>
+                                </a>
+                            <% }); %>
+                            <% if (announcements.length > 3) { %>
+                                <button type="button" class="btn-view-more" aria-expanded="false" aria-controls="adminActivityFeed" onclick="toggleViewMore('adminActivityFeed', this)">View more updates</button>
+                            <% } %>
+                        <% } else { %>
+                            <p class="admin-empty-message">No recent activities.</p>
+                        <% } %>
+                    </div>
+                </section>
+                <section class="admin-dashboard-panel">
+                    <div class="admin-panel-heading"><h2>Term calendar</h2><a href="/calendar">View all</a></div>
+                    <% if (locals.upcomingEvents && upcomingEvents.length > 0) { %>
+                        <% upcomingEvents.forEach(event => { %>
+                            <div class="admin-calendar-row">
+                                <span class="admin-calendar-date"><small><%= new Date(event.event_date).toLocaleDateString('en-US', { month: 'short' }) %></small><strong><%= new Date(event.event_date).getDate() %></strong></span>
+                                <span><strong><%= event.title %></strong><small><%= event.type || 'Event' %></small></span>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <p class="admin-empty-message">No upcoming events scheduled.</p>
+                    <% } %>
+                </section>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    let readPosts = [];
+    try {
+        const stored = JSON.parse(localStorage.getItem('read_announcements') || '[]');
+        if (Array.isArray(stored)) readPosts = stored.map(String);
+    } catch (error) {
+        // The activity feed remains available when browser storage is unavailable.
+    }
+    document.querySelectorAll('.announcement-card').forEach(card => {
+        const postId = String(card.dataset.id || '');
+        if (readPosts.includes(postId)) card.classList.add('read');
+        card.addEventListener('click', () => {
+            if (!postId || readPosts.includes(postId)) return;
+            readPosts.push(postId);
+            try { localStorage.setItem('read_announcements', JSON.stringify(readPosts)); } catch (error) { /* optional enhancement */ }
         });
-    </script>
-
-    <%- include('partials/footer') %>
+    });
+});
+</script>
+<%- include('partials/footer') %>

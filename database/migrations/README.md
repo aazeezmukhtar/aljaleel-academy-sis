@@ -116,3 +116,16 @@ npm run test:attendance-schedule
 \`\`\`
 
 Production execution remains a separate approval step after read-only preflight, verified backup/restore, and disposable PostgreSQL 17.6 validation. Do not execute either migration against production without separate explicit approval.
+
+
+## Staff information foundation (2026-11-22)
+
+Files:
+
+- `20261122_staff_information.postgres.sql`
+- `20261122_staff_information.sqlite.sql`
+- `20261122_staff_information.md`
+
+This additive/manual migration creates separate staff personal details, employment details, emergency contacts, and qualification records. It leaves existing staff and assignment records unchanged and does not backfill personal or employment data. It is not wired into application startup. Review the dedicated migration note for constraints and production safety gates.
+
+Run `npm run test:staff-information-migration` for the in-memory SQLite preservation and constraint checks. PostgreSQL validation must use a disposable PostgreSQL 17.6 database matching production; never point it at production Supabase.

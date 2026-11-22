@@ -467,6 +467,19 @@
     updateAttendanceSummary();
     restoreAttendanceDraft();
 
+    function replaceUnrecordedWithAbsent() {
+        let replacedCount = 0;
+        document.querySelectorAll('.student-row-card').forEach(card => {
+            const btn = card.querySelector('.cycle-btn');
+            if (btn && btn.dataset.state === 'Not recorded') {
+                setStudentStatus(card, 'Absent');
+                replacedCount += 1;
+            }
+        });
+        if (replacedCount) updateAttendanceSummary();
+        return replacedCount;
+    }
+
     document.getElementById('attendance-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const submitBtns = document.querySelectorAll('button[form="attendance-form"]');
@@ -480,6 +493,8 @@
             if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
                 throw new Error('Durable offline storage is unavailable. Do not close this page until storage is available.');
             }
+            // Explicit Save finalizes the sheet: any student left unmarked is recorded Absent.
+            replaceUnrecordedWithAbsent();
             await offline.saveAttendanceOffline(collectAttendanceFormData());
             if (navigator.onLine) await offline.syncData();
             const form = document.getElementById('attendance-form');

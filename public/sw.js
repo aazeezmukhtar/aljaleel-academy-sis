@@ -471,19 +471,19 @@ async function clearDurablePreparedAttendanceForOwner(owner) {
             const snapshots = tx.objectStore('attendance_prepared');
             const manifests = tx.objectStore('offline_manifest');
             const drafts = tx.objectStore('attendance_drafts');
-            const request = snapshots.getAll();
-            request.onsuccess = () => {
-                (request.result || []).forEach(item => {
+            const snapshotRequest = snapshots.getAll();
+            const draftRequest = drafts.getAll();
+            snapshotRequest.onsuccess = () => {
+                (snapshotRequest.result || []).forEach(item => {
                     if (!owner || item.ownerKey !== owner) {
                         snapshots.delete(item.id);
                         manifests.delete(item.id);
                     }
                 });
-                drafts.getAll().onsuccess = event => {
-                    (event.target.result || []).forEach(item => {
-                        if (!owner || item._ownerKey !== owner) drafts.delete(item.id);
-                    });
-                
+            };
+            draftRequest.onsuccess = () => {
+                (draftRequest.result || []).forEach(item => {
+                    if (!owner || item._ownerKey !== owner) drafts.delete(item.id);
                 });
             };
             tx.oncomplete = resolve;

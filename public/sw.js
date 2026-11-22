@@ -1,4 +1,4 @@
-const CACHE_NAME = 'aljaleel-sis-v19';
+const CACHE_NAME = 'aljaleel-sis-v20';
 
 const STATIC_ASSETS = [
     '/css/main.css',
@@ -406,7 +406,7 @@ async function clearPrivatePageCache(cache) {
 }
 
 const OFFLINE_DB_NAME = 'AcadMeSIS_OfflineDB';
-const OFFLINE_DB_VERSION = 4;
+const OFFLINE_DB_VERSION = 5;
 
 function openOfflineSnapshotDB() {
     return new Promise((resolve, reject) => {
@@ -418,6 +418,7 @@ function openOfflineSnapshotDB() {
             if (!db.objectStoreNames.contains('offline_manifest')) db.createObjectStore('offline_manifest', { keyPath: 'id' });
             if (!db.objectStoreNames.contains('attendance_prepared')) db.createObjectStore('attendance_prepared', { keyPath: 'id' });
             if (!db.objectStoreNames.contains('attendance_drafts')) db.createObjectStore('attendance_drafts', { keyPath: 'id' });
+            if (!db.objectStoreNames.contains('results_drafts')) db.createObjectStore('results_drafts', { keyPath: 'id' });
         };
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);

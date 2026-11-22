@@ -18,7 +18,7 @@
                     </button>
                     <% } %>
                     <button type="submit" form="attendance-form" class="btn btn-primary attendance-save-action" <%= readOnly ? 'hidden' : '' %>>
-                        <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Draft' %>
+                        <i class="bi bi-cloud-check-fill"></i> Submit
                     </button>
                     <% if (canEdit !== false) { %>
                     <button type="button" id="submit-attendance-register" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>
@@ -133,7 +133,7 @@
                 <i class="bi bi-arrow-left"></i>
             </a>
             <button type="submit" form="attendance-form" class="btn btn-primary">
-                <i class="bi bi-cloud-check-fill"></i> <%= register ? 'Save Progress' : 'Save Draft' %>
+                <i class="bi bi-cloud-check-fill"></i> Submit
             </button>
             <% if (canEdit !== false) { %>
             <button type="button" id="submit-attendance-register-mobile" class="btn btn-success" <%= readOnly ? 'hidden' : '' %>>

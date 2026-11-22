@@ -57,19 +57,16 @@ check('attendance pending count fails closed when IndexedDB cannot be read', () 
     assert.match(source, /catch \{\s*\/\/ An unreadable queue cannot prove that attendance is fully synchronized\.\s*return Number\.MAX_SAFE_INTEGER;/);
 });
 
-check('attendance sync saves a draft before completing an offline-submitted register', () => {
+check('offline attendance sync saves marked statuses without invoking finalization', () => {
     const start = offline.indexOf('for (const item of attendanceItems)');
     const end = offline.indexOf('let resultItems', start);
     const source = offline.slice(start, end);
-    assert.match(source, /const \{ id, _savedAt, _ownerKey, _submitAfterSync, \.\.\.payload \} = item/);
     assert.match(source, /fetch\('\/attendance\/save'/);
-    assert.match(source, /if \(_submitAfterSync\)/);
-    assert.match(source, /fetch\('\/attendance\/submit'/);
-    assert.ok(source.indexOf("fetch('/attendance/save'") < source.indexOf("fetch('/attendance/submit'"));
-    assert.ok(source.indexOf("fetch('/attendance/submit'") < source.indexOf("deleteQueued('attendance_sync', id)"));
+    assert.doesNotMatch(source, /fetch\('\/attendance\/submit'/);
+    assert.match(source, /delete payload\._submitAfterSync/);
+    assert.ok(source.indexOf("fetch('/attendance/save'") < source.indexOf("deleteQueued('attendance_sync', id)"));
     assert.match(source, /updateSavedAttendanceDraft\(/);
 });
-
 
 check('an unreadable queue is visible and the user can manually retry online sync', () => {
     assert.match(offline, /getPendingCount\(\)\.catch\(\(\) => null\)/);
@@ -80,23 +77,18 @@ check('an unreadable queue is visible and the user can manually retry online syn
 
 check('Save Draft persists locally first and syncs only when connected', () => {
     const start = attendanceView.indexOf("document.getElementById('attendance-form').addEventListener('submit'");
-    const end = attendanceView.indexOf('async function submitAttendanceRegister()', start);
+    const end = attendanceView.indexOf('const reopenButton', start);
     const source = attendanceView.slice(start, end);
     assert.match(source, /await offline\.saveAttendanceOffline\(collectAttendanceFormData\(\)\)/);
     assert.match(source, /if \(navigator\.onLine\) await offline\.syncData\(\)/);
     assert.match(source, /pending synchronization/);
 });
 
-check('offline Submit finalizes unmarked students locally and queues server submission', () => {
-    const start = attendanceView.indexOf('async function submitAttendanceRegister()');
-    const end = attendanceView.indexOf('const reopenButton', start);
-    const source = attendanceView.slice(start, end);
-    assert.doesNotMatch(source, /if \(!navigator\.onLine\)/);
-    assert.match(source, /data\.attendance\[studentId\] === 'Not recorded'/);
-    assert.match(source, /data\.attendance\[studentId\] = 'Absent'/);
-    assert.match(source, /saveAttendanceOffline\(data, \{ submitAfterSync: true \}\)/);
-    assert.match(source, /Pending submission/);
-    assert.match(source, /await offline\.syncData\(\)/);
+check('attendance page keeps one save action and never converts unmarked statuses to Absent', () => {
+    assert.doesNotMatch(attendanceView, /async function submitAttendanceRegister\(/);
+    assert.doesNotMatch(attendanceView, /submitAfterSync: true/);
+    assert.doesNotMatch(attendanceView, /data\.attendance\[studentId\] = 'Absent'/);
+    assert.match(attendanceView, /await offline\.saveAttendanceOffline\(collectAttendanceFormData\(\)\)/);
 });
 
 check('the service worker can recover prepared attendance from IndexedDB and enforces owner boundaries', () => {

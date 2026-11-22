@@ -352,25 +352,96 @@
         updateAttendanceSummary();
     }
 
-    function cycleStatus(studentId) {
-        const card = document.querySelector(`.student-row-card[data-student-id="${studentId}"]`);
+    function collectAttendanceFormData() {
+        const form = document.getElementById('attendance-form');
+        const formData = new FormData(form);
+        const data = {
+            class_id: formData.get('class_id'),
+            date: formData.get('date'),
+            session: formData.get('session'),
+            term: formData.get('term'),
+            attendance: {},
+            reasons: {},
+            custom_reasons: {}
+        };
+        for (const [key, value] of formData.entries()) {
+            const match = key.match(/^(attendance|reasons|custom_reasons)\\[(\\d+)\\]$/);
+            if (match) data[match[1]][match[2]] = value;
+        }
+        return data;
+    }
+
+    function setStudentStatus(card, nextState) {
         const btn = card.querySelector('.cycle-btn');
         const input = card.querySelector('.status-input');
-        
-        const currentState = btn.dataset.state;
-        const nextIndex = (STATUS_CYCLE.indexOf(currentState) + 1) % STATUS_CYCLE.length;
-        const nextState = STATUS_CYCLE[nextIndex];
-
-        // Update data attributes and input
         btn.dataset.state = nextState;
         input.value = nextState;
-
-        // Update UI
-        btn.className = `cycle-btn btn-status-${nextState === 'Not recorded' ? 'unrecorded' : nextState.toLowerCase()}`;
-        btn.querySelector('i').className = `bi ${STATUS_ICONS[nextState]}`;
+        btn.className = 'cycle-btn btn-status-' + (nextState === 'Not recorded' ? 'unrecorded' : nextState.toLowerCase());
+        btn.querySelector('i').className = 'bi ' + STATUS_ICONS[nextState];
         btn.querySelector('.status-label').textContent = nextState;
         btn.setAttribute('aria-label', 'Attendance status for ' + card.querySelector('.row-name').textContent.trim() + ': ' + nextState + '. Activate to change status.');
+    }
+
+    let attendanceAutosaveTimer = null;
+    let restoringAttendanceDraft = false;
+    function scheduleAttendanceLocalSave() {
+        if (restoringAttendanceDraft) return;
+        window.clearTimeout(attendanceAutosaveTimer);
+        attendanceAutosaveTimer = window.setTimeout(async () => {
+            try {
+                const offline = window.AcadMeOffline || window.NexusOffline;
+                if (!offline || typeof offline.saveAttendanceOffline !== 'function') return;
+                await offline.saveAttendanceOffline(collectAttendanceFormData());
+                const status = document.getElementById('attendance-local-save-status');
+                if (status) status.textContent = 'Changes saved on this device';
+            } catch (error) {
+                console.error('[AcadMe Offline] Attendance autosave failed:', error);
+                const status = document.getElementById('attendance-local-save-status');
+                if (status) status.textContent = 'Local save failed — keep this page open and check storage';
+            }
+        }, 350);
+    }
+
+    async function restoreAttendanceDraft() {
+        const offline = window.AcadMeOffline || window.NexusOffline;
+        if (!offline || typeof offline.getQueuedAttendanceRecord !== 'function') return;
+        try {
+            const form = document.getElementById('attendance-form');
+            const record = await offline.getQueuedAttendanceRecord(
+                form.querySelector('[name="class_id"]').value,
+                form.querySelector('[name="date"]').value
+            );
+            if (!record) return;
+            restoringAttendanceDraft = true;
+            document.querySelectorAll('.student-row-card').forEach(card => {
+                const studentId = card.dataset.studentId;
+                const saved = record.attendance && record.attendance[studentId];
+                if (saved && STATUS_CYCLE.includes(saved)) setStudentStatus(card, saved);
+            });
+            updateAttendanceSummary();
+            const status = document.getElementById('attendance-local-save-status');
+            if (status) status.textContent = record._submitAfterSync
+                ? 'Completed register saved on this device — pending submission sync'
+                : 'Restored unsynced draft from this device';
+            if (record._submitAfterSync) {
+                const notice = document.getElementById('attendance-local-submit-notice');
+                if (notice) notice.hidden = false;
+            }
+        } catch (error) {
+            console.warn('[AcadMe Offline] Could not restore the local attendance draft:', error);
+        } finally {
+            restoringAttendanceDraft = false;
+        }
+    }
+
+    function cycleStatus(studentId) {
+        const card = document.querySelector('.student-row-card[data-student-id="' + studentId + '"]');
+        const btn = card.querySelector('.cycle-btn');
+        const currentState = btn.dataset.state;
+        const nextIndex = (STATUS_CYCLE.indexOf(currentState) + 1) % STATUS_CYCLE.length;
+        setStudentStatus(card, STATUS_CYCLE[nextIndex]);
         updateAttendanceSummary();
+        scheduleAttendanceLocalSave();
     }
 
     function updateAttendanceSummary() {
@@ -379,7 +450,6 @@
             const state = btn.dataset.state;
             if (Object.prototype.hasOwnProperty.call(counts, state)) counts[state] += 1;
         });
-
         const summary = document.getElementById('attendance-status-summary');
         if (!summary) return;
         summary.innerHTML = Object.entries(counts).map(([label, count]) =>
@@ -391,129 +461,55 @@
         const cards = document.querySelectorAll('.student-row-card');
         const needsChange = Array.from(cards).some(card => card.querySelector('.cycle-btn').dataset.state !== 'Present');
         if (needsChange && !window.confirm('Mark all ' + cards.length + ' students as Present? This will replace their current statuses.')) return;
-
-        cards.forEach(card => {
-            const btn = card.querySelector('.cycle-btn');
-            const input = card.querySelector('.status-input');
-            const nextState = 'Present';
-            btn.dataset.state = nextState;
-            input.value = nextState;
-            btn.className = `cycle-btn btn-status-${nextState === 'Not recorded' ? 'unrecorded' : nextState.toLowerCase()}`;
-            btn.querySelector('i').className = `bi ${STATUS_ICONS[nextState]}`;
-            btn.querySelector('.status-label').textContent = nextState;
-            btn.setAttribute('aria-label', 'Attendance status for ' + card.querySelector('.row-name').textContent.trim() + ': Present. Activate to change status.');
-        });
+        cards.forEach(card => setStudentStatus(card, 'Present'));
         updateAttendanceSummary();
+        scheduleAttendanceLocalSave();
     }
 
     updateAttendanceSummary();
+    restoreAttendanceDraft();
 
     document.getElementById('attendance-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const submitBtns = document.querySelectorAll('button[form="attendance-form"]');
         const originalText = submitBtns[0] ? submitBtns[0].innerHTML : '<i class="bi bi-cloud-check-fill"></i> Save Records';
-
         submitBtns.forEach(btn => {
             btn.disabled = true;
             btn.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving...';
         });
-        const registerSubmitBtns = [
-            document.getElementById('submit-attendance-register'),
-            document.getElementById('submit-attendance-register-mobile')
-        ].filter(Boolean);
-        registerSubmitBtns.forEach(btn => { btn.disabled = true; });
-
-        const formData = new FormData(e.target);
-        const data = {
-            class_id: formData.get('class_id'),
-            date: formData.get('date'),
-            session: formData.get('session'),
-            term: formData.get('term'),
-            attendance: {},
-            reasons: {},
-            custom_reasons: {}
-        };
-
-        for (let [key, value] of formData.entries()) {
-            const match = key.match(/^(attendance|reasons|custom_reasons)\[(\d+)\]$/);
-            if (match) data[match[1]][match[2]] = value;
-        }
-
         try {
-            const res = await fetch('/attendance/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(data)
-            });
-            
-            // Check if we were redirected to login (session expired)
-            if (res.url.includes('/auth/login')) {
-                alert('Session expired. Please log in again.');
-                window.location.href = '/auth/login';
-                return;
+            const offline = window.AcadMeOffline || window.NexusOffline;
+            if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
+                throw new Error('Durable offline storage is unavailable. Do not close this page until storage is available.');
             }
-
-            const text = await res.text();
-            let result;
-            try {
-                result = JSON.parse(text);
-            } catch (e) {
-                console.error('Invalid JSON response:', text);
-                alert('System Error: Server returned invalid format.\n\nResponse preview: ' + text.substring(0, 200));
-                return;
-            }
-
-            if (result.success) {
-                document.getElementById('feedbackModal').style.display = 'flex';
+            await offline.saveAttendanceOffline(collectAttendanceFormData());
+            if (navigator.onLine) await offline.syncData();
+            const form = document.getElementById('attendance-form');
+            const queued = await offline.getQueuedAttendanceRecord(
+                form.querySelector('[name="class_id"]').value,
+                form.querySelector('[name="date"]').value
+            );
+            if (!queued) {
+                const modal = document.getElementById('feedbackModal');
+                if (modal) modal.style.display = 'flex';
+                else alert('Draft saved and synchronized with the school server.');
             } else {
-                alert('Server Error: ' + (result.message || 'Unknown error occurred'));
+                alert('Draft saved safely on this device. It is pending synchronization and has not yet been confirmed by the school server.');
             }
-        } catch (err) {
-            console.warn('[AcadMe Offline] Attendance save request failed; queueing locally.', err);
-            try {
-                const offline = window.AcadMeOffline || window.NexusOffline;
-                if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
-                    throw new Error('Offline storage is unavailable. Reconnect before leaving this page.');
-                }
-                await offline.saveAttendanceOffline(data);
-                alert('Attendance saved on this device. It is pending sync and has not yet been saved to the school database.');
-            } catch (queueError) {
-                alert('Could not save attendance offline: ' + queueError.message + '. Keep this page open and reconnect before leaving.');
-            }
+            const status = document.getElementById('attendance-local-save-status');
+            if (status) status.textContent = queued ? 'Draft saved on this device — pending sync' : 'Draft synchronized with school server';
+        } catch (error) {
+            alert('Could not save attendance: ' + error.message);
         } finally {
             submitBtns.forEach(btn => {
                 btn.disabled = false;
                 btn.innerHTML = originalText;
             });
-            registerSubmitBtns.forEach(btn => { btn.disabled = !navigator.onLine; });
         }
     });
 
     async function submitAttendanceRegister() {
-        if (!navigator.onLine) {
-            alert('Reconnect before submitting. Offline attendance is saved locally and is not yet a server-submitted register.');
-            return;
-        }
-
-        const offline = window.AcadMeOffline || window.NexusOffline;
-        if (!offline || typeof offline.getPendingAttendanceCount !== 'function') {
-            alert('The offline attendance queue could not be verified. Wait until synchronization status is available before submitting.');
-            return;
-        }
-        const pending = await offline.getPendingAttendanceCount();
-        if (pending === Number.MAX_SAFE_INTEGER) {
-            alert('The offline attendance queue could not be verified. Wait until synchronization status is available before submitting.');
-            return;
-        }
-        if (pending > 0) {
-            alert('There are ' + pending + ' attendance item(s) waiting to sync. Wait for synchronization to finish, then submit the register.');
-            return;
-        }
-
-        if (!window.confirm('Submit attendance for this class and date? Every student still marked Not recorded will be recorded as Absent. Students marked Present, Late or Leave will keep their selected status.')) {
-            return;
-        }
-
+        if (!window.confirm('Complete this attendance register? Every student still marked Not recorded will be recorded as Absent. Your selected Present, Late and Leave statuses will be preserved. If offline, the completed register will be saved on this device and submitted automatically when the connection returns.')) return;
         const buttons = [
             document.getElementById('submit-attendance-register'),
             document.getElementById('submit-attendance-register-mobile')
@@ -521,71 +517,46 @@
         const saveButtons = Array.from(document.querySelectorAll('button[form="attendance-form"]'));
         buttons.forEach(button => {
             button.disabled = true;
-            button.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Submitting...';
+            button.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> Saving submission...';
         });
         saveButtons.forEach(button => { button.disabled = true; });
-
         try {
+            const offline = window.AcadMeOffline || window.NexusOffline;
+            if (!offline || typeof offline.saveAttendanceOffline !== 'function') {
+                throw new Error('Durable offline storage is unavailable. The register was not submitted.');
+            }
+            const data = collectAttendanceFormData();
+            Object.keys(data.attendance).forEach(studentId => {
+                if (data.attendance[studentId] === 'Not recorded') data.attendance[studentId] = 'Absent';
+            });
+            await offline.saveAttendanceOffline(data, { submitAfterSync: true });
+            document.querySelectorAll('.student-row-card').forEach(card => {
+                if (card.querySelector('.cycle-btn').dataset.state === 'Not recorded') setStudentStatus(card, 'Absent');
+            });
+            updateAttendanceSummary();
+            const status = document.getElementById('attendance-local-save-status');
+            if (navigator.onLine) {
+                await offline.syncData();
+            }
             const form = document.getElementById('attendance-form');
-            const formData = new FormData(form);
-            const draftData = {
-                class_id: formData.get('class_id'),
-                date: formData.get('date'),
-                session: formData.get('session'),
-                term: formData.get('term'),
-                attendance: {},
-                reasons: {},
-                custom_reasons: {}
-            };
-
-            for (const [key, value] of formData.entries()) {
-                const match = key.match(/^(attendance|reasons|custom_reasons)\[(\d+)\]$/);
-                if (match) draftData[match[1]][match[2]] = value;
+            const queued = await offline.getQueuedAttendanceRecord(
+                form.querySelector('[name="class_id"]').value,
+                form.querySelector('[name="date"]').value
+            );
+            if (!queued) {
+                alert('Attendance submitted successfully to the school server.');
+                window.location.reload();
+            } else {
+                if (status) status.textContent = 'Completed register saved on this device — pending submission sync';
+                const notice = document.getElementById('attendance-local-submit-notice');
+                if (notice) notice.hidden = false;
+                alert('Attendance has been completed and saved on this device. It is marked Pending submission and will be sent automatically when the connection returns. The school server has not confirmed it yet.');
             }
-
-            // Persist the teacher's current selections before finalizing the register.
-            // This ensures Submit never discards unsaved Present/Late/Leave choices.
-            const draftResponse = await fetch('/attendance/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify(draftData)
-            });
-            const draftResult = await draftResponse.json().catch(() => ({}));
-            if (draftResponse.redirected || draftResponse.url.includes('/auth/login')) {
-                alert('Session expired. Please log in again.');
-                window.location.href = '/auth/login';
-                return;
-            }
-            if (!draftResponse.ok || !draftResult.success) {
-                alert(draftResult.message || 'Your draft could not be saved. Attendance has not been submitted.');
-                return;
-            }
-
-            const response = await fetch('/attendance/submit', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({
-                    class_id: draftData.class_id,
-                    date: draftData.date
-                })
-            });
-            if (response.redirected || response.url.includes('/auth/login')) {
-                alert('Session expired. Please log in again.');
-                window.location.href = '/auth/login';
-                return;
-            }
-            const result = await response.json().catch(() => ({}));
-            if (!response.ok || !result.success) {
-                alert(result.message || 'The register could not be submitted.');
-                return;
-            }
-            alert('Attendance submitted successfully. ' + (result.markedAbsentCount || 0) + ' unmarked student(s) recorded as Absent.');
-            window.location.reload();
         } catch (error) {
-            alert('Submission failed. Reconnect and try again. The register has not been submitted.');
+            alert('Could not save the completed register locally: ' + error.message + '. Your register has not been submitted.');
         } finally {
             buttons.forEach(button => {
-                button.disabled = !navigator.onLine;
+                button.disabled = false;
                 button.innerHTML = '<i class="bi bi-send-check"></i> ' + (button.id.endsWith('-mobile') ? 'Submit' : 'Submit Attendance');
             });
             saveButtons.forEach(button => { button.disabled = false; });
@@ -633,21 +604,9 @@
     ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
         const button = document.getElementById(id);
         if (button) {
-            button.disabled = !navigator.onLine;
+            button.disabled = false;
             button.addEventListener('click', submitAttendanceRegister);
         }
-    });
-    window.addEventListener('online', () => {
-        ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
-            const button = document.getElementById(id);
-            if (button) button.disabled = false;
-        });
-    });
-    window.addEventListener('offline', () => {
-        ['submit-attendance-register', 'submit-attendance-register-mobile'].forEach(id => {
-            const button = document.getElementById(id);
-            if (button) button.disabled = true;
-        });
     });
 </script>
 

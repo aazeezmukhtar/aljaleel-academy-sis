@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const staffController = require('../controllers/staffController');
+const informationController = require('../controllers/staffInformationController');
 const { isAdmin } = require('../middleware/authMiddleware');
 const path = require('path');
 const multer = require('multer');
@@ -8,6 +9,15 @@ const multer = require('multer');
 // Memory storage — buffer sent to Supabase Storage in prod, written to disk in dev
 const upload = multer({ storage: multer.memoryStorage() });
 
+
+router.get('/my-profile', informationController.getMyProfile);
+router.post('/my-profile/personal', informationController.savePersonalDetails);
+router.post('/my-profile/emergency-contacts', informationController.addEmergencyContact);
+router.post('/my-profile/emergency-contacts/:id/delete', informationController.deleteEmergencyContact);
+router.post('/my-profile/qualifications', informationController.addQualification);
+router.get('/information/:id', isAdmin, informationController.getStaffInformation);
+router.post('/information/:id/employment', isAdmin, informationController.saveEmploymentDetails);
+router.post('/qualifications/:id/review', isAdmin, informationController.verifyQualification);
 
 router.get('/', staffController.getAllStaff);
 router.get('/add', isAdmin, staffController.addStaffForm);

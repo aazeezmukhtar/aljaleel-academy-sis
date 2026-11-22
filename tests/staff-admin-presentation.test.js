@@ -86,3 +86,42 @@ check('shared shell, dashboard templates and notification partial compile as EJS
     'views/dashboard_staff.ejs'
   ].forEach(file => ejs.compile(read(file), { filename: path.join(__dirname, '..', file) }));
 });
+
+check('admin dashboard follows the reference layout while retaining live server values and existing destinations', () => {
+  [
+    'admin-attendance-hero',
+    'admin-attendance-ring',
+    'admin-overview-grid',
+    'admin-gender-card',
+    'admin-actions-grid',
+    'admin-dashboard-lower-grid',
+    'Recent enrollments',
+    'School activity',
+    'Term calendar'
+  ].forEach(marker => assert.ok(adminDashboard.includes(marker), 'Missing dashboard section: ' + marker));
+  [
+    'stats.totalStudents',
+    'stats.activeStaff',
+    'stats.totalSubjects',
+    'stats.attendance',
+    'stats.revenuePercentage',
+    'stats.genderSummary.Male',
+    'stats.genderSummary.Female',
+    'recentEnrollments',
+    'announcements',
+    'upcomingEvents'
+  ].forEach(value => assert.ok(adminDashboard.includes(value), 'Missing live dashboard value: ' + value));
+  ['/attendance', '/fees/manager', '/students/enroll', '/results', '/students', '/announcements', '/calendar']
+    .forEach(route => assert.ok(adminDashboard.includes('href="' + route + '"'), 'Missing dashboard destination: ' + route));
+});
+
+check('admin dashboard reference layout has responsive card grids and accessible attendance progress', () => {
+  assert.match(adminDashboard, /role="progressbar"/);
+  assert.match(adminDashboard, /aria-label="Today's attendance"/);
+  assert.match(modernCss, /\.admin-attendance-hero/);
+  assert.match(modernCss, /\.admin-overview-grid/);
+  assert.match(modernCss, /\.admin-gender-track/);
+  assert.match(modernCss, /\.admin-actions-grid/);
+  assert.match(modernCss, /@media \(max-width: 640px\)/);
+  assert.match(modernCss, /@media \(min-width: 992px\)/);
+});

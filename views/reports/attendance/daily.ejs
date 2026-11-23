@@ -54,8 +54,8 @@
                 </div>
 
                 <% if (students && students.length> 0) { %>
-                    <div class="card">
-                        <table class="data-table" id="dataTable">
+                    <div class="card attendance-daily-results">
+                        <div class="attendance-daily-table-wrap"><table class="data-table" id="dataTable">
                             <thead>
                                 <tr>
                                     <th>Student Name</th>
@@ -96,9 +96,9 @@
                                     </tr>
                                     <% }) %>
                             </tbody>
-                        </table>
+                        </table></div>
                     </div>
-                    <p class="text-muted" style="margin-top: 15px; text-align: right;">Total Records: <%=
+                    <p class="text-muted attendance-daily-total">Total Records: <%=
                             students.length %>
                     </p>
                     <% } else { %>

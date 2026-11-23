@@ -86,3 +86,15 @@ check('shared shell, dashboard templates and notification partial compile as EJS
     'views/dashboard_staff.ejs'
   ].forEach(file => ejs.compile(read(file), { filename: path.join(__dirname, '..', file) }));
 });
+
+check('teacher class and subject panels stack as separate compact rows on phones', () => {
+  assert.match(dashboardCss, /\.staff-dashboard-shell \.teacher-dashboard-panels\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) !important;/);
+  assert.match(dashboardCss, /teacher-dashboard-panels > \.card,\s*\.staff-dashboard-shell \.teacher-dashboard-panels > \.card:nth-child\(3\)/);
+  assert.match(dashboardCss, /assignedClasses\.length > 3/);
+  assert.match(dashboardCss, /assignedSubjects\.length > 3/);
+});
+check('mobile dashboard tiles use compact typography and attendance content stays within its card', () => {
+  assert.match(dashboardCss, /font-size: 1\.38rem !important/);
+  assert.match(dashboardCss, /admin-attendance-stat \.stat-content\s*\{[\s\S]*?width: calc\(100% - 78px\) !important/);
+  assert.match(dashboardCss, /admin-attendance-stat::after\s*\{[\s\S]*?width: 66px !important/);
+});

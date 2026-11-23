@@ -1,0 +1,39 @@
+/*
+ * AcadMe Announcements presentation layer.
+ * Existing publishing, audience, event-date, upload and delete workflows are unchanged.
+ */
+.main-content:is(.announcements-list-page,.announcements-form-page,.announcement-detail-page){min-width:0}
+.main-content:is(.announcements-list-page,.announcements-form-page,.announcement-detail-page) h1{color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight)}
+.main-content:is(.announcements-list-page,.announcements-form-page,.announcement-detail-page)>header{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)!important}
+.announcements-list-page>header,.announcement-detail-page .content-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.announcements-list-page>header p,.announcement-detail-page .content-header p{color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.announcements-list-page>.card,.announcements-form-page>.card,.announcement-detail-page>.card{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.announcements-list-page .table-container{max-width:100%;border-radius:var(--acm-radius-sm)}
+.announcements-list-page .data-table{font-size:var(--acm-text-sm)}
+.announcements-list-page .data-table th{white-space:nowrap;color:var(--acm-text-secondary);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-semibold)}
+.announcements-list-page .data-table td{vertical-align:middle}
+.announcements-list-page .data-table td strong{color:var(--acm-text-primary);overflow-wrap:anywhere}
+.announcements-list-page .data-table td:last-child>div{gap:var(--acm-sp-8)!important}
+.announcements-list-page :is(button,a):focus-visible,.announcements-form-page :is(button,a,input,select,textarea):focus-visible,.announcement-detail-page :is(button,a):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+.announcements-form-page>.card{max-width:850px!important;padding:clamp(16px,3vw,28px)}
+.announcements-form-page .form-group{min-width:0}
+.announcements-form-page .form-group label{display:block;margin-block-end:6px;color:var(--acm-text-primary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold)}
+.announcements-form-page .form-control{width:100%;min-width:0;min-height:44px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.announcements-form-page textarea.form-control{min-height:170px;resize:vertical}
+.announcements-form-page .grid-3{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--acm-sp-12)}
+.announcements-form-page form>div:last-child{gap:var(--acm-sp-8)!important}
+.announcements-form-page form>div:last-child .btn{min-height:44px}
+.announcement-detail-page>.card{max-width:850px!important;margin-inline:auto;padding:clamp(18px,4vw,40px)!important}
+.announcement-detail-page .announcement-content{color:var(--acm-text-primary);font-size:clamp(1rem,2vw,1.1rem);line-height:1.85;overflow-wrap:anywhere}
+.announcement-detail-page .announcement-content img{max-width:100%;height:auto}
+.announcement-detail-page .announcement-content a{overflow-wrap:anywhere}
+.announcement-detail-page>.card>img{max-width:100%;height:auto}
+@media(max-width:760px){
+ .announcements-list-page .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .announcements-list-page .data-table{min-width:680px}
+ .announcements-form-page .grid-3{grid-template-columns:minmax(0,1fr)}
+ .announcements-form-page form>div:last-child{flex-direction:column}
+ .announcements-form-page form>div:last-child .btn{width:100%;flex:auto}
+ .announcement-detail-page .content-header{align-items:flex-start}
+}
+@media(prefers-reduced-motion:reduce){.announcements-list-page *{scroll-behavior:auto}}

@@ -59,7 +59,8 @@
     "test:acadme-finance-ui": "node tests/acadme-finance-ui.test.js",
     "test:acadme-academics-ui": "node tests/acadme-academics-ui.test.js",
     "test:acadme-staff-ui": "node tests/acadme-staff-ui.test.js",
-    "test:acadme-reports-ui": "node tests/acadme-reports-ui.test.js"
+    "test:acadme-reports-ui": "node tests/acadme-reports-ui.test.js",
+    "test:acadme-announcements-ui": "node tests/acadme-announcements-ui.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

@@ -1,0 +1,55 @@
+/* System Audit presentation only. Audit data, access, ordering and retention remain unchanged. */
+.system-audit-page{min-width:0}
+.system-audit-page .audit-page-header{display:flex;align-items:center;justify-content:space-between;gap:var(--acm-sp-16);margin-block-end:var(--acm-sp-24)}
+.system-audit-page .audit-page-header h1{margin-block-end:var(--acm-sp-4)}
+.system-audit-page .audit-page-header p{margin:0;color:var(--acm-text-secondary)}
+.system-audit-page .audit-header-actions{display:flex;align-items:center;gap:var(--acm-sp-8)}
+.system-audit-page>.card{min-width:0;padding:var(--acm-sp-12);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.system-audit-page .table-container{width:100%;overflow-x:auto}
+.system-audit-page .data-table{width:100%;min-width:900px;border-collapse:collapse;font-size:var(--acm-text-sm)}
+.system-audit-page .data-table th{position:sticky;top:0;background:var(--acm-bg);color:var(--acm-text-secondary);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.system-audit-page .data-table th,.system-audit-page .data-table td{padding:var(--acm-sp-12);border-bottom:1px solid var(--acm-border);vertical-align:top}
+.system-audit-page .data-table tbody tr:hover{background:var(--acm-bg)}
+.system-audit-page .audit-timestamp,.system-audit-page .audit-ip-address{color:var(--acm-text-secondary);font-size:var(--acm-text-xs);white-space:nowrap;font-variant-numeric:tabular-nums}
+.system-audit-page .audit-user-cell{display:flex;flex-direction:column;text-align:right;gap:2px;min-width:110px}
+.system-audit-page .audit-user-cell strong{color:var(--acm-text-primary);font-weight:var(--acm-fw-semibold)}
+.system-audit-page .audit-staff-id{color:var(--school-primary);font-size:var(--acm-text-xs);overflow-wrap:anywhere}
+.system-audit-page .audit-module-badge,.system-audit-page .audit-action-badge{display:inline-flex;align-items:center;max-width:180px;padding:4px 8px;border-radius:var(--acm-radius-xs);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-semibold);overflow-wrap:anywhere}
+.system-audit-page .audit-module-badge,.system-audit-page .audit-action-default{background:var(--acm-bg);color:var(--acm-text-secondary)}
+.system-audit-page .audit-action-success{background:var(--acm-success-bg);color:var(--acm-success)}
+.system-audit-page .audit-action-login{background:var(--acm-info-bg);color:var(--acm-info)}
+.system-audit-page .audit-details-cell{max-width:360px;font-size:var(--acm-text-sm)}
+.system-audit-page .audit-details-value{max-width:360px;padding:var(--acm-sp-8);border:1px solid var(--acm-border);border-radius:var(--acm-radius-xs);background:var(--acm-bg);overflow-x:auto;text-align:left}
+.system-audit-page .audit-details-value code{font-size:var(--acm-text-xs);white-space:pre-wrap;overflow-wrap:anywhere}
+.system-audit-page .audit-empty-cell{text-align:center;padding:var(--acm-sp-40);color:var(--acm-text-secondary)}
+.system-audit-page :is(button,a):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:760px){
+ .system-audit-page .audit-page-header{align-items:flex-start;flex-direction:column}
+ .system-audit-page .audit-header-actions{width:100%}
+ .system-audit-page .audit-header-actions button{width:100%;min-height:44px}
+ .system-audit-page>.card{padding:var(--acm-sp-8)}
+ .system-audit-page .table-container.mobile-cards{overflow:visible}
+ .system-audit-page .data-table{min-width:0}
+ .system-audit-page .data-table thead{display:none}
+ .system-audit-page .data-table.mobile-cards tbody tr,.system-audit-page .table-container.mobile-cards .data-table tbody tr{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--acm-sp-8);padding:var(--acm-sp-12);border-bottom:1px solid var(--acm-border)}
+ .system-audit-page .table-container.mobile-cards .data-table tbody td{display:grid;grid-template-columns:minmax(92px,30%) minmax(0,1fr);gap:var(--acm-sp-8);padding:4px 0;border:0;text-align:start;min-width:0}
+ .system-audit-page .table-container.mobile-cards .data-table tbody td:before{content:attr(data-label);color:var(--acm-text-secondary);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-semibold)}
+ .system-audit-page .audit-user-cell{min-width:0;text-align:start}
+ .system-audit-page .audit-details-cell,.system-audit-page .audit-details-value{max-width:100%;min-width:0}
+ .system-audit-page .audit-empty-cell{display:block!important;text-align:center!important}
+ .system-audit-page .audit-empty-cell:before{content:none!important}
+}
+@media print{
+ @page{size:A4 landscape;margin:8mm}
+ body *{visibility:hidden}
+ .system-audit-page,.system-audit-page *{visibility:visible}
+ .system-audit-page{position:absolute;inset:0;width:100%;margin:0!important;padding:0!important}
+ .system-audit-page .audit-page-header{display:none!important}
+ .system-audit-page>.card{padding:0;border:0;box-shadow:none}
+ .system-audit-page .table-container{overflow:visible}
+ .system-audit-page .data-table{min-width:0;font-size:8pt}
+ .system-audit-page .data-table th,.system-audit-page .data-table td{padding:4px}
+ .system-audit-page .audit-details-value{max-width:none;overflow:visible}
+ .system-audit-page .audit-details-value code{white-space:pre-wrap;overflow-wrap:anywhere}
+}
+@media(prefers-reduced-motion:reduce){.system-audit-page *{scroll-behavior:auto!important;transition:none!important}}

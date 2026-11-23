@@ -3,14 +3,13 @@
     <div class="dashboard-container">
         <%- include('../partials/sidebar') %>
 
-            <main class="main-content reports-audit-page">
-                <header class="content-header"
-                    style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+            <main class="main-content reports-audit-page system-audit-page">
+                <header class="content-header audit-page-header">
                     <div>
                         <h1>System Audit Logs</h1>
                         <p>Track all administrative and academic activities across the system.</p>
                     </div>
-                    <div style="display: flex; gap: 10px;">
+                    <div class="audit-header-actions">
                         <button class="btn btn-outline btn-sm" onclick="window.print()"><i class="bi bi-printer"></i>
                             Print Log</button>
                     </div>
@@ -34,39 +33,35 @@
                                     <% logs.forEach(log=> { %>
                                         <tr>
                                             <td data-label="Timestamp"
-                                                style="white-space: nowrap; font-size: 0.85rem; color: var(--text-muted);">
+                                                class="audit-timestamp">
                                                 <%= new Date(log.timestamp).toLocaleString('en-GB') %>
                                             </td>
                                             <td data-label="User">
-                                                <div style="display: flex; flex-direction: column; text-align: right;">
+                                                <div class="audit-user-cell">
                                                     <strong>
                                                         <%= log.last_name %>, <%= log.first_name %>
                                                     </strong>
                                                     <code
-                                                        style="font-size: 0.75rem; color: var(--school-primary);"><%= log.staff_id %></code>
+                                                        class="audit-staff-id"><%= log.staff_id %></code>
                                                 </div>
                                             </td>
                                             <td data-label="Module">
-                                                <span class="badge" style="background: #f1f5f9; color: #475569;">
+                                                <span class="badge audit-module-badge">
                                                     <%= log.module %>
                                                 </span>
                                             </td>
                                             <td data-label="Action">
-                                                <span class="badge" style="
-                                                    background: <%= log.action.includes('SAVE') || log.action.includes('UPDATE') ? '#dcfce7' : (log.action.includes('LOGIN') ? '#e0f2fe' : '#f1f5f9') %>;
-                                                    color: <%= log.action.includes('SAVE') || log.action.includes('UPDATE') ? '#15803d' : (log.action.includes('LOGIN') ? '#0369a1' : '#475569') %>;
-                                                ">
+                                                <span class="badge audit-action-badge <%= log.action.includes('SAVE') || log.action.includes('UPDATE') ? 'audit-action-success' : (log.action.includes('LOGIN') ? 'audit-action-login' : 'audit-action-default') %>">
                                                     <%= log.action %>
                                                 </span>
                                             </td>
-                                            <td data-label="Details" style="max-width: 300px; font-size: 0.85rem;">
-                                                <div
-                                                    style="background: #f8fafc; padding: 8px; border-radius: 4px; border: 1px solid #f1f5f9; overflow-x: auto; text-align: left;">
+                                            <td data-label="Details" class="audit-details-cell">
+                                                <div class="audit-details-value">
                                                     <code><%= log.details %></code>
                                                 </div>
                                             </td>
                                             <td data-label="IP Address"
-                                                style="font-family: monospace; font-size: 0.85rem; color: var(--text-muted);">
+                                                class="audit-ip-address">
                                                 <%= log.ip_address %>
                                             </td>
                                         </tr>
@@ -74,7 +69,7 @@
                                             <% } else { %>
                                                 <tr>
                                                     <td colspan="6"
-                                                        style="text-align: center; padding: 40px; color: var(--text-muted);">
+                                                        class="audit-empty-cell">
                                                         No logs available yet.</td>
                                                 </tr>
                                                 <% } %>

@@ -17,5 +17,5 @@ assert.ok(staffHead.indexOf('acadme-tokens.css') < staffHead.indexOf('acadme-com
 assert.ok(staffHead.indexOf('acadme-components.css') < staffHead.indexOf('staff-admin-modern.css'));
 assert.ok(studentHead.indexOf('acadme-tokens.css') < studentHead.indexOf('acadme-components.css'));
 assert.ok(studentHead.indexOf('acadme-components.css') < studentHead.indexOf('student-portal.css'));
-assert.ok(!staffHead.includes('>\\\\n    <link'));
+assert.ok(!staffHead.includes('\\n    <link'));
 console.log('PASS: shared AcadMe component layer loads in staff/admin and student shells');

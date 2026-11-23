@@ -1,0 +1,25 @@
+'use strict';
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+const shellCss = read('public/css/acadme-shells.css');
+const staffHead = read('views/partials/header.ejs');
+const studentHead = read('views/partials/student_shell_head.ejs');
+const admin = read('views/dashboard.ejs');
+const teacher = read('views/dashboard_staff.ejs');
+
+assert.match(shellCss, /var\(--acm-text-primary\)/);
+assert.match(shellCss, /\.sidebar nav a:focus-visible/);
+assert.match(shellCss, /prefers-reduced-motion/);
+assert.ok(staffHead.indexOf('acadme-tokens.css') < staffHead.indexOf('acadme-components.css'));
+assert.ok(staffHead.indexOf('acadme-components.css') < staffHead.indexOf('acadme-shells.css'));
+assert.ok(staffHead.indexOf('acadme-shells.css') < staffHead.indexOf('staff-admin-modern.css'));
+assert.ok(studentHead.indexOf('acadme-tokens.css') < studentHead.indexOf('acadme-components.css'));
+assert.ok(studentHead.indexOf('acadme-components.css') < studentHead.indexOf('acadme-shells.css'));
+assert.ok(studentHead.indexOf('acadme-shells.css') < studentHead.indexOf('student-portal-modern.css'));
+assert.match(admin, /content-header acm-page-header/);
+assert.match(teacher, /content-header acm-page-header/);
+assert.match(admin, /stats\.totalStudents/);
+assert.match(teacher, /stats\.assignedClasses/);
+console.log('PASS: shared AcadMe shell styles load in order and both dashboards consume shared page header pattern');

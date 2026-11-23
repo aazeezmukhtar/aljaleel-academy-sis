@@ -139,7 +139,7 @@
                     <% const studentStatuses = students.map(student => student.status || null); %>
                     <% const visibleStatuses = [...new Set(studentStatuses.filter(Boolean))]; %>
                     <% const sheetStatus = visibleStatuses.length === 0 ? 'New / Draft' : (visibleStatuses.length === 1 && studentStatuses.every(status => status === visibleStatuses[0]) ? visibleStatuses[0] : 'Mixed / Incomplete'); %>
-                    <div class="card">
+                    <div class="card result-sheet-card">
                         <div class="result-sheet-header"
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3 style="margin: 0;">
@@ -186,7 +186,7 @@
                                         <% 
                                             const isLocked = s.status === 'locked' || s.status === 'published' || s.status === 'approved';
                                         %>
-                                        <tr data-student="<%= s.id %>">
+                                        <tr data-student="<%= s.id %>" data-score-count="<%= resultConfig.ca_count != 1 ? 3 : 2 %>">
                                             <td data-label="#">
                                                 <%= index + 1 %>
                                             </td>

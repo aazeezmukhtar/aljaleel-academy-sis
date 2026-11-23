@@ -1,0 +1,27 @@
+/* Attendance closures: presentation only. Approval and request behavior remain unchanged. */
+.attendance-closures-page{min-width:0}
+.attendance-closures-page .closures-heading{display:flex;flex-wrap:wrap;align-items:flex-start;justify-content:space-between;gap:var(--acm-sp-12);margin-bottom:var(--acm-sp-20)}
+.attendance-closures-page .closures-heading h1{margin:var(--acm-sp-8) 0 var(--acm-sp-6);line-height:var(--acm-lh-tight);color:var(--acm-text-primary);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl))}
+.attendance-closures-page .closures-heading p{max-width:680px;margin:0;color:var(--acm-text-secondary)}
+.attendance-closures-page .closures-back{display:inline-flex;align-items:center;gap:var(--acm-sp-6);min-height:40px;padding:var(--acm-sp-8) var(--acm-sp-12);border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);text-decoration:none;font-weight:var(--acm-fw-semibold)}
+.attendance-closures-page .closures-panel{min-width:0;padding:clamp(14px,2vw,20px);margin-bottom:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.attendance-closures-page .closures-panel>h2,.attendance-closures-page .closures-list-header h2{color:var(--acm-text-primary);font-weight:var(--acm-fw-semibold)}
+.attendance-closures-page .closures-intro{max-width:760px;line-height:var(--acm-lh-relaxed);color:var(--acm-text-secondary)}
+.attendance-closures-page .closures-form{margin-top:var(--acm-sp-16)}
+.attendance-closures-page .closures-form .form-control,.attendance-closures-page .closures-form .form-select{min-width:0;min-height:44px;border-color:var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.attendance-closures-page .closures-form textarea.form-control{min-height:92px}
+.attendance-closures-page .closures-form :is(input,select,textarea):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px;box-shadow:var(--acm-focus-ring)}
+.attendance-closures-page .closures-submit{display:flex;flex-wrap:wrap;align-items:center;gap:var(--acm-sp-10)}
+.attendance-closures-page .closures-submit .btn,.attendance-closures-page .closures-actions .btn,.attendance-closures-page [data-cancel-closure]{min-height:40px;border-radius:var(--acm-radius-sm)}
+.attendance-closures-page .closures-list-header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:var(--acm-sp-8);margin-bottom:var(--acm-sp-12)}
+.attendance-closures-page .closures-count{padding:var(--acm-sp-6) var(--acm-sp-10);border-radius:var(--acm-radius-full);background:var(--acm-surface-muted);color:var(--acm-text-secondary);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-semibold)}
+.attendance-closures-page .closures-table-wrap{border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm)}
+.attendance-closures-page .closures-table{margin:0;font-size:var(--acm-text-sm)}
+.attendance-closures-page .closures-table thead th{white-space:nowrap;color:var(--acm-text-secondary);background:var(--acm-surface-muted);font-size:var(--acm-text-xs)}
+.attendance-closures-page .closures-table tbody td{vertical-align:middle}
+.attendance-closures-page .closures-table .closures-reason{min-width:180px;max-width:360px;white-space:normal;overflow-wrap:anywhere}
+.attendance-closures-page .closures-actions{display:flex;flex-wrap:wrap;gap:var(--acm-sp-6)}
+.attendance-closures-page .closures-empty{padding:var(--acm-sp-16);border:1px dashed var(--acm-border);border-radius:var(--acm-radius-sm);color:var(--acm-text-secondary)}
+.attendance-closures-page :is(a,button):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+@media(max-width:640px){.attendance-closures-page .closures-heading{margin-bottom:var(--acm-sp-16)}.attendance-closures-page .closures-panel{padding:var(--acm-sp-12);margin-bottom:var(--acm-sp-12)}.attendance-closures-page .closures-submit{align-items:stretch;flex-direction:column}.attendance-closures-page .closures-submit .btn{width:100%}.attendance-closures-page .closures-submit #closure-request-feedback{margin:0!important}.attendance-closures-page .closures-table-wrap{border:0;border-radius:0}.attendance-closures-page .closures-table{min-width:680px}}
+@media(prefers-reduced-motion:reduce){.attendance-closures-page *{scroll-behavior:auto!important;transition-duration:.01ms!important}}

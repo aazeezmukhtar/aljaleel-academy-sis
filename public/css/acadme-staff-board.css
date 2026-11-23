@@ -1,0 +1,31 @@
+/* Teacher Class Board: presentation only. Posting and targeting behavior is unchanged. */
+.staff-class-board-page{min-width:0;width:100%;padding:0 clamp(12px,2vw,24px) var(--acm-sp-24)}
+.staff-class-board-page .navbar{min-width:0;gap:var(--acm-sp-12);flex-wrap:wrap;padding:var(--acm-sp-12) 0;margin-bottom:var(--acm-sp-16);border-bottom:1px solid var(--acm-border)}
+.staff-class-board-page .nav-title,.staff-class-board-page .user-info{min-width:0}
+.staff-class-board-page .staff-greeting{color:var(--acm-text-primary);font-size:clamp(var(--acm-text-lg),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight)}
+.staff-class-board-page .user-info{display:flex;align-items:center;gap:var(--acm-sp-8);flex-wrap:wrap;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.staff-class-board-page .user-avatar{flex:0 0 auto}
+.staff-class-board-page>.card{min-width:0;margin-block:var(--acm-sp-16)!important;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs);overflow:hidden}
+.staff-class-board-page>.card>.card-header{padding:var(--acm-sp-12) var(--acm-sp-16);background:var(--acm-surface);color:var(--acm-text-primary);border-bottom:1px solid var(--acm-border)}
+.staff-class-board-page>.card>.card-header h3{font-size:var(--acm-text-md);font-weight:var(--acm-fw-semibold)}
+.staff-class-board-page>.card>.card-body{padding:clamp(14px,2.5vw,24px)}
+.staff-class-board-page>.card>.card-body h4{margin-bottom:var(--acm-sp-16);color:var(--acm-text-primary);font-size:var(--acm-text-lg);font-weight:var(--acm-fw-semibold)}
+.staff-class-board-page form label{display:block;margin-bottom:var(--acm-sp-8);color:var(--acm-text-primary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold)}
+.staff-class-board-page form :is(input,select,textarea){width:100%;min-width:0;min-height:44px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.staff-class-board-page form textarea{min-height:120px;resize:vertical}
+.staff-class-board-page form :is(input,select,textarea):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px;box-shadow:var(--acm-focus-ring)}
+.staff-class-board-page form .row{row-gap:var(--acm-sp-8)}
+.staff-class-board-page form .btn{min-height:44px;border-radius:var(--acm-radius-sm)}
+.staff-class-board-page .list-group{display:grid;gap:var(--acm-sp-12)}
+.staff-class-board-page .list-group-item{min-width:0;padding:var(--acm-sp-16);border:1px solid var(--acm-border)!important;border-radius:var(--acm-radius-md)!important;background:var(--acm-surface)}
+.staff-class-board-page .list-group-item>.d-flex{gap:var(--acm-sp-8);align-items:flex-start;flex-wrap:wrap}
+.staff-class-board-page .list-group-item h5{min-width:0;flex:1 1 300px;color:var(--acm-text-primary);font-size:var(--acm-text-md);line-height:var(--acm-lh-snug);overflow-wrap:anywhere}
+.staff-class-board-page .list-group-item>small{color:var(--acm-text-secondary)}
+.staff-class-board-page .list-group-item p{color:var(--acm-text-secondary);line-height:var(--acm-lh-relaxed);overflow-wrap:anywhere}
+.staff-class-board-page .list-group-item form{text-align:start!important}
+.staff-class-board-page .list-group-item form .btn{min-height:38px}
+.staff-class-board-page .alert{margin-block:var(--acm-sp-12);border-radius:var(--acm-radius-sm);overflow-wrap:anywhere}
+.staff-class-board-page :is(a,button):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+@media(max-width:760px){.staff-class-board-page{padding-inline:12px}.staff-class-board-page .navbar{align-items:flex-start}.staff-class-board-page .user-info{width:100%;justify-content:flex-start}.staff-class-board-page>.card>.card-body{padding:var(--acm-sp-12)}.staff-class-board-page .list-group-item{padding:var(--acm-sp-12)}.staff-class-board-page form .btn{width:100%}}
+@media(max-width:480px){.staff-class-board-page .navbar .user-info .btn{margin-left:0!important}.staff-class-board-page .list-group-item>.d-flex{display:flex!important;flex-direction:column;align-items:flex-start!important}}
+@media(prefers-reduced-motion:reduce){.staff-class-board-page *{scroll-behavior:auto!important;transition-duration:.01ms!important}}

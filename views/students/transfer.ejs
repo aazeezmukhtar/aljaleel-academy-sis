@@ -1,17 +1,7 @@
 <%- include('../partials/header') %>
-<style>
-.transfer-page{max-width:900px;margin:0 auto}.transfer-card{padding:clamp(16px,3vw,28px);margin-top:20px}
-.transfer-field{margin-bottom:18px;min-width:0}.transfer-field label{display:block;font-weight:700;margin-bottom:7px}
-.transfer-field select,.transfer-field input,.transfer-field textarea{width:100%;min-width:0}
-.transfer-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.transfer-note{padding:13px 15px;border:1px solid #cbdff0;background:#f1f7fc;color:#245477;border-radius:9px;margin:16px 0;line-height:1.5}
-.transfer-alert{padding:12px;border-radius:8px;background:#fff0ef;color:#9b2720;border:1px solid #f2c5c1;margin:14px 0}
-.transfer-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-@media(max-width:640px){.transfer-grid{grid-template-columns:1fr}.transfer-actions>*{width:100%;text-align:center;justify-content:center}}
-</style>
 <div class="dashboard-container">
   <%- include('../partials/sidebar') %>
-  <main class="main-content"><div class="transfer-page">
+  <main class="main-content"><div class="transfer-page student-transfer-page">
     <a href="/students/view/<%= student.id %>" style="color:var(--primary);text-decoration:none;font-weight:600">← Back to Student Profile</a>
     <header style="margin:18px 0 8px"><h1 style="margin:0">Transfer Student</h1>
       <p style="color:var(--text-muted);margin:6px 0 0"><strong><%= student.first_name %> <%= student.last_name %></strong> · <%= student.admission_number || 'Admission pending' %></p></header>

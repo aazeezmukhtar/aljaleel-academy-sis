@@ -9,6 +9,7 @@ const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const header = read('views/partials/header.ejs');
 const notificationBar = read('views/partials/notification_bar.ejs');
 const modernCss = read('public/css/staff-admin-modern.css');
+const dashboardCss = read('public/css/dashboard-reference-refresh.css');
 const adminDashboard = read('views/dashboard.ejs');
 const staffDashboard = read('views/dashboard_staff.ejs');
 const app = read('app.js');

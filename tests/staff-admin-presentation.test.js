@@ -91,8 +91,8 @@ check('shared shell, dashboard templates and notification partial compile as EJS
 check('teacher class and subject panels stack as separate compact rows on phones', () => {
   assert.match(dashboardCss, /\.staff-dashboard-shell \.teacher-dashboard-panels\s*\{[\s\S]*?grid-template-columns: minmax\(0, 1fr\) !important;/);
   assert.match(dashboardCss, /teacher-dashboard-panels > \.card,\s*\.staff-dashboard-shell \.teacher-dashboard-panels > \.card:nth-child\(3\)/);
-  assert.match(dashboardCss, /assignedClasses\.length > 3/);
-  assert.match(dashboardCss, /assignedSubjects\.length > 3/);
+  assert.match(staffDashboard, /assignedClasses\.length > 3/);
+  assert.match(staffDashboard, /assignedSubjects\.length > 3/);
 });
 check('mobile dashboard tiles use compact typography and attendance content stays within its card', () => {
   assert.match(dashboardCss, /font-size: 1\.38rem !important/);

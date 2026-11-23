@@ -15,10 +15,10 @@
 .academic-report-detail-page .report-header p{margin:4px 0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
 .academic-report-detail-page .report-table{width:100%;border-collapse:collapse;font-size:var(--acm-text-sm)}
 .academic-report-detail-page .report-table th,.academic-report-detail-page .report-table td{padding:10px;border:1px solid var(--acm-border);text-align:left;vertical-align:middle}
-.academic-report-detail-page .report-table th{background:var(--acm-surface-muted);color:var(--acm-text-secondary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.academic-report-detail-page .report-table th{background:var(--acm-surface);color:var(--acm-text-secondary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
 .academic-report-detail-page .academic-student-name{font-weight:var(--acm-fw-medium)}
 .academic-report-detail-page .academic-rank-column{width:64px}
-.academic-report-detail-page .rank-badge{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:50%;background:var(--acm-surface-muted);color:var(--acm-text-secondary);font-weight:var(--acm-fw-bold)}
+.academic-report-detail-page .rank-badge{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:50%;background:var(--acm-surface);color:var(--acm-text-secondary);font-weight:var(--acm-fw-bold)}
 .academic-report-detail-page .top-rank .rank-badge{color:#fff}
 .academic-report-detail-page .rank-1 .rank-badge{background:#eab308}
 .academic-report-detail-page .rank-2 .rank-badge{background:#94a3b8}
@@ -35,8 +35,8 @@
 .academic-broadsheet-report-page .rotate-header>div{position:absolute;bottom:10px;left:50%;width:30px;transform:translate(0,0) rotate(270deg);transform-origin:center bottom}
 .academic-broadsheet-report-page .rotate-header>div>span{padding:5px 10px}
 .academic-broadsheet-report-page .fail{background:var(--acm-error-bg);color:var(--acm-error)}
-.academic-broadsheet-report-page .empty{background:var(--acm-surface-muted);color:var(--acm-text-tertiary)}
-.academic-broadsheet-report-page .summary-col{border-left:2px solid var(--acm-border-strong);background:var(--acm-info-bg);font-weight:var(--acm-fw-bold)}
+.academic-broadsheet-report-page .empty{background:var(--acm-surface);color:var(--acm-text-muted)}
+.academic-broadsheet-report-page .summary-col{border-left:2px solid var(--acm-border);background:var(--acm-info-bg);font-weight:var(--acm-fw-bold)}
 .academic-report-detail-page :is(a,button,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
 @media(max-width:760px){
  .academic-report-detail-page .content-header{align-items:flex-start}

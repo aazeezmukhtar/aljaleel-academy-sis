@@ -40,6 +40,7 @@
     box-shadow: 0 2px 5px rgba(20,35,65,.045);
 }
 .admin-dashboard-shell .stats-grid > .admin-attendance-stat {
+    order: -1;
     grid-column: span 2;
     grid-row: span 2;
     min-height: 350px;
@@ -74,6 +75,7 @@
     transform: translateY(-50%) rotate(-35deg);
 }
 .admin-dashboard-shell .stats-grid > .admin-gender-stat {
+    order: 5;
     grid-column: span 4;
     min-height: 142px;
     flex-direction: row;
@@ -96,6 +98,7 @@
 .admin-dashboard-shell .admin-attendance-stat .stat-content h3 { color: #fff; }
 .admin-dashboard-shell .admin-gender-stat .stat-content { display: flex; flex-direction: row; align-items: center; gap: 22px; }
 .admin-dashboard-shell .admin-gender-stat .stat-content > div { gap: 20px !important; }
+.admin-dashboard-shell .admin-gender-stat .stat-content::after { content: ""; display: block; height: 8px; width: 100%; margin-top: 12px; border-radius: 99px; background: linear-gradient(90deg, #5145e5 0 52.8%, #d81b70 52.8% 100%); }
 .admin-dashboard-shell .admin-gender-stat .stat-content h3 { color: #4f46e5; }
 .admin-dashboard-shell .admin-gender-stat .stat-content h3[title="Female"] { color: #c2185b; }
 .admin-dashboard-shell .admin-quick-actions { margin-top: 32px; }
@@ -180,8 +183,8 @@
 @media (max-width: 991px) {
     .admin-dashboard-shell .stats-grid,
     .staff-dashboard-shell .stats-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
-    .admin-dashboard-shell .stats-grid > .admin-attendance-stat { grid-column: 1 / -1; grid-row: auto; min-height: 190px; }
-    .admin-dashboard-shell .stats-grid > .admin-gender-stat { grid-column: 1 / -1; }
+    .admin-dashboard-shell .stats-grid > .admin-attendance-stat { order: -1; grid-column: 1 / -1; grid-row: auto; min-height: 190px; }
+    .admin-dashboard-shell .stats-grid > .admin-gender-stat { order: 5; grid-column: 1 / -1; }
     .admin-dashboard-shell .admin-quick-actions .grid-4 { grid-template-columns: repeat(2,minmax(0,1fr)); }
     .admin-dashboard-shell .admin-dashboard-panels { grid-template-columns: minmax(0,1fr); }
     .staff-dashboard-shell .teacher-dashboard-panels { grid-template-columns: minmax(0,1fr); }

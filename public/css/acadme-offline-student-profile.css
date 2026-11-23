@@ -83,7 +83,7 @@
   background: var(--acm-bg-subtle, #f8fafc);
   color: var(--acm-text-secondary);
   font-size: var(--acm-text-sm);
-  line-height: var(--acm-lh-normal);
+  line-height: var(--acm-lh-base);
 }
 @media (max-width: 640px) {
   .offline-student-profile-page .offline-student-profile {

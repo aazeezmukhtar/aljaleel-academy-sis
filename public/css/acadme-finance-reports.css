@@ -1,0 +1,46 @@
+/* Finance reports presentation only. Fee rules, balances, permissions, filters and exports remain unchanged. */
+.finance-reports-index-page .finance-stat-collected{background:var(--acm-success-bg);color:var(--acm-success)}
+.finance-reports-index-page .finance-stat-today{background:var(--acm-warning-bg);color:var(--acm-warning)}
+.finance-reports-index-page .finance-stat-outstanding{background:var(--acm-error-bg);color:var(--acm-error)}
+.finance-report-detail-page{min-width:0}
+.finance-report-detail-page .content-header{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+.finance-report-detail-page .header-left{min-width:0}
+.finance-report-detail-page .header-actions{display:flex;flex-wrap:wrap;gap:var(--acm-sp-8)}
+.finance-report-detail-page .settings-card{min-width:0;padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.finance-report-detail-page .filter-form{display:flex;align-items:flex-end;gap:var(--acm-sp-12);flex-wrap:wrap}
+.finance-report-detail-page .filter-form .form-group{min-width:min(100%,220px);margin:0}
+.finance-report-detail-page .report-paper{width:100%;max-width:210mm;margin:var(--acm-sp-16) auto;padding:clamp(14px,3vw,36px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-sm);overflow-x:auto}
+.finance-report-detail-page .report-header{margin-block-end:var(--acm-sp-16);padding-block-end:var(--acm-sp-12);border-bottom:1px solid var(--acm-border);text-align:center}
+.finance-report-detail-page .report-header h2{margin:0 0 6px;color:var(--acm-text-primary);font-size:var(--acm-text-xl)}
+.finance-report-detail-page .report-header p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.finance-report-detail-page .report-table{width:100%;border-collapse:collapse;font-size:var(--acm-text-sm)}
+.finance-report-detail-page .report-table th,.finance-report-detail-page .report-table td{padding:10px;border:1px solid var(--acm-border);text-align:left;vertical-align:middle}
+.finance-report-detail-page .report-table th{background:var(--acm-bg);color:var(--acm-text-secondary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.finance-report-detail-page .finance-report-number{width:50px}
+.finance-report-detail-page .finance-student-name{font-weight:var(--acm-fw-medium)}
+.finance-report-detail-page .finance-debt-value{color:var(--acm-error);font-weight:var(--acm-fw-bold)}
+.finance-report-detail-page .finance-empty-success{color:var(--acm-success)}
+.finance-status-report-page .status-badge{display:inline-flex;padding:4px 8px;border:1px solid transparent;border-radius:var(--acm-radius-xs);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-bold);text-transform:uppercase}
+.finance-status-report-page .status-badge.paid{background:var(--acm-success-bg);color:var(--acm-success)}
+.finance-status-report-page .status-badge.partial{background:var(--acm-warning-bg);color:var(--acm-warning)}
+.finance-status-report-page .status-badge.unpaid{background:var(--acm-error-bg);color:var(--acm-error)}
+.finance-report-detail-page :is(a,button,input,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:760px){
+ .finance-report-detail-page .content-header{align-items:flex-start}
+ .finance-report-detail-page .header-actions{width:100%}
+ .finance-report-detail-page .header-actions :is(button,a){flex:1 1 auto}
+ .finance-report-detail-page .filter-form{display:grid;grid-template-columns:minmax(0,1fr)}
+ .finance-report-detail-page .filter-form .form-group{min-width:0;width:100%}
+ .finance-report-detail-page .report-paper{margin-block:var(--acm-sp-12)}
+ .finance-report-detail-page .report-table{min-width:680px}
+}
+@media print{
+ @page{size:A4;margin:10mm}
+ body *{visibility:hidden}
+ .finance-report-detail-page .report-paper,.finance-report-detail-page .report-paper *{visibility:visible}
+ .finance-report-detail-page .report-paper{position:absolute;inset-block-start:0;inset-inline-start:0;width:100%;max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;overflow:visible}
+ .finance-report-detail-page.main-content{margin:0!important;padding:0!important}
+ .finance-report-detail-page .no-print{display:none!important}
+ .finance-status-report-page .status-badge{border:1px solid #777;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+@media(prefers-reduced-motion:reduce){.finance-report-detail-page *{scroll-behavior:auto!important}}

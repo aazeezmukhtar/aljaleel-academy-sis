@@ -18,6 +18,9 @@ router.get('/', resultController.getResultsDashboard);
 // GET /results/manage - Manager Sheet
 router.get('/manage', resultController.getResultManager);
 
+// GET /results/tracking - Read-only drafting, submission and publication progress
+router.get('/tracking', resultController.getResultWorkflowTracking);
+
 // POST /results/save - Batch Save
 router.post('/save', resultController.saveResults);
 

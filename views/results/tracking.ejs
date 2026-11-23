@@ -1,0 +1,175 @@
+<%- include('../partials/header') %>
+<div class="dashboard-container">
+    <%- include('../partials/sidebar') %>
+    <main class="main-content results-tracking-page">
+        <header class="content-header">
+            <div>
+                <p class="results-tracking-eyebrow">RESULT MANAGEMENT</p>
+                <h1>Result Workflow Tracking</h1>
+                <p>Monitor result entry, submission, approval and publication by class and subject.</p>
+            </div>
+            <div class="results-tracking-header-actions">
+                <a class="btn btn-outline" href="/results"><i class="bi bi-arrow-left"></i> Result Management</a>
+                <a class="btn btn-primary" href="/results/manage"><i class="bi bi-pencil-square"></i> Enter Results</a>
+            </div>
+        </header>
+
+        <section class="results-tracking-summary" aria-label="Workflow summary">
+            <article class="results-tracking-metric">
+                <span class="results-tracking-metric-label">Expected entries</span>
+                <strong><%= summary.expected_count %></strong>
+                <small>Enrolled student-subject entries</small>
+            </article>
+            <article class="results-tracking-metric">
+                <span class="results-tracking-metric-label">Recorded</span>
+                <strong><%= summary.recorded_count %></strong>
+                <small><%= summary.expected_count ? Math.round(summary.recorded_count / summary.expected_count * 100) : 0 %>% of expected entries</small>
+            </article>
+            <article class="results-tracking-metric is-draft">
+                <span class="results-tracking-metric-label">Drafts</span>
+                <strong><%= summary.draft_count %></strong>
+                <small>Saved, not yet submitted</small>
+            </article>
+            <article class="results-tracking-metric is-submitted">
+                <span class="results-tracking-metric-label">Submitted</span>
+                <strong><%= summary.submitted_count %></strong>
+                <small>Awaiting examination review</small>
+            </article>
+            <article class="results-tracking-metric is-approved">
+                <span class="results-tracking-metric-label">Approved</span>
+                <strong><%= summary.approved_count %></strong>
+                <small>Approved for publication</small>
+            </article>
+            <article class="results-tracking-metric is-published">
+                <span class="results-tracking-metric-label">Published</span>
+                <strong><%= summary.published_count %></strong>
+                <small>Visible on student portals</small>
+            </article>
+        </section>
+
+        <section class="card results-tracking-filter-card">
+            <form action="/results/tracking" method="GET" class="results-tracking-filters">
+                <div class="form-group">
+                    <label for="trackingSession">Academic session</label>
+                    <select id="trackingSession" name="session" class="form-control">
+                        <option value="">All sessions</option>
+                        <% sessions.forEach(session => { %>
+                            <option value="<%= session %>" <%= filters.session === session ? 'selected' : '' %>><%= session %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="trackingTerm">Term</label>
+                    <select id="trackingTerm" name="term" class="form-control">
+                        <option value="">All terms</option>
+                        <% ['1st Term','2nd Term','3rd Term'].forEach(term => { %>
+                            <option value="<%= term %>" <%= filters.term === term ? 'selected' : '' %>><%= term %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="trackingSection">Section</label>
+                    <select id="trackingSection" name="section_id" class="form-control">
+                        <option value="">All sections</option>
+                        <% sections.forEach(section => { %>
+                            <option value="<%= section.id %>" <%= filters.section_id === String(section.id) ? 'selected' : '' %>><%= section.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+                <div class="results-tracking-filter-actions">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Apply filters</button>
+                    <a href="/results/tracking" class="btn btn-outline">Clear</a>
+                </div>
+            </form>
+        </section>
+
+        <section class="results-tracking-list-section">
+            <div class="results-tracking-list-heading">
+                <div>
+                    <h2>Class and subject progress</h2>
+                    <p>Each row represents one class, subject, session and term combination.</p>
+                </div>
+                <span class="results-tracking-row-count"><%= rows.length %> tracked combinations</span>
+            </div>
+
+            <% if (rows.length) { %>
+                <div class="results-tracking-table-wrap">
+                    <table class="results-tracking-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">Class / Section</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Academic period</th>
+                                <th scope="col">Entry coverage</th>
+                                <th scope="col">Draft</th>
+                                <th scope="col">Submitted</th>
+                                <th scope="col">Approved</th>
+                                <th scope="col">Locked</th>
+                                <th scope="col">Published</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% rows.forEach(row => {
+                                const expected = Number(row.expected_count || 0);
+                                const recorded = Number(row.recorded_count || 0);
+                                const coverage = expected ? Math.min(100, Math.round(recorded / expected * 100)) : 0;
+                                const outstanding = Math.max(0, expected - recorded);
+                                let stage = 'Not started';
+                                let stageClass = 'is-idle';
+                                if (expected > 0 && Number(row.published_count) === expected) {
+                                    stage = 'Published'; stageClass = 'is-published';
+                                } else if (Number(row.published_count) > 0) {
+                                    stage = 'Partly published'; stageClass = 'is-published';
+                                } else if (Number(row.approved_count) > 0) {
+                                    stage = 'Approved'; stageClass = 'is-approved';
+                                } else if (Number(row.locked_count) > 0) {
+                                    stage = 'Locked'; stageClass = 'is-locked';
+                                } else if (Number(row.submitted_count) > 0) {
+                                    stage = 'Submitted'; stageClass = 'is-submitted';
+                                } else if (Number(row.draft_count) > 0) {
+                                    stage = 'Drafting'; stageClass = 'is-draft';
+                                }
+                            %>
+                                <tr>
+                                    <td>
+                                        <strong><%= row.class_name %></strong>
+                                        <small><%= row.section_name %></small>
+                                    </td>
+                                    <td><strong><%= row.subject_name %></strong></td>
+                                    <td>
+                                        <strong><%= row.term %></strong>
+                                        <small><%= row.session %></small>
+                                    </td>
+                                    <td>
+                                        <div class="results-tracking-coverage-label"><strong><%= recorded %> / <%= expected %></strong><span><%= coverage %>%</span></div>
+                                        <progress class="results-tracking-progress" aria-label="Result entry coverage for <%= row.class_name %> <%= row.subject_name %>" value="<%= coverage %>" max="100"><%= coverage %>%</progress>
+                                        <small class="results-tracking-outstanding"><%= outstanding %> not entered</small>
+                                    </td>
+                                    <td><span class="results-tracking-count is-draft"><%= row.draft_count %></span></td>
+                                    <td><span class="results-tracking-count is-submitted"><%= row.submitted_count %></span></td>
+                                    <td><span class="results-tracking-count is-approved"><%= row.approved_count %></span></td>
+                                    <td><span class="results-tracking-count is-locked"><%= row.locked_count %></span></td>
+                                    <td><span class="results-tracking-count is-published"><%= row.published_count %></span></td>
+                                    <td>
+                                        <span class="results-tracking-stage <%= stageClass %>"><%= stage %></span>
+                                        <a class="results-tracking-open" href="/results/manage?class_id=<%= encodeURIComponent(row.class_id) %>&subject_id=<%= encodeURIComponent(row.subject_id) %>&session=<%= encodeURIComponent(row.session) %>&term=<%= encodeURIComponent(row.term) %>">Open sheet <i class="bi bi-arrow-up-right"></i></a>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                </div>
+            <% } else { %>
+                <div class="results-tracking-empty">
+                    <i class="bi bi-clipboard2-data"></i>
+                    <h3>No result assignments found</h3>
+                    <p>There are no assigned class subjects matching these filters and your access permissions.</p>
+                    <a href="/results/manage" class="btn btn-primary">Open Result Entry</a>
+                </div>
+            <% } %>
+        </section>
+        <p class="results-tracking-note"><i class="bi bi-info-circle"></i> Counts reflect the latest saved result status. This page does not change, approve or publish results. Locked entries are shown separately and are not counted as published.</p>
+    </main>
+</div>
+<%- include('../partials/footer') %>

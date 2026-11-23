@@ -93,6 +93,10 @@ jobs:
         run: node tests/offline-sync-recovery.test.js
       - name: Run attendance offline register sync safety tests
         run: node tests/attendance-offline-register-sync.test.js
+      - name: Run result workflow tracking regression checks
+        run: npm run test:result-workflow-tracking
+      - name: Run existing Results UI regression checks
+        run: npm run test:acadme-results-ui
       - name: Run section-owned academic-records regression tests
         run: npm run test:section-owned
       - name: Run UI shell accessibility regression checks

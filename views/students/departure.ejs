@@ -1,17 +1,7 @@
 <%- include('../partials/header') %>
-<style>
-.departure-page{max-width:900px;margin:0 auto}.departure-card{padding:clamp(16px,3vw,28px);margin-top:20px}
-.departure-field{margin-bottom:18px;min-width:0}.departure-field label{display:block;font-weight:700;margin-bottom:7px}
-.departure-field input,.departure-field select{width:100%;min-width:0}
-.departure-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.departure-note{padding:13px 15px;border:1px solid #f2d6a5;background:#fff8e8;color:#81520c;border-radius:9px;margin:16px 0;line-height:1.5}
-.departure-alert{padding:12px;border-radius:8px;background:#fff0ef;color:#9b2720;border:1px solid #f2c5c1;margin:14px 0}
-.departure-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
-@media(max-width:640px){.departure-grid{grid-template-columns:1fr}.departure-actions>*{width:100%;text-align:center;justify-content:center}}
-</style>
 <div class="dashboard-container">
   <%- include('../partials/sidebar') %>
-  <main class="main-content"><div class="departure-page">
+  <main class="main-content"><div class="departure-page student-departure-page">
     <a href="/students/view/<%= student.id %>" style="color:var(--primary);text-decoration:none;font-weight:600">← Back to Student Profile</a>
     <header style="margin:18px 0 8px"><h1 style="margin:0">Record Student Departure</h1>
       <p style="color:var(--text-muted);margin:6px 0 0"><strong><%= student.first_name %> <%= student.last_name %></strong> · <%= student.admission_number || 'Admission pending' %></p></header>

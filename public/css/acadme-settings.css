@@ -1,0 +1,58 @@
+/* AcadMe School Settings and Promotion presentation layer. */
+.school-settings-page,.promotion-page{min-width:0}
+.school-settings-page .content-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)!important}
+.school-settings-page .content-header h1,.promotion-page .promotion-header h1{color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight)}
+.school-settings-page .content-header p,.promotion-page .promotion-header p{color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.school-settings-page .settings-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.8fr);gap:var(--acm-sp-16);align-items:start}
+.school-settings-page .settings-grid>.card{min-width:0;padding:clamp(14px,2.5vw,24px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.school-settings-page .settings-grid h3{color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:var(--acm-text-lg)}
+.school-settings-page .settings-grid h4{color:var(--acm-text-primary);font-size:var(--acm-text-base)}
+.school-settings-page .form-group{min-width:0}
+.school-settings-page .form-group label{color:var(--acm-text-primary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold)}
+.school-settings-page .form-control,.school-settings-page :is(input,select,textarea){max-width:100%;min-width:0;min-height:44px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.school-settings-page textarea{min-height:88px}
+.school-settings-page input[type=color]{min-height:40px;min-width:60px;padding:3px}
+.school-settings-page input[type=file]{width:100%;font-size:var(--acm-text-sm)}
+.school-settings-page .settings-preview-card{background:var(--acm-bg)!important}
+.school-settings-page .preview-box{max-width:100%;padding:clamp(16px,3vw,30px)!important;overflow-wrap:anywhere}
+.school-settings-page .settings-section-calendar-card,.school-settings-page .settings-promotion-card{grid-column:1/-1;min-width:0}
+.school-settings-page .settings-section-calendar-card form>div{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr))!important}
+.school-settings-page .settings-section-calendar-card form>div>div{min-width:0;border-radius:var(--acm-radius-md)!important}
+.school-settings-page .settings-section-calendar-card form>div>div>div{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+.school-settings-page .settings-promotion-card>div{gap:var(--acm-sp-16)}
+.school-settings-page .alert{border-radius:var(--acm-radius-sm);line-height:1.5}
+.school-settings-page :is(a,button,input,select,textarea):focus-visible,.promotion-page :is(a,button,input,select,textarea):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+.promotion-page{max-width:1440px}
+.promotion-page .promotion-header{margin-block-end:var(--acm-sp-16)}
+.promotion-page .promotion-header h1{margin:var(--acm-sp-12) 0 6px}
+.promotion-page .promotion-back{color:var(--acm-navy);font-weight:var(--acm-fw-semibold)}
+.promotion-page .promotion-config,.promotion-page .promotion-preview{padding:clamp(14px,2.5vw,24px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.promotion-page .promotion-session-grid{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr);gap:var(--acm-sp-12);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md)}
+.promotion-page .promotion-field,.promotion-page .promotion-target-field{min-width:0}
+.promotion-page .promotion-field label,.promotion-page .promotion-target-field label{color:var(--acm-text-primary);font-size:var(--acm-text-sm)}
+.promotion-page .promotion-field .form-control,.promotion-page .promotion-target-field .form-control{width:100%;min-width:0;min-height:44px;font-size:16px}
+.promotion-page .promotion-section-group,.promotion-page .promotion-preview-group{border-color:var(--acm-border);border-radius:var(--acm-radius-md)}
+.promotion-page .promotion-section-heading,.promotion-page .promotion-preview-group-header{gap:var(--acm-sp-8);flex-wrap:wrap}
+.promotion-page .promotion-class-card{grid-template-columns:minmax(130px,.8fr) minmax(220px,1.2fr);gap:var(--acm-sp-16)}
+.promotion-page .promotion-class-info,.promotion-page .promotion-target-field{min-width:0}
+.promotion-page .promotion-student-option{min-width:0;min-height:44px}
+.promotion-page .promotion-actions,.promotion-page .promotion-commit-bar{gap:var(--acm-sp-12)}
+.promotion-page .promotion-actions .btn,.promotion-page .promotion-commit-bar .btn{min-height:44px}
+.promotion-page .promotion-preview-content{max-height:620px;overflow:auto}
+@media(max-width:760px){
+ .school-settings-page .settings-grid{grid-template-columns:minmax(0,1fr)}
+ .school-settings-page .settings-section-calendar-card form>div>div>div{grid-template-columns:minmax(0,1fr)!important}
+ .school-settings-page .settings-promotion-card>div{align-items:flex-start!important;flex-direction:column}
+ .school-settings-page .settings-promotion-card .btn{width:100%;white-space:normal!important}
+ .promotion-page .promotion-session-grid{grid-template-columns:minmax(0,1fr)}
+ .promotion-page .promotion-session-arrow{display:none}
+ .promotion-page .promotion-class-card{grid-template-columns:minmax(0,1fr)}
+ .promotion-page .promotion-actions{flex-direction:column-reverse}
+ .promotion-page .promotion-actions>*{width:100%;text-align:center}
+ .promotion-page .promotion-selection-actions{width:100%;margin-left:0}
+ .promotion-page .promotion-selection-actions .btn{flex:1;min-width:0}
+ .promotion-page .promotion-totals{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .promotion-page .promotion-commit-bar{align-items:stretch;flex-direction:column}
+ .promotion-page .promotion-commit-bar .btn{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.school-settings-page *,.promotion-page *{scroll-behavior:auto}}

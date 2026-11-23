@@ -1,0 +1,51 @@
+/*
+ * AcadMe Academics module presentation.
+ * Scoped styling only; class, subject, section and session assignment workflows are unchanged.
+ */
+.main-content:is(.academics-page,.academics-edit-subject-page){min-width:0}
+.main-content:is(.academics-page,.academics-edit-subject-page) .content-header{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+.main-content:is(.academics-page,.academics-edit-subject-page) .content-header h1,.academics-edit-subject-page h1{color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight)}
+.main-content:is(.academics-page,.academics-edit-subject-page) .content-header p{color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.academics-page .stats-grid{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+.academics-page .stat-card,.academics-page .activity-feed,.academics-edit-subject-page>section.card{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.academics-page .stat-card{padding:var(--acm-sp-16)}
+.academics-page .stat-value{font-size:clamp(1.35rem,3vw,1.8rem);font-weight:var(--acm-fw-bold);color:var(--acm-text-primary)}
+.academics-page .stat-label{color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
+.academics-page .activity-feed{padding:clamp(14px,2vw,22px);overflow:hidden}
+.academics-page .activity-feed>div:first-child{gap:var(--acm-sp-12)!important;flex-wrap:wrap}
+.academics-page .activity-feed h3{margin:0;color:var(--acm-text-primary);font-size:var(--acm-text-lg);font-weight:var(--acm-fw-semibold)}
+.academics-page .activity-feed>div[id$="-form"]{background:var(--acm-bg)!important;border:1px solid var(--acm-border)!important;border-radius:var(--acm-radius-md)!important;padding:var(--acm-sp-16)!important}
+.academics-page :is(input,select,textarea),.academics-edit-subject-page :is(input,select,textarea){min-height:44px;min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.academics-page :is(input,select,textarea):focus-visible,.academics-edit-subject-page :is(input,select,textarea):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+.academics-page .btn,.academics-edit-subject-page .btn{min-height:40px;border-radius:var(--acm-radius-sm)}
+.academics-page .table-container{max-width:100%;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm)}
+.academics-page .data-table{font-size:var(--acm-text-sm)}
+.academics-page .data-table th{color:var(--acm-text-secondary);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.academics-page .data-table td{vertical-align:middle}
+.academics-page .data-table td:last-child form{display:inline-flex}
+.academics-page .data-table td:last-child :is(button,a){min-height:36px;display:inline-flex;align-items:center}
+.academics-page .data-table td:last-child form button{padding:4px 2px!important}
+.academics-page .activity-feed form.form-group{padding:10px 12px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);background:var(--acm-bg)}
+.academics-page .activity-feed form.grid-2,.academics-page .activity-feed form.grid-4{gap:var(--acm-sp-12)}
+.academics-edit-subject-page>section.card{max-width:600px;padding:clamp(16px,3vw,26px)}
+.academics-edit-subject-page .enroll-form{gap:var(--acm-sp-16)}
+.academics-edit-subject-page header a{color:var(--acm-navy);font-weight:var(--acm-fw-semibold);text-decoration:none}
+.academics-edit-subject-page header a:focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+#editClassModal .modal-content{border:1px solid var(--acm-border);border-radius:var(--acm-radius-lg);box-shadow:var(--acm-shadow-lg)}
+#editClassModal :is(input,select){min-height:44px;border-radius:var(--acm-radius-sm);font-size:16px}
+#editClassModal :is(button,input,select):focus-visible,.academics-page .activity-feed :is(button,a):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:760px){
+ .academics-page .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .academics-page .activity-feed form.grid-2,.academics-page .activity-feed form.grid-4{grid-template-columns:minmax(0,1fr)}
+ .academics-page .activity-feed form.grid-2 [style*="grid-column: span 2"],.academics-page .activity-feed form.grid-4 [style*="grid-column: span 4"]{grid-column:1/-1!important;flex-wrap:wrap}
+ .academics-page .activity-feed form.form-group{align-items:stretch!important}
+ .academics-page .activity-feed form.form-group select{max-width:100%!important;width:100%}
+}
+@media(max-width:480px){
+ .academics-page .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .academics-page .activity-feed{padding:var(--acm-sp-12)}
+ .academics-page .activity-feed>div:first-child .btn{width:auto;max-width:100%}
+ #editClassModal{padding:16px}
+ #editClassModal .modal-content{width:100%!important;padding:18px!important}
+}
+@media(prefers-reduced-motion:reduce){.academics-page *{scroll-behavior:auto}}

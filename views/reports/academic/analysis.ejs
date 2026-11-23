@@ -1,7 +1,7 @@
 <%- include('../../partials/header') %>
     <%- include('../../partials/sidebar') %>
 
-        <main class="main-content">
+        <main class="main-content academic-report-detail-page academic-analysis-report-page">
             <header class="content-header no-print">
                 <div class="header-left">
                     <a href="/reports/academic" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
@@ -102,7 +102,7 @@
                                     <td class="text-danger">
                                         <%= record.lowest_score === null ? '—' : record.lowest_score %>
                                     </td>
-                                    <td style="width: 150px;">
+                                    <td class="academic-pass-rate-cell">
                                         <% const passRate=(record.students_count > 0 && record.eligible_students_count > 0 ? (record.pass_count / record.eligible_students_count) * 100 : null); const
                                             color=passRate === null ? '#64748b' : (passRate >= 70 ? '#16a34a' : (passRate >= 50 ? '#ca8a04' : '#dc2626'));
                                             %>
@@ -132,57 +132,6 @@
                     <% } %>
         </main>
 
-        <style>
-            .filter-form {
-                display: flex;
-                gap: 20px;
-                align-items: flex-end;
-            }
 
-            .report-paper {
-                background: white;
-                padding: 40px;
-                border-radius: 4px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                max-width: 210mm;
-                margin: 0 auto;
-            }
-
-            .report-table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 0.9rem;
-            }
-
-            .report-table th,
-            .report-table td {
-                border: 1px solid #ddd;
-                padding: 10px;
-                text-align: left;
-            }
-
-            .report-table th {
-                background: #f8f9fa;
-            }
-
-            .text-success {
-                color: #16a34a;
-                font-weight: 500;
-            }
-
-            .text-danger {
-                color: #dc2626;
-                font-weight: 500;
-            }
-
-            @media print {
-                @page { size: A4 landscape; margin: 10mm; }
-                .no-print { display: none !important; }
-                .report-paper { position: static !important; width: 100% !important; box-shadow: none !important; padding: 0 !important; margin: 0 !important; }
-                .card { display: none !important; }
-                .report-table { width: 100% !important; border-collapse: collapse !important; display: table !important; }
-                .report-table th, .report-table td { border: 1px solid #000 !important; padding: 4px !important; }
-            }
-        </style>
 
         <%- include('../../partials/footer') %>

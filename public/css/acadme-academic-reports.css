@@ -1,0 +1,63 @@
+/* Academic report presentation only. Section ownership, result calculations and report data remain unchanged. */
+.academic-reports-index-page .academic-stat-results{background:var(--acm-info-bg);color:var(--acm-info)}
+.academic-reports-index-page .academic-stat-subjects{background:#dcfce7;color:#16a34a}
+.academic-reports-index-page .academic-stat-classes{background:#f3e8ff;color:#9333ea}
+.academic-report-detail-page{min-width:0}
+.academic-report-detail-page .content-header{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+.academic-report-detail-page .header-left{min-width:0}
+.academic-report-detail-page .header-actions{display:flex;flex-wrap:wrap;gap:var(--acm-sp-8)}
+.academic-report-detail-page .settings-card{padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.academic-report-detail-page .filter-form{display:flex;align-items:flex-end;gap:var(--acm-sp-12);flex-wrap:wrap}
+.academic-report-detail-page .filter-form .form-group{min-width:min(100%,190px);margin:0}
+.academic-report-detail-page .report-paper{width:100%;max-width:210mm;margin:var(--acm-sp-16) auto;padding:clamp(14px,3vw,36px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-sm);overflow-x:auto}
+.academic-report-detail-page .report-header{margin-block-end:var(--acm-sp-16);padding-block-end:var(--acm-sp-12);border-bottom:1px solid var(--acm-border);text-align:center}
+.academic-report-detail-page .report-header h2{margin:0 0 6px;color:var(--acm-text-primary);font-size:var(--acm-text-xl)}
+.academic-report-detail-page .report-header p{margin:4px 0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.academic-report-detail-page .report-table{width:100%;border-collapse:collapse;font-size:var(--acm-text-sm)}
+.academic-report-detail-page .report-table th,.academic-report-detail-page .report-table td{padding:10px;border:1px solid var(--acm-border);text-align:left;vertical-align:middle}
+.academic-report-detail-page .report-table th{background:var(--acm-surface);color:var(--acm-text-secondary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.academic-report-detail-page .academic-student-name{font-weight:var(--acm-fw-medium)}
+.academic-report-detail-page .academic-rank-column{width:64px}
+.academic-report-detail-page .rank-badge{display:inline-flex;width:30px;height:30px;align-items:center;justify-content:center;border-radius:50%;background:var(--acm-surface);color:var(--acm-text-secondary);font-weight:var(--acm-fw-bold)}
+.academic-report-detail-page .top-rank .rank-badge{color:#fff}
+.academic-report-detail-page .rank-1 .rank-badge{background:#eab308}
+.academic-report-detail-page .rank-2 .rank-badge{background:#94a3b8}
+.academic-report-detail-page .rank-3 .rank-badge{background:#b45309}
+.academic-report-detail-page .text-success{color:var(--acm-success);font-weight:var(--acm-fw-medium)}
+.academic-report-detail-page .text-danger{color:var(--acm-error);font-weight:var(--acm-fw-medium)}
+.academic-report-detail-page .academic-pass-rate-cell{min-width:150px}
+.academic-broadsheet-report-page .report-paper{max-width:none}
+.academic-broadsheet-report-page .table-container{width:100%;overflow:auto}
+.academic-broadsheet-report-page .broadsheet-table{width:100%;min-width:1000px;border-collapse:collapse;font-size:var(--acm-text-xs)}
+.academic-broadsheet-report-page .broadsheet-table th,.academic-broadsheet-report-page .broadsheet-table td{padding:5px;border:1px solid var(--acm-border);text-align:center}
+.academic-broadsheet-report-page .broadsheet-table .name-col{text-align:left;min-width:150px;font-weight:var(--acm-fw-medium);background:var(--acm-surface)}
+.academic-broadsheet-report-page .rotate-header{position:relative;height:120px;padding:0;white-space:nowrap;vertical-align:bottom}
+.academic-broadsheet-report-page .rotate-header>div{position:absolute;bottom:10px;left:50%;width:30px;transform:translate(0,0) rotate(270deg);transform-origin:center bottom}
+.academic-broadsheet-report-page .rotate-header>div>span{padding:5px 10px}
+.academic-broadsheet-report-page .fail{background:var(--acm-error-bg);color:var(--acm-error)}
+.academic-broadsheet-report-page .empty{background:var(--acm-surface);color:var(--acm-text-muted)}
+.academic-broadsheet-report-page .summary-col{border-left:2px solid var(--acm-border);background:var(--acm-info-bg);font-weight:var(--acm-fw-bold)}
+.academic-report-detail-page :is(a,button,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:760px){
+ .academic-report-detail-page .content-header{align-items:flex-start}
+ .academic-report-detail-page .header-actions{width:100%}
+ .academic-report-detail-page .header-actions :is(button,a){flex:1 1 auto}
+ .academic-report-detail-page .filter-form{display:grid;grid-template-columns:minmax(0,1fr)}
+ .academic-report-detail-page .filter-form .form-group{min-width:0;width:100%}
+ .academic-report-detail-page .report-paper{margin-block:var(--acm-sp-12)}
+ .academic-report-detail-page:not(.academic-broadsheet-report-page) .report-table{min-width:650px}
+}
+@media print{
+ .academic-report-detail-page .no-print,.academic-report-detail-page .sidebar,.academic-report-detail-page .sidebar-overlay,.academic-report-detail-page .mobile-topbar{display:none!important}
+ .academic-report-detail-page .report-paper{max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;overflow:visible}
+ .academic-report-detail-page.main-content{margin:0!important;padding:0!important;width:100%!important;max-width:100%!important}
+ .academic-report-detail-page .report-table{width:100%;border-collapse:collapse}
+ .academic-report-detail-page .report-table th,.academic-report-detail-page .report-table td{border:1px solid #000;padding:4px}
+ .academic-report-detail-page .rank-badge{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .academic-broadsheet-report-page .report-paper,.academic-broadsheet-report-page .table-container{overflow:visible!important;width:100%!important}
+ .academic-broadsheet-report-page .broadsheet-table{width:100%!important;min-width:0!important;border-collapse:collapse!important}
+ .academic-broadsheet-report-page .sticky-col{position:static!important;background:transparent!important}
+ .academic-broadsheet-report-page .rotate-header{height:auto!important}
+ .academic-broadsheet-report-page .rotate-header>div{position:static!important;width:auto!important;transform:none!important;font-size:.65rem!important}
+}
+@media(prefers-reduced-motion:reduce){.academic-report-detail-page *{scroll-behavior:auto!important}}

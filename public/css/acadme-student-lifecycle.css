@@ -1,0 +1,24 @@
+/* Presentation-only styles for existing student lifecycle workflows. */
+.main-content:has(.student-departure-page),.main-content:has(.student-transfer-page){min-width:0}
+.student-departure-page,.student-transfer-page{width:100%;max-width:900px;margin-inline:auto}
+.student-departure-page>a,.student-transfer-page>a{display:inline-flex;align-items:center;min-height:40px;color:var(--primary);font-weight:600;text-decoration:none}
+.student-departure-page>header,.student-transfer-page>header{margin:18px 0 8px!important}
+.student-departure-page>header h1,.student-transfer-page>header h1{margin:0;color:var(--acm-text-primary);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));line-height:var(--acm-lh-tight)}
+.student-departure-page>header p,.student-transfer-page>header p{color:var(--acm-text-secondary);font-size:var(--acm-text-sm);overflow-wrap:anywhere}
+.student-departure-page .departure-card,.student-transfer-page .transfer-card{min-width:0;margin-top:var(--acm-sp-16);padding:clamp(16px,3vw,28px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-xs)}
+.student-departure-page .departure-card h2,.student-transfer-page .transfer-card h2{color:var(--acm-text-primary);font-size:var(--acm-text-lg)}
+.student-departure-page .departure-card>p,.student-transfer-page .transfer-card>p{color:var(--acm-text-secondary);line-height:var(--acm-lh-relaxed)}
+.student-departure-page .departure-field,.student-transfer-page .transfer-field{min-width:0;margin-bottom:var(--acm-sp-16)}
+.student-departure-page .departure-field label,.student-transfer-page .transfer-field label{display:block;margin-bottom:var(--acm-sp-8);color:var(--acm-text-primary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold)}
+.student-departure-page .departure-field input,.student-departure-page .departure-field select,.student-transfer-page .transfer-field input,.student-transfer-page .transfer-field select,.student-transfer-page .transfer-field textarea{width:100%;min-width:0;min-height:44px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.student-departure-page .departure-field input:focus,.student-departure-page .departure-field select:focus,.student-transfer-page .transfer-field input:focus,.student-transfer-page .transfer-field select:focus{border-color:var(--acm-border-focus);box-shadow:var(--acm-focus-ring);outline:none}
+.student-departure-page .departure-grid,.student-transfer-page .transfer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--acm-sp-16)}
+.student-departure-page .departure-note,.student-transfer-page .transfer-note{margin:var(--acm-sp-16) 0;padding:var(--acm-sp-12) var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-bg-subtle);color:var(--acm-text-secondary);line-height:var(--acm-lh-relaxed)}
+.student-departure-page .departure-note ul{margin:var(--acm-sp-8) 0 0;padding-left:20px}
+.student-departure-page .departure-alert,.student-transfer-page .transfer-alert{margin:var(--acm-sp-12) 0;padding:var(--acm-sp-12) var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);background:var(--acm-bg-subtle);color:var(--acm-text-primary);line-height:var(--acm-lh-relaxed);overflow-wrap:anywhere}
+.student-departure-page .departure-actions,.student-transfer-page .transfer-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:var(--acm-sp-8)}
+.student-departure-page .departure-actions .btn,.student-transfer-page .transfer-actions .btn{min-height:44px;border-radius:var(--acm-radius-sm)}
+.student-departure-page .departure-field small,.student-transfer-page .transfer-field small{display:block;margin-top:var(--acm-sp-4);color:var(--acm-text-secondary);line-height:var(--acm-lh-normal)}
+.student-departure-page :focus-visible,.student-transfer-page :focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+@media(max-width:640px){.student-departure-page .departure-card,.student-transfer-page .transfer-card{padding:var(--acm-sp-16)}.student-departure-page .departure-grid,.student-transfer-page .transfer-grid{grid-template-columns:minmax(0,1fr);gap:0}.student-departure-page .departure-actions,.student-transfer-page .transfer-actions{display:grid;grid-template-columns:minmax(0,1fr)}.student-departure-page .departure-actions>*,.student-transfer-page .transfer-actions>*{width:100%;min-height:44px;text-align:center;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.student-departure-page *,.student-transfer-page *{scroll-behavior:auto!important;transition-duration:.01ms!important}}

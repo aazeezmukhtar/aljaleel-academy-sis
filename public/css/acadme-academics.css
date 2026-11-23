@@ -14,7 +14,7 @@
 .academics-page .activity-feed{padding:clamp(14px,2vw,22px);overflow:hidden}
 .academics-page .activity-feed>div:first-child{gap:var(--acm-sp-12)!important;flex-wrap:wrap}
 .academics-page .activity-feed h3{margin:0;color:var(--acm-text-primary);font-size:var(--acm-text-lg);font-weight:var(--acm-fw-semibold)}
-.academics-page .activity-feed>div[id$="-form"]{background:var(--acm-surface-subtle)!important;border:1px solid var(--acm-border)!important;border-radius:var(--acm-radius-md)!important;padding:var(--acm-sp-16)!important}
+.academics-page .activity-feed>div[id$="-form"]{background:var(--acm-bg)!important;border:1px solid var(--acm-border)!important;border-radius:var(--acm-radius-md)!important;padding:var(--acm-sp-16)!important}
 .academics-page :is(input,select,textarea),.academics-edit-subject-page :is(input,select,textarea){min-height:44px;min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
 .academics-page :is(input,select,textarea):focus-visible,.academics-edit-subject-page :is(input,select,textarea):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
 .academics-page .btn,.academics-edit-subject-page .btn{min-height:40px;border-radius:var(--acm-radius-sm)}
@@ -25,11 +25,11 @@
 .academics-page .data-table td:last-child form{display:inline-flex}
 .academics-page .data-table td:last-child :is(button,a){min-height:36px;display:inline-flex;align-items:center}
 .academics-page .data-table td:last-child form button{padding:4px 2px!important}
-.academics-page .activity-feed form.form-group{padding:10px 12px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);background:var(--acm-surface-subtle)}
+.academics-page .activity-feed form.form-group{padding:10px 12px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);background:var(--acm-bg)}
 .academics-page .activity-feed form.grid-2,.academics-page .activity-feed form.grid-4{gap:var(--acm-sp-12)}
 .academics-edit-subject-page>section.card{max-width:600px;padding:clamp(16px,3vw,26px)}
 .academics-edit-subject-page .enroll-form{gap:var(--acm-sp-16)}
-.academics-edit-subject-page header a{color:var(--acm-text-link);font-weight:var(--acm-fw-semibold);text-decoration:none}
+.academics-edit-subject-page header a{color:var(--acm-navy);font-weight:var(--acm-fw-semibold);text-decoration:none}
 .academics-edit-subject-page header a:focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
 #editClassModal .modal-content{border:1px solid var(--acm-border);border-radius:var(--acm-radius-lg);box-shadow:var(--acm-shadow-lg)}
 #editClassModal :is(input,select){min-height:44px;border-radius:var(--acm-radius-sm);font-size:16px}

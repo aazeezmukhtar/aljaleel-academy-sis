@@ -1,36 +1,7 @@
 <%- include('../partials/header') %>
-<style>
-    .attendance-closures .closures-heading { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:20px; }
-    .attendance-closures .closures-heading h1 { margin:8px 0 6px; line-height:1.2; }
-    .attendance-closures .closures-heading p { margin:0; max-width:680px; }
-    .attendance-closures .closures-back { display:inline-flex; align-items:center; gap:6px; padding:7px 10px; border:1px solid var(--border-color,#e5e7eb); border-radius:9px; text-decoration:none; font-weight:600; }
-    .attendance-closures .closures-panel { min-width:0; padding:20px; margin-bottom:18px; }
-    .attendance-closures .closures-panel > h2 { margin-bottom:6px; }
-    .attendance-closures .closures-intro { max-width:760px; line-height:1.5; }
-    .attendance-closures .closures-form { margin-top:16px; }
-    .attendance-closures .closures-form .form-control,
-    .attendance-closures .closures-form .form-select { min-width:0; }
-    .attendance-closures .closures-submit { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
-    .attendance-closures .closures-list-header { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:8px; margin-bottom:14px; }
-    .attendance-closures .closures-count { padding:5px 9px; border-radius:999px; background:var(--surface-muted,rgba(127,127,127,.08)); font-size:.82rem; font-weight:600; }
-    .attendance-closures .closures-table-wrap { border:1px solid var(--border-color,#e5e7eb); border-radius:10px; }
-    .attendance-closures .closures-table { margin:0; }
-    .attendance-closures .closures-table thead th { white-space:nowrap; color:var(--text-muted); font-size:.82rem; background:var(--surface-muted,rgba(127,127,127,.06)); }
-    .attendance-closures .closures-table tbody td { vertical-align:middle; }
-    .attendance-closures .closures-table .closures-reason { min-width:180px; max-width:360px; white-space:normal; overflow-wrap:anywhere; }
-    .attendance-closures .closures-actions { display:flex; flex-wrap:wrap; gap:6px; }
-    .attendance-closures .closures-empty { padding:18px; border:1px dashed var(--border-color,#e5e7eb); border-radius:10px; color:var(--text-muted); }
-    @media (max-width:600px) {
-        .attendance-closures .closures-panel { padding:14px; margin-bottom:14px; }
-        .attendance-closures .closures-heading { margin-bottom:16px; }
-        .attendance-closures .closures-submit { align-items:stretch; flex-direction:column; }
-        .attendance-closures .closures-submit .btn { width:100%; }
-        .attendance-closures .closures-submit #closure-request-feedback { margin:0 !important; }
-    }
-</style>
 <div class="dashboard-container">
     <%- include('../partials/sidebar') %>
-    <main class="main-content attendance-closures">
+    <main class="main-content attendance-closures attendance-closures-page">
         <header class="closures-heading">
             <div>
                 <a href="/attendance" class="closures-back"><i class="bi bi-arrow-left"></i> Attendance</a>

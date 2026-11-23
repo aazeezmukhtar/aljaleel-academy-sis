@@ -5,7 +5,7 @@ const header=read('views/partials/header.ejs');
 assert.ok(header.indexOf('acadme-health-reports.css')>header.indexOf('acadme-student-reports.css'),'Health reports stylesheet must load after shared report styles');
 const css=read('public/css/acadme-health-reports.css');
 const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\w-]+)\s*:/g)].map(m=>m[1]));
-for(const m of css.matchAll(/var\\((--acm-[\w-]+)/g))assert.ok(tokens.has(m[1]),'Undefined token '+m[1]);
+for(const m of css.matchAll(/var\((--acm-[\w-]+)/g))assert.ok(tokens.has(m[1]),'Undefined token '+m[1]);
 for(const [file,scope] of [
  ['views/reports/health/index.ejs','health-reports-index-page'],
  ['views/reports/health/alerts.ejs','health-alerts-page'],

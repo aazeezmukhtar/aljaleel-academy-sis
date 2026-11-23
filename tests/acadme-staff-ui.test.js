@@ -9,13 +9,13 @@ const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const header = read('views/partials/header.ejs');
 const layers = ['acadme-tokens.css','acadme-components.css','acadme-shells.css','acadme-students.css','acadme-attendance.css','acadme-results.css','acadme-finance.css','acadme-academics.css','acadme-staff.css'].map(file => header.indexOf(file));
 assert.ok(layers.every((value,index)=>value>=0&&(index===0||value>layers[index-1])), 'Staff styles must load after shared and feature layers');
-assert.doesNotMatch(header,/\\n\\s*<link[^>]*acadme-staff/);
+assert.doesNotMatch(header,/\n\s*<link[^>]*acadme-staff/);
 
 const css=read('public/css/acadme-staff.css');
-const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\\w-]+)\\s*:/g)].map(m=>m[1]));
-for(const m of css.matchAll(/var\\((--acm-[\\w-]+)/g)) assert.ok(tokens.has(m[1]), 'Undefined AcadMe token: '+m[1]);
-assert.match(css,/@media\\(max-width:760px\\)/);
-assert.match(css,/@media\\(prefers-reduced-motion:reduce\\)/);
+const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\w-]+)\s*:/g)].map(m=>m[1]));
+for(const m of css.matchAll(/var\((--acm-[\w-]+)/g)) assert.ok(tokens.has(m[1]), 'Undefined AcadMe token: '+m[1]);
+assert.match(css,/@media\(max-width:760px\)/);
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 
 const pages = [
  ['views/staff/index.ejs','staff-directory-page',['/staff/add','/staff/view/','staff-directory-search','staff-role-filter','staff-status-filter']],

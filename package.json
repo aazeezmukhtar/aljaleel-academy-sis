@@ -54,7 +54,8 @@
     "test:acadme-students-ui": "node tests/acadme-students-ui.test.js",
     "test:acadme-attendance-ui": "node tests/acadme-attendance-ui.test.js",
     "test:staff-information-migration": "node tests/staff-information-migration.test.js",
-    "test:staff-information-self-service": "node tests/staff-information-self-service.test.js"
+    "test:staff-information-self-service": "node tests/staff-information-self-service.test.js",
+    "test:acadme-results-ui": "node tests/acadme-results-ui.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

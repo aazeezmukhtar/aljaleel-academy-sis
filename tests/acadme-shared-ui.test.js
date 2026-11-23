@@ -1,0 +1,21 @@
+'use strict';
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+const tokens = read('public/css/acadme-tokens.css');
+const components = read('public/css/acadme-components.css');
+const staffHead = read('views/partials/header.ejs');
+const studentHead = read('views/partials/student_shell_head.ejs');
+
+assert.match(tokens, /--acm-text-base/);
+assert.match(components, /\.acm-page-header/);
+assert.match(components, /\.acm-btn-primary/);
+assert.match(components, /\.acm-field/);
+assert.match(components, /prefers-reduced-motion/);
+assert.ok(staffHead.indexOf('acadme-tokens.css') < staffHead.indexOf('acadme-components.css'));
+assert.ok(staffHead.indexOf('acadme-components.css') < staffHead.indexOf('staff-admin-modern.css'));
+assert.ok(studentHead.indexOf('acadme-tokens.css') < studentHead.indexOf('acadme-components.css'));
+assert.ok(studentHead.indexOf('acadme-components.css') < studentHead.indexOf('student-portal.css'));
+assert.ok(!staffHead.includes('>\\\\n    <link'));
+console.log('PASS: shared AcadMe component layer loads in staff/admin and student shells');

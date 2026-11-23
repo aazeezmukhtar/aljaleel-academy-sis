@@ -9,13 +9,13 @@ const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const header = read('views/partials/header.ejs');
 const layers = ['acadme-tokens.css','acadme-components.css','acadme-shells.css','acadme-students.css','acadme-attendance.css','acadme-results.css','acadme-finance.css','acadme-academics.css'].map(file => header.indexOf(file));
 assert.ok(layers.every((value,index)=>value>=0&&(index===0||value>layers[index-1])), 'Academics styles must load after shared and prior feature layers');
-assert.doesNotMatch(header,/\\n\\s*<link[^>]*acadme-academics/);
+assert.doesNotMatch(header,/\n\s*<link[^>]*acadme-academics/);
 
 const css=read('public/css/acadme-academics.css');
-const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\\w-]+)\\s*:/g)].map(m=>m[1]));
-for(const m of css.matchAll(/var\\((--acm-[\\w-]+)/g)) assert.ok(tokens.has(m[1]), 'Undefined AcadMe token: '+m[1]);
-assert.match(css,/@media\\(max-width:760px\\)/);
-assert.match(css,/@media\\(prefers-reduced-motion:reduce\\)/);
+const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\w-]+)\s*:/g)].map(m=>m[1]));
+for(const m of css.matchAll(/var\((--acm-[\w-]+)/g)) assert.ok(tokens.has(m[1]), 'Undefined AcadMe token: '+m[1]);
+assert.match(css,/@media\(max-width:760px\)/);
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 
 const index=read('views/academics/index.ejs');
 assert.match(index,/class="main-content academics-page"/);
@@ -30,7 +30,7 @@ ejs.compile(index,{filename:path.join(__dirname,'..','views/academics/index.ejs'
 
 const edit=read('views/academics/edit-subject.ejs');
 assert.match(edit,/class="main-content academics-edit-subject-page"/);
-assert.match(edit,/action="\\/academics\\/subjects\\/update\\//);
+assert.match(edit,/action="\/academics\/subjects\/update\//);
 assert.match(edit,/name="name"/);
 assert.match(edit,/name="code"/);
 ejs.compile(edit,{filename:path.join(__dirname,'..','views/academics/edit-subject.ejs')});

@@ -443,3 +443,48 @@
         font-size: .72rem !important;
     }
 }
+
+/* Compact shared mobile header — aligned with the supplied AcadMe references */
+@media (max-width: 991px) {
+    .mobile-topbar {
+        height: 68px !important;
+        min-height: 68px !important;
+        padding: 0 18px !important;
+        gap: 12px !important;
+    }
+    .mobile-topbar .mobile-hamburger {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        flex: 0 0 44px !important;
+        border-radius: 15px !important;
+        font-size: 1.35rem !important;
+    }
+    .mobile-topbar .mobile-topbar-title {
+        font-size: 1.12rem !important;
+        line-height: 1.2 !important;
+        font-weight: 750 !important;
+        letter-spacing: -.035em !important;
+    }
+    .mobile-topbar .mobile-topbar-actions .notification-bell-container {
+        width: 44px !important;
+        height: 44px !important;
+        min-width: 44px !important;
+        min-height: 44px !important;
+        border-radius: 15px !important;
+    }
+    .mobile-topbar .mobile-topbar-actions .notification-bell-container > i {
+        font-size: 1.12rem !important;
+    }
+}
+@media (max-width: 640px) {
+    .mobile-topbar {
+        height: 64px !important;
+        min-height: 64px !important;
+        padding-inline: 16px !important;
+    }
+    .main-content {
+        padding-top: 84px !important;
+    }
+}

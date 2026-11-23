@@ -117,3 +117,10 @@ check('mobile dashboard tiles use compact typography and attendance content stay
   assert.match(dashboardCss, /admin-attendance-stat \.stat-content\s*\{[\s\S]*?width: calc\(100% - 78px\) !important/);
   assert.match(dashboardCss, /admin-attendance-stat::after\s*\{[\s\S]*?width: 66px !important/);
 });
+
+
+check('shared mobile header uses compact reference-sized dimensions', () => {
+  assert.match(dashboardCss, /\.mobile-topbar\s*\{[\s\S]*?height: 64px !important/);
+  assert.match(dashboardCss, /mobile-hamburger\s*\{[\s\S]*?width: 44px !important/);
+  assert.match(dashboardCss, /mobile-topbar-title\s*\{[\s\S]*?font-size: 1\.12rem !important/);
+});

@@ -73,8 +73,10 @@
     top: 50%;
     width: 116px;
     height: 116px;
-    border: 12px solid #fbbf24;
-    border-left-color: rgba(255,255,255,.18);
+    border: 0;
+    background: conic-gradient(#fbbf24 0 var(--attendance-percent, 0%), rgba(255,255,255,.18) var(--attendance-percent, 0%) 100%);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 12px), #000 calc(100% - 11px));
     border-radius: 50%;
     transform: translateY(-50%) rotate(-35deg);
 }
@@ -102,7 +104,7 @@
 .admin-dashboard-shell .admin-attendance-stat .stat-content h3 { color: #fff; }
 .admin-dashboard-shell .admin-gender-stat .stat-content { display: flex; flex-direction: row; align-items: center; gap: 22px; }
 .admin-dashboard-shell .admin-gender-stat .stat-content > div { gap: 20px !important; }
-.admin-dashboard-shell .admin-gender-stat .stat-content::after { content: ""; display: block; height: 8px; width: 100%; margin-top: 12px; border-radius: 99px; background: linear-gradient(90deg, #5145e5 0 52.8%, #d81b70 52.8% 100%); }
+.admin-dashboard-shell .gender-distribution-bar { height: 8px; width: 100%; margin-top: 12px; border-radius: 99px; background: linear-gradient(90deg, #5145e5 0 var(--male-share, 0%), #d81b70 var(--male-share, 0%) 100%); }
 .admin-dashboard-shell .admin-gender-stat .stat-content h3 { color: #4f46e5; }
 .admin-dashboard-shell .admin-gender-stat .stat-content h3[title="Female"] { color: #c2185b; }
 .admin-dashboard-shell .admin-quick-actions { margin-top: 32px; }
@@ -235,3 +237,7 @@
 @media (prefers-reduced-motion: reduce) {
     .admin-dashboard-shell *, .staff-dashboard-shell * { transition-duration: .01ms !important; }
 }
+
+.admin-dashboard-shell .attendance-stat-link { display: inline-flex; align-items: center; width: fit-content; margin-top: 10px; padding: 9px 16px; border-radius: 999px; color: #fff; background: rgba(255,255,255,.18); font-size: .9rem; font-weight: 700; text-decoration: none; transition: background .18s ease; }
+.admin-dashboard-shell .attendance-stat-link:hover { background: rgba(255,255,255,.28); }
+.admin-dashboard-shell .attendance-stat-link:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }

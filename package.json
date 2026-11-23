@@ -65,7 +65,8 @@
     "test:acadme-settings-ui": "node tests/acadme-settings-ui.test.js",
     "test:acadme-student-portal-ui": "node tests/acadme-student-portal-ui.test.js",
     "test:acadme-auth-ui": "node tests/acadme-auth-ui.test.js",
-    "test:acadme-student-lifecycle-ui": "node tests/acadme-student-lifecycle-ui.test.js"
+    "test:acadme-student-lifecycle-ui": "node tests/acadme-student-lifecycle-ui.test.js",
+    "test:acadme-staff-board-ui": "node tests/acadme-staff-board-ui.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

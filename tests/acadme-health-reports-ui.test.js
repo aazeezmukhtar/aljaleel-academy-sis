@@ -4,13 +4,13 @@ const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
 const header=read('views/partials/header.ejs');
 assert.ok(header.indexOf('acadme-health-reports.css')>header.indexOf('acadme-student-reports.css'),'Health reports stylesheet must load after shared report styles');
 const css=read('public/css/acadme-health-reports.css');
-const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\\w-]+)\\s*:/g)].map(m=>m[1]));
-for(const m of css.matchAll(/var\\((--acm-[\\w-]+)/g))assert.ok(tokens.has(m[1]),'Undefined token '+m[1]);
+const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\w-]+)\s*:/g)].map(m=>m[1]));
+for(const m of css.matchAll(/var\\((--acm-[\w-]+)/g))assert.ok(tokens.has(m[1]),'Undefined token '+m[1]);
 for(const [file,scope] of [
  ['views/reports/health/index.ejs','health-reports-index-page'],
  ['views/reports/health/alerts.ejs','health-alerts-page'],
  ['views/reports/health/contacts.ejs','health-contacts-page']
-]){const s=read(file);assert.ok(s.includes(scope),'Missing page scope '+scope);assert.ok(!/<style[\\s>]/i.test(s),'Inline style block remains in '+file);}
+]){const s=read(file);assert.ok(s.includes(scope),'Missing page scope '+scope);assert.ok(!/<style[\s>]/i.test(s),'Inline style block remains in '+file);}
 const index=read('views/reports/health/index.ejs');
 for(const v of ['stats.students_with_conditions','stats.students_with_allergies','stats.blood_group_a','/reports/health/alerts','/reports/health/contacts'])assert.ok(index.includes(v),'Health overview content missing '+v);
 const alerts=read('views/reports/health/alerts.ejs');

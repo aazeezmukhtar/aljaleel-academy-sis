@@ -54,7 +54,7 @@
                         </div>
                     </div>
 
-                    <div class="stat-card admin-attendance-stat">
+                    <div class="stat-card admin-attendance-stat" style="--attendance-percent: <%= Math.min(100, Math.max(0, Number(String(stats.attendance).replace('%', '')) || 0)) %>%;">
                         <div class="stat-icon" style="background: linear-gradient(135deg, #3b82f6, #2563eb);">
                             <i class="bi bi-calendar-check-fill"></i>
                         </div>
@@ -63,6 +63,7 @@
                                 <%= stats.attendance === 'N/A' ? '—' : stats.attendance %>
                             </h3>
                             <p>Attendance Today</p>
+                            <a class="attendance-stat-link" href="/attendance">View attendance</a>
                         </div>
                     </div>
 
@@ -96,6 +97,7 @@
                         </div>
                     </div>
 
+                    <% const maleGenderCount = Number(stats.genderSummary.Male) || 0; const femaleGenderCount = Number(stats.genderSummary.Female) || 0; const genderTotal = maleGenderCount + femaleGenderCount; const maleGenderPercent = genderTotal ? (maleGenderCount / genderTotal) * 100 : 0; %>
                     <div class="stat-card admin-gender-stat">
                         <div class="stat-icon" style="background: linear-gradient(135deg, #ec4899, #db2777);">
                             <i class="bi bi-gender-ambiguous"></i>
@@ -110,6 +112,7 @@
                                 </h3>
                             </div>
                             <p>Students by Gender</p>
+                            <div class="gender-distribution-bar" role="img" aria-label="<%= maleGenderCount %> male and <%= femaleGenderCount %> female students" style="--male-share: <%= maleGenderPercent %>%;"></div>
                         </div>
                     </div>
                 </section>

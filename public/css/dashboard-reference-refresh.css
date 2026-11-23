@@ -1,0 +1,230 @@
+/* Reference-led Admin and Teacher dashboard layouts. Presentation only. */
+.dashboard-eyebrow {
+    display: block;
+    margin-bottom: 7px;
+    color: #5145e5;
+    font-size: .76rem;
+    font-weight: 800;
+    letter-spacing: .12em;
+}
+.admin-dashboard-shell,
+.staff-dashboard-shell { background: #f3f5fb; }
+.admin-dashboard-shell .main-content,
+.staff-dashboard-shell .main-content { max-width: 1320px; }
+.admin-dashboard-shell .content-header,
+.staff-dashboard-shell .content-header { margin-bottom: 26px; }
+.admin-dashboard-shell .content-header h1,
+.staff-dashboard-shell .content-header h1 {
+    color: #121a2d;
+    font-size: clamp(1.65rem, 3vw, 2.25rem);
+}
+.admin-dashboard-shell .content-header p,
+.staff-dashboard-shell .content-header p { color: #71819c; }
+.admin-dashboard-shell .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+.admin-dashboard-shell .stats-grid > .stat-card {
+    position: relative;
+    min-height: 166px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 24px;
+    border: 0;
+    border-radius: 26px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(20,35,65,.045);
+}
+.admin-dashboard-shell .stats-grid > .admin-attendance-stat {
+    grid-column: span 2;
+    grid-row: span 2;
+    min-height: 350px;
+    justify-content: center;
+    padding: 32px;
+    overflow: hidden;
+    color: #fff;
+    background: #4338ca;
+}
+.admin-dashboard-shell .admin-attendance-stat .stat-icon { display: none; }
+.admin-dashboard-shell .admin-attendance-stat .stat-content { position: relative; z-index: 1; }
+.admin-dashboard-shell .admin-attendance-stat .stat-content h3 {
+    color: #fff;
+    font-size: clamp(2.5rem, 5vw, 3.35rem);
+    font-weight: 800;
+}
+.admin-dashboard-shell .admin-attendance-stat .stat-content p {
+    color: rgba(255,255,255,.82);
+    font-size: 1rem;
+    font-weight: 700;
+}
+.admin-dashboard-shell .admin-attendance-stat::after {
+    content: "";
+    position: absolute;
+    right: 9%;
+    top: 50%;
+    width: 116px;
+    height: 116px;
+    border: 12px solid #fbbf24;
+    border-left-color: rgba(255,255,255,.18);
+    border-radius: 50%;
+    transform: translateY(-50%) rotate(-35deg);
+}
+.admin-dashboard-shell .stats-grid > .admin-gender-stat {
+    grid-column: span 4;
+    min-height: 142px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+}
+.admin-dashboard-shell .stat-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    background: #e4e9ff !important;
+    color: #4f46e5;
+    font-size: 1.35rem;
+}
+.admin-dashboard-shell .stats-grid > .stat-card:nth-child(1) .stat-icon { background: #fff2d6 !important; color: #c45a00; }
+.admin-dashboard-shell .stats-grid > .stat-card:nth-child(2) .stat-icon { background: #d9f7ec !important; color: #00866a; }
+.admin-dashboard-shell .stats-grid > .stat-card:nth-child(4) .stat-icon { background: #d9f7ec !important; color: #00866a; }
+.admin-dashboard-shell .stat-content h3 { font-size: 2rem; font-weight: 800; color: #121a2d; }
+.admin-dashboard-shell .stat-content p { color: #71819c; font-size: .96rem; }
+.admin-dashboard-shell .admin-attendance-stat .stat-content h3 { color: #fff; }
+.admin-dashboard-shell .admin-gender-stat .stat-content { display: flex; flex-direction: row; align-items: center; gap: 22px; }
+.admin-dashboard-shell .admin-gender-stat .stat-content > div { gap: 20px !important; }
+.admin-dashboard-shell .admin-gender-stat .stat-content h3 { color: #4f46e5; }
+.admin-dashboard-shell .admin-gender-stat .stat-content h3[title="Female"] { color: #c2185b; }
+.admin-dashboard-shell .admin-quick-actions { margin-top: 32px; }
+.admin-dashboard-shell .admin-quick-actions .grid-4 { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 16px; }
+.admin-dashboard-shell .admin-quick-actions .card {
+    min-height: 174px;
+    border: 0;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(20,35,65,.045);
+}
+.admin-dashboard-shell .admin-dashboard-panels { grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); gap: 20px; }
+.admin-dashboard-shell .admin-dashboard-panels > .card,
+.admin-dashboard-shell .admin-dashboard-panels > div > .card {
+    border: 0;
+    border-radius: 24px;
+    box-shadow: 0 2px 5px rgba(20,35,65,.045);
+}
+.staff-dashboard-shell .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4,minmax(0,1fr));
+    gap: 16px;
+}
+.staff-dashboard-shell .stats-grid > .stat-card {
+    min-height: 166px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 24px;
+    border: 0;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(20,35,65,.045);
+}
+.staff-dashboard-shell .stat-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 17px;
+    background: #e2e8ff !important;
+    color: #4f46e5;
+}
+.staff-dashboard-shell .stats-grid > .stat-card:nth-child(2) .stat-icon { background: #d9f7ec !important; color: #00866a; }
+.staff-dashboard-shell .stats-grid > .stat-card:nth-child(3) .stat-icon { background: #fff2d6 !important; color: #c45a00; }
+.staff-dashboard-shell .stats-grid > .stat-card:nth-child(4) .stat-icon { background: #fce2ef !important; color: #c2185b; }
+.staff-dashboard-shell .stat-content h3 { color: #121a2d; font-size: 1.9rem; font-weight: 800; }
+.staff-dashboard-shell .stat-content p { color: #71819c; }
+.staff-dashboard-shell .teacher-dashboard-panels {
+    display: grid;
+    grid-template-columns: repeat(2,minmax(0,1fr));
+    gap: 20px;
+    margin-top: 24px !important;
+}
+.staff-dashboard-shell .teacher-dashboard-panels > .card {
+    border: 0;
+    border-radius: 24px;
+    background: #fff;
+    box-shadow: 0 2px 5px rgba(20,35,65,.045);
+    padding: 24px;
+}
+.staff-dashboard-shell .teacher-dashboard-panels > .card:nth-child(3) { grid-column: 1 / -1; }
+.staff-dashboard-shell .clickable-class-item,
+.staff-dashboard-shell .teacher-dashboard-panels .list-item {
+    min-height: 64px;
+    border-bottom-color: #e1e7f1 !important;
+}
+.staff-dashboard-shell .clickable-class-item strong,
+.staff-dashboard-shell .teacher-dashboard-panels .list-item strong { color: #172033 !important; font-size: .98rem !important; }
+.staff-dashboard-shell .teacher-dashboard-panels .card-header { border-bottom: 1px solid #e1e7f1; padding-bottom: 12px; }
+.staff-dashboard-shell .teacher-dashboard-panels .btn {
+    border-radius: 16px;
+    border-color: #c7d2fe;
+    color: #4338ca;
+    background: #f0f2ff;
+}
+.staff-dashboard-shell section[style*="margin-top: 40px"] .card {
+    border: 0;
+    border-radius: 24px;
+    box-shadow: 0 2px 5px rgba(20,35,65,.045);
+}
+@media (max-width: 991px) {
+    .admin-dashboard-shell .stats-grid,
+    .staff-dashboard-shell .stats-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .admin-dashboard-shell .stats-grid > .admin-attendance-stat { grid-column: 1 / -1; grid-row: auto; min-height: 190px; }
+    .admin-dashboard-shell .stats-grid > .admin-gender-stat { grid-column: 1 / -1; }
+    .admin-dashboard-shell .admin-quick-actions .grid-4 { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .admin-dashboard-shell .admin-dashboard-panels { grid-template-columns: minmax(0,1fr); }
+    .staff-dashboard-shell .teacher-dashboard-panels { grid-template-columns: minmax(0,1fr); }
+    .staff-dashboard-shell .teacher-dashboard-panels > .card:nth-child(3) { grid-column: auto; }
+}
+@media (max-width: 640px) {
+    .admin-dashboard-shell .content-header,
+    .staff-dashboard-shell .content-header { margin-bottom: 20px; }
+    .admin-dashboard-shell .stats-grid,
+    .staff-dashboard-shell .stats-grid { gap: 12px; }
+    .admin-dashboard-shell .stats-grid > .stat-card,
+    .staff-dashboard-shell .stats-grid > .stat-card {
+        min-height: 148px;
+        padding: 20px;
+        border-radius: 24px;
+    }
+    .admin-dashboard-shell .stats-grid > .admin-attendance-stat {
+        min-height: 174px;
+        padding: 24px;
+        border-radius: 28px;
+    }
+    .admin-dashboard-shell .admin-attendance-stat::after {
+        width: 88px; height: 88px; border-width: 9px; right: 8%;
+    }
+    .admin-dashboard-shell .stats-grid > .admin-gender-stat {
+        min-height: 128px;
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 10px;
+    }
+    .admin-dashboard-shell .admin-gender-stat .stat-content { width: 100%; flex-direction: column; align-items: flex-start; gap: 6px; }
+    .admin-dashboard-shell .admin-gender-stat .stat-content > div { gap: 16px !important; }
+    .admin-dashboard-shell .admin-gender-stat .stat-content h3 { font-size: 1.55rem; }
+    .admin-dashboard-shell .admin-quick-actions { margin-top: 28px; }
+    .admin-dashboard-shell .admin-quick-actions .grid-4 { gap: 12px; }
+    .admin-dashboard-shell .admin-quick-actions .card { min-height: 150px; border-radius: 24px; }
+    .admin-dashboard-shell .admin-dashboard-panels { gap: 16px; }
+    .staff-dashboard-shell .stats-grid > .stat-card { min-height: 146px; padding: 18px; }
+    .staff-dashboard-shell .teacher-dashboard-panels { gap: 18px; }
+    .staff-dashboard-shell .teacher-dashboard-panels > .card { padding: 20px; border-radius: 24px; }
+    .staff-dashboard-shell .teacher-dashboard-panels .card-header { align-items: center !important; }
+    .dashboard-eyebrow { margin-bottom: 5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+    .admin-dashboard-shell *, .staff-dashboard-shell * { transition-duration: .01ms !important; }
+}

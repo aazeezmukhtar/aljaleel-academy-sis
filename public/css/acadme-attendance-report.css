@@ -1,0 +1,41 @@
+/* AcadMe Attendance Reports presentation; scoped to the staff report screen. */
+.attendance-report-page{min-width:0}
+.attendance-report-page .attendance-report-header{margin-bottom:var(--acm-sp-20)}
+.attendance-report-page .attendance-report-back{display:inline-flex;align-items:center;gap:var(--acm-sp-8);color:var(--acm-text-secondary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold);text-decoration:none}
+.attendance-report-page .attendance-report-back:hover{color:var(--acm-navy);text-decoration:underline}
+.attendance-report-page .attendance-report-header h1{margin:var(--acm-sp-8) 0 var(--acm-sp-4);color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight)}
+.attendance-report-page .attendance-report-header p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.attendance-report-page .attendance-report-filters{margin-bottom:var(--acm-sp-20);padding:var(--acm-sp-20);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.attendance-report-page .attendance-report-filter-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--acm-sp-16);align-items:end}
+.attendance-report-page .attendance-report-filter-grid .form-group{min-width:0;margin:0}
+.attendance-report-page .attendance-report-filter-grid label{display:block;margin-bottom:var(--acm-sp-8);color:var(--acm-text-primary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold)}
+.attendance-report-page .attendance-report-filter-grid .form-control{min-height:44px;border-color:var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.attendance-report-page .attendance-report-filter-grid .form-control:focus{border-color:var(--acm-border-focus);box-shadow:var(--acm-focus-ring)}
+.attendance-report-page .attendance-report-submit{grid-column:1/-1;width:100%;min-height:44px;border-radius:var(--acm-radius-sm)}
+.attendance-report-page .attendance-report-no-classes{padding:var(--acm-sp-8);border:1px dashed var(--acm-error-border);border-radius:var(--acm-radius-sm);color:var(--acm-error);font-size:var(--acm-text-xs)}
+.attendance-report-page .attendance-report-summary{margin-bottom:var(--acm-sp-16);padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.attendance-report-page .attendance-report-threshold-alert{margin-bottom:var(--acm-sp-12)}
+.attendance-report-page .attendance-report-summary-meta{display:flex;flex-wrap:wrap;align-items:center;gap:var(--acm-sp-12) var(--acm-sp-20)}
+.attendance-report-page .attendance-report-summary-meta>span{padding:var(--acm-sp-8) var(--acm-sp-12);border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);background:var(--acm-bg);color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.attendance-report-page .attendance-report-summary-meta strong{color:var(--acm-text-primary)}
+.attendance-report-page .attendance-report-summary-note{margin:var(--acm-sp-12) 0 0;color:var(--acm-text-secondary);font-size:var(--acm-text-xs);line-height:var(--acm-lh-base)}
+.attendance-report-page .attendance-report-results{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.attendance-report-page .attendance-report-table-wrap{width:100%;min-width:0;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.attendance-report-page .attendance-report-table-wrap .data-table{min-width:680px}
+.attendance-report-page .attendance-report-table-wrap .data-table th{white-space:nowrap;font-size:var(--acm-text-xs)}
+.attendance-report-page .attendance-report-table-wrap .data-table td{vertical-align:middle;font-size:var(--acm-text-sm)}
+.attendance-report-page .attendance-report-table-wrap .data-table tbody tr:hover{background:var(--acm-bg)}
+.attendance-report-page .attendance-report-align-center{text-align:center}
+.attendance-report-page .attendance-report-value--present,.attendance-report-page .attendance-report-index--healthy{color:var(--acm-success)}
+.attendance-report-page .attendance-report-value--late{color:var(--acm-warning)}
+.attendance-report-page .attendance-report-value--absent,.attendance-report-page .attendance-report-index--below{color:var(--acm-error)}
+.attendance-report-page .attendance-report-value--leave{color:var(--acm-info)}
+.attendance-report-page .attendance-report-index{font-weight:var(--acm-fw-bold)}
+.attendance-report-page .attendance-report-empty{display:flex;flex-direction:column;align-items:center;gap:var(--acm-sp-8);padding:var(--acm-sp-40) var(--acm-sp-20);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);color:var(--acm-text-secondary);text-align:center}
+.attendance-report-page .attendance-report-empty i{font-size:var(--acm-text-2xl);opacity:.65}
+.attendance-report-page .attendance-report-empty strong{color:var(--acm-text-primary);font-size:var(--acm-text-md)}
+.attendance-report-page .attendance-report-empty p{margin:0;font-size:var(--acm-text-sm)}
+.attendance-report-page :is(a,button,input,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+@media(min-width:700px){.attendance-report-page .attendance-report-filter-grid{grid-template-columns:repeat(3,minmax(0,1fr)) auto}.attendance-report-page .attendance-report-submit{grid-column:auto;width:auto;min-width:150px}}
+@media(max-width:699px){.attendance-report-page .attendance-report-header{margin-bottom:var(--acm-sp-16)}.attendance-report-page .attendance-report-filters{padding:var(--acm-sp-16);margin-bottom:var(--acm-sp-16)}.attendance-report-page .attendance-report-filter-grid{grid-template-columns:minmax(0,1fr);gap:var(--acm-sp-12)}.attendance-report-page .attendance-report-submit{grid-column:auto}.attendance-report-page .attendance-report-summary-meta{display:grid;grid-template-columns:minmax(0,1fr);gap:var(--acm-sp-8)}.attendance-report-page .attendance-report-summary-meta>span,.attendance-report-page .attendance-report-summary-note{font-size:var(--acm-text-xs)}.attendance-report-page .attendance-report-results{padding:var(--acm-sp-12)}}
+@media(prefers-reduced-motion:reduce){.attendance-report-page *{scroll-behavior:auto}}

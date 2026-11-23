@@ -238,6 +238,134 @@ const saveGradingSystem = async (req, res) => {
 
 
 
+
+/**
+ * Read-only workflow overview for result batches. Results are grouped by their
+ * owning class/section, subject, session and term; no student records are changed.
+ */
+const getResultWorkflowTracking = async (req, res) => {
+    const user = req.session.staff;
+    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
+    const selectedSession = String(req.query.session || '').trim();
+    const selectedTerm = String(req.query.term || '').trim();
+    const selectedSection = String(req.query.section_id || '').trim();
+
+    try {
+        const sessions = await getAvailableSessions(schoolId);
+        const sections = await db.all(`
+            SELECT DISTINCT sec.id, sec.name
+            FROM sections sec
+            JOIN classes c ON c.section_id = sec.id AND c.school_id = sec.school_id
+            JOIN subject_assignments sa ON sa.class_id = c.id
+            WHERE sec.school_id = ?
+              AND (
+                ? IN ('Admin', 'Examination Officer')
+                OR EXISTS (
+                    SELECT 1 FROM subject_assignments own
+                    WHERE own.class_id = sa.class_id AND own.subject_id = sa.subject_id
+                      AND own.session = sa.session AND own.teacher_id = ?
+                )
+                OR EXISTS (
+                    SELECT 1 FROM class_assignments ca
+                    WHERE ca.class_id = c.id AND ca.staff_id = ? AND ca.session = sa.session
+                )
+                OR c.form_teacher_id = ?
+              )
+            ORDER BY sec.name
+        `, [schoolId, user.role, user.id, user.id, user.id]);
+
+        const rows = await db.all(`
+            WITH assigned_contexts AS (
+                SELECT DISTINCT sa.class_id, sa.subject_id, sa.session
+                FROM subject_assignments sa
+                JOIN classes c ON c.id = sa.class_id
+                JOIN subjects sub ON sub.id = sa.subject_id
+                WHERE c.school_id = ? AND sub.school_id = ?
+                  AND (? = '' OR sa.session = ?)
+                  AND (
+                    ? IN ('Admin', 'Examination Officer')
+                    OR EXISTS (
+                        SELECT 1 FROM subject_assignments own
+                        WHERE own.class_id = sa.class_id AND own.subject_id = sa.subject_id
+                          AND own.session = sa.session AND own.teacher_id = ?
+                    )
+                    OR EXISTS (
+                        SELECT 1 FROM class_assignments ca
+                        WHERE ca.class_id = c.id AND ca.staff_id = ? AND ca.session = sa.session
+                    )
+                    OR c.form_teacher_id = ?
+                  )
+            ),
+            academic_terms AS (
+                SELECT '1st Term' AS term
+                UNION ALL SELECT '2nd Term'
+                UNION ALL SELECT '3rd Term'
+            )
+            SELECT
+                c.id AS class_id,
+                c.name AS class_name,
+                sec.id AS section_id,
+                COALESCE(sec.name, 'Unassigned section') AS section_name,
+                sub.id AS subject_id,
+                sub.name AS subject_name,
+                a.session,
+                period.term,
+                COUNT(DISTINCT enrolled.id) AS expected_count,
+                COUNT(DISTINCT r.student_id) AS recorded_count,
+                COUNT(DISTINCT CASE WHEN LOWER(COALESCE(r.status, '')) = 'draft' THEN r.student_id END) AS draft_count,
+                COUNT(DISTINCT CASE WHEN LOWER(COALESCE(r.status, '')) = 'submitted' THEN r.student_id END) AS submitted_count,
+                COUNT(DISTINCT CASE WHEN LOWER(COALESCE(r.status, '')) = 'approved' THEN r.student_id END) AS approved_count,
+                COUNT(DISTINCT CASE WHEN LOWER(COALESCE(r.status, '')) = 'locked' THEN r.student_id END) AS locked_count,
+                COUNT(DISTINCT CASE WHEN LOWER(COALESCE(r.status, '')) = 'published' THEN r.student_id END) AS published_count
+            FROM assigned_contexts a
+            JOIN classes c ON c.id = a.class_id AND c.school_id = ?
+            LEFT JOIN sections sec ON sec.id = c.section_id AND sec.school_id = c.school_id
+            JOIN subjects sub ON sub.id = a.subject_id AND sub.school_id = c.school_id
+            CROSS JOIN academic_terms period
+            LEFT JOIN student_enrollments se
+                ON se.class_id = c.id AND se.session = a.session
+            LEFT JOIN students enrolled
+                ON enrolled.id = se.student_id AND enrolled.school_id = c.school_id
+            LEFT JOIN results r
+                ON r.student_id = enrolled.id
+                AND r.class_id = c.id
+                AND r.subject_id = sub.id
+                AND r.session = a.session
+                AND r.term = period.term
+            WHERE (? = '' OR period.term = ?)
+              AND (? = '' OR CAST(sec.id AS TEXT) = ?)
+            GROUP BY c.id, c.name, sec.id, sec.name, sub.id, sub.name, a.session, period.term
+            ORDER BY sec.name, c.name, sub.name, a.session DESC, period.term
+        `, [
+            schoolId, schoolId, selectedSession, selectedSession,
+            user.role, user.id, user.id, user.id,
+            schoolId, selectedTerm, selectedTerm, selectedSection, selectedSection
+        ]);
+
+        const summary = rows.reduce((totals, row) => {
+            for (const key of ['expected_count', 'recorded_count', 'draft_count', 'submitted_count', 'approved_count', 'locked_count', 'published_count']) {
+                totals[key] += Number(row[key] || 0);
+            }
+            return totals;
+        }, {
+            expected_count: 0, recorded_count: 0, draft_count: 0,
+            submitted_count: 0, approved_count: 0, locked_count: 0, published_count: 0
+        });
+
+        res.render('results/tracking', {
+            title: 'Result Workflow Tracking',
+            rows,
+            summary,
+            sessions,
+            sections,
+            filters: { session: selectedSession, term: selectedTerm, section_id: selectedSection }
+        });
+    } catch (err) {
+        console.error('Result Workflow Tracking Error:', err);
+        res.status(500).send('Unable to load result workflow tracking.');
+    }
+};
+
 const getResultManager = async (req, res) => {
     const user = req.session.staff;
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
@@ -1155,6 +1283,7 @@ const publishBulkResults = async (req, res) => {
 
 module.exports = {
     getResultsDashboard,
+    getResultWorkflowTracking,
     getResultManager,
     saveResults,
     getReportCard,

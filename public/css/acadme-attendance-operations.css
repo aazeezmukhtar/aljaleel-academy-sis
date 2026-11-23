@@ -1,0 +1,34 @@
+/* Attendance Operations — presentation only. */
+.attendance-operations-page { min-width:0; }
+.attendance-operations-page > header { margin-bottom:var(--acm-sp-24); }
+.attendance-operations-page > header > a { color:var(--acm-navy); text-decoration:none; font-weight:var(--acm-fw-semibold); }
+.attendance-operations-page > header > a:hover { text-decoration:underline; }
+.attendance-operations-page > header h1 { margin-top:var(--acm-sp-12); line-height:var(--acm-lh-tight); }
+.attendance-operations-page > header p { color:var(--acm-text-secondary); line-height:var(--acm-lh-base); }
+.attendance-operations-page > header p:last-child { font-size:var(--acm-text-sm); color:var(--acm-text-muted); }
+.attendance-operations-page > section { min-width:0; margin-bottom:var(--acm-sp-20); }
+.attendance-operations-page > section > h2 { font-size:var(--acm-text-lg); margin:0 0 var(--acm-sp-8); }
+.attendance-operations-page > section > p { color:var(--acm-text-secondary); line-height:var(--acm-lh-base); }
+.attendance-operations-page .grid-2 { gap:var(--acm-sp-12); }
+.attendance-operations-page .card { min-width:0; }
+.attendance-operations-page .card > div:first-child { color:var(--acm-text-secondary); font-size:var(--acm-text-sm); }
+.attendance-operations-page .card > div:nth-child(2) { color:var(--acm-text-primary); font-size:clamp(1.25rem,3vw,1.8rem); font-weight:var(--acm-fw-bold); overflow-wrap:anywhere; }
+.attendance-operations-page table { width:100%; border-collapse:collapse; }
+.attendance-operations-page th { white-space:nowrap; color:var(--acm-text-secondary); font-size:var(--acm-text-xs); letter-spacing:var(--acm-ls-wide); }
+.attendance-operations-page td { vertical-align:top; overflow-wrap:anywhere; }
+.attendance-operations-page details { min-width:120px; }
+.attendance-operations-page summary { cursor:pointer; color:var(--acm-navy); font-weight:var(--acm-fw-semibold); }
+.attendance-operations-page .badge { white-space:nowrap; }
+.attendance-operations-page .alert { line-height:var(--acm-lh-base); }
+@media(max-width:700px) {
+ .attendance-operations-page > section { padding:var(--acm-sp-16); }
+ .attendance-operations-page .grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ .attendance-operations-page table { min-width:680px; }
+ .attendance-operations-page > header h1 { font-size:var(--acm-text-2xl); }
+}
+@media(max-width:380px) {
+ .attendance-operations-page .grid-2 { grid-template-columns:minmax(0,1fr); }
+}
+@media(prefers-reduced-motion:reduce) {
+ .attendance-operations-page *, .attendance-operations-page *::before, .attendance-operations-page *::after { scroll-behavior:auto !important; transition:none !important; animation:none !important; }
+}

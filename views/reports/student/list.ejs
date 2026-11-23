@@ -1,7 +1,7 @@
 <%- include('../../partials/header') %>
     <%- include('../../partials/sidebar') %>
 
-        <main class="main-content">
+        <main class="main-content student-class-list-page">
             <header class="content-header no-print">
                 <div class="header-left">
                     <a href="/reports/students" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
@@ -17,7 +17,7 @@
                 </div>
             </header>
 
-            <div class="card no-print settings-card">
+            <div class="card no-print settings-card student-list-filters">
                 <form action="/reports/students/list" method="GET" class="filter-form">
                     <div class="form-group">
                         <label>Class</label>
@@ -34,7 +34,7 @@
             </div>
 
             <% if (students && students.length > 0) { %>
-                <div class="report-paper">
+                <div class="report-paper student-report-paper">
                     <div class="report-header">
                         <h2>
                             <%= students[0].class_name || 'Class' %> List
@@ -43,7 +43,7 @@
                         </p>
                     </div>
 
-                    <table class="report-table">
+                    <table class="report-table student-class-list-table">
                         <thead>
                             <tr>
                                 <th style="width: 50px;">S/N</th>

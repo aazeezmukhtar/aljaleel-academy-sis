@@ -1,0 +1,30 @@
+/* Student reports presentation only. Data, exports, filters and print behavior remain unchanged. */
+.student-reports-index-page .stat-icon{width:48px;height:48px;min-width:48px;border-radius:var(--acm-radius-sm);display:grid;place-items:center;font-size:1.25rem}
+.student-reports-index-page .student-stat-total{background:#e0f2fe;color:#0284c7}.student-reports-index-page .student-stat-male{background:#dcfce7;color:#16a34a}.student-reports-index-page .student-stat-female{background:#fce7f3;color:#db2777}.student-reports-index-page .student-stat-intake{background:#fff7ed;color:#ea580c}
+.student-class-list-page,.student-demographics-page,.student-profile-audit-page{min-width:0}
+:is(.student-class-list-page,.student-demographics-page,.student-profile-audit-page) .content-header{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+:is(.student-class-list-page,.student-demographics-page,.student-profile-audit-page) .header-left{min-width:0}
+:is(.student-class-list-page,.student-demographics-page,.student-profile-audit-page) .header-actions{display:flex;flex-wrap:wrap;gap:var(--acm-sp-8)}
+.student-list-filters{padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.student-class-list-page .filter-form{display:flex;align-items:flex-end;gap:var(--acm-sp-12)}.student-class-list-page .filter-form .form-group{width:min(100%,360px);margin:0}
+.student-report-paper{width:100%;max-width:210mm;margin:var(--acm-sp-16) auto;padding:clamp(16px,3vw,36px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-sm);overflow-x:auto}
+.student-class-list-page .report-header{text-align:center;margin-block-end:var(--acm-sp-16);padding-block-end:var(--acm-sp-12);border-bottom:1px solid var(--acm-border)}
+.student-class-list-page .report-header h2{margin:0 0 5px;color:var(--acm-text-primary)}.student-class-list-page .report-header p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.student-class-list-page .report-table{width:100%;border-collapse:collapse;font-size:var(--acm-text-sm)}.student-class-list-page .report-table th,.student-class-list-page .report-table td{padding:9px;border:1px solid var(--acm-border);text-align:left}
+.student-class-list-page .report-table th{background:var(--acm-surface);color:var(--acm-text-secondary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.student-class-list-page .report-footer{margin-block-start:var(--acm-sp-12);padding-block-start:var(--acm-sp-12);border-top:1px solid var(--acm-border);text-align:right;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.student-demographics-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:var(--acm-sp-16)}
+.student-demographics-page .card,.student-profile-audit-page .card{min-width:0;padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.student-demographics-page .card h3{margin-block:0 var(--acm-sp-12);color:var(--acm-text-primary);font-size:var(--acm-text-base)}
+.student-demographics-page .metric-row{display:flex;align-items:center;gap:var(--acm-sp-8);margin-block-end:var(--acm-sp-12)}
+.student-demographics-page .label{width:72px;flex:0 0 72px;font-weight:var(--acm-fw-medium)}
+.student-demographics-page .bar-container{flex:1;min-width:24px;height:16px;margin:0;border-radius:var(--acm-radius-full);background:var(--acm-surface);overflow:hidden}
+.student-demographics-page .bar{height:100%;border-radius:inherit;background:var(--acm-navy)}
+.student-demographics-page .value{width:94px;flex:0 0 94px;text-align:right;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
+.student-demographics-page .data-table,.student-profile-audit-page .data-table{width:100%;font-size:var(--acm-text-sm)}
+.student-profile-audit-page .card{overflow-x:auto}.student-profile-audit-page .data-table th{white-space:nowrap}.student-profile-audit-page .data-table td{vertical-align:middle}
+.student-profile-audit-page .badge-error{background:#fee2e2;color:#dc2626}.student-profile-audit-page .badge-success{background:#dcfce7;color:#16a34a}.student-audit-success-icon{color:var(--acm-success)}
+:is(.student-class-list-page,.student-demographics-page,.student-profile-audit-page) :is(a,button,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:760px){:is(.student-class-list-page,.student-demographics-page,.student-profile-audit-page) .content-header{align-items:flex-start}:is(.student-class-list-page,.student-demographics-page,.student-profile-audit-page) .header-actions{width:100%}.student-class-list-page .filter-form{display:block}.student-class-list-page .filter-form .form-group{width:100%}.student-report-paper{margin-block:var(--acm-sp-12)}}
+@media(max-width:480px){:is(.student-class-list-page,.student-demographics-page,.student-profile-audit-page) .header-actions :is(button,a){flex:1 1 auto}.student-demographics-page .metric-row{gap:6px}.student-demographics-page .label{width:58px;flex-basis:58px}.student-demographics-page .value{width:84px;flex-basis:84px}}
+@media(prefers-reduced-motion:reduce){.student-reports-index-page .report-card{transition:none}}

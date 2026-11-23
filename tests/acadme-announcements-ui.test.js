@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const ejs=require('ejs');
+const read=file=>fs.readFileSync(path.join(__dirname,'..',file),'utf8');
+const header=read('views/partials/header.ejs');
+const previous=['acadme-tokens.css','acadme-components.css','acadme-shells.css','acadme-students.css','acadme-attendance.css','acadme-results.css','acadme-finance.css','acadme-academics.css','acadme-staff.css','acadme-reports.css','acadme-announcements.css'].map(x=>header.indexOf(x));
+assert.ok(previous.every((v,i)=>v>=0&&(i===0||v>previous[i-1])),'Announcements stylesheet must load after existing shared layers');
+const css=read('public/css/acadme-announcements.css');
+const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\w-]+)\s*:/g)].map(m=>m[1]));
+for(const m of css.matchAll(/var\((--acm-[\w-]+)/g))assert.ok(tokens.has(m[1]),'Undefined AcadMe token: '+m[1]);
+assert.match(css,/@media\(max-width:760px\)/);
+assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
+const pages=[['views/announcements/index.ejs','announcements-list-page'],['views/announcements/form.ejs','announcements-form-page'],['views/announcements/view.ejs','announcement-detail-page']];
+for(const [file,scope] of pages){const source=read(file);assert.ok(source.includes(scope),'Missing page scope '+scope);ejs.compile(source,{filename:path.join(__dirname,'..',file)});}
+const list=read('views/announcements/index.ejs');
+for(const action of ['/announcements/create','/announcements/toggle/','/announcements/delete/'])assert.ok(list.includes(action),'Existing action missing '+action);
+assert.match(list,/user\.role === 'Admin'/);
+const form=read('views/announcements/form.ejs');
+for(const field of ['name="title"','name="type"','name="event_date"','name="target_role"','name="is_published"','name="content"','name="image"'])assert.ok(form.includes(field),'Existing field missing '+field);
+assert.match(form,/enctype="multipart\/form-data"/);
+const detail=read('views/announcements/view.ejs');
+assert.match(detail,/announcement\.content\.replace/);
+assert.match(detail,/window\.print\(\)/);
+console.log('AcadMe Announcements UI presentation checks passed.');

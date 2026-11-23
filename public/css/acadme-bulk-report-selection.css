@@ -1,0 +1,20 @@
+/* AcadMe bulk report selection presentation only. */
+.results-bulk-select-page{min-width:0}
+.results-bulk-select-page .content-header{margin-bottom:var(--acm-sp-20)}
+.results-bulk-select-page .back-link{display:inline-flex;align-items:center;gap:var(--acm-sp-8);margin-bottom:var(--acm-sp-8);color:var(--acm-text-secondary);font-size:var(--acm-text-sm);text-decoration:none}
+.results-bulk-select-page .back-link:hover{color:var(--acm-navy);text-decoration:underline}
+.results-bulk-select-page .results-bulk-error{margin-bottom:var(--acm-sp-16);padding:var(--acm-sp-12) var(--acm-sp-16);border-radius:var(--acm-radius-sm)}
+.results-bulk-select-page .results-bulk-card{width:100%;max-width:600px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.results-bulk-select-page .results-bulk-card-body{padding:var(--acm-sp-24)}
+.results-bulk-select-page .results-bulk-field{min-width:0;margin-bottom:var(--acm-sp-16)}
+.results-bulk-select-page .results-bulk-field--last{margin-bottom:var(--acm-sp-20)}
+.results-bulk-select-page .results-bulk-label{display:block;margin-bottom:var(--acm-sp-8);color:var(--acm-text-primary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold)}
+.results-bulk-select-page .form-control{width:100%;min-height:44px;padding:var(--acm-sp-8) var(--acm-sp-12);border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.results-bulk-select-page .form-control:focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px;box-shadow:var(--acm-focus-ring)}
+.results-bulk-select-page .results-bulk-actions{display:flex;flex-wrap:wrap;gap:var(--acm-sp-12);margin-top:var(--acm-sp-12)}
+.results-bulk-select-page .results-bulk-action{display:flex;flex:1 1 180px;align-items:center;justify-content:center;gap:var(--acm-sp-8);min-height:46px;padding:var(--acm-sp-12);border-radius:var(--acm-radius-sm);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold)}
+.results-bulk-select-page .results-bulk-publish{border:1px solid var(--acm-success);background:transparent;color:var(--acm-success)}
+.results-bulk-select-page .results-bulk-publish:hover{background:var(--acm-success-bg)}
+.results-bulk-select-page :is(a,button,input,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+@media(max-width:640px){.results-bulk-select-page .results-bulk-card-body{padding:var(--acm-sp-16)}.results-bulk-select-page .results-bulk-actions--admin{flex-direction:column}.results-bulk-select-page .results-bulk-action{width:100%;flex-basis:auto}}
+@media(prefers-reduced-motion:reduce){.results-bulk-select-page *{scroll-behavior:auto;transition:none}}

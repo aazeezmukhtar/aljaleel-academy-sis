@@ -1,0 +1,28 @@
+/* Report navigation pages — presentation only. */
+.reports-center-page,.reports-attendance-page{min-width:0}
+.reports-center-page .report-dashboard-grid,.reports-attendance-page .report-dashboard-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,290px),1fr));gap:var(--acm-sp-16);margin-block-start:var(--acm-sp-20)}
+.reports-center-page .report-card,.reports-attendance-page .report-card{display:flex;align-items:center;gap:var(--acm-sp-16);min-width:0;min-height:112px;padding:var(--acm-sp-20);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);color:var(--acm-text-primary);text-decoration:none;box-shadow:var(--acm-shadow-xs);transition:transform var(--acm-transition-fast),box-shadow var(--acm-transition-fast),border-color var(--acm-transition-fast)}
+.reports-center-page .report-card:hover,.reports-attendance-page .report-card:hover{transform:translateY(-2px);border-color:var(--school-primary);box-shadow:var(--acm-shadow-sm)}
+.reports-center-page .report-icon,.reports-attendance-page .report-icon{display:grid;place-items:center;flex:0 0 52px;width:52px;height:52px;border-radius:var(--acm-radius-md);background:var(--acm-bg);color:var(--school-primary);font-size:var(--acm-text-2xl)}
+.reports-center-page .report-info,.reports-attendance-page .report-info{min-width:0}
+.reports-center-page .report-info h3,.reports-attendance-page .report-info h3{margin:0 0 var(--acm-sp-4);color:var(--acm-text-primary);font-size:var(--acm-text-md);font-weight:var(--acm-fw-semibold)}
+.reports-center-page .report-info p,.reports-attendance-page .report-info p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm);line-height:var(--acm-lh-snug)}
+.reports-center-page .report-icon.academic{background:var(--acm-info-bg);color:var(--acm-info)}
+.reports-center-page .report-icon.student{background:var(--acm-warning-bg);color:var(--acm-warning)}
+.reports-center-page .report-icon.attendance{background:var(--acm-success-bg);color:var(--acm-success)}
+.reports-center-page .report-icon.finance{background:var(--acm-warning-bg);color:var(--acm-warning)}
+.reports-center-page .report-icon.staff{background:var(--acm-info-bg);color:var(--acm-info)}
+.reports-center-page .report-icon.health{background:var(--acm-error-bg);color:var(--acm-error)}
+.reports-center-page .report-icon.audit{background:var(--acm-bg);color:var(--acm-text-secondary)}
+.reports-attendance-page .back-link{display:inline-flex;align-items:center;gap:var(--acm-sp-4);margin-block-end:var(--acm-sp-8);color:var(--acm-text-secondary);text-decoration:none}
+.reports-attendance-page .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:var(--acm-sp-16);margin-block:var(--acm-sp-24)}
+.reports-attendance-page .stat-card{display:flex;align-items:center;gap:var(--acm-sp-12);min-width:0;padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-xs)}
+.reports-attendance-page .stat-icon{display:grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:var(--acm-radius-sm);font-size:var(--acm-text-xl)}
+.reports-attendance-page .stat-present{background:var(--acm-success-bg);color:var(--acm-success)}
+.reports-attendance-page .stat-absent{background:var(--acm-error-bg);color:var(--acm-error)}
+.reports-attendance-page .stat-late{background:var(--acm-warning-bg);color:var(--acm-warning)}
+.reports-attendance-page .stat-info h3{margin:0;color:var(--acm-text-primary);font-size:var(--acm-text-2xl);font-variant-numeric:tabular-nums}
+.reports-attendance-page .stat-info p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.reports-center-page a:focus-visible,.reports-attendance-page a:focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:600px){.reports-center-page .report-card,.reports-attendance-page .report-card{padding:var(--acm-sp-16);gap:var(--acm-sp-12)}.reports-center-page .report-icon,.reports-attendance-page .report-icon{flex-basis:44px;width:44px;height:44px;font-size:var(--acm-text-xl)}}
+@media(prefers-reduced-motion:reduce){.reports-center-page *,.reports-attendance-page *{transition:none!important}}

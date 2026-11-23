@@ -629,3 +629,82 @@ img { max-width: 100%; }
     .admin-action-card { transition: none; }
     .admin-action-card:hover { transform: none; }
 }
+
+
+/* Staff dashboard — reference-aligned presentation, existing data and routes only. */
+.staff-dashboard-main { padding: 28px 30px 42px !important; min-width: 0; }
+.staff-welcome-header { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:26px; }
+.staff-welcome-copy { min-width:0; }
+.staff-eyebrow { display:block; margin-bottom:7px; color:#5145df; font-size:.78rem; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.staff-welcome-copy h1 { margin:0; color:#151d31; font-size:clamp(1.7rem,3vw,2.35rem); line-height:1.16; font-weight:800; }
+.staff-welcome-copy p { margin:8px 0 0; color:#71819d; font-size:.92rem; }
+.staff-dashboard .header-actions { display:flex; align-items:center; }
+.staff-dashboard .header-actions .notification-bell-container { display:flex; align-items:center; justify-content:center; width:54px; height:54px; border-radius:18px; background:#fff; box-shadow:0 2px 8px rgba(25,40,70,.07); color:#172033; }
+.staff-overview-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:16px; margin-bottom:24px; }
+.staff-overview-card { display:flex; flex-direction:column; align-items:flex-start; min-width:0; min-height:156px; padding:22px; border:1px solid #edf0f6; border-radius:26px; background:#fff; box-shadow:0 2px 5px rgba(20,35,65,.045); }
+.staff-overview-icon { display:flex; align-items:center; justify-content:center; width:52px; height:52px; margin-bottom:14px; border-radius:17px; font-size:1.3rem; }
+.staff-icon-violet { color:#5145df; background:#e4e9ff; }
+.staff-icon-green { color:#008a68; background:#d9f7eb; }
+.staff-icon-amber { color:#c45b00; background:#fff1d2; }
+.staff-icon-pink { color:#c61c68; background:#fde2ee; }
+.staff-overview-card > strong { color:#151d31; font-size:2rem; line-height:1.1; font-weight:800; }
+.staff-overview-card > span:last-child { margin-top:6px; color:#71819d; font-size:.9rem; }
+.staff-dashboard-panel { margin-bottom:22px; padding:24px; border:1px solid #edf0f6; border-radius:28px; background:#fff; box-shadow:0 2px 5px rgba(20,35,65,.045); }
+.staff-panel-heading { display:flex; align-items:center; justify-content:space-between; gap:14px; padding-bottom:13px; border-bottom:1px solid #dfe5ef; }
+.staff-panel-heading h2 { margin:0; color:#151d31; font-size:1.1rem; font-weight:800; }
+.staff-panel-action { display:inline-flex; align-items:center; justify-content:center; min-height:44px; padding:0 17px; border:1px solid #cbd4ff; border-radius:16px; background:#f1f3ff; color:#4036c7; font-size:.88rem; font-weight:700; text-decoration:none; white-space:nowrap; }
+.staff-class-row,.staff-subject-row { display:flex; align-items:center; gap:14px; min-height:70px; padding:12px 0; border-bottom:1px solid #dfe5ef; color:inherit; text-decoration:none; }
+.staff-class-row:last-child,.staff-subject-row:last-child { border-bottom:0; }
+.staff-class-avatar { display:flex; flex:0 0 48px; align-items:center; justify-content:center; width:48px; height:48px; border-radius:15px; background:#e4e9ff; color:#4036c7; font-size:.8rem; font-weight:800; }
+.staff-row-copy { display:flex; flex:1; flex-direction:column; min-width:0; gap:3px; }
+.staff-row-copy strong { color:#182137; font-size:.98rem; font-weight:750; }
+.staff-row-copy small { color:#71819d; font-size:.82rem; }
+.staff-class-row > i,.staff-subject-row > i { color:#71819d; font-size:1.05rem; }
+.staff-subject-row { min-height:60px; }
+.staff-view-all { display:block; padding-top:15px; color:#4c40db; font-size:.88rem; font-weight:750; text-align:center; text-decoration:none; }
+.staff-empty-state { margin:0; padding:22px 8px; color:#71819d; text-align:center; }
+.staff-announcements-panel { border-top:4px solid #665cff; }
+.staff-announcement-list { display:grid; gap:12px; padding-top:16px; }
+.staff-announcement-card { padding:17px; border:1px solid #dce4f0; border-radius:22px; background:#f8fafc; }
+.staff-announcement-meta { display:flex; align-items:center; justify-content:space-between; gap:10px; color:#71819d; font-size:.78rem; }
+.staff-announcement-tag { padding:5px 10px; border-radius:20px; background:#deebff; color:#2348b5; font-size:.68rem; font-weight:800; letter-spacing:.04em; }
+.staff-announcement-card h3 { margin:12px 0 7px; color:#182137; font-size:1rem; line-height:1.35; font-weight:800; }
+.staff-announcement-card p { display:-webkit-box; overflow:hidden; margin:0 0 11px; color:#64748b; font-size:.87rem; line-height:1.55; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.staff-announcement-card > a { color:#4c40db; font-size:.88rem; font-weight:750; text-decoration:none; }
+.staff-announcement-card.read { opacity:.72; }
+.staff-dashboard a:focus-visible,.staff-dashboard button:focus-visible { outline:3px solid rgba(81,69,223,.35); outline-offset:3px; }
+@media (max-width: 1100px) {
+ .staff-overview-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 991px) {
+ .staff-dashboard-main { padding:24px 20px 36px !important; }
+ .staff-welcome-header { margin-bottom:22px; }
+ .staff-overview-card { min-height:148px; padding:20px; border-radius:24px; }
+ .staff-dashboard-panel { padding:22px; border-radius:26px; }
+}
+@media (max-width: 640px) {
+ .staff-dashboard-main { padding:22px 20px 32px !important; }
+ .staff-welcome-copy h1 { font-size:1.85rem; }
+ .staff-welcome-copy p { font-size:.82rem; }
+ .staff-dashboard .header-actions { display:none; }
+ .staff-overview-grid { gap:14px; margin-bottom:20px; }
+ .staff-overview-card { min-height:166px; padding:18px; border-radius:25px; }
+ .staff-overview-icon { width:52px; height:52px; margin-bottom:13px; }
+ .staff-overview-card > strong { font-size:1.9rem; }
+ .staff-overview-card > span:last-child { font-size:.82rem; }
+ .staff-dashboard-panel { margin-bottom:20px; padding:21px; border-radius:27px; }
+ .staff-panel-heading h2 { max-width:90px; line-height:1.25; }
+ .staff-panel-action { padding:0 14px; font-size:.82rem; }
+ .staff-class-row { min-height:70px; }
+ .staff-subject-row { min-height:60px; }
+}
+@media (max-width: 380px) {
+ .staff-dashboard-main { padding-inline:14px !important; }
+ .staff-overview-grid { gap:10px; }
+ .staff-overview-card { min-height:150px; padding:15px; }
+ .staff-dashboard-panel { padding:18px; }
+ .staff-panel-action { padding-inline:10px; font-size:.76rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+ .staff-dashboard * { scroll-behavior:auto !important; transition:none !important; }
+}

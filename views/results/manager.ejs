@@ -110,9 +110,12 @@
                     <div class="card" style="margin-bottom: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--school-primary);">
                         <div>
                             <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Editing Results For</div>
-                            <div style="font-size: 1.1rem; font-weight: 800; color: #1e293b; line-height: 1.2;">
-                                <%= selClass %> <span style="color: #cbd5e1; margin: 0 6px;">•</span> <span style="color: var(--school-primary);"><%= selSubj %></span>
+                            <div class="result-context-title">
+                                <span class="result-context-class"><%= selClass %></span>
+                                <span class="result-context-divider" aria-hidden="true">•</span>
+                                <span class="result-context-subject"><%= selSubj %></span>
                             </div>
+                            <div class="result-context-period"><%= filters.term %> <span aria-hidden="true">•</span> <%= filters.session %></div>
                         </div>
                         <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end;">
                             <button type="button" id="prepareResultsOfflineBtn" class="btn btn-outline btn-sm"

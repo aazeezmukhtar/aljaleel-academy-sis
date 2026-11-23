@@ -1,9 +1,8 @@
 <%- include('../../partials/header') %>
     <%- include('../../partials/sidebar') %>
 
-        <main class="main-content">
+        <main class="main-content attendance-low-report-page">
             <header class="content-header no-print">
-
                 <div class="header-left">
                     <a href="/reports/attendance" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
                     <h1>Low Attendance Alerts</h1>
@@ -32,13 +31,13 @@
                         <label>Session</label>
                         <select name="session" required>
                             <option value="">Select Session</option>
-                            <% 
-                            const sessList = (typeof availableSessions !== 'undefined' && availableSessions && availableSessions.length > 0) 
-                                ? availableSessions 
-                                : ((typeof available_sessions !== 'undefined' && available_sessions && available_sessions.length > 0) 
-                                    ? available_sessions 
+                            <%
+                            const sessList = (typeof availableSessions !== 'undefined' && availableSessions && availableSessions.length > 0)
+                                ? availableSessions
+                                : ((typeof available_sessions !== 'undefined' && available_sessions && available_sessions.length > 0)
+                                    ? available_sessions
                                     : ['2024/2025', '2025/2026']);
-                            sessList.forEach(s => { 
+                            sessList.forEach(s => {
                             %>
                                 <option value="<%= s %>" <%= query.session === s ? 'selected' : '' %>><%= s %></option>
                             <% }); %>
@@ -46,134 +45,51 @@
                     </div>
                     <div class="form-group">
                         <label>Min. Attendance (%)</label>
-                        <input type="number" name="threshold" value="<%= query.threshold %>" min="1" max="100"
-                            style="width: 80px;">
+                        <input type="number" name="threshold" value="<%= query.threshold %>" min="1" max="100">
                     </div>
                     <button type="submit" class="btn btn-primary">Check</button>
                 </form>
             </div>
 
-            <% if (students && students.length> 0) { %>
+            <% if (students && students.length > 0) { %>
                 <div class="report-paper">
                     <div class="report-header">
                         <h2>Critical Attendance Report</h2>
-                        <p>Students below <%= query.threshold %>% attendance in <%= query.term %>, <%= query.session %>
-                        </p>
+                        <p>Students below <%= query.threshold %>% attendance in <%= query.term %>, <%= query.session %></p>
                     </div>
-
-                    <table class="report-table">
-                        <thead>
-                            <tr>
-                                <th>Student Name</th>
-                                <th>Adm No.</th>
-                                <th>Class</th>
-                                <th>Total Days</th>
-                                <th>Present Days</th>
-                                <th>Attendance %</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <% students.forEach(student=> { %>
-                                <% const percentage=((student.present_days / student.total_days) * 100).toFixed(1); %>
+                    <div class="table-container">
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Student Name</th>
+                                    <th>Adm No.</th>
+                                    <th>Class</th>
+                                    <th>Total Days</th>
+                                    <th>Present Days</th>
+                                    <th>Attendance %</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% students.forEach(student => { %>
+                                    <% const percentage = ((student.present_days / student.total_days) * 100).toFixed(1); %>
                                     <tr>
-                                        <td style="font-weight: 500;">
-                                            <%= student.last_name.toUpperCase() %>, <%= student.first_name %>
-                                        </td>
-                                        <td>
-                                            <%= student.admission_number %>
-                                        </td>
-                                        <td>
-                                            <%= student.class_name %>
-                                        </td>
-                                        <td>
-                                            <%= student.total_days %>
-                                        </td>
-                                        <td>
-                                            <%= student.present_days %>
-                                        </td>
-                                        <td style="color: #dc2626; font-weight: bold;">
-                                            <%= percentage %>%
-                                        </td>
+                                        <td class="student-name"><%= student.last_name.toUpperCase() %>, <%= student.first_name %></td>
+                                        <td><%= student.admission_number %></td>
+                                        <td><%= student.class_name %></td>
+                                        <td><%= student.total_days %></td>
+                                        <td><%= student.present_days %></td>
+                                        <td class="attendance-percentage"><%= percentage %>%</td>
                                     </tr>
-                                    <% }) %>
-                        </tbody>
-                    </table>
-                </div>
-                <% } else if (query.term) { %>
-                    <div class="empty-state">
-                        <i class="bi bi-emoji-smile"></i>
-                        <p>Great! No students found with attendance below <%= query.threshold %>%.</p>
+                                <% }) %>
+                            </tbody>
+                        </table>
                     </div>
-                    <% } %>
+                </div>
+            <% } else if (query.term) { %>
+                <div class="empty-state">
+                    <i class="bi bi-emoji-smile"></i>
+                    <p>Great! No students found with attendance below <%= query.threshold %>%.</p>
+                </div>
+            <% } %>
         </main>
-
-        <style>
-            .filter-form {
-                display: flex;
-                gap: 20px;
-                align-items: flex-end;
-            }
-
-            .report-paper {
-                background: white;
-                padding: 40px;
-                border-radius: 4px;
-                box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-                max-width: 210mm;
-                margin: 0 auto;
-            }
-
-            .report-table {
-                width: 100%;
-                border-collapse: collapse;
-                font-size: 0.95rem;
-            }
-
-            .report-table th,
-            .report-table td {
-                border: 1px solid #ddd;
-                padding: 10px;
-                text-align: left;
-            }
-
-            .report-table th {
-                background: #f8f9fa;
-            }
-
-            @media print {
-                @page {
-                    size: A4;
-                    margin: 10mm;
-                }
-
-                body * {
-                    visibility: hidden;
-                }
-
-                .report-paper,
-                .report-paper * {
-                    visibility: visible;
-                }
-
-                .report-paper {
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 100%;
-                    box-shadow: none;
-                    padding: 0;
-                    margin: 0;
-                }
-
-                .main-content {
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
-
-                .no-print {
-                    display: none !important;
-                }
-            }
-        </style>
-
         <%- include('../../partials/footer') %>

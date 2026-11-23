@@ -1,0 +1,77 @@
+/*
+ * AcadMe application shell patterns — phase 2.
+ * Shared visual rules for Admin/Staff navigation and dashboard composition.
+ * Tokens -> components -> shell -> feature styles.
+ */
+:where(.dashboard-container) { min-width: 0; }
+:where(.main-content) {
+  color: var(--acm-text-primary);
+  font-family: var(--acm-font-body);
+}
+:where(.content-header) {
+  display:flex; align-items:center; justify-content:space-between;
+  gap:var(--acm-sp-16); min-width:0; flex-wrap:wrap;
+  margin-block-end:var(--acm-sp-24);
+}
+:where(.content-header > div:first-child) { min-width:0; }
+:where(.content-header h1) {
+  margin:0; color:var(--acm-text-primary);
+  font-family:var(--acm-font-heading);
+  font-size:clamp(var(--acm-text-xl),2.4vw,var(--acm-text-2xl));
+  font-weight:var(--acm-fw-bold); line-height:var(--acm-lh-tight);
+  letter-spacing:var(--acm-ls-tight); overflow-wrap:anywhere;
+}
+:where(.content-header p) { margin-block-start:var(--acm-sp-4); color:var(--acm-text-secondary); font-size:var(--acm-text-sm); }
+:where(.dashboard-eyebrow) {
+  display:block; margin-block-end:var(--acm-sp-4);
+  color:var(--acm-text-secondary); font-size:var(--acm-text-xs);
+  font-weight:var(--acm-fw-bold); letter-spacing:.09em;
+}
+:where(.header-actions) { display:flex; align-items:center; gap:var(--acm-sp-8); }
+:where(.stats-grid) { gap:var(--acm-sp-12); margin-block-end:var(--acm-sp-20); }
+:where(.stats-grid .stat-card, .main-content .card) {
+  min-width:0; border:1px solid var(--acm-border);
+  border-radius:var(--acm-radius-md); background:var(--acm-surface);
+  box-shadow:var(--acm-shadow-xs);
+}
+:where(.stats-grid .stat-card) { padding:var(--acm-sp-16); gap:var(--acm-sp-12); }
+:where(.stat-icon) { width:42px; height:42px; flex:0 0 42px; border-radius:var(--acm-radius-sm); }
+:where(.stat-content) { min-width:0; }
+:where(.stat-content h3) {
+  margin:0; color:var(--acm-text-primary);
+  font-size:clamp(1.15rem,2vw,1.5rem); font-weight:var(--acm-fw-bold);
+  line-height:var(--acm-lh-tight); letter-spacing:var(--acm-ls-tight);
+  overflow-wrap:anywhere;
+}
+:where(.stat-content p) { margin-block-start:var(--acm-sp-4); color:var(--acm-text-secondary); font-size:var(--acm-text-xs); line-height:var(--acm-lh-snug); }
+:where(.main-content .card) { padding:var(--acm-sp-16); }
+:where(.main-content .card h2, .main-content .card h3) { color:var(--acm-text-primary); font-size:var(--acm-text-md); font-weight:var(--acm-fw-semibold); line-height:var(--acm-lh-snug); }
+:where(.main-content .card-header) { gap:var(--acm-sp-8); margin-block-end:var(--acm-sp-12); }
+:where(.sidebar nav a) {
+  min-height:42px; margin-block:2px; padding:10px 12px;
+  border-radius:var(--acm-radius-sm); font-size:var(--acm-text-sm);
+  transition:background-color var(--acm-transition-fast), color var(--acm-transition-fast);
+}
+:where(.sidebar nav a:focus-visible) { outline:3px solid var(--acm-yellow); outline-offset:2px; }
+:where(.sidebar nav a.active) { font-weight:var(--acm-fw-semibold); }
+:where(.sidebar .nav-label) { letter-spacing:.08em; }
+:where(.main-content .btn) { min-height:38px; border-radius:var(--acm-radius-sm); font-size:var(--acm-text-sm); }
+:where(.main-content .list-group .list-item) { min-width:0; }
+:where(.main-content .list-group a:focus-visible, .main-content a:focus-visible) { outline:2px solid var(--acm-border-focus); outline-offset:2px; }
+@media(max-width:991px) {
+  :where(.content-header) { margin-block-end:var(--acm-sp-16); }
+  :where(.stats-grid) { gap:var(--acm-sp-8); }
+}
+@media(max-width:640px) {
+  :where(.content-header) { align-items:flex-start; gap:var(--acm-sp-8); }
+  :where(.content-header h1) { font-size:var(--acm-text-xl); }
+  :where(.stats-grid) { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  :where(.stats-grid .stat-card) { padding:var(--acm-sp-12); gap:var(--acm-sp-8); }
+  :where(.stat-icon) { width:36px; height:36px; flex-basis:36px; }
+  :where(.stat-content h3) { font-size:1.2rem; }
+  :where(.stat-content p) { font-size:var(--acm-text-xs); }
+  :where(.main-content .card) { padding:var(--acm-sp-12); }
+}
+@media(prefers-reduced-motion:reduce) {
+  :where(.sidebar nav a) { transition:none; }
+}

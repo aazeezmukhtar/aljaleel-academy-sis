@@ -23,9 +23,12 @@ const staffCss = read('public/css/acadme-staff.css');
 assert.match(resultEntry, /result-context-period/);
 assert.match(resultEntry, /filters\.term/);
 assert.match(resultEntry, /filters\.session/);
-assert.match(resultCss, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
-assert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) 52px 52px 42px 38px/);\nassert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) repeat\\(3,minmax\\(42px,48px\\)\\)/);\nassert.match(resultCss, /row-info>div:first-child\\{display:none!important\\}/);
-assert.match(resultCss, /min-height:34px;height:34px/);\nassert.match(resultCss, /result-sheet-card\\{width:100%;max-width:100%;min-width:0;margin-inline:0;padding:0!important/);
+assert.match(resultEntry, /data-score-count=.*resultConfig\\.ca_count/);
+assert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) 52px 52px 42px 38px/);
+assert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) repeat\\(3,minmax\\(42px,48px\\)\\)/);
+assert.match(resultCss, /row-info>div:first-child\\{display:none!important\\}/);
+assert.match(resultCss, /min-height:34px;height:34px/);
+assert.match(resultCss, /result-sheet-card\\{width:100%;max-width:100%;min-width:0;margin-inline:0;padding:0!important/);
 assert.match(staffCss, /staff-directory-page \.table-container\.table-stack tbody tr\{width:100%/);
 
 const pages = [

@@ -1,0 +1,63 @@
+/*
+ * AcadMe Staff Management presentation layer.
+ * Scoped to existing staff administration and profile pages only.
+ */
+.main-content:is(.staff-directory-page,.staff-create-page,.staff-edit-page,.staff-profile-page,.staff-information-page){min-width:0}
+.main-content:is(.staff-directory-page,.staff-create-page,.staff-edit-page,.staff-profile-page,.staff-information-page) .content-header{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+.main-content:is(.staff-directory-page,.staff-create-page,.staff-edit-page,.staff-profile-page,.staff-information-page) .content-header h1{font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight);color:var(--acm-text-primary)}
+.main-content:is(.staff-directory-page,.staff-create-page,.staff-edit-page,.staff-profile-page,.staff-information-page) .content-header p{font-size:var(--acm-text-sm);color:var(--acm-text-secondary)}
+.staff-directory-page .staff-directory-card,.staff-directory-page>.card,.staff-create-page .staff-form-card,.staff-edit-page .staff-form-card,.staff-information-page .staff-info-card{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.staff-directory-page .staff-directory-card{padding:var(--acm-sp-16)}
+.staff-directory-page .staff-directory-filters{gap:var(--acm-sp-12)}
+.staff-directory-page .staff-directory-count{font-size:var(--acm-text-xs);color:var(--acm-text-secondary)}
+.staff-directory-page .staff-id-chip{background:var(--acm-bg);border:1px solid var(--acm-border);color:var(--acm-navy);border-radius:var(--acm-radius-xs)}
+.staff-directory-page .staff-directory-action .btn{min-height:38px}
+.staff-directory-page .staff-directory-empty{color:var(--acm-text-secondary)}
+.staff-create-page .staff-form-card,.staff-edit-page .staff-form-card{max-width:900px;padding:clamp(16px,3vw,26px)}
+.staff-create-page .staff-back-link,.staff-edit-page .staff-back-link,.staff-profile-page .staff-profile-back{color:var(--acm-navy);font-weight:var(--acm-fw-semibold);text-decoration:none}
+.staff-create-page .staff-form-card :is(input,select,textarea),.staff-edit-page .staff-form-card :is(input,select,textarea),.staff-information-page .staff-info-card :is(input,select,textarea){min-width:0;min-height:44px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.staff-create-page .staff-form-card :is(input,select,textarea):focus-visible,.staff-edit-page .staff-form-card :is(input,select,textarea):focus-visible,.staff-information-page .staff-info-card :is(input,select,textarea):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+.staff-create-page .staff-form-actions,.staff-edit-page .staff-form-actions{gap:var(--acm-sp-8);margin-block-start:var(--acm-sp-20)}
+.staff-create-page .staff-form-actions .btn,.staff-edit-page .staff-form-actions .btn{min-height:42px}
+.staff-create-page .staff-password-note{border-radius:var(--acm-radius-sm);padding:var(--acm-sp-12)}
+.staff-edit-page .staff-current-photo img{border:1px solid var(--acm-border)}
+.staff-profile-page .staff-profile-header{display:flex;align-items:center;gap:var(--acm-sp-20);flex-wrap:wrap;margin-block-end:var(--acm-sp-16)}
+.staff-profile-page .profile-header{border:1px solid var(--acm-border);border-radius:var(--acm-radius-lg);box-shadow:var(--acm-shadow-xs);padding:clamp(16px,3vw,32px)!important}
+.staff-profile-page .staff-profile-avatar{flex:0 0 auto}
+.staff-profile-page .profile-info{min-width:0}
+.staff-profile-page .profile-info h1{font-size:clamp(1.25rem,3vw,1.8rem);line-height:1.25;overflow-wrap:anywhere}
+.staff-profile-page .profile-info>div{flex-wrap:wrap}
+.staff-profile-page .profile-header>div:last-child{display:flex;flex-wrap:wrap;gap:var(--acm-sp-8)!important}
+.staff-profile-page .profile-header .btn{min-height:40px}
+.staff-profile-page .grid-2>.card{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs);padding:var(--acm-sp-16)}
+.staff-profile-page .card-header{gap:var(--acm-sp-8);flex-wrap:wrap}
+.staff-profile-page .list-item{gap:var(--acm-sp-12);flex-wrap:wrap}
+.staff-profile-page .list-item>div{min-width:0}
+.staff-profile-page .list-item form{flex:0 0 auto}
+.staff-information-page .staff-info-card{padding:clamp(16px,2.5vw,24px);margin-block-end:var(--acm-sp-16)}
+.staff-information-page .staff-info-card h2{font-size:var(--acm-text-lg);font-weight:var(--acm-fw-semibold);color:var(--acm-text-primary)}
+.staff-information-page .staff-info-grid{gap:var(--acm-sp-12)}
+.staff-information-page .staff-info-item{gap:var(--acm-sp-12);flex-wrap:wrap}
+.staff-information-page .staff-info-item>div{min-width:0}
+.staff-information-page .staff-info-form{border-color:var(--acm-border);border-radius:var(--acm-radius-sm);padding:var(--acm-sp-16)}
+.staff-information-page .staff-photo-row img,.staff-information-page .staff-photo-fallback{border:1px solid var(--acm-border);border-radius:var(--acm-radius-md)}
+.staff-information-page :is(button,a):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:760px){
+ .staff-directory-page .staff-directory-filters{grid-template-columns:minmax(0,1fr)}
+ .staff-directory-page .table-container{overflow-x:auto}
+ .staff-profile-page .profile-header{align-items:flex-start!important}
+ .staff-profile-page .profile-header>div:last-child{width:100%}
+ .staff-profile-page .profile-header>div:last-child .btn{flex:1 1 auto}
+ .staff-profile-page .grid-2{grid-template-columns:minmax(0,1fr)}
+ .staff-information-page .staff-info-grid{grid-template-columns:minmax(0,1fr)}
+ .staff-information-page .staff-review{display:flex;flex-wrap:wrap;gap:var(--acm-sp-8)}
+}
+@media(max-width:480px){
+ .staff-create-page .staff-form-actions,.staff-edit-page .staff-form-actions{flex-direction:column}
+ .staff-create-page .staff-form-actions .btn,.staff-edit-page .staff-form-actions .btn{width:100%}
+ .staff-profile-page .profile-header{gap:var(--acm-sp-12)!important}
+ .staff-profile-page .staff-profile-avatar{width:76px!important;height:76px!important;border-radius:var(--acm-radius-md)!important;font-size:2rem!important}
+ .staff-profile-page .profile-header>div:last-child .btn{width:100%;justify-content:center}
+ .staff-information-page .staff-info-form{padding:var(--acm-sp-12)}
+}
+@media(prefers-reduced-motion:reduce){.staff-directory-page *,.staff-profile-page *{scroll-behavior:auto}}

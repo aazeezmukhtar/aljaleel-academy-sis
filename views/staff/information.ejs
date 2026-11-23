@@ -1,5 +1,5 @@
 <%- include('../partials/header') %>
-<div class="dashboard-container"><%- include('../partials/sidebar') %><main class="main-content">
+<div class="dashboard-container"><%- include('../partials/sidebar') %><main class="main-content staff-information-page">
 <header class="content-header"><div><a href="<%= isOwnProfile?'/dashboard':'/staff/view/'+member.id %>" class="staff-back-link">&larr; Back</a><h1><%= isOwnProfile?'My Profile':'Staff Information' %></h1><p class="text-muted"><%= member.first_name %> <%= member.last_name %> · <%= member.designation||member.role %></p></div></header>
 <% if(error){ %><div class="alert alert-danger" role="alert"><%= error %></div><% } %><% if(success){ %><div class="alert alert-success" role="status"><%= success %></div><% } %>
 <% if(migrationRequired){ %><section class="card"><h2>Staff information setup required</h2><p>The staff-information database migration has not been installed in this environment. Existing staff accounts and assignments are unaffected. These forms will be available after the migration is approved and applied.</p></section><% }else{ %>

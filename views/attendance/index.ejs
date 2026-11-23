@@ -34,7 +34,7 @@
                                         <% }); %>
                                 </select>
                                 <% } else { %>
-                                <div class="emp-state" style="padding: 10px; border: 1px dashed #ef4444; color: #ef4444; border-radius: 8px;">
+                                <div class="emp-state attendance-no-classes">
                                     <i class="bi bi-exclamation-triangle"></i> No classes assigned to you.
                                 </div>
                                 <% } %>
@@ -117,7 +117,7 @@
                             <summary>
                                 <span class="attendance-risk-class-name">
                                     <i class="bi bi-door-open-fill"></i>
-                                    <span><%= group.class.name %><small style="display:block;font-weight:500;color:var(--text-muted);font-size:.75rem;"><%= group.section_name %></small></span>
+                                    <span><%= group.class.name %><small class="attendance-risk-section-name"><%= group.section_name %></small></span>
                                 </span>
                                 <span class="attendance-risk-class-meta">
                                     <span class="attendance-risk-class-count"><%= group.students.length %> flagged</span>
@@ -126,9 +126,9 @@
                             </summary>
 
                             <% if (!group.hasAcademicContext) { %>
-                            <p class="attendance-risk-guidance" style="padding:12px;margin:0;">Attendance alerts cannot be calculated because this class's section has no complete current session and term configured.</p>
+                            <p class="attendance-risk-guidance attendance-risk-guidance-inline">Attendance alerts cannot be calculated because this class's section has no complete current session and term configured.</p>
                             <% } else if (group.students.length === 0) { %>
-                            <p class="attendance-risk-guidance" style="padding:12px;margin:0;">No students in this class currently meet the attendance warning thresholds.</p>
+                            <p class="attendance-risk-guidance attendance-risk-guidance-inline">No students in this class currently meet the attendance warning thresholds.</p>
                             <% } else { %>
                             <!-- Desktop: retain the detailed table -->
                             <div class="attendance-risk-desktop">
@@ -138,8 +138,8 @@
                                             <tr>
                                                 <th>Student Name</th>
                                                 <th>Parent Contact</th>
-                                                <th style="text-align:center;">Total Absences</th>
-                                                <th style="text-align:center;">Consecutive Streak</th>
+                                                <th class="attendance-risk-centered-cell">Total Absences</th>
+                                                <th class="attendance-risk-centered-cell">Consecutive Streak</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -162,8 +162,8 @@
                                                         <% } %>
                                                     </div>
                                                 </td>
-                                                <td style="text-align:center;"><strong class="attendance-risk-absence"><%= st.total_absent_days %> days</strong></td>
-                                                <td style="text-align:center;">
+                                                <td class="attendance-risk-centered-cell"><strong class="attendance-risk-absence"><%= st.total_absent_days %> days</strong></td>
+                                                <td class="attendance-risk-centered-cell">
                                                     <% if (st.current_consecutive_absent_days === 0) { %>
                                                     <span class="attendance-risk-broken">0 days · Broken</span>
                                                     <% } else { %>
@@ -223,102 +223,6 @@
                     </div>
                 </section>
 
-                <style>
-                    .attendance-risk-filter { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
-                    .attendance-risk-filter-button { border:1px solid var(--border-subtle); border-radius:999px; padding:8px 14px; background:var(--bg-subtle,#f8fafc); color:var(--text-primary,#1e293b); font:inherit; font-size:.84rem; cursor:pointer; }
-                    .attendance-risk-filter-button.active { background:var(--primary,#001c2c); border-color:var(--primary,#001c2c); color:#fff; }
-                    .attendance-risk-filter-empty { margin:0 0 12px; padding:12px; border:1px dashed var(--border-subtle); border-radius:10px; color:var(--text-muted); font-size:.85rem; }
-                    .attendance-risk-section { border-top: 4px solid #dc2626; margin-top: 10px; }
-                    .attendance-risk-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:16px; }
-                    .attendance-risk-heading h3 { color:#b91c1c; margin:0; display:flex; align-items:center; gap:8px; }
-                    .attendance-risk-heading p { color:var(--text-muted); margin:5px 0 0; font-size:.9rem; }
-                    .attendance-risk-total { flex-shrink:0; border-radius:999px; background:#fee2e2; color:#991b1b; padding:6px 12px; font-size:.82rem; font-weight:700; }
-                    .attendance-risk-overview { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:12px; }
-                    .attendance-risk-stat { display:flex; flex-direction:column; gap:2px; background:var(--bg-subtle,#f8fafc); border:1px solid var(--border-subtle); border-radius:12px; padding:12px 14px; }
-                    .attendance-risk-stat strong { font-size:1.45rem; line-height:1.2; color:var(--text-primary,#1e293b); }
-                    .attendance-risk-stat span { font-size:.78rem; color:var(--text-muted); }
-                    .attendance-risk-guidance { color:var(--text-muted); font-size:.82rem; margin:0 0 16px; line-height:1.5; }
-                    .attendance-risk-groups { display:grid; gap:10px; }
-                    .attendance-risk-class { border:1px solid var(--border-subtle); border-radius:12px; overflow:hidden; background:#fff; }
-                    .attendance-risk-class > summary { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px; cursor:pointer; list-style:none; background:#fff7f7; }
-                    .attendance-risk-class > summary::-webkit-details-marker { display:none; }
-                    .attendance-risk-class-name,.attendance-risk-class-meta { display:flex; align-items:center; gap:9px; min-width:0; }
-                    .attendance-risk-class-name { color:#7f1d1d; font-weight:700; }
-                    .attendance-risk-class-name span { overflow-wrap:anywhere; }
-                    .attendance-risk-class-count { color:#991b1b; background:#fee2e2; border-radius:999px; padding:4px 9px; white-space:nowrap; font-size:.75rem; font-weight:700; }
-                    .attendance-risk-chevron { color:#991b1b; transition:transform .2s ease; }
-                    .attendance-risk-class[open] .attendance-risk-chevron { transform:rotate(180deg); }
-                    .attendance-risk-desktop { padding:0 12px 12px; }
-                    .attendance-risk-desktop .table-container { overflow-x:auto; }
-                    .attendance-risk-desktop .data-table { min-width:680px; }
-                    .attendance-risk-desktop .data-table td { vertical-align:middle; }
-                    .attendance-risk-contact { display:flex; align-items:center; gap:8px; }
-                    .attendance-risk-contact-icon { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:10px; text-decoration:none; font-size:1rem; transition:transform .15s ease,background .15s ease; }
-                    .attendance-risk-contact-icon:active { transform:scale(.94); }
-                    .attendance-risk-contact-icon.whatsapp { color:#15803d; background:#dcfce7; }
-                    .attendance-risk-contact-icon.phone { color:#1d4ed8; background:#dbeafe; }
-                    .attendance-risk-absence { color:#b91c1c; }
-                    .attendance-risk-streak { color:#b45309; }
-                    .attendance-risk-broken { color:#047857; font-size:.82rem; }
-                    .attendance-risk-mobile { display:none; }
-                    @media (max-width:768px) {
-                        .attendance-risk-section { padding:14px; }
-                        .attendance-risk-heading { align-items:center; }
-                        .attendance-risk-heading h3 { font-size:1.05rem; }
-                        .attendance-risk-heading p { font-size:.8rem; }
-                        .attendance-risk-overview { gap:8px; }
-                        .attendance-risk-stat { padding:10px 12px; }
-                        .attendance-risk-stat strong { font-size:1.3rem; }
-                        .attendance-risk-class > summary { padding:12px; }
-                        .attendance-risk-desktop { display:none; }
-                        .attendance-risk-mobile { display:grid; gap:9px; padding:10px; }
-                        .attendance-risk-student { min-width:0; border:1px solid #e2e8f0; border-radius:11px; padding:12px; background:#fff; }
-                        .attendance-risk-student-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
-                        .attendance-risk-student-name { min-width:0; color:#1e293b; font-size:.9rem; line-height:1.3; overflow-wrap:anywhere; }
-                        .attendance-risk-contact { flex-shrink:0; }
-                        .attendance-risk-contact-icon { width:34px; height:34px; }
-                        .attendance-risk-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:12px 0 10px; }
-                        .attendance-risk-metrics > div { display:flex; flex-direction:column; gap:3px; min-width:0; background:#f8fafc; border-radius:8px; padding:8px; }
-                        .attendance-risk-metrics span { color:var(--text-muted); font-size:.7rem; }
-                        .attendance-risk-metrics strong { font-size:.84rem; overflow-wrap:anywhere; }
-                    }
-                    @media (min-width:769px) {
-                        .attendance-risk-class > summary { padding:13px 16px; }
-                        .attendance-risk-desktop .data-table { margin:0; }
-                    }
-
-                    .attendance-page-header { margin-bottom: 22px; align-items: center; }
-                    .attendance-launch-grid { margin-bottom: 24px; gap: 18px; align-items: stretch; }
-                    .attendance-launch-card { display: flex; flex-direction: column; }
-                    .attendance-launch-card h3, .attendance-staff-card h3 { margin: 0; }
-                    .attendance-launch-description { margin: 8px 0 20px; color: var(--text-muted); line-height: 1.5; }
-                    .attendance-launch-form { display: grid; gap: 14px; }
-                    .attendance-launch-form .form-group { margin: 0; }
-                    .attendance-launch-form .form-group label { display: block; margin-bottom: 7px; font-weight: 600; }
-                    .attendance-launch-form .form-control { min-height: 46px; }
-                    .attendance-start-button, .attendance-previous-button { width: 100%; min-height: 44px; margin: 0; }
-                    .attendance-previous-button { margin-top: -4px; }
-                    .attendance-previous-help { font-size: .78rem; margin: -8px 0 0; text-align: center; }
-                    .attendance-offline-status { margin: 14px 0 0; font-size: .82rem; line-height: 1.45; color: var(--text-muted); }
-                    .attendance-staff-card { display: flex; flex-direction: column; background: var(--bg-subtle, #f8fafc); color: var(--text-primary, #1e293b); border: 1px solid var(--border-subtle); }
-                    .attendance-staff-description { margin: 8px 0 0; color: var(--text-muted); line-height: 1.5; }
-                    .attendance-staff-action { margin-top: auto; padding-top: 28px; }
-                    .attendance-staff-link { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; min-height: 44px; background: var(--primary, #001c2c); color: #fff; }
-                    .attendance-staff-note { margin-top: 14px; text-align: center; color: var(--text-muted); font-size: .82rem; }
-                    .attendance-launch-form .form-control:focus-visible,
-                    .attendance-start-button:focus-visible,
-                    .attendance-previous-button:focus-visible,
-                    .attendance-staff-link:focus-visible { outline: 3px solid var(--focus-ring, #fbbf24); outline-offset: 2px; }
-                    @media (max-width: 768px) {
-                        .attendance-page-header { gap: 10px; margin-bottom: 16px; }
-                        .attendance-page-header > div { min-width: 100%; }
-                        .attendance-launch-grid { gap: 12px; margin-bottom: 18px; }
-                        .attendance-launch-card, .attendance-staff-card { padding: 16px; }
-                        .attendance-launch-description { margin-bottom: 16px; }
-                        .attendance-staff-action { padding-top: 20px; }
-                    }
-
-                </style>
                 <% } %>
             </main>
     </div>

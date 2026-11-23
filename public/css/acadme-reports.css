@@ -1,0 +1,41 @@
+/*
+ * AcadMe Reports module presentation.
+ * Presentation only: report queries, filters, calculations, permissions and print output remain unchanged.
+ */
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page,.reports-audit-page){min-width:0}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page,.reports-audit-page) .content-header{gap:var(--acm-sp-8);margin-block-end:var(--acm-sp-16)}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page,.reports-audit-page) .content-header h1{color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight)}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page,.reports-audit-page) .content-header p{color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .back-link{display:inline-flex;align-items:center;gap:6px;margin-block-end:var(--acm-sp-8);color:var(--acm-text-secondary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-medium);text-decoration:none}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .back-link:hover{color:var(--acm-navy)}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) :is(.report-dashboard-grid,.stats-grid){gap:var(--acm-sp-12)}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-dashboard-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));margin-block-start:var(--acm-sp-16)}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-card{min-width:0;min-height:112px;gap:var(--acm-sp-16);padding:clamp(14px,2.2vw,22px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);color:var(--acm-text-primary);box-shadow:var(--acm-shadow-xs);transition:border-color .18s ease,box-shadow .18s ease,transform .18s ease}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-card:hover{border-color:var(--acm-border-strong);box-shadow:var(--acm-shadow-sm);transform:translateY(-2px)}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-card:focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-icon{width:48px;height:48px;min-width:48px;border-radius:var(--acm-radius-sm);font-size:1.35rem}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-info{min-width:0}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-info h3{margin:0 0 5px;color:var(--acm-text-primary);font-size:var(--acm-text-base);font-weight:var(--acm-fw-semibold);line-height:var(--acm-lh-snug)}
+.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-info p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm);line-height:var(--acm-lh-normal)}
+.main-content:is(.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .stats-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));margin-block-end:var(--acm-sp-16)}
+.main-content:is(.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .stat-card{min-width:0;gap:var(--acm-sp-12);padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-xs)}
+.main-content:is(.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .stat-icon{width:44px;height:44px;min-width:44px;border-radius:var(--acm-radius-sm);font-size:1.2rem}
+.main-content:is(.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .stat-info{min-width:0}
+.main-content:is(.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .stat-info h3{overflow-wrap:anywhere;margin:0;color:var(--acm-text-primary);font-size:clamp(1.1rem,2.5vw,1.45rem);font-weight:var(--acm-fw-bold)}
+.main-content:is(.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .stat-info p{margin:2px 0 0;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
+.reports-audit-page .card{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.reports-audit-page .table-container{max-width:100%;border-radius:var(--acm-radius-sm)}
+.reports-audit-page .data-table{font-size:var(--acm-text-sm)}
+.reports-audit-page .data-table th{white-space:nowrap;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
+.reports-audit-page .data-table td{vertical-align:middle}
+.reports-audit-page :is(button,a):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:760px){
+ .main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-dashboard-grid{grid-template-columns:minmax(0,1fr)}
+ .main-content:is(.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-card{min-height:96px}
+}
+@media(max-width:420px){
+ .main-content:is(.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .stats-grid{grid-template-columns:minmax(0,1fr)}
+ .main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-card{gap:var(--acm-sp-12);padding:var(--acm-sp-12)}
+}
+@media(prefers-reduced-motion:reduce){.main-content:is(.reports-center-page,.reports-academic-page,.reports-attendance-page,.reports-finance-page,.reports-staff-page,.reports-student-page,.reports-health-page) .report-card{transition:none}}

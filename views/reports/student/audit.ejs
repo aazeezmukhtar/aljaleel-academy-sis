@@ -1,7 +1,7 @@
 <%- include('../../partials/header') %>
     <%- include('../../partials/sidebar') %>
 
-        <main class="main-content">
+        <main class="main-content student-profile-audit-page">
             <header class="content-header">
                 <div class="header-left">
                     <a href="/reports/students" class="back-link"><i class="bi bi-arrow-left"></i> Back</a>
@@ -72,23 +72,11 @@
                 </div>
                 <% } else { %>
                     <div class="empty-state">
-                        <i class="bi bi-check-circle-fill" style="color: var(--success);"></i>
+                        <i class="bi bi-check-circle-fill" class="student-audit-success-icon"></i>
                         <h3>All Good!</h3>
                         <p>Every active student has a complete profile.</p>
                     </div>
                     <% } %>
         </main>
 
-        <style>
-            .badge-error {
-                background: #fee2e2;
-                color: #dc2626;
-            }
-
-            .badge-success {
-                background: #dcfce7;
-                color: #16a34a;
-            }
-        </style>
-
-        <%- include('../../partials/footer') %>
+<%- include('../../partials/footer') %>

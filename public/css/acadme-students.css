@@ -1,0 +1,262 @@
+/*
+ * AcadMe Students module presentation
+ * Feature layer: consumes shared tokens/components; does not change student workflows.
+ * Loaded only in the Admin/Staff shell and scoped to existing student-page classes.
+ */
+
+.main-content:has(.student-mobile-cards),
+.main-content:has(.profile-header),
+.main-content:has(.student-edit-card),
+.main-content:has(.student-enroll-page) {
+  min-width: 0;
+}
+
+.main-content:has(.student-mobile-cards) > .content-header,
+.main-content:has(.student-mobile-cards) > header.content-header {
+  margin-block-end: var(--acm-sp-16) !important;
+  padding-block: 0;
+  gap: var(--acm-sp-12) !important;
+}
+.main-content:has(.student-mobile-cards) .content-header h1,
+.main-content:has(.student-edit-card) .content-header h1 {
+  margin: 0;
+  color: var(--acm-text-primary);
+  font-size: clamp(var(--acm-text-xl), 2.5vw, var(--acm-text-2xl));
+  line-height: var(--acm-lh-tight);
+}
+.main-content:has(.student-mobile-cards) .content-header p {
+  margin-block-start: var(--acm-sp-4);
+  color: var(--acm-text-secondary);
+  font-size: var(--acm-text-sm);
+}
+.main-content:has(.student-mobile-cards) .content-header .btn,
+.main-content:has(.student-edit-card) .content-header .btn {
+  min-height: 42px;
+  border-radius: var(--acm-radius-sm);
+  font-size: var(--acm-text-sm);
+}
+
+.main-content:has(.student-mobile-cards) .search-filter-card {
+  margin-block-end: var(--acm-sp-16) !important;
+  padding: var(--acm-sp-16) !important;
+  border: 1px solid var(--acm-border);
+  border-radius: var(--acm-radius-md);
+  box-shadow: var(--acm-shadow-xs);
+}
+.main-content:has(.student-mobile-cards) .filter-main-bar { gap: var(--acm-sp-12); }
+.main-content:has(.student-mobile-cards) .search-input-wrapper {
+  min-width: 0;
+  border-radius: var(--acm-radius-sm);
+}
+.main-content:has(.student-mobile-cards) .search-input {
+  min-height: 44px;
+  border-radius: var(--acm-radius-sm);
+  font-size: 16px;
+}
+.main-content:has(.student-mobile-cards) .filter-pill-wrapper,
+.main-content:has(.student-mobile-cards) .more-filters-btn {
+  min-height: 42px;
+  border-radius: var(--acm-radius-sm);
+}
+.main-content:has(.student-mobile-cards) .filter-summary-bar {
+  margin-block-start: var(--acm-sp-12) !important;
+}
+.main-content:has(.student-mobile-cards) .results-count-display {
+  color: var(--acm-text-secondary);
+  font-size: var(--acm-text-sm);
+}
+
+.main-content:has(.student-mobile-cards) .student-mobile-cards {
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.main-content:has(.student-mobile-cards) .student-mobile-cards .data-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.main-content:has(.student-mobile-cards) .student-mobile-cards .data-table th {
+  color: var(--acm-text-secondary);
+  font-size: var(--acm-text-xs);
+  font-weight: var(--acm-fw-semibold);
+  letter-spacing: .02em;
+}
+.main-content:has(.student-mobile-cards) .student-mobile-cards .data-table td {
+  color: var(--acm-text-primary);
+  font-size: var(--acm-text-sm);
+  vertical-align: middle;
+}
+.main-content:has(.student-mobile-cards) .student-mobile-cards .data-table tbody tr {
+  transition: background-color var(--acm-transition-fast);
+}
+.main-content:has(.student-mobile-cards) .student-mobile-cards .data-table tbody tr:hover {
+  background: var(--acm-bg);
+}
+
+.main-content:has(.profile-header) .profile-header {
+  min-width: 0;
+  gap: var(--acm-sp-20);
+  margin-block-end: var(--acm-sp-16);
+  padding: var(--acm-sp-20);
+  border: 1px solid var(--acm-border);
+  border-radius: var(--acm-radius-md);
+  background: var(--acm-surface);
+  box-shadow: var(--acm-shadow-xs);
+}
+.main-content:has(.profile-header) .profile-info { min-width: 0; }
+.main-content:has(.profile-header) .profile-info h1 {
+  color: var(--acm-text-primary);
+  font-size: clamp(var(--acm-text-xl), 3vw, var(--acm-text-2xl));
+  line-height: var(--acm-lh-tight);
+  overflow-wrap: anywhere;
+}
+.main-content:has(.profile-header) .profile-info p {
+  color: var(--acm-text-secondary);
+  font-size: var(--acm-text-sm);
+}
+.main-content:has(.profile-header) .profile-header > div:last-child {
+  min-width: 0;
+}
+.main-content:has(.profile-header) .profile-header .btn {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: var(--acm-radius-sm);
+  font-size: var(--acm-text-xs);
+}
+.main-content:has(.profile-header) .card {
+  min-width: 0;
+  margin-block-end: var(--acm-sp-16);
+  border: 1px solid var(--acm-border);
+  border-radius: var(--acm-radius-md);
+  box-shadow: var(--acm-shadow-xs);
+}
+.main-content:has(.profile-header) .card h2,
+.main-content:has(.profile-header) .card h3 {
+  color: var(--acm-text-primary);
+  font-size: var(--acm-text-md);
+  line-height: var(--acm-lh-snug);
+}
+.main-content:has(.profile-header) .detail-grid {
+  gap: var(--acm-sp-16);
+}
+.main-content:has(.profile-header) .detail-item {
+  min-width: 0;
+  padding-block-end: var(--acm-sp-8);
+  border-color: var(--acm-border);
+  overflow-wrap: anywhere;
+}
+.main-content:has(.profile-header) .detail-item strong {
+  color: var(--acm-text-secondary);
+  font-size: var(--acm-text-xs);
+  letter-spacing: .025em;
+}
+.main-content:has(.profile-header) .detail-item > :not(strong) {
+  font-size: var(--acm-text-sm);
+}
+
+.main-content:has(.student-edit-card) .student-edit-card,
+.main-content:has(.student-enroll-page) .student-enroll-card {
+  border: 1px solid var(--acm-border);
+  border-radius: var(--acm-radius-md);
+  box-shadow: var(--acm-shadow-xs);
+}
+.main-content:has(.student-edit-card) .student-edit-card .form-group label,
+.main-content:has(.student-enroll-page) .student-enroll-field label {
+  color: var(--acm-text-primary);
+  font-size: var(--acm-text-sm);
+  font-weight: var(--acm-fw-semibold);
+}
+.main-content:has(.student-edit-card) .student-edit-card .form-control,
+.main-content:has(.student-enroll-page) .student-enroll-field input,
+.main-content:has(.student-enroll-page) .student-enroll-field select {
+  min-height: 44px;
+  border-color: var(--acm-border);
+  border-radius: var(--acm-radius-sm);
+  font-size: 16px;
+}
+.main-content:has(.student-edit-card) .student-edit-card .form-control:focus,
+.main-content:has(.student-enroll-page) .student-enroll-field input:focus,
+.main-content:has(.student-enroll-page) .student-enroll-field select:focus {
+  border-color: var(--acm-border-focus);
+  box-shadow: var(--acm-focus-ring);
+}
+.main-content:has(.student-enroll-page) .student-enroll-header h1 {
+  color: var(--acm-text-primary);
+  font-size: clamp(var(--acm-text-xl), 2.5vw, var(--acm-text-2xl));
+  line-height: var(--acm-lh-tight);
+}
+.main-content:has(.student-enroll-page) .student-enroll-section-heading {
+  color: var(--acm-text-primary);
+  font-size: var(--acm-text-md);
+  font-weight: var(--acm-fw-semibold);
+}
+.main-content:has(.student-enroll-page) .student-enroll-section-help,
+.main-content:has(.student-enroll-page) .student-enroll-help {
+  color: var(--acm-text-secondary);
+  font-size: var(--acm-text-xs);
+}
+
+@media (max-width: 640px) {
+  .main-content:has(.student-mobile-cards) .search-filter-card { padding: var(--acm-sp-12) !important; }
+  .main-content:has(.student-mobile-cards) .student-mobile-cards tr {
+    gap: var(--acm-sp-8) !important;
+    padding: var(--acm-sp-12) !important;
+    border: 1px solid var(--acm-border) !important;
+    border-radius: var(--acm-radius-md) !important;
+    box-shadow: var(--acm-shadow-xs) !important;
+  }
+  .main-content:has(.student-mobile-cards) .student-mobile-cards td[data-label="Name"] {
+    padding-block-end: var(--acm-sp-8) !important;
+  }
+  .main-content:has(.student-mobile-cards) .student-mobile-cards td[data-label="Name"] > div {
+    gap: var(--acm-sp-8) !important;
+    min-width: 0;
+  }
+  .main-content:has(.student-mobile-cards) .student-mobile-cards td[data-label="Name"] > div > div {
+    width: 40px !important;
+    height: 40px !important;
+    flex: 0 0 40px;
+  }
+  .main-content:has(.student-mobile-cards) .student-mobile-cards td[data-label="Name"] span {
+    font-size: var(--acm-text-sm) !important;
+    overflow-wrap: anywhere;
+  }
+  .main-content:has(.student-mobile-cards) .student-mobile-cards td[data-label="Contact Numbers"] {
+    overflow-wrap: anywhere;
+  }
+  .main-content:has(.student-mobile-cards) .student-mobile-cards td[data-label="Action"] .btn {
+    min-height: 38px;
+    padding-inline: 12px !important;
+  }
+  .main-content:has(.profile-header) .profile-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: var(--acm-sp-12);
+    padding: var(--acm-sp-16);
+  }
+  .main-content:has(.profile-header) .profile-header > img,
+  .main-content:has(.profile-header) .profile-header > .avatar-placeholder {
+    width: 76px !important;
+    height: 76px !important;
+    flex: 0 0 76px;
+    font-size: var(--acm-text-xl) !important;
+  }
+  .main-content:has(.profile-header) .profile-header > div:last-child {
+    flex: 1 1 100%;
+    display: flex !important;
+    align-items: stretch !important;
+    gap: var(--acm-sp-8) !important;
+  }
+  .main-content:has(.profile-header) .profile-header > div:last-child .btn {
+    flex: 1 1 calc(50% - var(--acm-sp-8));
+    min-width: 0;
+    white-space: normal;
+    text-align: center;
+  }
+  .main-content:has(.profile-header) .detail-grid { grid-template-columns: minmax(0, 1fr); gap: var(--acm-sp-12); }
+  .main-content:has(.student-edit-card) .student-edit-card { margin-inline: 0 !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-content:has(.student-mobile-cards) .student-mobile-cards tr { transition: none; }
+}

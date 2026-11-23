@@ -59,6 +59,7 @@
     "test:staff-information-migration": "node tests/staff-information-migration.test.js",
     "test:staff-information-self-service": "node tests/staff-information-self-service.test.js",
     "test:acadme-results-ui": "node tests/acadme-results-ui.test.js",
+    "test:acadme-result-preview-ui": "node tests/acadme-result-preview-ui.test.js",
     "test:acadme-finance-ui": "node tests/acadme-finance-ui.test.js",
     "test:acadme-academics-ui": "node tests/acadme-academics-ui.test.js",
     "test:acadme-staff-ui": "node tests/acadme-staff-ui.test.js",

@@ -17,6 +17,6 @@
 .attendance-daily-report-page .data-table td{vertical-align:middle}
 .attendance-daily-report-page .attendance-daily-total{margin-top:var(--acm-sp-12);text-align:right}
 .attendance-daily-report-page .attendance-daily-empty{padding:var(--acm-sp-32) var(--acm-sp-16);text-align:center;border:1px dashed var(--acm-border);border-radius:var(--acm-radius-md)}
-.attendance-daily-report-page .attendance-daily-empty-icon{display:block;margin-bottom:var(--acm-sp-12);color:var(--acm-text-tertiary);font-size:2.5rem}
+.attendance-daily-report-page .attendance-daily-empty-icon{display:block;margin-bottom:var(--acm-sp-12);color:var(--acm-text-secondary);font-size:2.5rem}
 .attendance-daily-report-page :is(a,button,input,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
 @media(max-width:700px){.attendance-daily-report-page .attendance-daily-header{align-items:flex-start;flex-direction:column}.attendance-daily-report-page .attendance-daily-actions{width:100%}.attendance-daily-report-page .attendance-daily-actions .btn{flex:1 1 130px}.attendance-daily-report-page .attendance-daily-filter-form{align-items:stretch;flex-direction:column}.attendance-daily-report-page .attendance-daily-filter-form .form-group,.attendance-daily-report-page .attendance-daily-filter-form>.btn{width:100%}}

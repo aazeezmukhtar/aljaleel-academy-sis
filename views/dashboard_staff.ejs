@@ -1,15 +1,16 @@
 <%- include('partials/header') %>
 
-    <div class="dashboard-container">
+    <div class="dashboard-container staff-dashboard-shell">
         <%- include('partials/sidebar') %>
 
             <!-- Main Content -->
             <main class="main-content">
                 <header class="content-header">
                     <div>
+                        <span class="dashboard-eyebrow">TEACHER</span>
                         <h1>Welcome, <%= user.first_name %>
                         </h1>
-                        <p class="text-muted">Staff Dashboard | <%= new Date().toLocaleDateString('en-US', {
+                        <p class="text-muted"><%= new Date().toLocaleDateString('en-US', {
                                 weekday: 'long' , year: 'numeric' , month: 'long' , day: 'numeric' }) %>
                         </p>
                     </div>
@@ -81,7 +82,7 @@
                     </div>
                 </div>
 
-                <div class="grid-3" style="margin-top: 40px;">
+                <div class="grid-3 teacher-dashboard-panels" style="margin-top: 40px;">
                     <!-- Assigned Classes -->
                     <div class="card">
                         <div class="card-header"

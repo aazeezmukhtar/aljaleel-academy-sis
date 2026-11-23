@@ -1,0 +1,217 @@
+/*
+ * AcadMe Results module presentation.
+ * Feature-only styling: no scoring, approval, publication, report, or offline workflow changes.
+ */
+.main-content.results-overview-page,
+.main-content.results-manager-page,
+.main-content.results-bulk-select-page,
+.main-content.results-setup-page,
+.main-content.results-traits-page,
+.main-content.results-import-page { min-width:0; }
+
+.main-content.results-overview-page > .content-header,
+.main-content.results-manager-page > .content-header,
+.main-content.results-setup-page > .content-header,
+.main-content.results-traits-page > .content-header {
+  gap:var(--acm-sp-12);
+  margin-block-end:var(--acm-sp-16);
+}
+.main-content.results-overview-page .content-header h1,
+.main-content.results-manager-page .content-header h1,
+.main-content.results-setup-page .content-header h1,
+.main-content.results-traits-page .content-header h1,
+.main-content.results-bulk-select-page .content-header h1,
+.main-content.results-import-page .content-header h1 {
+  color:var(--acm-text-primary);
+  font-family:var(--acm-font-heading);
+  font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));
+  font-weight:var(--acm-fw-bold);
+  line-height:var(--acm-lh-tight);
+  letter-spacing:var(--acm-ls-tight);
+}
+.main-content.results-overview-page .content-header p,
+.main-content.results-manager-page .content-header p,
+.main-content.results-setup-page .content-header p,
+.main-content.results-traits-page .content-header p,
+.main-content.results-bulk-select-page .content-header p {
+  color:var(--acm-text-secondary);
+  font-size:var(--acm-text-sm);
+}
+
+.results-overview-page .grid-3 { gap:var(--acm-sp-12); }
+.results-overview-page .report-card-link {
+  min-width:0;
+  color:inherit;
+  text-decoration:none;
+  transition:transform var(--acm-transition-fast);
+}
+.results-overview-page .report-card-link:focus-visible {
+  outline:3px solid var(--acm-border-focus);
+  outline-offset:3px;
+  border-radius:var(--acm-radius-md);
+}
+.results-overview-page .stat-card {
+  min-width:0;
+  height:100%;
+  gap:var(--acm-sp-12);
+  padding:var(--acm-sp-16) !important;
+  border:1px solid var(--acm-border);
+  border-radius:var(--acm-radius-md);
+  box-shadow:var(--acm-shadow-xs);
+}
+.results-overview-page .stat-icon {
+  width:44px;
+  height:44px;
+  flex:0 0 44px;
+  border-radius:var(--acm-radius-sm);
+  font-size:1.25rem;
+}
+.results-overview-page .stat-info { min-width:0; }
+.results-overview-page .stat-info h3 {
+  color:var(--acm-text-primary);
+  font-size:var(--acm-text-md);
+  font-weight:var(--acm-fw-semibold);
+}
+.results-overview-page .stat-info p {
+  color:var(--acm-text-secondary);
+  font-size:var(--acm-text-sm);
+  line-height:var(--acm-lh-base);
+}
+.results-overview-page > .grid-2 { gap:var(--acm-sp-12); }
+.results-overview-page > .grid-2 > .card,
+.results-manager-page > .card,
+.results-setup-page > .card,
+.results-traits-page > .card,
+.results-import-page > .card,
+.results-bulk-select-page > .card {
+  min-width:0;
+  border:1px solid var(--acm-border);
+  border-radius:var(--acm-radius-md);
+  box-shadow:var(--acm-shadow-xs);
+}
+
+.results-manager-page .filter-grid,
+.results-bulk-select-page form,
+.results-import-page form { gap:var(--acm-sp-12); }
+.results-manager-page .form-group,
+.results-bulk-select-page .form-group,
+.results-setup-page .form-group,
+.results-traits-page .form-group,
+.results-import-page .form-group { min-width:0; }
+.results-manager-page .form-control,
+.results-bulk-select-page .form-control,
+.results-setup-page .form-control,
+.results-traits-page .form-control,
+.results-import-page .form-control {
+  min-height:44px;
+  border-color:var(--acm-border);
+  border-radius:var(--acm-radius-sm);
+  font-size:16px;
+}
+.results-manager-page .btn,
+.results-bulk-select-page .btn,
+.results-setup-page .btn,
+.results-traits-page .btn,
+.results-import-page .btn {
+  min-height:40px;
+  border-radius:var(--acm-radius-sm);
+}
+.results-manager-page .result-sheet-header {
+  flex-wrap:wrap;
+  gap:var(--acm-sp-12);
+  align-items:flex-start !important;
+}
+.results-manager-page .result-actions-group {
+  min-width:0;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:center;
+  justify-content:flex-end;
+  gap:var(--acm-sp-12);
+}
+.results-manager-page .result-config-info {
+  font-size:var(--acm-text-xs);
+  line-height:var(--acm-lh-base);
+}
+.results-manager-page .button-stack { display:flex; flex-wrap:wrap; gap:var(--acm-sp-8); }
+.results-manager-page .result-grid-wrapper {
+  max-width:100%;
+  border:1px solid var(--acm-border);
+  border-radius:var(--acm-radius-sm);
+}
+.results-manager-page .result-grid { font-size:var(--acm-text-sm); }
+.results-manager-page .result-grid th {
+  color:var(--acm-text-secondary);
+  font-size:var(--acm-text-xs);
+  font-weight:var(--acm-fw-semibold);
+}
+.results-manager-page .result-grid td { vertical-align:middle; }
+.results-manager-page .score-input {
+  width:100%;
+  min-width:64px;
+  min-height:40px;
+  border-color:var(--acm-border);
+  border-radius:var(--acm-radius-xs);
+  font-size:16px;
+}
+.results-manager-page .score-input:focus-visible,
+.results-setup-page :is(input,select,button):focus-visible,
+.results-traits-page :is(select,button):focus-visible,
+.results-import-page :is(input,select,button):focus-visible {
+  outline:3px solid var(--acm-border-focus);
+  outline-offset:2px;
+}
+.results-manager-page .row-name { color:var(--acm-text-primary); }
+.results-manager-page .row-index,
+.results-manager-page .row-id { color:var(--acm-text-secondary); }
+.results-manager-page .sticky-save-bar { padding-bottom:calc(var(--acm-sp-12) + env(safe-area-inset-bottom,0px)); }
+.results-manager-page .sticky-save-inner { gap:var(--acm-sp-8); }
+.results-manager-page .sticky-save-inner .btn { min-height:44px; border-radius:var(--acm-radius-sm); }
+.results-manager-page .emp-state {
+  padding:var(--acm-sp-32) var(--acm-sp-16);
+  border:1px dashed var(--acm-border);
+  border-radius:var(--acm-radius-md);
+  text-align:center;
+}
+.results-manager-page #resultsOfflinePreparationStatus { overflow-wrap:anywhere; }
+
+.results-setup-page .tabs-navigation { gap:var(--acm-sp-8); flex-wrap:wrap; }
+.results-setup-page .tab-btn { min-height:40px; border-radius:var(--acm-radius-sm); }
+.results-setup-page .tab-content { min-width:0; }
+.results-setup-page .table,
+.results-traits-page .data-table { font-size:var(--acm-text-sm); }
+.results-setup-page .table th,
+.results-traits-page .data-table th { color:var(--acm-text-secondary); }
+.results-setup-page .table-responsive,
+.results-traits-page .table-container { max-width:100%; }
+.results-traits-page .trait-select { min-height:40px; min-width:120px; }
+.results-bulk-select-page .back-link { color:var(--acm-text-secondary); }
+.results-bulk-select-page .card-body { min-width:0; }
+.results-import-page .text-muted,
+.results-setup-page .text-muted,
+.results-traits-page .text-muted { color:var(--acm-text-secondary) !important; }
+
+@media(max-width:640px) {
+  .results-overview-page .grid-3 { grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--acm-sp-8); }
+  .results-overview-page .stat-card { align-items:flex-start; flex-direction:column; gap:var(--acm-sp-8); padding:var(--acm-sp-12) !important; }
+  .results-overview-page .stat-icon { width:38px; height:38px; flex-basis:38px; font-size:1.1rem; }
+  .results-overview-page .stat-info h3 { font-size:var(--acm-text-sm); }
+  .results-overview-page .stat-info p { font-size:var(--acm-text-xs); }
+  .results-manager-page > .card { padding:var(--acm-sp-12); }
+  .results-manager-page .result-sheet-header { display:flex !important; }
+  .results-manager-page .result-actions-group { width:100%; justify-content:stretch; }
+  .results-manager-page .button-stack { width:100%; }
+  .results-manager-page .button-stack .btn { flex:1 1 calc(50% - var(--acm-sp-8)); }
+  .results-manager-page .result-config-info { flex:1 1 100%; }
+  .results-manager-page .result-grid-wrapper { overflow-x:auto; }
+  .results-manager-page .result-grid { min-width:680px; }
+  .results-manager-page .sticky-save-inner .btn { flex:1 1 0; }
+  .results-setup-page .tabs-navigation { overflow-x:auto; flex-wrap:nowrap; padding-block-end:var(--acm-sp-4); }
+  .results-setup-page .tab-btn { flex:0 0 auto; }
+  .results-bulk-select-page > .card,
+  .results-import-page > .card,
+  .results-traits-page > .card { padding:var(--acm-sp-12); }
+}
+@media(prefers-reduced-motion:reduce) {
+  .results-overview-page .report-card-link { transition:none; }
+}

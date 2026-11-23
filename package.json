@@ -82,7 +82,8 @@
     "test:acadme-finance-reports-ui": "node tests/acadme-finance-reports-ui.test.js",
     "test:acadme-system-audit-ui": "node tests/acadme-system-audit-ui.test.js",
     "test:acadme-report-navigation-ui": "node tests/acadme-report-navigation-ui.test.js",
-    "test:acadme-attendance-register-reports-ui": "node tests/acadme-attendance-register-reports-ui.test.js"
+    "test:acadme-attendance-register-reports-ui": "node tests/acadme-attendance-register-reports-ui.test.js",
+    "test:acadme-attendance-analytics-ui": "node tests/acadme-attendance-analytics-ui.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

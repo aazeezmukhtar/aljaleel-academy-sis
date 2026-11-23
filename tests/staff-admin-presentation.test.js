@@ -9,6 +9,7 @@ const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const header = read('views/partials/header.ejs');
 const notificationBar = read('views/partials/notification_bar.ejs');
 const modernCss = read('public/css/staff-admin-modern.css');
+const dashboardCss = read('public/css/dashboard-reference-refresh.css');
 const adminDashboard = read('views/dashboard.ejs');
 const staffDashboard = read('views/dashboard_staff.ejs');
 const app = read('app.js');
@@ -85,4 +86,22 @@ check('shared shell, dashboard templates and notification partial compile as EJS
     'views/dashboard.ejs',
     'views/dashboard_staff.ejs'
   ].forEach(file => ejs.compile(read(file), { filename: path.join(__dirname, '..', file) }));
+});
+
+check('teacher dashboard statistics and classes/subjects panels use two columns on mobile', () => {
+  assert.match(dashboardCss, /\.staff-dashboard-shell \.stats-grid[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important;/);
+  assert.match(dashboardCss, /\.staff-dashboard-shell \.teacher-dashboard-panels[\s\S]*?grid-template-columns: repeat\(2, minmax\(0, 1fr\)\) !important;/);
+});
+check('teacher class and subject lists limit initial display to three with view more', () => {
+  assert.match(staffDashboard, /assignedClasses\.forEach\(\(cls, index\)/);
+  assert.match(staffDashboard, /assignedSubjects\.forEach\(\(sub, index\)/);
+  assert.match(staffDashboard, /index >= 3/);
+  assert.match(staffDashboard, /assignedClasses\.length > 3/);
+  assert.match(staffDashboard, /assignedSubjects\.length > 3/);
+  assert.match(staffDashboard, /aria-controls="assignedClassesList"/);
+  assert.match(staffDashboard, /aria-controls="assignedSubjectsList"/);
+});
+check('mobile AcadMe top bar and compact admin attendance tile are styled', () => {
+  assert.match(dashboardCss, /\.mobile-topbar \{ height: 88px !important/);
+  assert.match(dashboardCss, /height: 148px !important/);
 });

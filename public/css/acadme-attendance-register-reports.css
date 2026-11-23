@@ -1,0 +1,41 @@
+/* Attendance low-attendance and monthly-register reports. */
+.attendance-low-report-page,.attendance-monthly-register-page{min-width:0}
+.attendance-low-report-page .filter-form,.attendance-monthly-register-page .filter-form{display:flex;align-items:flex-end;flex-wrap:wrap;gap:var(--acm-sp-16)}
+.attendance-low-report-page .filter-form .form-group,.attendance-monthly-register-page .filter-form .form-group{min-width:min(100%,180px);flex:1 1 180px}
+.attendance-low-report-page .report-paper,.attendance-monthly-register-page .report-paper{max-width:100%;margin:var(--acm-sp-20) auto;padding:var(--acm-sp-24);border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);background:var(--acm-surface);box-shadow:var(--acm-shadow-xs)}
+.attendance-low-report-page .report-paper{max-width:210mm}
+.attendance-low-report-page .report-header,.attendance-monthly-register-page .report-header{text-align:center;margin-block-end:var(--acm-sp-20);padding-block-end:var(--acm-sp-12);border-block-end:1px solid var(--acm-border)}
+.attendance-low-report-page .report-header h2,.attendance-monthly-register-page .report-header h2{margin:0 0 var(--acm-sp-4);color:var(--acm-text-primary);font-size:var(--acm-text-lg)}
+.attendance-low-report-page .report-header p,.attendance-monthly-register-page .report-header p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.attendance-low-report-page .table-container,.attendance-monthly-register-page .table-container{width:100%;overflow-x:auto}
+.attendance-low-report-page .report-table,.attendance-monthly-register-page .report-table{width:100%;border-collapse:collapse;font-size:var(--acm-text-sm)}
+.attendance-low-report-page .report-table th,.attendance-low-report-page .report-table td,.attendance-monthly-register-page .report-table th,.attendance-monthly-register-page .report-table td{padding:var(--acm-sp-8);border:1px solid var(--acm-border);text-align:start;vertical-align:middle}
+.attendance-low-report-page .report-table th,.attendance-monthly-register-page .report-table th{background:var(--acm-bg);color:var(--acm-text-primary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.attendance-low-report-page .student-name{font-weight:var(--acm-fw-medium)}
+.attendance-low-report-page .attendance-percentage{color:var(--acm-error);font-weight:var(--acm-fw-bold);white-space:nowrap}
+.attendance-monthly-register-page .register-table{min-width:max-content;font-size:var(--acm-text-xs);border-collapse:collapse}
+.attendance-monthly-register-page .register-table th,.attendance-monthly-register-page .register-table td{text-align:center;padding:var(--acm-sp-4);min-width:26px}
+.attendance-monthly-register-page .register-table .name-col{position:sticky;inset-inline-start:0;z-index:1;min-width:170px;text-align:start;background:var(--acm-surface);font-weight:var(--acm-fw-medium)}
+.attendance-monthly-register-page .register-table thead .name-col{z-index:2;background:var(--acm-bg)}
+.attendance-monthly-register-page .register-table .day-col{width:26px;min-width:26px}
+.attendance-monthly-register-page .register-table .summary-col{min-width:32px;background:var(--acm-bg);font-weight:var(--acm-fw-semibold)}
+.attendance-monthly-register-page .status-present{color:var(--acm-success);background:var(--acm-success-bg)}
+.attendance-monthly-register-page .status-absent{color:var(--acm-error);background:var(--acm-error-bg);font-weight:var(--acm-fw-bold)}
+.attendance-monthly-register-page .status-late{color:var(--acm-warning);background:var(--acm-warning-bg);font-weight:var(--acm-fw-bold)}
+.attendance-monthly-register-page .status-none{color:var(--acm-text-muted)}
+.attendance-monthly-register-page .legend{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:var(--acm-sp-16);margin-block-start:var(--acm-sp-12);color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.attendance-low-report-page a:focus-visible,.attendance-monthly-register-page a:focus-visible,.attendance-low-report-page button:focus-visible,.attendance-monthly-register-page button:focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:640px){.attendance-low-report-page .report-paper,.attendance-monthly-register-page .report-paper{padding:var(--acm-sp-12)}.attendance-low-report-page .report-table{min-width:620px}.attendance-low-report-page .header-actions,.attendance-monthly-register-page .header-actions{display:flex;flex-wrap:wrap;gap:var(--acm-sp-8)}.attendance-low-report-page .header-actions .btn,.attendance-monthly-register-page .header-actions .btn{min-height:44px}}
+@media print{
+ @page{size:A4;margin:10mm}
+ .attendance-low-report-page,.attendance-monthly-register-page{margin:0!important;padding:0!important}
+ .attendance-low-report-page *,.attendance-monthly-register-page *{visibility:hidden}
+ .attendance-low-report-page .report-paper,.attendance-low-report-page .report-paper *,.attendance-monthly-register-page .report-paper,.attendance-monthly-register-page .report-paper *{visibility:visible}
+ .attendance-low-report-page .report-paper,.attendance-monthly-register-page .report-paper{position:absolute;inset-block-start:0;inset-inline-start:0;width:100%;max-width:none;margin:0;padding:0;border:0;box-shadow:none;overflow:visible}
+ .attendance-low-report-page .table-container,.attendance-monthly-register-page .table-container{overflow:visible}
+ .attendance-low-report-page .no-print,.attendance-monthly-register-page .no-print{display:none!important}
+ .attendance-monthly-register-page .report-paper{width:100%}
+ .attendance-monthly-register-page .register-table{font-size:7pt}
+ .attendance-monthly-register-page .register-table th,.attendance-monthly-register-page .register-table td{padding:2px}
+}
+@media(prefers-reduced-motion:reduce){.attendance-low-report-page *,.attendance-monthly-register-page *{transition:none!important}}

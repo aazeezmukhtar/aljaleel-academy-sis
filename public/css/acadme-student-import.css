@@ -1,0 +1,134 @@
+/* AcadMe — Bulk Student Import presentation */
+.main-content.bulk-student-import-page {
+  min-width: 0;
+}
+.bulk-student-import-page > .content-header {
+  align-items: center;
+  gap: var(--acm-sp-16);
+  margin-block-end: var(--acm-sp-24) !important;
+}
+.bulk-student-import-page > .content-header h1 {
+  color: var(--acm-text-primary);
+  font-size: clamp(var(--acm-text-xl), 2.5vw, var(--acm-text-2xl));
+  line-height: var(--acm-lh-tight);
+}
+.bulk-student-import-page > .content-header p {
+  margin-block: var(--acm-sp-8) 0;
+  color: var(--acm-text-secondary);
+  font-size: var(--acm-text-sm);
+}
+.bulk-student-import-page > .content-header .btn {
+  min-height: 40px;
+  border-radius: var(--acm-radius-sm);
+}
+.bulk-student-import-page > .content-header + div {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.7fr) minmax(260px, 1fr) !important;
+  align-items: start;
+  gap: var(--acm-sp-20) !important;
+}
+.bulk-student-import-page .card {
+  min-width: 0;
+  padding: var(--acm-sp-24);
+  border: 1px solid var(--acm-border);
+  border-radius: var(--acm-radius-md);
+  box-shadow: var(--acm-shadow-xs);
+}
+.bulk-student-import-page #importForm h3,
+.bulk-student-import-page aside h3 {
+  color: var(--acm-text-primary);
+  font-size: var(--acm-text-md) !important;
+  font-weight: var(--acm-fw-semibold);
+}
+.bulk-student-import-page #importForm .form-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: var(--acm-sp-12) !important;
+  margin-block-end: var(--acm-sp-20) !important;
+}
+.bulk-student-import-page .form-group label {
+  display: block;
+  margin-block-end: var(--acm-sp-8);
+  color: var(--acm-text-primary);
+  font-size: var(--acm-text-sm);
+  font-weight: var(--acm-fw-semibold);
+}
+.bulk-student-import-page .form-control {
+  min-height: 44px;
+  border-color: var(--acm-border);
+  border-radius: var(--acm-radius-sm);
+  font-size: 16px;
+}
+.bulk-student-import-page .form-control:focus {
+  border-color: var(--acm-border-focus);
+  box-shadow: var(--acm-focus-ring);
+}
+.bulk-student-import-page #studentFile + span { overflow-wrap: anywhere; }
+.bulk-student-import-page #importForm .form-group > div:has(#studentFile) {
+  min-height: 132px;
+  border-color: var(--acm-border) !important;
+  border-radius: var(--acm-radius-md) !important;
+  background: var(--acm-bg) !important;
+  transition: border-color var(--acm-transition-fast), background-color var(--acm-transition-fast);
+}
+.bulk-student-import-page #importForm .form-group > div:has(#studentFile):hover,
+.bulk-student-import-page #importForm .form-group > div:has(#studentFile):focus-within {
+  border-color: var(--acm-border-focus) !important;
+  background: var(--acm-info-bg) !important;
+}
+.bulk-student-import-page #studentFile {
+  inset: 0;
+  width: 100%;
+  min-height: 100%;
+  cursor: pointer;
+}
+.bulk-student-import-page #importForm button[type="submit"] {
+  min-height: 48px;
+  border-radius: var(--acm-radius-sm);
+  font-weight: var(--acm-fw-semibold);
+}
+.bulk-student-import-page #statusSection {
+  border-color: var(--acm-border) !important;
+}
+.bulk-student-import-page #errorList,
+.bulk-student-import-page #duplicateList {
+  overflow-wrap: anywhere;
+}
+.bulk-student-import-page aside .card {
+  background: var(--acm-info-bg) !important;
+  border-color: var(--acm-info-border) !important;
+}
+.bulk-student-import-page aside p,
+.bulk-student-import-page aside ul {
+  color: var(--acm-text-secondary);
+  font-size: var(--acm-text-sm) !important;
+  line-height: var(--acm-lh-base);
+}
+.bulk-student-import-page aside ul { padding-inline-start: var(--acm-sp-20) !important; }
+.bulk-student-import-page aside li + li { margin-block-start: var(--acm-sp-8); }
+.bulk-student-import-page aside .card > div:last-child {
+  background: var(--acm-warning-bg) !important;
+  border: 1px solid var(--acm-warning-border);
+  border-radius: var(--acm-radius-sm) !important;
+  color: var(--acm-text-primary) !important;
+  line-height: var(--acm-lh-base);
+}
+.bulk-student-import-page :focus-visible {
+  outline: 3px solid var(--acm-border-focus);
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .bulk-student-import-page > .content-header {
+    align-items: flex-start !important;
+    flex-direction: column;
+  }
+  .bulk-student-import-page > .content-header .btn { width: 100%; justify-content: center; }
+  .bulk-student-import-page > .content-header + div {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: var(--acm-sp-16) !important;
+  }
+  .bulk-student-import-page .card { padding: var(--acm-sp-16); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bulk-student-import-page #importForm .form-group > div:has(#studentFile) { transition: none; }
+}

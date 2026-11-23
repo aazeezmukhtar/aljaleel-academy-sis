@@ -1,0 +1,58 @@
+/*
+ * AcadMe Finance module presentation.
+ * Scoped UI only; payment, assignment, fee calculation and reporting behavior remain unchanged.
+ */
+.main-content:is(.fees-manager-page,.fees-payment-page,.fees-receipt-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-reports-page,.finance-status-page){min-width:0}
+.main-content:is(.fees-manager-page,.fees-payment-page,.fees-receipt-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-reports-page,.finance-status-page) .content-header{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+.main-content:is(.fees-manager-page,.fees-payment-page,.fees-receipt-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-reports-page,.finance-status-page) .content-header h1{color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight)}
+.main-content:is(.fees-manager-page,.fees-payment-page,.fees-receipt-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-reports-page,.finance-status-page) .content-header p{color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.main-content:is(.fees-manager-page,.fees-payment-page,.fees-receipt-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-reports-page,.finance-status-page) .card{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.main-content:is(.fees-manager-page,.fees-payment-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-status-page) :is(input,select,textarea){min-height:44px;min-width:0;border-color:var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.main-content:is(.fees-manager-page,.fees-payment-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-status-page) .btn{min-height:40px;border-radius:var(--acm-radius-sm)}
+.main-content:is(.fees-manager-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-status-page) .table-container{max-width:100%;border-radius:var(--acm-radius-sm)}
+.main-content:is(.fees-manager-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-status-page) .data-table{font-size:var(--acm-text-sm)}
+.main-content:is(.fees-manager-page,.fees-setup-page,.fees-student-page,.fees-report-page,.finance-debtors-page,.finance-status-page) .data-table th{color:var(--acm-text-secondary);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-semibold)}
+.fees-manager-page .grid-2,.fees-setup-page .dashboard-grid,.fees-student-page .dashboard-grid{gap:var(--acm-sp-12)!important}
+.fees-manager-page .emp-state{padding:var(--acm-sp-32) var(--acm-sp-16);border:1px dashed var(--acm-border);border-radius:var(--acm-radius-md);text-align:center}
+.fees-payment-page>section.card{max-width:600px;padding:var(--acm-sp-20)}
+.fees-payment-page .enroll-form{gap:var(--acm-sp-16)}
+.fees-payment-page .enroll-form button,.fees-payment-page .enroll-form select{width:100%}
+.fees-payment-page .enroll-form :is(input,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+.fees-setup-page .dashboard-grid{grid-template-columns:minmax(0,1fr) minmax(0,2fr)!important}
+.fees-setup-page .enroll-form{gap:var(--acm-sp-12)}
+.fees-setup-page .data-table td,.fees-student-page .data-table td{vertical-align:middle}
+.fees-student-page .dashboard-grid{grid-template-columns:minmax(0,2fr) minmax(260px,1fr)!important}
+.fees-receipt-page .receipt-card{max-width:800px;margin-inline:auto;overflow-wrap:anywhere}
+.fees-report-page .stats-grid,.finance-reports-page .stats-grid{gap:var(--acm-sp-12)}
+.fees-report-page .stat-card,.finance-reports-page .stat-card{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.finance-reports-page .report-dashboard-grid{gap:var(--acm-sp-12)}
+.finance-reports-page .report-card{min-width:0;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);transition:transform var(--acm-transition-fast),box-shadow var(--acm-transition-fast)}
+.finance-reports-page .report-card:focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+.finance-debtors-page .filter-form,.finance-status-page .filter-form{display:flex;flex-wrap:wrap;align-items:flex-end;gap:var(--acm-sp-12)}
+.finance-debtors-page .filter-form .form-group,.finance-status-page .filter-form .form-group{flex:1 1 180px;min-width:0}
+.finance-debtors-page .report-paper,.finance-status-page .report-paper{max-width:210mm;margin-inline:auto;padding:var(--acm-sp-32);background:#fff;border-radius:var(--acm-radius-sm);box-shadow:var(--acm-shadow-xs)}
+.finance-debtors-page .report-table,.finance-status-page .report-table{width:100%;border-collapse:collapse;font-size:var(--acm-text-sm)}
+.finance-debtors-page .report-table :is(th,td),.finance-status-page .report-table :is(th,td){border:1px solid #ddd;padding:10px;text-align:left}
+.finance-debtors-page .report-table th,.finance-status-page .report-table th{background:#f8f9fa}
+.finance-debtors-page .empty-state,.finance-status-page .empty-state{padding:var(--acm-sp-32) var(--acm-sp-16);border:1px dashed var(--acm-border);border-radius:var(--acm-radius-md);text-align:center}
+@media(max-width:760px){
+ .fees-setup-page .dashboard-grid,.fees-student-page .dashboard-grid{grid-template-columns:minmax(0,1fr)!important}
+ .fees-manager-page .grid-2{grid-template-columns:minmax(0,1fr)!important}
+ .fees-payment-page>section.card{padding:var(--acm-sp-16)}
+ .fees-report-page .stats-grid,.finance-reports-page .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .finance-debtors-page .report-paper,.finance-status-page .report-paper{padding:var(--acm-sp-12)}
+ .finance-debtors-page .report-paper,.finance-status-page .report-paper{overflow-x:auto}
+ .finance-debtors-page .report-table,.finance-status-page .report-table{min-width:640px}
+}
+@media(max-width:480px){
+ .fees-manager-page .btn,.fees-payment-page .btn,.fees-setup-page .btn{max-width:100%}
+ .fees-receipt-page .receipt-card{padding:var(--acm-sp-16)!important}
+ .fees-receipt-page .receipt-card>div[style*="grid-template-columns"]{grid-template-columns:minmax(0,1fr)!important;gap:var(--acm-sp-16)!important}
+ .fees-receipt-page .receipt-card>div[style*="grid-template-columns"]>div{text-align:left!important}
+ .fees-report-page .stats-grid,.finance-reports-page .stats-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(prefers-reduced-motion:reduce){.finance-reports-page .report-card{transition:none}}
+@media print{
+ .fees-receipt-page .no-print,.finance-debtors-page .no-print,.finance-status-page .no-print{display:none!important}
+ .fees-receipt-page .receipt-card,.finance-debtors-page .report-paper,.finance-status-page .report-paper{box-shadow:none!important}
+}

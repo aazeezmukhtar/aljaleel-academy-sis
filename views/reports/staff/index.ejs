@@ -1,7 +1,7 @@
 <%- include('../../partials/header') %>
     <%- include('../../partials/sidebar') %>
 
-        <main class="main-content reports-staff-page">
+        <main class="main-content reports-staff-page staff-reports-index-page">
             <header class="content-header">
                 <a href="/reports" class="back-link"><i class="bi bi-arrow-left"></i> Back to Report Center</a>
                 <h1>Staff Reports</h1>
@@ -10,7 +10,7 @@
 
             <div class="stats-grid">
                 <div class="stat-card">
-                    <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">
+                    <div class="stat-icon staff-stat-total">
                         <i class="bi bi-people-fill"></i>
                     </div>
                     <div class="stat-info">
@@ -21,7 +21,7 @@
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon" style="background: #f3e8ff; color: #9333ea;">
+                    <div class="stat-icon staff-stat-teaching">
                         <i class="bi bi-person-video3"></i>
                     </div>
                     <div class="stat-info">
@@ -32,7 +32,7 @@
                     </div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-icon" style="background: #dcfce7; color: #16a34a;">
+                    <div class="stat-icon staff-stat-admin">
                         <i class="bi bi-shield-lock-fill"></i>
                     </div>
                     <div class="stat-info">
@@ -77,94 +77,6 @@
             </div>
         </main>
 
-        <style>
-            .back-link {
-                display: inline-block;
-                margin-bottom: 10px;
-                color: var(--text-muted);
-                text-decoration: none;
-                font-size: 0.9rem;
-            }
 
-            .back-link:hover {
-                color: var(--primary);
-            }
-
-            .stats-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                gap: 20px;
-                margin-bottom: 30px;
-            }
-
-            .stat-card {
-                background: white;
-                padding: 20px;
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                gap: 15px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-            }
-
-            .stat-icon {
-                width: 50px;
-                height: 50px;
-                border-radius: 10px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.5rem;
-            }
-
-            .stat-info h3 {
-                margin: 0;
-                font-size: 1.5rem;
-                color: var(--text-dark);
-            }
-
-            .stat-info p {
-                margin: 0;
-                font-size: 0.85rem;
-                color: var(--text-muted);
-            }
-
-            .report-dashboard-grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                gap: 20px;
-            }
-
-            .report-card {
-                background: white;
-                border-radius: 12px;
-                padding: 25px;
-                display: flex;
-                align-items: center;
-                gap: 20px;
-                text-decoration: none;
-                color: inherit;
-                border: 1px solid #eee;
-                transition: transform 0.2s;
-            }
-
-            .report-card:hover {
-                transform: translateY(-3px);
-                box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-                border-color: var(--primary);
-            }
-
-            .report-icon {
-                width: 60px;
-                height: 60px;
-                background: #f8fafc;
-                color: var(--primary);
-                border-radius: 12px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 1.8rem;
-            }
-        </style>
 
         <%- include('../../partials/footer') %>

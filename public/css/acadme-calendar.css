@@ -1,0 +1,54 @@
+/*
+ * AcadMe Calendar presentation layer.
+ * Calendar dates, event grouping, section/session rules and management actions are unchanged.
+ */
+.main-content.calendar-list-page,.main-content.calendar-manage-page{min-width:0}
+.calendar-list-page .content-header{display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+.calendar-list-page .content-header h1,.calendar-manage-page .content-header h1{color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));font-weight:var(--acm-fw-bold);line-height:var(--acm-lh-tight)}
+.calendar-list-page .content-header p,.calendar-manage-page .content-header p{color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.calendar-list-page .calendar-list-container{max-width:850px;margin-inline:auto}
+.calendar-list-page .month-group{margin-block-end:var(--acm-sp-16)!important}
+.calendar-list-page .month-group>h3{padding-block-end:var(--acm-sp-8);border-color:var(--acm-border)!important;color:var(--acm-text-primary)!important;font-family:var(--acm-font-heading);font-size:var(--acm-text-lg)!important}
+.calendar-list-page .month-group>div{gap:var(--acm-sp-12)!important}
+.calendar-list-page .event-card{min-width:0;align-items:flex-start;padding:clamp(14px,2.5vw,20px)!important;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-xs)}
+.calendar-list-page .event-date-box{min-width:68px;padding:10px 12px;border-radius:var(--acm-radius-sm);background:var(--acm-surface-muted)!important;color:var(--acm-navy)!important}
+.calendar-list-page .event-details{min-width:0}
+.calendar-list-page .event-details h4{color:var(--acm-text-primary)!important;overflow-wrap:anywhere}
+.calendar-list-page .event-details>p{color:var(--acm-text-secondary);line-height:1.65;overflow-wrap:anywhere}
+.calendar-list-page .event-details>div:last-child{color:var(--acm-text-muted)!important}
+.calendar-list-page .card:has(.bi-calendar-x){border:1px dashed var(--acm-border-strong);border-radius:var(--acm-radius-md);background:var(--acm-surface)}
+.calendar-manage-page .calendar-manage-grid{grid-template-columns:minmax(280px,1fr) minmax(0,2fr)!important;gap:var(--acm-sp-16)!important;align-items:start}
+.calendar-manage-page .calendar-manage-card{min-width:0;padding:clamp(14px,2.5vw,24px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.calendar-manage-page .calendar-manage-card>h3{margin:0;color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:var(--acm-text-lg);font-weight:var(--acm-fw-semibold)}
+.calendar-manage-page .calendar-create-card form{margin-block-start:var(--acm-sp-12)!important}
+.calendar-manage-page .form-group{min-width:0;margin-block-end:var(--acm-sp-12)}
+.calendar-manage-page .form-group label{display:block;margin-block-end:6px;color:var(--acm-text-primary);font-size:var(--acm-text-sm);font-weight:var(--acm-fw-semibold)}
+.calendar-manage-page :is(input,select,textarea){width:100%;min-width:0;min-height:44px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.calendar-manage-page textarea{min-height:92px;resize:vertical}
+.calendar-manage-page .grid-2{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--acm-sp-8)}
+.calendar-manage-page .calendar-create-card button[type=submit]{min-height:44px}
+.calendar-manage-page .calendar-events-card .table-container{max-width:100%;margin-block-start:var(--acm-sp-12)!important}
+.calendar-manage-page .data-table{font-size:var(--acm-text-sm)}
+.calendar-manage-page .data-table th{white-space:nowrap;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
+.calendar-manage-page .data-table td{vertical-align:middle}
+.calendar-manage-page .data-table td[data-label=Title]{min-width:150px;overflow-wrap:anywhere}
+.calendar-manage-page .data-table td[data-label=Action] form{display:flex;justify-content:flex-end}
+.calendar-manage-page .data-table td[data-label=Action] button{display:grid;place-items:center;min-width:40px;min-height:40px;border-radius:var(--acm-radius-sm)!important}
+.calendar-manage-page :is(a,button,input,select,textarea):focus-visible,.calendar-list-page :is(a,button):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+.portal-calendar-page .acm-profile-card{min-width:0}
+.portal-calendar-page .table-container{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.portal-calendar-page .data-table{font-size:var(--acm-text-sm)}
+.portal-calendar-page .data-table th{white-space:nowrap;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
+.portal-calendar-page .data-table td{vertical-align:top}
+.portal-calendar-page .data-table td:nth-child(2){min-width:180px;overflow-wrap:anywhere}
+.portal-calendar-page .acm-empty{padding:clamp(24px,5vw,48px) var(--acm-sp-16)}
+@media(max-width:760px){
+ .calendar-list-page .event-card{gap:var(--acm-sp-12)!important}
+ .calendar-list-page .event-date-box{min-width:58px;padding:8px}
+ .calendar-manage-page .calendar-manage-grid{grid-template-columns:minmax(0,1fr)!important}
+ .calendar-manage-page .grid-2{grid-template-columns:minmax(0,1fr)}
+ .calendar-manage-page .calendar-events-card .table-container{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .calendar-manage-page .data-table{min-width:560px}
+ .calendar-manage-page .content-header{align-items:flex-start}
+}
+@media(prefers-reduced-motion:reduce){.calendar-list-page *{scroll-behavior:auto}}

@@ -3,7 +3,7 @@
 <div class="dashboard-container">
     <%- include('../partials/sidebar') %>
 
-    <main class="main-content">
+    <main class="main-content calendar-manage-page">
         <header class="content-header">
             <div>
                 <h1>Manage Calendar</h1>
@@ -12,9 +12,9 @@
             <a href="/calendar" class="btn btn-outline">View Calendar</a>
         </header>
 
-        <div class="dashboard-grid" style="grid-template-columns: 1fr 2fr; gap: 30px;">
+        <div class="dashboard-grid calendar-manage-grid" style="grid-template-columns: 1fr 2fr; gap: 30px;">
             <!-- Create Event Form -->
-            <div class="card">
+            <div class="card calendar-manage-card calendar-create-card">
                 <h3>Add New Event</h3>
                 <form action="/calendar/add" method="POST" style="margin-top: 20px;">
                     <div class="form-group">
@@ -72,7 +72,7 @@
             </div>
 
             <!-- Existing Events List -->
-            <div class="card">
+            <div class="card calendar-manage-card calendar-events-card">
                 <h3>Scheduled Events</h3>
                 <div class="table-container table-stack" style="margin-top: 20px;">
                     <table class="data-table">

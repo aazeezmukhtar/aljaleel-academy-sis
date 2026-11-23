@@ -143,9 +143,7 @@
                                     </td>
                                     <td>
                                         <div class="results-tracking-coverage-label"><strong><%= recorded %> / <%= expected %></strong><span><%= coverage %>%</span></div>
-                                        <div class="results-tracking-progress" role="progressbar" aria-label="Result entry coverage for <%= row.class_name %> <%= row.subject_name %>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= coverage %>">
-                                            <span style="width:<%= coverage %>%"></span>
-                                        </div>
+                                        <progress class="results-tracking-progress" aria-label="Result entry coverage for <%= row.class_name %> <%= row.subject_name %>" value="<%= coverage %>" max="100"><%= coverage %>%</progress>
                                         <small class="results-tracking-outstanding"><%= outstanding %> not entered</small>
                                     </td>
                                     <td><span class="results-tracking-count is-draft"><%= row.draft_count %></span></td>

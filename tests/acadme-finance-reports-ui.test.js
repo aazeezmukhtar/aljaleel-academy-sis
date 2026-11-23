@@ -4,13 +4,13 @@ const read=f=>fs.readFileSync(path.join(__dirname,'..',f),'utf8');
 const header=read('views/partials/header.ejs');
 assert.ok(header.indexOf('acadme-finance-reports.css')>header.indexOf('acadme-academic-reports.css'),'Finance reports stylesheet must load after Academic Reports styles');
 const css=read('public/css/acadme-finance-reports.css');
-const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\\w-]+)\\s*:/g)].map(m=>m[1]));
-for(const m of css.matchAll(/var\\((--acm-[\\w-]+)/g))assert.ok(tokens.has(m[1]),'Undefined token '+m[1]);
+const tokens=new Set([...read('public/css/acadme-tokens.css').matchAll(/(--acm-[\w-]+)\s*:/g)].map(m=>m[1]));
+for(const m of css.matchAll(/var\\((--acm-[\w-]+)/g))assert.ok(tokens.has(m[1]),'Undefined token '+m[1]);
 for(const [file,scope] of [
  ['views/reports/finance/index.ejs','finance-reports-index-page'],
  ['views/reports/finance/debtors.ejs','finance-debtors-report-page'],
  ['views/reports/finance/status.ejs','finance-status-report-page']
-]){const s=read(file);assert.ok(s.includes(scope),'Missing page scope '+scope);assert.ok(!/<style[\\s>]/i.test(s),'Inline style block remains in '+file);ejs.compile(s,{filename:path.join(__dirname,'..',file)});}
+]){const s=read(file);assert.ok(s.includes(scope),'Missing page scope '+scope);assert.ok(!/<style[\s>]/i.test(s),'Inline style block remains in '+file);ejs.compile(s,{filename:path.join(__dirname,'..',file)});}
 const overview=read('views/reports/finance/index.ejs');
 for(const v of ['stats.total_collected_session','stats.total_payment_today','/reports/finance/status','/reports/finance/debtors','/fees/manager'])assert.ok(overview.includes(v),'Finance overview content missing '+v);
 const debt=read('views/reports/finance/debtors.ejs');

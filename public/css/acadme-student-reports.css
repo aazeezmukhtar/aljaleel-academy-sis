@@ -11,14 +11,14 @@
 .student-class-list-page .report-header{text-align:center;margin-block-end:var(--acm-sp-16);padding-block-end:var(--acm-sp-12);border-bottom:1px solid var(--acm-border)}
 .student-class-list-page .report-header h2{margin:0 0 5px;color:var(--acm-text-primary)}.student-class-list-page .report-header p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
 .student-class-list-page .report-table{width:100%;border-collapse:collapse;font-size:var(--acm-text-sm)}.student-class-list-page .report-table th,.student-class-list-page .report-table td{padding:9px;border:1px solid var(--acm-border);text-align:left}
-.student-class-list-page .report-table th{background:var(--acm-surface-muted);color:var(--acm-text-secondary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.student-class-list-page .report-table th{background:var(--acm-surface);color:var(--acm-text-secondary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
 .student-class-list-page .report-footer{margin-block-start:var(--acm-sp-12);padding-block-start:var(--acm-sp-12);border-top:1px solid var(--acm-border);text-align:right;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
 .student-demographics-grid{grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:var(--acm-sp-16)}
 .student-demographics-page .card,.student-profile-audit-page .card{min-width:0;padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
 .student-demographics-page .card h3{margin-block:0 var(--acm-sp-12);color:var(--acm-text-primary);font-size:var(--acm-text-base)}
 .student-demographics-page .metric-row{display:flex;align-items:center;gap:var(--acm-sp-8);margin-block-end:var(--acm-sp-12)}
 .student-demographics-page .label{width:72px;flex:0 0 72px;font-weight:var(--acm-fw-medium)}
-.student-demographics-page .bar-container{flex:1;min-width:24px;height:16px;margin:0;border-radius:var(--acm-radius-full);background:var(--acm-surface-muted);overflow:hidden}
+.student-demographics-page .bar-container{flex:1;min-width:24px;height:16px;margin:0;border-radius:var(--acm-radius-full);background:var(--acm-surface);overflow:hidden}
 .student-demographics-page .bar{height:100%;border-radius:inherit;background:var(--acm-navy)}
 .student-demographics-page .value{width:94px;flex:0 0 94px;text-align:right;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
 .student-demographics-page .data-table,.student-profile-audit-page .data-table{width:100%;font-size:var(--acm-text-sm)}

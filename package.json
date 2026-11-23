@@ -75,7 +75,8 @@
     "test:acadme-attendance-report-ui": "node tests/acadme-attendance-report-ui.test.js",
     "test:acadme-bulk-report-selection-ui": "node tests/acadme-bulk-report-selection-ui.test.js",
     "test:acadme-attendance-daily-report-ui": "node tests/acadme-attendance-daily-report-ui.test.js",
-    "test:acadme-student-reports-ui": "node tests/acadme-student-reports-ui.test.js"
+    "test:acadme-student-reports-ui": "node tests/acadme-student-reports-ui.test.js",
+    "test:acadme-health-reports-ui": "node tests/acadme-health-reports-ui.test.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",

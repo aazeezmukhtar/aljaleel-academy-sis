@@ -1,0 +1,43 @@
+/* Health reports presentation only. Health data, access, filters, exports and print content remain unchanged. */
+.health-reports-index-page .health-stat-condition{background:var(--acm-error-bg);color:var(--acm-error)}
+.health-reports-index-page .health-stat-allergy{background:#fff7ed;color:#ea580c}
+.health-reports-index-page .health-stat-blood{background:var(--acm-info-bg);color:var(--acm-info)}
+.health-report-detail-page{min-width:0}
+.health-report-detail-page .content-header{gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-16)}
+.health-report-detail-page .header-left{min-width:0}
+.health-report-detail-page .header-actions{display:flex;flex-wrap:wrap;gap:var(--acm-sp-8)}
+.health-report-detail-page .settings-card{margin-block-end:var(--acm-sp-16);padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.health-report-detail-page .filter-form{display:flex;align-items:flex-end;gap:var(--acm-sp-12);flex-wrap:wrap}
+.health-report-detail-page .filter-form .form-group{min-width:min(100%,240px);margin:0}
+.health-report-detail-page .report-paper{width:100%;max-width:210mm;margin:var(--acm-sp-16) auto;padding:clamp(14px,3vw,36px);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-sm);overflow-x:auto}
+.health-report-detail-page .report-header{margin-block-end:var(--acm-sp-16);padding-block-end:var(--acm-sp-12);border-bottom:1px solid var(--acm-border);text-align:center}
+.health-report-detail-page .report-header h2{margin:0 0 6px;color:var(--acm-text-primary);font-size:var(--acm-text-xl)}
+.health-report-detail-page .report-header p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-sm)}
+.health-report-detail-page .health-alert-report-title{color:var(--acm-error)}
+.health-report-detail-page .report-table{width:100%;border-collapse:collapse;font-size:var(--acm-text-sm)}
+.health-report-detail-page .report-table th,.health-report-detail-page .report-table td{padding:10px;border:1px solid var(--acm-border);text-align:left;vertical-align:top}
+.health-report-detail-page .report-table th{background:#f8f9fa;color:var(--acm-text-secondary);font-weight:var(--acm-fw-semibold);white-space:nowrap}
+.health-report-detail-page .health-student-name-cell,.health-report-detail-page .health-contact-phone{font-weight:var(--acm-fw-medium)}
+.health-report-detail-page .health-contact-number{width:50px}
+.health-report-detail-page .alert-tag{display:inline-block;margin-block-end:2px;padding:2px 6px;border:1px solid transparent;border-radius:var(--acm-radius-xs);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-medium)}
+.health-report-detail-page .alert-tag.condition{border-color:var(--acm-error-border);background:var(--acm-error-bg);color:var(--acm-error)}
+.health-report-detail-page .alert-tag.allergy{border-color:#fed7aa;background:#fff7ed;color:#ea580c}
+.health-report-detail-page :is(a,button,select):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:3px}
+@media(max-width:760px){
+ .health-report-detail-page .content-header{align-items:flex-start}
+ .health-report-detail-page .header-actions{width:100%}
+ .health-report-detail-page .header-actions :is(button,a){flex:1 1 auto}
+ .health-report-detail-page .filter-form{display:grid;grid-template-columns:minmax(0,1fr)}
+ .health-report-detail-page .filter-form .form-group{min-width:0;width:100%}
+ .health-report-detail-page .report-paper{margin-block:var(--acm-sp-12)}
+ .health-report-detail-page .report-table{min-width:680px}
+}
+@media print{
+ @page{size:A4;margin:10mm}
+ body *{visibility:hidden}
+ .health-report-detail-page .report-paper,.health-report-detail-page .report-paper *{visibility:visible}
+ .health-report-detail-page .report-paper{position:absolute;inset-block-start:0;inset-inline-start:0;width:100%;max-width:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;overflow:visible}
+ .health-report-detail-page.main-content{margin:0!important;padding:0!important}
+ .health-report-detail-page .no-print{display:none!important}
+}
+@media(prefers-reduced-motion:reduce){.health-report-detail-page *{scroll-behavior:auto!important}}

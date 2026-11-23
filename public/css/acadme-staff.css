@@ -61,3 +61,15 @@
  .staff-information-page .staff-info-form{padding:var(--acm-sp-12)}
 }
 @media(prefers-reduced-motion:reduce){.staff-directory-page *,.staff-profile-page *{scroll-behavior:auto}}
+
+
+/* Keep stacked directory cards aligned to the full content width on phones. */
+@media(max-width:768px){
+ .staff-directory-page>.card{width:100%;min-width:0;box-sizing:border-box}
+ .staff-directory-page .table-container.table-stack{width:100%;max-width:100%;margin:0;padding:0;overflow:visible;box-sizing:border-box}
+ .staff-directory-page .table-container.table-stack table{width:100%;min-width:0!important;box-sizing:border-box}
+ .staff-directory-page .table-container.table-stack tbody tr{width:100%;max-width:100%;margin-inline:0;box-sizing:border-box}
+ .staff-directory-page .table-container.table-stack td{min-width:0;box-sizing:border-box}
+ .staff-directory-page .table-container.table-stack td[data-label="Name"]{justify-content:flex-start;overflow-wrap:anywhere}
+ .staff-directory-page .table-container.table-stack td[data-label="Name"] strong{min-width:0;max-width:100%;overflow-wrap:anywhere}
+}

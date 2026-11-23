@@ -17,6 +17,17 @@ for(const m of css.matchAll(/var\((--acm-[\w-]+)/g)) assert.ok(tokens.has(m[1]),
 assert.match(css,/@media\(max-width:760px\)/);
 assert.match(css,/@media\(prefers-reduced-motion:reduce\)/);
 
+const resultEntry = read('views/results/manager.ejs');
+const resultCss = read('public/css/acadme-results.css');
+const staffCss = read('public/css/acadme-staff.css');
+assert.match(resultEntry, /result-context-period/);
+assert.match(resultEntry, /filters\.term/);
+assert.match(resultEntry, /filters\.session/);
+assert.match(resultCss, /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+assert.match(resultCss, /white-space:normal!important;overflow:visible!important;text-overflow:clip!important/);
+assert.match(resultCss, /min-height:36px;height:38px/);
+assert.match(staffCss, /staff-directory-page \.table-container\.table-stack tbody tr\{width:100%/);
+
 const pages = [
  ['views/staff/index.ejs','staff-directory-page',['/staff/add','/staff/view/','staff-directory-search','staff-role-filter','staff-status-filter']],
  ['views/staff/add.ejs','staff-create-page',['action="/staff/add"','name="first_name"','name="last_name"','name="staff_id"','name="role"','name="designation"','name="avatar_image"','name="public_bio"','name="show_on_website"']],

@@ -241,3 +241,33 @@
 .admin-dashboard-shell .attendance-stat-link { display: inline-flex; align-items: center; width: fit-content; margin-top: 10px; padding: 9px 16px; border-radius: 999px; color: #fff; background: rgba(255,255,255,.18); font-size: .9rem; font-weight: 700; text-decoration: none; transition: background .18s ease; }
 .admin-dashboard-shell .attendance-stat-link:hover { background: rgba(255,255,255,.28); }
 .admin-dashboard-shell .attendance-stat-link:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }
+
+/* Precision fixes from the mobile dashboard review */
+@media (max-width: 991px) {
+    .mobile-topbar { height: 88px !important; padding: 0 22px !important; gap: 16px; background: #f3f5fb !important; border-bottom: 0 !important; box-shadow: none !important; }
+    .mobile-hamburger { flex: 0 0 56px; width: 56px !important; height: 56px !important; min-width: 56px !important; min-height: 56px !important; padding: 0 !important; justify-content: center; border: 0 !important; border-radius: 20px !important; color: #172033 !important; background: #fff !important; box-shadow: 0 2px 8px rgba(20,35,65,.08); font-size: 1.65rem !important; }
+    .mobile-topbar-title { flex: 1; font-family: inherit !important; font-size: 1.35rem !important; font-weight: 800 !important; letter-spacing: -.04em; color: #151d31 !important; }
+    .mobile-topbar-actions .notification-bell-container { display: flex !important; width: 56px !important; height: 56px !important; min-width: 56px !important; min-height: 56px !important; align-items: center; justify-content: center; padding: 0 !important; border: 0 !important; border-radius: 20px !important; background: #fff !important; box-shadow: 0 2px 8px rgba(20,35,65,.08); }
+    .mobile-topbar-actions .notification-bell-container > i { color: #172033 !important; font-size: 1.35rem !important; }
+    .mobile-topbar-actions .notification-badge { top: 11px; right: 11px; border: 2px solid #fff; background: #ef4444; }
+    .main-content { padding-top: 108px !important; }
+    .admin-dashboard-shell .stats-grid, .staff-dashboard-shell .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    .staff-dashboard-shell .teacher-dashboard-panels { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 14px !important; margin-top: 24px !important; }
+    .staff-dashboard-shell .teacher-dashboard-panels > .card:nth-child(3) { grid-column: 1 / -1 !important; }
+    .admin-dashboard-shell .stats-grid > .admin-attendance-stat { grid-column: 1 / -1 !important; grid-row: auto !important; min-height: 164px !important; height: 164px !important; padding: 22px 24px !important; }
+    .admin-dashboard-shell .stats-grid > .admin-gender-stat { grid-column: 1 / -1 !important; }
+    .admin-dashboard-shell .content-header .header-actions, .staff-dashboard-shell .content-header .header-actions { display: none !important; }
+}
+@media (max-width: 640px) {
+    .mobile-topbar { height: 84px !important; padding-inline: 20px !important; }
+    .main-content { padding-top: 104px !important; }
+    .admin-dashboard-shell .stats-grid > .admin-attendance-stat { min-height: 148px !important; height: 148px !important; grid-row: auto !important; }
+    .admin-dashboard-shell .admin-attendance-stat .stat-content h3 { font-size: 2.55rem !important; line-height: 1 !important; }
+    .admin-dashboard-shell .admin-attendance-stat::after { width: 84px !important; height: 84px !important; right: 7% !important; }
+    .staff-dashboard-shell .teacher-dashboard-panels { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 12px !important; }
+    .staff-dashboard-shell .teacher-dashboard-panels > .card { min-width: 0; padding: 16px 13px !important; border-radius: 22px !important; }
+    .staff-dashboard-shell .teacher-dashboard-panels .card-header { align-items: flex-start !important; flex-direction: column !important; gap: 10px !important; }
+    .staff-dashboard-shell .teacher-dashboard-panels .card-header h3 { font-size: 1rem; }
+    .staff-dashboard-shell .teacher-dashboard-panels .card-header .btn { width: 100%; min-height: 38px; padding: 7px 8px; font-size: .76rem; white-space: normal; }
+    .staff-dashboard-shell .teacher-dashboard-panels > .card:nth-child(3) { grid-column: 1 / -1 !important; }
+}

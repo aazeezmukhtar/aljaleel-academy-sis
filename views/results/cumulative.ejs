@@ -6,6 +6,7 @@
     <title><%= title %></title>
     <link rel="stylesheet" href="/css/main.css">
     <link rel="stylesheet" href="/css/report.css">
+    <link rel="stylesheet" href="/css/acadme-result-preview.css?v=1.0">
     <link
         href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=Inter:wght@400;600;700&display=swap"
         rel="stylesheet">
@@ -100,9 +101,9 @@
         }
     </style>
 </head>
-<body>
+<body class="report-preview-page">
     <!-- AcadMe back bar (no-print) -->
-    <div class="no-print" style="
+    <div class="no-print report-preview-toolbar" style="
         position: fixed; top: 0; left: 0; right: 0; z-index: 200;
         background: var(--school-primary, #2c3e50); color: #fff;
         display: flex; align-items: center; justify-content: space-between;
@@ -119,7 +120,7 @@
             Print / Save PDF
         </button>
     </div>
-    <div class="no-print" style="height: 54px;"></div>
+    <div class="no-print report-preview-toolbar-spacer" style="height: 54px;"></div>
 
     <%- include('../partials/cumulative_content', { student, subjects, getGrade, position, classCount, session, school, grading, marksAnalysis }) %>
 </body>

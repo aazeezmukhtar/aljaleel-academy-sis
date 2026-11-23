@@ -1,0 +1,84 @@
+/* Screen-only improvements for individual and cumulative report previews.
+   The existing @media print rules and report content remain authoritative. */
+@media screen {
+  body.report-preview-page {
+    min-width: 0;
+    overflow-x: hidden;
+  }
+  .report-preview-page .report-preview-toolbar {
+    gap: 12px;
+    min-height: 54px;
+    box-sizing: border-box;
+    padding: 8px 16px !important;
+  }
+  .report-preview-page .report-preview-toolbar a,
+  .report-preview-page .report-preview-toolbar button {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    text-decoration: none;
+  }
+  .report-preview-page .report-preview-toolbar a {
+    padding: 8px 10px;
+  }
+  .report-preview-page .report-preview-toolbar button {
+    padding: 8px 16px !important;
+  }
+  .report-preview-page .report-card {
+    width: min(100% - 32px, 210mm);
+    min-height: 0;
+    margin: 16px auto;
+    padding: clamp(16px, 3vw, 32px);
+    border-radius: 8px;
+    overflow-wrap: anywhere;
+  }
+  .report-preview-page .report-card img {
+    max-width: 100%;
+  }
+  .report-preview-page .rc-table-wrapper,
+  .report-preview-page .report-card .table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .report-preview-page .report-card table {
+    max-width: 100%;
+  }
+  .report-preview-page :is(a, button):focus-visible {
+    outline: 3px solid currentColor;
+    outline-offset: 3px;
+  }
+}
+@media screen and (max-width: 560px) {
+  .report-preview-page .report-preview-toolbar {
+    align-items: stretch;
+    flex-wrap: wrap;
+    padding: 8px 10px !important;
+  }
+  .report-preview-page .report-preview-toolbar a {
+    flex: 1 1 100%;
+  }
+  .report-preview-page .report-preview-toolbar button {
+    flex: 1 1 100%;
+  }
+  .report-preview-page .report-card {
+    width: calc(100% - 16px);
+    margin: 8px auto;
+    padding: 14px 10px;
+    border-radius: 4px;
+  }
+  .report-preview-page .rc-bio-wrapper,
+  .report-preview-page .rc-bottom {
+    min-width: 0;
+  }
+  .report-preview-page .rc-bio-cell {
+    min-width: 0;
+    flex-wrap: wrap;
+    overflow-wrap: anywhere;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .report-preview-page .report-preview-toolbar button { transition: none !important; }
+}

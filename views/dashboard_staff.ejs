@@ -82,7 +82,7 @@
                     </div>
                 </div>
 
-                <div class="grid-3 teacher-dashboard-panels" style="margin-top: 40px;">
+                <div class="grid-3 teacher-dashboard-panels" style="margin-top: 24px;">
                     <!-- Assigned Classes -->
                     <div class="card">
                         <div class="card-header"
@@ -90,10 +90,10 @@
                             <h3>My Classes</h3>
                             <a href="/attendance" class="btn btn-sm btn-outline">Take Attendance</a>
                         </div>
-                        <div class="list-group">
+                        <div class="list-group" id="assignedClassesList">
                             <% if (assignedClasses && assignedClasses.length> 0) { %>
-                                <% assignedClasses.forEach(cls=> { %>
-                                    <a href="/students?class_id=<%= cls.id %>" class="list-item clickable-class-item"
+                                <% assignedClasses.forEach((cls, index)=> { %>
+                                    <a href="/students?class_id=<%= cls.id %>" class="list-item clickable-class-item <%= index >= 3 ? 'activity-item hidden' : '' %>"
                                         style="padding: 15px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; text-decoration: none; color: inherit;">
                                         <div>
                                             <strong style="font-size: 1.1rem; color: #1e293b;">
@@ -105,6 +105,9 @@
                                         <i class="bi bi-chevron-right text-muted"></i>
                                     </a>
                                     <% }); %>
+                                    <% if (assignedClasses.length > 3) { %>
+                                        <div class="view-more-container"><button type="button" class="btn-view-more" aria-expanded="false" aria-controls="assignedClassesList" onclick="toggleViewMore('assignedClassesList', this)">View More</button></div>
+                                    <% } %>
                                         <% } else { %>
                                             <p class="text-muted" style="padding: 20px; text-align: center;">No classes
                                                 assigned yet.</p>
@@ -119,10 +122,10 @@
                             <h3>My Subjects</h3>
                             <a href="/results" class="btn btn-sm btn-outline">Enter Results</a>
                         </div>
-                        <div class="list-group">
+                        <div class="list-group" id="assignedSubjectsList">
                             <% if (assignedSubjects && assignedSubjects.length> 0) { %>
-                                <% assignedSubjects.forEach(sub=> { %>
-                                    <div class="list-item"
+                                <% assignedSubjects.forEach((sub, index)=> { %>
+                                    <div class="list-item <%= index >= 3 ? 'activity-item hidden' : '' %>"
                                         style="padding: 15px 0; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between;">
                                         <div>
                                             <strong style="font-size: 1.1rem;">
@@ -135,6 +138,9 @@
                                         <i class="bi bi-chevron-right text-muted"></i>
                                     </div>
                                     <% }); %>
+                                    <% if (assignedSubjects.length > 3) { %>
+                                        <div class="view-more-container"><button type="button" class="btn-view-more" aria-expanded="false" aria-controls="assignedSubjectsList" onclick="toggleViewMore('assignedSubjectsList', this)">View More</button></div>
+                                    <% } %>
                                         <% } else { %>
                                             <p class="text-muted" style="padding: 20px; text-align: center;">No subjects
                                                 assigned yet.</p>

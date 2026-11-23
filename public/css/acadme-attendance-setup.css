@@ -1,0 +1,28 @@
+/* Attendance Setup: presentation-only styles. Configuration semantics and handlers are unchanged. */
+.attendance-setup-page{min-width:0}
+.attendance-setup-page>div:first-of-type{align-items:flex-start!important;margin-bottom:var(--acm-sp-20)!important}
+.attendance-setup-page>div:first-of-type a{display:inline-flex;align-items:center;min-height:40px;padding:var(--acm-sp-8) var(--acm-sp-12);border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);font-weight:var(--acm-fw-semibold)}
+.attendance-setup-page>div:first-of-type h1{color:var(--acm-text-primary);font-family:var(--acm-font-heading);font-size:clamp(var(--acm-text-xl),2.5vw,var(--acm-text-2xl));line-height:var(--acm-lh-tight)}
+.attendance-setup-page>div:first-of-type p{max-width:850px;color:var(--acm-text-secondary);font-size:var(--acm-text-sm);line-height:var(--acm-lh-base)}
+.attendance-setup-page>.card{min-width:0;padding:clamp(14px,2vw,20px)!important;margin-bottom:var(--acm-sp-16)!important;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);box-shadow:var(--acm-shadow-xs)}
+.attendance-setup-page .card h2{color:var(--acm-text-primary);font-weight:var(--acm-fw-semibold)}
+.attendance-setup-page .card h3{color:var(--acm-text-primary);font-weight:var(--acm-fw-semibold)}
+.attendance-setup-page .card p{max-width:900px;line-height:var(--acm-lh-base)}
+.attendance-setup-page .setup-form{align-items:end}
+.attendance-setup-page .setup-form .form-control,.attendance-setup-page .setup-form .form-select{min-width:0;min-height:44px;border-color:var(--acm-border);border-radius:var(--acm-radius-sm);font-size:16px}
+.attendance-setup-page .setup-form textarea.form-control{min-height:88px}
+.attendance-setup-page .setup-form :is(input,select,textarea):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px;box-shadow:var(--acm-focus-ring)}
+.attendance-setup-page .setup-form .form-check{display:inline-flex;align-items:center;gap:var(--acm-sp-8);min-height:40px;margin:0;padding:var(--acm-sp-8) var(--acm-sp-12);border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm);background:var(--acm-surface)}
+.attendance-setup-page .setup-form .form-check-input{float:none;margin:0}
+.attendance-setup-page .setup-form .btn{min-height:42px;border-radius:var(--acm-radius-sm)}
+.attendance-setup-page .border.rounded.p-3{min-width:0;border-color:var(--acm-border)!important;border-radius:var(--acm-radius-md)!important;background:var(--acm-surface)}
+.attendance-setup-page .table-responsive{max-width:100%;border:1px solid var(--acm-border);border-radius:var(--acm-radius-sm)}
+.attendance-setup-page .table{margin:0;font-size:var(--acm-text-sm)}
+.attendance-setup-page .table thead th{white-space:nowrap;background:var(--acm-surface);color:var(--acm-text-secondary);font-size:var(--acm-text-xs);font-weight:var(--acm-fw-semibold)}
+.attendance-setup-page .table tbody td{vertical-align:middle}
+.attendance-setup-page .table .btn{min-height:36px;border-radius:var(--acm-radius-sm);white-space:nowrap}
+.attendance-setup-page .badge{font-weight:var(--acm-fw-semibold)}
+.attendance-setup-page :is(a,button):focus-visible{outline:3px solid var(--acm-border-focus);outline-offset:2px}
+.attendance-setup-page #setup-feedback{position:sticky;top:var(--acm-sp-8);z-index:2}
+@media(max-width:640px){.attendance-setup-page>div:first-of-type{margin-bottom:var(--acm-sp-16)!important}.attendance-setup-page>.card{padding:var(--acm-sp-12)!important;margin-bottom:var(--acm-sp-12)!important}.attendance-setup-page .setup-form>[class*="col-"]{width:100%}.attendance-setup-page .setup-form .btn{width:100%}.attendance-setup-page .setup-form .form-check{flex:1 1 calc(50% - var(--acm-sp-8));justify-content:flex-start}.attendance-setup-page .table-responsive{border:0;border-radius:0}.attendance-setup-page .table{min-width:680px}.attendance-setup-page .border.rounded.p-3{padding:var(--acm-sp-12)!important}}
+@media(prefers-reduced-motion:reduce){.attendance-setup-page *{scroll-behavior:auto!important;transition-duration:.01ms!important}}

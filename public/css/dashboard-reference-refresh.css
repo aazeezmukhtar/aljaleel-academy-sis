@@ -241,3 +241,176 @@
 .admin-dashboard-shell .attendance-stat-link { display: inline-flex; align-items: center; width: fit-content; margin-top: 10px; padding: 9px 16px; border-radius: 999px; color: #fff; background: rgba(255,255,255,.18); font-size: .9rem; font-weight: 700; text-decoration: none; transition: background .18s ease; }
 .admin-dashboard-shell .attendance-stat-link:hover { background: rgba(255,255,255,.28); }
 .admin-dashboard-shell .attendance-stat-link:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }
+
+/* Refine mobile density: stacked teacher panels, lighter summary tiles and safe attendance text */
+@media (max-width: 640px) {
+    .staff-dashboard-shell .teacher-dashboard-panels {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 14px !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels > .card,
+    .staff-dashboard-shell .teacher-dashboard-panels > .card:nth-child(3) {
+        grid-column: 1 / -1 !important;
+        padding: 16px 18px !important;
+        border-radius: 20px !important;
+        box-shadow: 0 2px 7px rgba(20,35,65,.045) !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels .card-header {
+        flex-direction: row !important;
+        align-items: center !important;
+        gap: 8px !important;
+        margin-bottom: 10px !important;
+        padding-bottom: 9px !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels .card-header h3 {
+        margin: 0 !important;
+        font-size: .96rem !important;
+        font-weight: 700 !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels .card-header .btn {
+        width: auto !important;
+        min-height: 34px !important;
+        padding: 6px 11px !important;
+        font-size: .72rem !important;
+        white-space: nowrap !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels .list-item,
+    .staff-dashboard-shell .teacher-dashboard-panels .clickable-class-item {
+        min-height: 48px !important;
+        padding: 8px 0 !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels .list-item strong,
+    .staff-dashboard-shell .teacher-dashboard-panels .clickable-class-item strong {
+        font-size: .84rem !important;
+        line-height: 1.25 !important;
+        font-weight: 650 !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels .list-item p,
+    .staff-dashboard-shell .teacher-dashboard-panels .clickable-class-item p {
+        font-size: .70rem !important;
+        line-height: 1.25 !important;
+        margin-top: 2px !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels .list-item > i,
+    .staff-dashboard-shell .teacher-dashboard-panels .clickable-class-item > i {
+        font-size: .78rem !important;
+    }
+    .staff-dashboard-shell .teacher-dashboard-panels .btn-view-more {
+        font-size: .76rem !important;
+        padding: 7px 10px !important;
+    }
+
+    .staff-dashboard-shell .stats-grid { gap: 10px !important; }
+    .staff-dashboard-shell .stats-grid > .stat-card {
+        min-height: 112px !important;
+        padding: 13px 14px !important;
+        border-radius: 19px !important;
+        box-shadow: 0 2px 6px rgba(20,35,65,.045) !important;
+        gap: 9px !important;
+    }
+    .staff-dashboard-shell .stats-grid .stat-icon {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        border-radius: 13px !important;
+        font-size: 1rem !important;
+    }
+    .staff-dashboard-shell .stats-grid .stat-content h3 {
+        font-size: 1.38rem !important;
+        line-height: 1.05 !important;
+        margin: 0 0 4px !important;
+        letter-spacing: -.035em !important;
+    }
+    .staff-dashboard-shell .stats-grid .stat-content p {
+        font-size: .70rem !important;
+        line-height: 1.25 !important;
+        margin: 0 !important;
+    }
+
+    .admin-dashboard-shell .stats-grid { gap: 10px !important; }
+    .admin-dashboard-shell .stats-grid > .stat-card:not(.admin-attendance-stat):not(.admin-gender-stat) {
+        min-height: 112px !important;
+        padding: 13px 14px !important;
+        border-radius: 19px !important;
+        box-shadow: 0 2px 6px rgba(20,35,65,.045) !important;
+        gap: 9px !important;
+    }
+    .admin-dashboard-shell .stats-grid > .stat-card:not(.admin-attendance-stat):not(.admin-gender-stat) .stat-icon {
+        width: 38px !important;
+        height: 38px !important;
+        min-width: 38px !important;
+        border-radius: 13px !important;
+        font-size: 1rem !important;
+    }
+    .admin-dashboard-shell .stats-grid > .stat-card:not(.admin-attendance-stat):not(.admin-gender-stat) .stat-content h3 {
+        font-size: 1.38rem !important;
+        line-height: 1.05 !important;
+        margin: 0 0 4px !important;
+        letter-spacing: -.035em !important;
+    }
+    .admin-dashboard-shell .stats-grid > .stat-card:not(.admin-attendance-stat):not(.admin-gender-stat) .stat-content p {
+        font-size: .70rem !important;
+        line-height: 1.25 !important;
+        margin: 0 !important;
+    }
+
+    .admin-dashboard-shell .stats-grid > .admin-attendance-stat {
+        position: relative !important;
+        display: flex !important;
+        align-items: center !important;
+        min-height: 126px !important;
+        height: 126px !important;
+        padding: 15px 18px !important;
+        overflow: hidden !important;
+        border-radius: 22px !important;
+    }
+    .admin-dashboard-shell .admin-attendance-stat .stat-icon {
+        display: none !important;
+    }
+    .admin-dashboard-shell .admin-attendance-stat .stat-content {
+        position: relative !important;
+        z-index: 1 !important;
+        width: calc(100% - 78px) !important;
+        min-width: 0 !important;
+    }
+    .admin-dashboard-shell .admin-attendance-stat .stat-content h3 {
+        max-width: 100% !important;
+        font-size: clamp(1.8rem, 8vw, 2.15rem) !important;
+        line-height: 1.05 !important;
+        letter-spacing: -.045em !important;
+        white-space: nowrap !important;
+        margin: 2px 0 4px !important;
+    }
+    .admin-dashboard-shell .admin-attendance-stat .stat-content p {
+        font-size: .78rem !important;
+        line-height: 1.25 !important;
+        margin: 0 !important;
+    }
+    .admin-dashboard-shell .admin-attendance-stat .attendance-stat-link {
+        margin-top: 7px !important;
+        padding: 6px 12px !important;
+        font-size: .72rem !important;
+        line-height: 1.2 !important;
+    }
+    .admin-dashboard-shell .admin-attendance-stat::after {
+        width: 66px !important;
+        height: 66px !important;
+        right: 18px !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        border-width: 7px !important;
+    }
+    .admin-dashboard-shell .stats-grid > .admin-gender-stat {
+        min-height: 112px !important;
+        padding: 14px 16px !important;
+        border-radius: 19px !important;
+    }
+    .admin-dashboard-shell .admin-gender-stat .stat-content h3 {
+        font-size: 1.35rem !important;
+        line-height: 1.1 !important;
+    }
+    .admin-dashboard-shell .admin-gender-stat .stat-content p {
+        font-size: .72rem !important;
+    }
+}

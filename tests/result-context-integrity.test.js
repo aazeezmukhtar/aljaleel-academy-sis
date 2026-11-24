@@ -40,6 +40,7 @@ async function testRejectsBatchWhenAnyExistingResultIsProtected() {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
       if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 2 };
       if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
       if (sql.includes('WHERE (') && sql.includes('EXISTS (SELECT id FROM subject_assignments')) return { ok: 1 };
       if (sql.includes('SELECT status FROM results WHERE student_id = ? AND class_id = ?')) {
@@ -84,6 +85,7 @@ async function testRejectsBatchIfAnyStudentIsNotEnrolled() {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
       if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 2 };
       if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) {
         enrollmentLookups.push(params[0]);
         return Number(params[0]) === 101 ? { student_id: 101 } : null;
@@ -171,6 +173,7 @@ async function testResultBatchUsesTransactionClientAndVerifiesEveryRow() {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
       if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 2 };
       if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
       throw new Error('Unexpected database lookup: ' + sql);
     };

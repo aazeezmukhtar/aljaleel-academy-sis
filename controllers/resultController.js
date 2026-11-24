@@ -400,6 +400,7 @@ const getResultWorkflowTracking = async (req, res) => {
             title: 'Result Workflow Tracking',
             rows,
             classSummaries,
+            canManageWorkflow: ['Admin','Examination Officer'].includes(user.role),
             summary,
             sessions,
             sections,

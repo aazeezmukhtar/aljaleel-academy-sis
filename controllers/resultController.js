@@ -1309,7 +1309,7 @@ const unlockResults = async (req,res) => {
             WHERE class_id=? AND subject_id=? AND term=? AND session=?
               AND LOWER(status) IN ('approved','locked','published')`,
             [class_id,subject_id,term,session]);
-        if(!Number(info.changes)) return res.status(409).json({success:false,message:'No locked or published results found to reopen.'});
+        if(!Number(info.changes)) return res.status(409).json({success:false,message:'No approved, locked or published results found to reopen.'});
         res.json({success:true,message:`Reopened ${info.changes} results. They are returned to Submitted and can be edited again.`,updatedCount:Number(info.changes),status:'submitted'});
     }catch(err){console.error('Unlock Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };

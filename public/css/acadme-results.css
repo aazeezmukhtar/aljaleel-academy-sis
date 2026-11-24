@@ -557,3 +557,37 @@
  .results-manager-page .result-context-actions{width:96px!important;max-width:96px!important}
  .results-manager-page .result-context-button{width:96px!important}
 }
+
+
+/* Subject-first workflow overview */
+.results-tracking-page .results-subject-overview{margin-block:var(--acm-sp-16);padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-lg);background:linear-gradient(135deg,var(--acm-surface),var(--acm-bg));box-shadow:var(--acm-shadow-sm)}
+.results-tracking-page .results-subject-overview-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-12)}
+.results-tracking-page .results-subject-overview-kicker{color:var(--acm-gold,var(--school-accent,#d49a00));font-size:10px;font-weight:var(--acm-fw-bold);letter-spacing:.12em}
+.results-tracking-page .results-subject-overview-heading h2{margin:3px 0;color:var(--acm-text-primary);font-size:var(--acm-text-lg);font-weight:var(--acm-fw-bold)}
+.results-tracking-page .results-subject-overview-heading p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
+.results-tracking-page .results-subject-total{padding:6px 10px;border:1px solid var(--acm-border);border-radius:999px;background:var(--acm-surface);color:var(--acm-text-secondary);font-size:var(--acm-text-xs);white-space:nowrap}
+.results-tracking-page .results-subject-total strong{color:var(--acm-navy,var(--school-primary,#001C2C));font-size:var(--acm-text-md)}
+.results-tracking-page .results-subject-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:var(--acm-sp-10)}
+.results-tracking-page .results-subject-card{min-width:0;padding:var(--acm-sp-12);border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-surface);box-shadow:var(--acm-shadow-xs)}
+.results-tracking-page .results-subject-card-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.results-tracking-page .results-subject-icon{display:grid;width:32px;height:32px;place-items:center;border-radius:10px;background:var(--acm-bg);color:var(--acm-navy,var(--school-primary,#001C2C))}
+.results-tracking-page .results-subject-class-count{color:var(--acm-text-muted);font-size:10px;white-space:nowrap}
+.results-tracking-page .results-subject-card h3{margin:var(--acm-sp-8) 0;color:var(--acm-text-primary);font-size:var(--acm-text-md);font-weight:var(--acm-fw-bold)}
+.results-tracking-page .results-subject-coverage>div{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.results-tracking-page .results-subject-coverage strong{color:var(--acm-navy,var(--school-primary,#001C2C));font-size:1.35rem;font-variant-numeric:tabular-nums}
+.results-tracking-page .results-subject-coverage span{color:var(--acm-text-muted);font-size:10px}
+.results-tracking-page .results-subject-stages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-block-start:var(--acm-sp-8)}
+.results-tracking-page .results-subject-stages span{display:flex;align-items:center;gap:5px;padding:5px 7px;border-radius:var(--acm-radius-sm);background:var(--acm-bg);color:var(--acm-text-secondary);font-size:10px}
+.results-tracking-page .results-subject-stages b{font-size:var(--acm-text-xs);font-variant-numeric:tabular-nums}
+.results-tracking-page .results-subject-stages .is-draft b{color:var(--acm-warning)}
+.results-tracking-page .results-subject-stages .is-submitted b{color:var(--acm-info)}
+.results-tracking-page .results-subject-stages .is-approved b,.results-tracking-page .results-subject-stages .is-published b{color:var(--acm-success)}
+.results-tracking-page .results-subject-empty{padding:var(--acm-sp-16);border:1px dashed var(--acm-border);border-radius:var(--acm-radius-md);color:var(--acm-text-muted);text-align:center;font-size:var(--acm-text-sm)}
+@media(max-width:640px){
+ .results-tracking-page .results-subject-overview{padding:var(--acm-sp-12)}
+ .results-tracking-page .results-subject-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+ .results-tracking-page .results-subject-card{padding:10px}
+ .results-tracking-page .results-subject-card h3{font-size:var(--acm-text-sm)}
+ .results-tracking-page .results-subject-stages{gap:4px}
+ .results-tracking-page .results-subject-stages span{padding:4px;font-size:9px}
+}

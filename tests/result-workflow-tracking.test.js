@@ -72,4 +72,4 @@ assert.match(view, /data-workflow-action="approve"/);
 assert.match(view, /data-workflow-action="lock"/);
 assert.match(view, /data-workflow-action="unlock"/);
 assert.match(css, /results-class-card/);
-assert.match(css, /data-label=\\"Grade\\"\]\{display:none/);
+assert.match(css, /data-label="Grade"\]\{display:none/);

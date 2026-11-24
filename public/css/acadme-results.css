@@ -635,3 +635,5 @@
  .results-manager-page .result-sheet-card .result-grid .row-info{justify-content:flex-start!important;text-align:left!important}
  .results-manager-page .result-sheet-card .result-grid .row-name{text-align:left!important;white-space:normal!important}
 }
+
+.results-tracking-page .results-class-subject{flex-wrap:wrap}.results-tracking-page .results-class-subject button{min-height:26px;padding:3px 7px;font-size:10px}.results-tracking-page .results-class-actions{gap:8px;flex-wrap:wrap}

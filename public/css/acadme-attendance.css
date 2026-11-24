@@ -263,3 +263,13 @@
   .main-content.attendance-operations-page > .grid-2 { grid-template-columns:minmax(0,1fr); }
   .main-content.attendance-operations-page > .card { padding:var(--acm-sp-12); }
 }
+
+
+/* Attendance student rows fill the available mobile content width. */
+@media (max-width: 768px) {
+  .main-content.attendance-take-page .attendance-container,
+  .main-content.attendance-take-page .attendance-form,
+  .main-content.attendance-take-page .student-grid,
+  .main-content.attendance-take-page .student-row-card { width:100%; max-width:100%; min-width:0; margin-inline:0; box-sizing:border-box; }
+  .main-content.attendance-take-page .student-row-card { justify-self:stretch; }
+}

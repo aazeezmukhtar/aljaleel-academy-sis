@@ -25,13 +25,14 @@ assert.match(resultEntry, /result-context-title/);
 assert.match(resultEntry, /Offline Use/);
 assert.doesNotMatch(resultEntry, /Prepare for Offline Use/);
 assert.match(resultEntry, /result-context-buttons/);
-assert.match(resultEntry, /result-context-period/);
+assert.match(resultEntry, /result-context-period[\\s\\S]*filters\\.term[\\s\\S]*filters\\.session/);
+assert.ok(resultEntry.indexOf('result-context-period') > resultEntry.indexOf('result-context-toolbar'),'Term/session must be row three, after the toolbar');
 ejs.compile(resultEntry,{filename:path.join(__dirname,'..','views/results/manager.ejs')});
 assert.match(resultEntry, /filters\.term/);
 assert.match(resultEntry, /filters\.session/);
 assert.match(resultEntry, /data-score-count=.*resultConfig\\.ca_count/);
-assert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) 44px 44px 34px 32px/);
-assert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) repeat\\(3,minmax\\(38px,44px\\)\\)/);
+assert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) 46px 46px 34px 32px!important/);
+assert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) repeat\\(3,42px\\)!important/);
 assert.match(resultCss, /row-info>div:first-child\\{display:flex!important;width:36px!important;height:42px!important/);
 assert.match(resultCss, /min-height:34px;height:34px/);
 assert.match(resultCss, /result-sheet-card\\{width:100%;max-width:100%;min-width:0;margin-inline:0;padding:0!important/);
@@ -51,3 +52,6 @@ for(const [file,scope,required] of pages){
  ejs.compile(source,{filename:path.join(__dirname,'..',file)});
 }
 console.log('AcadMe Staff Management UI presentation checks passed.');
+
+assert.match(resultCss, /flex-direction:column;align-items:stretch;gap:5px/);
+assert.match(resultCss, /justify-self:end!important;width:100%/);

@@ -571,7 +571,25 @@ const saveResults = async (req, res) => {
             return res.status(400).json({ success: false, message: 'The submitted student list is invalid or contains duplicates. No results were saved.' });
         }
 
-        // Reject the whole batch if any student is not enrolled in this class/session.
+        // A submitted sheet must cover the exact active cohort shown by Result Entry.
+        // Draft saves may remain partial, but submission cannot silently omit an active student.
+        if (normalizedStatus === 'submitted') {
+            const activeCohort = await db.get(`
+                SELECT COUNT(DISTINCT se.student_id) AS total
+                FROM student_enrollments se
+                JOIN students s ON s.id = se.student_id
+                WHERE se.class_id = ? AND se.session = ? AND s.school_id = ?
+                  AND LOWER(COALESCE(s.status, '')) IN ('active', '')
+            `, [class_id, session, schoolId]);
+            if (submittedStudentIds.length !== Number(activeCohort && activeCohort.total || 0)) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'Submission must include every active student in this class for the selected session. Reload the Result Entry sheet and submit the complete active cohort.'
+                });
+            }
+        }
+
+        // Reject the whole batch if any student is not active and enrolled in this class/session.
         // Never silently skip a student and partially save the remaining marks.
         for (const studentId of submittedStudentIds) {
             const enrollmentCheck = await db.get(`
@@ -579,6 +597,7 @@ const saveResults = async (req, res) => {
                 FROM student_enrollments se
                 JOIN students s ON s.id = se.student_id
                 WHERE se.student_id = ? AND se.class_id = ? AND se.session = ? AND s.school_id = ?
+                  AND LOWER(COALESCE(s.status, '')) IN ('active', '')
                 LIMIT 1
             `, [studentId, class_id, session, schoolId]);
             if (!enrollmentCheck) {

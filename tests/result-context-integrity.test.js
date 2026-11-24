@@ -33,7 +33,48 @@ async function withMockedDb(runTest) {
 }
 
 async function testRejectsBatchWhenAnyExistingResultIsProtected() {
-  await withMockedDbasync function testSubmissionRequiresCompleteActiveCohort() {
+  await withMockedDbasync function testSubmittedBlankScoresPersistAsNullAndZeroStaysZero() {
+  await withMockedDb(async () => {
+    const writes = [];
+    const transactionClient = { transactionScoped: true };
+    db.get = async (sql, params = []) => {
+      if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
+      if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
+      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 1 };
+      if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
+      if (sql.includes('SELECT status FROM results WHERE student_id = ? AND class_id = ?')) return null;
+      throw new Error('Unexpected database lookup: ' + sql);
+    };
+    db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
+    db.all = async (sql, params, client) => {
+      assert.strictEqual(client, transactionClient);
+      return [{ student_id: 101, status: 'submitted' }];
+    };
+    db.transaction = async callback => callback(transactionClient);
+
+    const res = responseRecorder();
+    await resultController.saveResults({
+      schoolId: 1,
+      session: { staff: { id: 7, role: 'Admin' } },
+      body: {
+        class_id: '10', subject_id: '20', term: '3rd Term', session: '2025/2026',
+        status: 'submitted',
+        results: [{ student_id: 101, ca1: '', ca2: 0, exam: '' }]
+      }
+    }, res);
+
+    assert.strictEqual(res.statusCode, 200);
+    assert.strictEqual(writes.length, 1);
+    assert.strictEqual(writes[0][1][5], null, 'An empty CA1 field must persist as NULL');
+    assert.strictEqual(writes[0][1][6], 0, 'An explicitly recorded zero must remain zero');
+    assert.strictEqual(writes[0][1][7], null, 'An empty exam field must persist as NULL');
+    assert.strictEqual(writes[0][1][8], null, 'An incomplete result must not receive a zero total');
+    assert.strictEqual(writes[0][1][9], null, 'An incomplete result must not receive a failing grade');
+  });
+}
+
+async function testSubmissionRequiresCompleteActiveCohort() {
   await withMockedDb(async () => {
     const writes = [];
     db.get = async sql => {
@@ -231,6 +272,7 @@ async function testResultBatchUsesTransactionClientAndVerifiesEveryRow() {
   await testRejectsInvalidResultStatus();
   await testResultBatchUsesTransactionClientAndVerifiesEveryRow();
   await testSubmissionRequiresCompleteActiveCohort();
+  await testSubmittedBlankScoresPersistAsNullAndZeroStaysZero();
   process.stdout.write('PASS: Result context integrity regression tests\\n');
 })().catch(error => {
   console.error(error);

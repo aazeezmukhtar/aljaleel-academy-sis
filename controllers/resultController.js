@@ -570,22 +570,30 @@ const saveResults = async (req, res) => {
             return res.status(400).json({ success: false, message: 'The submitted student list is invalid or contains duplicates. No results were saved.' });
         }
 
-        // Reject the whole batch if any student is not enrolled in this class/session.
-        // Never silently skip a student and partially save the remaining marks.
-        for (const studentId of submittedStudentIds) {
-            const enrollmentCheck = await db.get(`
-                SELECT se.student_id
-                FROM student_enrollments se
-                JOIN students s ON s.id = se.student_id
-                WHERE se.student_id = ? AND se.class_id = ? AND se.session = ? AND s.school_id = ?
-                LIMIT 1
-            `, [studentId, class_id, session, schoolId]);
-            if (!enrollmentCheck) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'At least one submitted student is not enrolled in the selected class for this session. No results were saved.'
-                });
-            }
+        // The result sheet cohort is the active (or legacy NULL-status) enrollment set.
+        const activeCohortRows = await db.all(`
+            SELECT DISTINCT st.id
+            FROM student_enrollments se
+            JOIN students st ON st.id = se.student_id
+            WHERE se.class_id = ? AND se.session = ? AND st.school_id = ?
+              AND LOWER(COALESCE(st.status, '')) IN ('active', '')
+            ORDER BY st.id
+        `, [class_id, session, schoolId]);
+        const activeStudentIds = activeCohortRows.map(row => Number(row.id));
+        const activeStudentSet = new Set(activeStudentIds);
+        if (submittedStudentIds.some(id => !activeStudentSet.has(id))) {
+            return res.status(400).json({
+                success: false,
+                message: 'At least one submitted student is not an active enrolment in the selected class and session. No results were saved.'
+            });
+        }
+        if (normalizedStatus === 'submitted' &&
+            (submittedStudentIds.length !== activeStudentIds.length ||
+             activeStudentIds.some(id => !submittedStudentIds.includes(id)))) {
+            return res.status(409).json({
+                success: false,
+                message: 'Submission requires a result row for every active student in this class and session. Drafts may be saved before the sheet is complete.'
+            });
         }
 
         if (user.role !== 'Admin' && user.role !== 'Examination Officer') {
@@ -632,15 +640,32 @@ const saveResults = async (req, res) => {
             WHERE LOWER(COALESCE(results.status, 'draft')) NOT IN ('approved', 'locked', 'published')
         `;
 
+        const resultConfig = await getSectionResultConfig(class_id, schoolId);
+        const caCount = Number(resultConfig.ca_count || 2) > 1 ? 2 : 1;
+        const scoreValue = value => value === '' || value === undefined || value === null
+            ? null
+            : (Number.isFinite(Number(value)) ? Number(value) : NaN);
+        const normalizedScores = results.map(item => {
+            const ca1 = scoreValue(item.ca1);
+            const ca2 = caCount === 1 ? null : scoreValue(item.ca2);
+            const exam = scoreValue(item.exam);
+            if ([ca1, ca2, exam].some(value => Number.isNaN(value))) {
+                throw new Error('Invalid score value. Use a number or leave the assessment blank.');
+            }
+            const complete = ca1 !== null && exam !== null && (caCount === 1 || ca2 !== null);
+            const computed = complete
+                ? computeResult(ca1, caCount === 1 ? 0 : ca2, exam)
+                : { total: null, grade: null };
+            return { ...item, ca1, ca2, exam, total: computed.total, grade: computed.grade };
+        });
         // Use the transaction-scoped PostgreSQL client for every write and the
         // verification query. Pool-level calls here would escape the transaction.
         await db.transaction(async (client) => {
-            for (const item of results) {
-                const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
+            for (const item of normalizedScores) {
                 await db.run(sql, [
                     item.student_id, class_id, subject_id, term, session,
-                    item.ca1 || 0, item.ca2 || 0, item.exam || 0,
-                    total, grade, (item.remark || '').trim(), normalizedStatus
+                    item.ca1, item.ca2, item.exam,
+                    item.total, item.grade, (item.remark || '').trim(), normalizedStatus
                 ], client);
             }
 
@@ -1264,9 +1289,14 @@ const approveResults = async (req, res) => {
         const owned = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
         if (!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
         const expected = await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
-            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
-        const pending = await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='submitted' THEN student_id END) AS submitted
-            FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
+            JOIN students st ON st.id=se.student_id
+            WHERE se.class_id=? AND se.session=? AND st.school_id=?
+              AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
+        const pending = await db.get(`SELECT COUNT(DISTINCT r.student_id) AS total,
+            COUNT(DISTINCT CASE WHEN LOWER(COALESCE(r.status,''))='submitted' THEN r.student_id END) AS submitted
+            FROM results r JOIN students st ON st.id=r.student_id
+            WHERE r.class_id=? AND r.subject_id=? AND r.term=? AND r.session=? AND st.school_id=?
+              AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,subject_id,term,session,schoolId]);
         if (!Number(expected.total) || Number(pending.total)!==Number(expected.total) || Number(pending.submitted)!==Number(expected.total))
             return res.status(409).json({success:false,message:'Approval requires every recorded result for this subject to be submitted.'});
         const info = await db.run(`UPDATE results SET status='approved', approved_by=?
@@ -1285,9 +1315,13 @@ const lockResults = async (req, res) => {
         const owned=await db.get('SELECT id FROM classes WHERE id=? AND school_id=?',[class_id,schoolId]);
         if(!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
         const expected=await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
-            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
-        const rows=await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='approved' THEN student_id END) AS approved
-            FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
+            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?
+              AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
+        const rows=await db.get(`SELECT COUNT(DISTINCT r.student_id) AS total,
+            COUNT(DISTINCT CASE WHEN LOWER(COALESCE(r.status,''))='approved' THEN r.student_id END) AS approved
+            FROM results r JOIN students st ON st.id=r.student_id
+            WHERE r.class_id=? AND r.subject_id=? AND r.term=? AND r.session=? AND st.school_id=?
+              AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,subject_id,term,session,schoolId]);
         if(!Number(expected.total) || Number(rows.total)!==Number(expected.total) || Number(rows.approved)!==Number(expected.total))
             return res.status(409).json({success:false,message:'Only fully approved subject results can be locked.'});
         const info=await db.run(`UPDATE results SET status='locked'
@@ -1330,11 +1364,14 @@ const publishBulkResults = async (req, res) => {
         for(const item of assigned){
             const expected=await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total
                 FROM student_enrollments se JOIN students st ON st.id=se.student_id
-                WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
-            const state=await db.get(`SELECT COUNT(DISTINCT student_id) AS total,
-                COUNT(DISTINCT CASE WHEN LOWER(status) IN ('approved','locked','published') THEN student_id END) AS ready
-                FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,
-                [class_id,item.subject_id,term,session]);
+                WHERE se.class_id=? AND se.session=? AND st.school_id=?
+                  AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
+            const state=await db.get(`SELECT COUNT(DISTINCT r.student_id) AS total,
+                COUNT(DISTINCT CASE WHEN LOWER(COALESCE(r.status,'')) IN ('approved','locked','published') THEN r.student_id END) AS ready
+                FROM results r JOIN students st ON st.id=r.student_id
+                WHERE r.class_id=? AND r.subject_id=? AND r.term=? AND r.session=? AND st.school_id=?
+                  AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,
+                [class_id,item.subject_id,term,session,schoolId]);
             if(!Number(expected.total) || Number(state.total)!==Number(expected.total) || Number(state.ready)!==Number(expected.total))
                 return res.status(409).json({success:false,message:'Publication blocked: every assigned subject must have a complete set of approved or locked results.'});
         }

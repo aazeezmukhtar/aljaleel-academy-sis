@@ -52,3 +52,13 @@ assert.match(css, /@media\(max-width:640px\)/);
 assert.match(css, /prefers-reduced-motion:reduce/);
 
 console.log('Result workflow tracking checks passed.');
+
+assert.match(controller, /const subjectMap = new Map\(\)/);
+assert.match(controller, /subjectSummaries/);
+assert.match(controller, /class_period_count/);
+assert.match(view, /Subject Summary/);
+assert.match(view, /results-subject-grid/);
+assert.match(view, /subject\.coverage/);
+assert.ok(view.indexOf('results-subject-overview') < view.indexOf('results-tracking-summary'),
+  'Subject summary must appear above entry-level summary');
+assert.match(css, /results-subject-card/);

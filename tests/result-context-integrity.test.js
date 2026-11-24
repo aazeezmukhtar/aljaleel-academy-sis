@@ -32,10 +32,22 @@ async function withMockedDb(runTest) {
   }
 }
 
+function mockResultConfigAndCohort(activeIds) {
+  db.all = async (sql, params = [], client) => {
+    if (sql.includes('FROM result_config') || sql.includes('FROM settings')) return [];
+    if (sql.includes('SELECT DISTINCT st.id')) return activeIds.map(id => ({ id }));
+    if (sql.includes('SELECT student_id, status FROM results')) {
+      return params.slice(4).map(student_id => ({ student_id, status: 'draft' }));
+    }
+    throw new Error('Unexpected database list query: ' + sql);
+  };
+}
+
 async function testRejectsBatchWhenAnyExistingResultIsProtected() {
   await withMockedDb(async () => {
     const writes = [];
     const statusLookups = [];
+    mockResultConfigAndCohort([101, 202]);
     db.get = async (sql, params = []) => {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
@@ -80,6 +92,7 @@ async function testRejectsBatchIfAnyStudentIsNotEnrolled() {
   await withMockedDb(async () => {
     const writes = [];
     const enrollmentLookups = [];
+    mockResultConfigAndCohort([101]);
     db.get = async (sql, params = []) => {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
@@ -112,8 +125,8 @@ async function testRejectsBatchIfAnyStudentIsNotEnrolled() {
 
     assert.strictEqual(res.statusCode, 400, 'A batch containing an out-of-class student must be rejected');
     assert.strictEqual(res.body.success, false);
-    assert.match(res.body.message, /not enrolled/i);
-    assert.deepStrictEqual(enrollmentLookups, [101, 202], 'Every submitted student must be checked');
+    assert.match(res.body.message, /not an active enrolment/i);
+    assert.deepStrictEqual(enrollmentLookups, [], 'The active cohort query validates membership before any writes');
     assert.strictEqual(writes.length, 0, 'No student result may be written when any submitted student fails validation');
   });
 }
@@ -167,18 +180,24 @@ async function testRejectsInvalidResultStatus() {
 async function testResultBatchUsesTransactionClientAndVerifiesEveryRow() {
   await withMockedDb(async () => {
     const writes = [], transactionClient = { transactionScoped: true };
+    mockResultConfigAndCohort([101, 102]);
     db.get = async (sql, params = []) => {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
       if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('SELECT section_id FROM classes WHERE id = ? AND school_id = ?')) return null;
       if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
       throw new Error('Unexpected database lookup: ' + sql);
     };
     db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
-    db.all = async (sql, params, client) => {
-      assert.match(sql, /SELECT student_id, status FROM results/);
-      assert.strictEqual(client, transactionClient);
-      return params.slice(4).map(student_id => ({ student_id, status: 'draft' }));
+    db.all = async (sql, params = [], client) => {
+      if (sql.includes('FROM result_config') || sql.includes('FROM settings')) return [];
+      if (sql.includes('SELECT DISTINCT st.id')) return [{ id: 101 }, { id: 102 }];
+      if (sql.includes('SELECT student_id, status FROM results')) {
+        assert.strictEqual(client, transactionClient);
+        return params.slice(4).map(student_id => ({ student_id, status: 'draft' }));
+      }
+      throw new Error('Unexpected database list query: ' + sql);
     };
     db.transaction = async callback => callback(transactionClient);
     const res = responseRecorder();

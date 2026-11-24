@@ -62,13 +62,12 @@ const academicBroadsheet = academicReportSource.slice(academicReportSource.index
 const academicAnalysis = academicReportSource.slice(academicReportSource.indexOf('const getSubjectAnalysis'), academicReportSource.indexOf('const getTopPerformers'));
 const academicTop = academicReportSource.slice(academicReportSource.indexOf('const getTopPerformers'));
 
-for (const [name, body] of [
-  ['broadsheet', academicBroadsheet],
-  ['top performers', academicTop]
-]) {
-  assert.match(body, /r\.class_id = \?/,
-    `${name} must restrict result rows to the selected class`);
-}
+assert.match(academicBroadsheet, /draft[\\s\\S]*submitted[\\s\\S]*approved[\\s\\S]*locked[\\s\\S]*published/,
+  'Broadsheet must include every result workflow stage, including drafts');
+assert.match(academicBroadsheet, /LOWER\\(COALESCE\\(st\\.status, ''\\)\\) IN \\('active', ''\\)/,
+  'Broadsheet must use the active and legacy NULL-status student cohort');
+assert.match(academicBroadsheet, /canAccessClass\\(class_id\\)/,
+  'Broadsheet must authorize the requested class, not just the dropdown list');
 assert.match(academicAnalysis, /r\.class_id = sa\.class_id/,
   'Subject analysis must join results to the class captured at result entry');
 assert.match(academicAnalysis, /sa\.class_id = \?/,

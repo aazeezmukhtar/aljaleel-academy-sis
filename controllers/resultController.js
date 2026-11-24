@@ -650,7 +650,7 @@ const saveResults = async (req, res) => {
             const ca2 = caCount === 1 ? null : scoreValue(item.ca2);
             const exam = scoreValue(item.exam);
             if ([ca1, ca2, exam].some(value => Number.isNaN(value))) {
-                throw new Error('Invalid score value. Use a number or leave the assessment blank.');
+                return null;
             }
             const complete = ca1 !== null && exam !== null && (caCount === 1 || ca2 !== null);
             const computed = complete
@@ -658,6 +658,9 @@ const saveResults = async (req, res) => {
                 : { total: null, grade: null };
             return { ...item, ca1, ca2, exam, total: computed.total, grade: computed.grade };
         });
+        if (normalizedScores.some(item => item === null)) {
+            return res.status(400).json({ success: false, message: 'Invalid score value. Use a number or leave the assessment blank. No results were saved.' });
+        }
         // Use the transaction-scoped PostgreSQL client for every write and the
         // verification query. Pool-level calls here would escape the transaction.
         await db.transaction(async (client) => {
@@ -1300,8 +1303,9 @@ const approveResults = async (req, res) => {
         if (!Number(expected.total) || Number(pending.total)!==Number(expected.total) || Number(pending.submitted)!==Number(expected.total))
             return res.status(409).json({success:false,message:'Approval requires every recorded result for this subject to be submitted.'});
         const info = await db.run(`UPDATE results SET status='approved', approved_by=?
-            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='submitted'`,
-            [user.id,class_id,subject_id,term,session]);
+            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='submitted'
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status,'')) IN ('active',''))`,
+            [user.id,class_id,subject_id,term,session,schoolId]);
         res.json({success:true,message:`Approved ${info.changes} results.`});
     } catch(err){ console.error('Approve Error:',err); res.status(500).json({success:false,message:'Database Error'}); }
 };
@@ -1325,8 +1329,9 @@ const lockResults = async (req, res) => {
         if(!Number(expected.total) || Number(rows.total)!==Number(expected.total) || Number(rows.approved)!==Number(expected.total))
             return res.status(409).json({success:false,message:'Only fully approved subject results can be locked.'});
         const info=await db.run(`UPDATE results SET status='locked'
-            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='approved'`,
-            [class_id,subject_id,term,session]);
+            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='approved'
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status,'')) IN ('active',''))`,
+            [class_id,subject_id,term,session,schoolId]);
         res.json({success:true,message:`Locked ${info.changes} results.`});
     }catch(err){console.error('Lock Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };
@@ -1376,8 +1381,9 @@ const publishBulkResults = async (req, res) => {
                 return res.status(409).json({success:false,message:'Publication blocked: every assigned subject must have a complete set of approved or locked results.'});
         }
         const info=await db.run(`UPDATE results SET status='published', approved_by=?
-            WHERE class_id=? AND term=? AND session=? AND LOWER(status) IN ('approved','locked')`,
-            [user.id,class_id,term,session]);
+            WHERE class_id=? AND term=? AND session=? AND LOWER(status) IN ('approved','locked')
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status,'')) IN ('active',''))`,
+            [user.id,class_id,term,session,schoolId]);
         res.json({success:true,message:`Published ${info.changes} result entries for the class.`});
     }catch(err){console.error('Bulk Publish Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };

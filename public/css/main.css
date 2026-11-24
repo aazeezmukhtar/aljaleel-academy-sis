@@ -605,7 +605,9 @@ table {
     .main-content {
         padding: 90px 14px 40px; /* Adjusted top padding */
         margin-left: 0 !important; /* Force reset */
-        width: 100vw !important;
+        width: 100% !important;
+        max-width: 100%;
+        box-sizing: border-box;
         overflow-x: hidden;
     }
     .grid-2, .grid-3, .grid-4, .grid-main-aside, .stats-grid {
@@ -1239,4 +1241,11 @@ table {
         animation-iteration-count: 1 !important;
         transition-duration: 0.01ms !important;
     }
+}
+
+
+/* Keep mobile page content aligned to the viewport, not a 100vw flex overflow. */
+@media (max-width: 768px) {
+    .dashboard-container { width:100%; max-width:100%; min-width:0; overflow-x:clip; }
+    .dashboard-container > .main-content { width:100% !important; max-width:100%; min-width:0; margin-inline:0 !important; box-sizing:border-box; align-self:stretch; }
 }

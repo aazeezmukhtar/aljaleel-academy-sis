@@ -1273,12 +1273,14 @@ const approveResults = async (req, res) => {
         const expected = await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
             JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=? AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
         const pending = await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='submitted' THEN student_id END) AS submitted
-            FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
+            FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status, '')) IN ('active', ''))`,[class_id,subject_id,term,session,schoolId]);
         if (!Number(expected.total) || Number(pending.total)!==Number(expected.total) || Number(pending.submitted)!==Number(expected.total))
             return res.status(409).json({success:false,message:'Approval requires every recorded result for this subject to be submitted.'});
         const info = await db.run(`UPDATE results SET status='approved', approved_by=?
-            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='submitted'`,
-            [user.id,class_id,subject_id,term,session]);
+            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='submitted'
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status, '')) IN ('active', ''))`,
+            [user.id,class_id,subject_id,term,session,schoolId]);
         res.json({success:true,message:`Approved ${info.changes} results.`});
     } catch(err){ console.error('Approve Error:',err); res.status(500).json({success:false,message:'Database Error'}); }
 };
@@ -1294,12 +1296,14 @@ const lockResults = async (req, res) => {
         const expected=await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
             JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=? AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
         const rows=await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='approved' THEN student_id END) AS approved
-            FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
+            FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status, '')) IN ('active', ''))`,[class_id,subject_id,term,session,schoolId]);
         if(!Number(expected.total) || Number(rows.total)!==Number(expected.total) || Number(rows.approved)!==Number(expected.total))
             return res.status(409).json({success:false,message:'Only fully approved subject results can be locked.'});
         const info=await db.run(`UPDATE results SET status='locked'
-            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='approved'`,
-            [class_id,subject_id,term,session]);
+            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='approved'
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status, '')) IN ('active', ''))`,
+            [class_id,subject_id,term,session,schoolId]);
         res.json({success:true,message:`Locked ${info.changes} results.`});
     }catch(err){console.error('Lock Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };
@@ -1314,8 +1318,9 @@ const unlockResults = async (req,res) => {
         if(!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
         const info=await db.run(`UPDATE results SET status='submitted'
             WHERE class_id=? AND subject_id=? AND term=? AND session=?
-              AND LOWER(status) IN ('approved','locked','published')`,
-            [class_id,subject_id,term,session]);
+              AND LOWER(status) IN ('approved','locked','published')
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status, '')) IN ('active', ''))`,
+            [class_id,subject_id,term,session,schoolId]);
         if(!Number(info.changes)) return res.status(409).json({success:false,message:'No approved, locked or published results found to reopen.'});
         res.json({success:true,message:`Reopened ${info.changes} results. They are returned to Submitted and can be edited again.`,updatedCount:Number(info.changes),status:'submitted'});
     }catch(err){console.error('Unlock Error:',err);res.status(500).json({success:false,message:'Database Error'});}
@@ -1340,14 +1345,16 @@ const publishBulkResults = async (req, res) => {
                 WHERE se.class_id=? AND se.session=? AND st.school_id=? AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
             const state=await db.get(`SELECT COUNT(DISTINCT student_id) AS total,
                 COUNT(DISTINCT CASE WHEN LOWER(status) IN ('approved','locked','published') THEN student_id END) AS ready
-                FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,
-                [class_id,item.subject_id,term,session]);
+                FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?
+                  AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status, '')) IN ('active', ''))`,
+                [class_id,item.subject_id,term,session,schoolId]);
             if(!Number(expected.total) || Number(state.total)!==Number(expected.total) || Number(state.ready)!==Number(expected.total))
                 return res.status(409).json({success:false,message:'Publication blocked: every assigned subject must have a complete set of approved or locked results.'});
         }
         const info=await db.run(`UPDATE results SET status='published', approved_by=?
-            WHERE class_id=? AND term=? AND session=? AND LOWER(status) IN ('approved','locked')`,
-            [user.id,class_id,term,session]);
+            WHERE class_id=? AND term=? AND session=? AND LOWER(status) IN ('approved','locked')
+              AND student_id IN (SELECT id FROM students WHERE school_id=? AND LOWER(COALESCE(status, '')) IN ('active', ''))`,
+            [user.id,class_id,term,session,schoolId]);
         res.json({success:true,message:`Published ${info.changes} result entries for the class.`});
     }catch(err){console.error('Bulk Publish Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };

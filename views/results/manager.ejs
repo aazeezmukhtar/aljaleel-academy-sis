@@ -146,7 +146,7 @@
                             const normalizedStatuses = studentStatuses.map(status => String(status || 'draft').toLowerCase());
                             const allSubmitted = students.length > 0 && normalizedStatuses.every(status => status === 'submitted');
                             const allApproved = students.length > 0 && normalizedStatuses.every(status => status === 'approved');
-                            const hasLocked = normalizedStatuses.some(status => status === 'locked');
+                            const hasReopenable = normalizedStatuses.some(status => status === 'locked' || status === 'published');
                             const allPublished = students.length > 0 && normalizedStatuses.every(status => status === 'published');
                         %>
                         <section class="card result-workflow-admin-panel" aria-label="Administrator result workflow controls">
@@ -155,12 +155,12 @@
                                 <p class="text-muted" style="margin:0;">Administrator controls for <strong><%= classes.find(c => String(c.id) === String(filters.class_id))?.name || 'Selected Class' %> · <%= subjects.find(s => String(s.id) === String(filters.subject_id))?.name || 'Selected Subject' %></strong>. Changes apply to this subject and academic period.</p>
                             </div>
                             <div class="result-workflow-admin-actions">
-                                <button type="button" class="btn btn-outline" onclick="updateStatus('approve')" <%= allSubmitted ? '' : 'disabled' %>>Approve Subject</button>
-                                <button type="button" class="btn btn-outline" onclick="updateStatus('lock')" <%= allApproved ? '' : 'disabled' %>>Lock Subject</button>
-                                <button type="button" class="btn btn-outline" onclick="updateStatus('unlock')" <%= hasLocked ? '' : 'disabled' %>>Unlock Subject</button>
-                                <button type="button" class="btn btn-primary" onclick="publishCurrentClass()" <%= allPublished ? 'disabled' : '' %>>Publish Class</button>
+                                <button type="button" class="btn btn-outline" id="approveResultsBtn" onclick="updateStatus('approve')" <%= allSubmitted ? '' : 'disabled' %>>Approve Subject</button>
+                                <button type="button" class="btn btn-outline" id="lockResultsBtn" onclick="updateStatus('lock')" <%= allApproved ? '' : 'disabled' %>>Lock Subject</button>
+                                <button type="button" class="btn btn-outline" id="unlockResultsBtn" onclick="updateStatus('unlock')" <%= hasReopenable ? '' : 'disabled' %>>Unlock Subject</button>
+                                <button type="button" class="btn btn-primary" id="publishResultsBtn" onclick="publishCurrentClass()" <%= allPublished ? 'disabled' : '' %>>Publish Class</button>
                             </div>
-                            <small class="text-muted">Approval requires every student to be submitted; locking requires approval. Class publication checks every assigned subject before publishing.</small>
+                            <small id="resultWorkflowFeedback" class="text-muted" role="status" aria-live="polite">Approval requires every student to be submitted; locking requires approval. Class publication checks every assigned subject before publishing.</small>
                         </section>
                     <% } %>
                     <div class="card result-sheet-card">
@@ -168,7 +168,7 @@
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                             <h3 style="margin: 0;">
                                 Grade Sheet
-                                <span class="badge badge-info" style="font-size: 0.8rem; vertical-align: middle;">
+                                <span id="resultSheetStatus" class="badge badge-info" style="font-size: 0.8rem; vertical-align: middle;">
                                     <%= sheetStatus %>
                                 </span>
                             </h3>
@@ -849,47 +849,63 @@
 
         document.addEventListener('DOMContentLoaded', restoreSavedResultDraft);
 
+        function applyWorkflowState(state) {
+            const normalized = String(state || '').toLowerCase();
+            const locked = ['approved', 'locked', 'published'].includes(normalized);
+            document.querySelectorAll('#resultGrid .score-input').forEach(input => { input.disabled = locked; });
+            const badge = document.getElementById('resultSheetStatus');
+            if (badge) badge.textContent = normalized.charAt(0).toUpperCase() + normalized.slice(1);
+            const approve = document.getElementById('approveResultsBtn');
+            const lock = document.getElementById('lockResultsBtn');
+            const unlock = document.getElementById('unlockResultsBtn');
+            const publish = document.getElementById('publishResultsBtn');
+            if (approve) approve.disabled = normalized !== 'submitted';
+            if (lock) lock.disabled = normalized !== 'approved';
+            if (unlock) unlock.disabled = !['locked', 'published'].includes(normalized);
+            if (unlock) unlock.textContent = normalized === 'published' ? 'Reopen Published' : 'Unlock Subject';
+            if (publish) publish.disabled = normalized === 'published';
+            const feedback = document.getElementById('resultWorkflowFeedback');
+            if (feedback) feedback.textContent = locked ? 'This sheet is read-only. An administrator can reopen it to resume editing.' : 'This sheet is editable. Save a draft or submit the results when ready.';
+        }
+
+        async function sendWorkflowAction(url, payload, button) {
+            if (button) button.disabled = true;
+            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok || !data.success) throw new Error(data.message || 'The workflow action was not completed.');
+            return data;
+        }
+
         async function publishCurrentClass() {
-            const payload = {
-                term: document.querySelector('[name="term"]').value,
-                session: document.querySelector('[name="session"]').value,
-                class_id: document.querySelector('[name="class_id"]').value
-            };
+            const payload = { term: document.querySelector('[name="term"]').value, session: document.querySelector('[name="session"]').value, class_id: document.querySelector('[name="class_id"]').value };
             if (!confirm('Publish all eligible results for this class and academic period? The server will verify every assigned subject before publishing.')) return;
+            const button = document.getElementById('publishResultsBtn');
+            const feedback = document.getElementById('resultWorkflowFeedback');
             try {
-                const res = await fetch('/results/publish-bulk', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                alert(data.message || (data.success ? 'Class published.' : 'Publication was not completed.'));
-                if (data.success) location.reload();
+                const data = await sendWorkflowAction('/results/publish-bulk', payload, button);
+                applyWorkflowState('published');
+                if (feedback) feedback.textContent = data.message || 'Class published successfully.';
             } catch (err) {
-                alert('Publication action failed. Please check your connection and try again.');
+                if (button) button.disabled = false;
+                if (feedback) feedback.textContent = err.message;
             }
         }
 
         async function updateStatus(type) {
-            if (!confirm(`Are you sure you want to ${type.toUpperCase()} these results?`)) return;
-
-            const payload = {
-                term: document.querySelector('[name="term"]').value,
-                session: document.querySelector('[name="session"]').value,
-                class_id: document.querySelector('[name="class_id"]').value,
-                subject_id: document.querySelector('[name="subject_id"]').value
-            };
-
+            const labels = { approve: 'approve', lock: 'lock', unlock: 'reopen' };
+            if (!confirm('Are you sure you want to ' + (labels[type] || type) + ' these results?')) return;
+            const payload = { term: document.querySelector('[name="term"]').value, session: document.querySelector('[name="session"]').value, class_id: document.querySelector('[name="class_id"]').value, subject_id: document.querySelector('[name="subject_id"]').value };
+            const buttonId = { approve: 'approveResultsBtn', lock: 'lockResultsBtn', unlock: 'unlockResultsBtn' }[type];
+            const button = document.getElementById(buttonId);
+            const feedback = document.getElementById('resultWorkflowFeedback');
             try {
-                const res = await fetch(`/results/${type}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                alert(data.message);
-                if (data.success) location.reload();
-            } catch (err) { alert('Action failed'); }
+                const data = await sendWorkflowAction('/results/' + type, payload, button);
+                applyWorkflowState({ approve: 'approved', lock: 'locked', unlock: 'submitted' }[type]);
+                if (feedback) feedback.textContent = data.message || 'Workflow updated successfully.';
+            } catch (err) {
+                if (button) button.disabled = false;
+                if (feedback) feedback.textContent = err.message;
+            }
         }
     </script>
     <%- include('../partials/footer') %>

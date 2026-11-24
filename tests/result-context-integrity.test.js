@@ -33,7 +33,37 @@ async function withMockedDb(runTest) {
 }
 
 async function testRejectsBatchWhenAnyExistingResultIsProtected() {
+  await withMockedDbasync function testSubmissionRequiresCompleteActiveCohort() {
   await withMockedDb(async () => {
+    const writes = [];
+    db.get = async sql => {
+      if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
+      if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
+      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 2 };
+      throw new Error('Submission should stop at the active cohort check: ' + sql);
+    };
+    db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
+    db.transaction = async () => { throw new Error('Incomplete submissions must not start a write transaction'); };
+
+    const res = responseRecorder();
+    await resultController.saveResults({
+      schoolId: 1,
+      session: { staff: { id: 7, role: 'Admin' } },
+      body: {
+        class_id: '10', subject_id: '20', term: '3rd Term', session: '2025/2026',
+        status: 'submitted',
+        results: [{ student_id: 101, ca1: 10, ca2: 10, exam: 50 }]
+      }
+    }, res);
+
+    assert.strictEqual(res.statusCode, 409, 'Submission must be rejected when it omits an active student');
+    assert.match(res.body.message, /every active student/i);
+    assert.strictEqual(writes.length, 0, 'An incomplete submission must not write any result rows');
+  });
+}
+
+(async () => {
     const writes = [];
     const statusLookups = [];
     db.get = async (sql, params = []) => {
@@ -200,6 +230,7 @@ async function testResultBatchUsesTransactionClientAndVerifiesEveryRow() {
   await testRejectsBatchWhenAnyExistingResultIsProtected();
   await testRejectsInvalidResultStatus();
   await testResultBatchUsesTransactionClientAndVerifiesEveryRow();
+  await testSubmissionRequiresCompleteActiveCohort();
   process.stdout.write('PASS: Result context integrity regression tests\\n');
 })().catch(error => {
   console.error(error);

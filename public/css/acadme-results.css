@@ -562,7 +562,7 @@
 /* Subject-first workflow overview */
 .results-tracking-page .results-subject-overview{margin-block:var(--acm-sp-16);padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-lg);background:linear-gradient(135deg,var(--acm-surface),var(--acm-bg));box-shadow:var(--acm-shadow-sm)}
 .results-tracking-page .results-subject-overview-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--acm-sp-12);margin-block-end:var(--acm-sp-12)}
-.results-tracking-page .results-subject-overview-kicker{color:var(--acm-gold,var(--school-accent,#d49a00));font-size:10px;font-weight:var(--acm-fw-bold);letter-spacing:.12em}
+.results-tracking-page .results-subject-overview-kicker{color:var(--acm-warning);font-size:10px;font-weight:var(--acm-fw-bold);letter-spacing:.12em}
 .results-tracking-page .results-subject-overview-heading h2{margin:3px 0;color:var(--acm-text-primary);font-size:var(--acm-text-lg);font-weight:var(--acm-fw-bold)}
 .results-tracking-page .results-subject-overview-heading p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
 .results-tracking-page .results-subject-total{padding:6px 10px;border:1px solid var(--acm-border);border-radius:999px;background:var(--acm-surface);color:var(--acm-text-secondary);font-size:var(--acm-text-xs);white-space:nowrap}

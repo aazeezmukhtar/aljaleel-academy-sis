@@ -32,10 +32,22 @@ async function withMockedDb(runTest) {
   }
 }
 
+function mockResultConfigAndCohort(activeIds) {
+  db.all = async (sql, params = [], client) => {
+    if (sql.includes('FROM result_config') || sql.includes('FROM settings')) return [];
+    if (sql.includes('SELECT DISTINCT st.id')) return activeIds.map(id => ({ id }));
+    if (sql.includes('SELECT student_id, status FROM results')) {
+      return params.slice(4).map(student_id => ({ student_id, status: 'draft' }));
+    }
+    throw new Error('Unexpected database list query: ' + sql);
+  };
+}
+
 async function testRejectsBatchWhenAnyExistingResultIsProtected() {
   await withMockedDb(async () => {
     const writes = [];
     const statusLookups = [];
+    mockResultConfigAndCohort([101, 202]);
     db.get = async (sql, params = []) => {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
@@ -80,6 +92,7 @@ async function testRejectsBatchIfAnyStudentIsNotEnrolled() {
   await withMockedDb(async () => {
     const writes = [];
     const enrollmentLookups = [];
+    mockResultConfigAndCohort([101]);
     db.get = async (sql, params = []) => {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
@@ -167,6 +180,7 @@ async function testRejectsInvalidResultStatus() {
 async function testResultBatchUsesTransactionClientAndVerifiesEveryRow() {
   await withMockedDb(async () => {
     const writes = [], transactionClient = { transactionScoped: true };
+    mockResultConfigAndCohort([101, 102]);
     db.get = async (sql, params = []) => {
       if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
       if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };

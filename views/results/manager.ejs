@@ -107,26 +107,28 @@
                     <input type="hidden" name="term" value="<%= filters.term %>">
                     <input type="hidden" name="class_id" value="<%= filters.class_id %>">
                     <input type="hidden" name="subject_id" value="<%= filters.subject_id %>">
-                    <div class="card" style="margin-bottom: 20px; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid var(--school-primary);">
-                        <div>
-                            <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px;">Editing Results For</div>
+                    <section class="card result-context-card" aria-label="Current result entry context">
+                        <div class="result-context-eyebrow">Editing Results For</div>
+                        <div class="result-context-toolbar">
                             <div class="result-context-title">
                                 <span class="result-context-class"><%= selClass %></span>
                                 <span class="result-context-divider" aria-hidden="true">•</span>
                                 <span class="result-context-subject"><%= selSubj %></span>
                             </div>
-                            <div class="result-context-period"><%= filters.term %> <span aria-hidden="true">•</span> <%= filters.session %></div>
+                            <div class="result-context-actions">
+                                <div class="result-context-period"><%= filters.term %> <span aria-hidden="true">•</span> <%= filters.session %></div>
+                                <div class="result-context-buttons">
+                                    <button type="button" id="prepareResultsOfflineBtn" class="btn btn-outline btn-sm result-context-button"
+                                        onclick="prepareResultsOffline()">
+                                        <i class="bi bi-download"></i> Offline Use
+                                    </button>
+                                    <a href="/results/manage" class="btn btn-outline btn-sm result-context-button">
+                                        <i class="bi bi-pencil-square"></i> Change
+                                    </a>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end;">
-                            <button type="button" id="prepareResultsOfflineBtn" class="btn btn-outline btn-sm"
-                                onclick="prepareResultsOffline()" style="flex-shrink: 0;">
-                                <i class="bi bi-download"></i> Prepare for Offline Use
-                            </button>
-                            <a href="/results/manage" class="btn btn-outline btn-sm" style="flex-shrink: 0;">
-                                <i class="bi bi-pencil-square"></i> Change
-                            </a>
-                        </div>
-                    </div>
+                    </section>
                     <p id="resultsOfflinePreparationStatus" role="status" aria-live="polite"
                         class="text-muted" style="margin: -10px 0 20px; font-size: 0.9rem;"></p>
                 <% } %>

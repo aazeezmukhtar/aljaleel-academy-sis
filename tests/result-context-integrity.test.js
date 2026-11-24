@@ -33,7 +33,74 @@ async function withMockedDb(runTest) {
 }
 
 async function testRejectsBatchWhenAnyExistingResultIsProtected() {
-  await withMockedDbasync function testSubmittedBlankScoresPersistAsNullAndZeroStaysZero() {
+  await withMockedDb(async () => {
+    const writes = [];
+    const statusLookups = [];
+    db.get = async (sql, params = []) => {
+      if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
+      if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
+      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 2 };
+      if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
+      if (sql.includes('WHERE (') && sql.includes('EXISTS (SELECT id FROM subject_assignments')) return { ok: 1 };
+      if (sql.includes('SELECT status FROM results WHERE student_id = ? AND class_id = ?')) {
+        statusLookups.push(Number(params[0]));
+        return Number(params[0]) === 202 ? { status: 'approved' } : null;
+      }
+      throw new Error('Unexpected database lookup: ' + sql);
+    };
+    db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
+    db.transaction = async callback => callback();
+    const res = responseRecorder();
+    await resultController.saveResults({
+      schoolId: 1,
+      session: { staff: { id: 7, role: 'Teacher' } },
+      body: {
+        class_id: '10', subject_id: '20', term: '3rd Term', session: '2025/2026',
+        status: 'draft',
+        results: [
+          { student_id: 101, ca1: 10, ca2: 10, exam: 50 },
+          { student_id: 202, ca1: 15, ca2: 15, exam: 55 }
+        ]
+      }
+    }, res);
+    assert.strictEqual(res.statusCode, 409);
+    assert.strictEqual(res.body.success, false);
+    assert.match(res.body.message, /approved, locked, or published/i);
+    assert.deepStrictEqual(statusLookups, [101, 202]);
+    assert.strictEqual(writes.length, 0);
+  });
+}
+
+async function testSubmissionRequiresCompleteActiveCohort() {
+  await withMockedDb(async () => {
+    const writes = [];
+    db.get = async sql => {
+      if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
+      if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
+      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
+      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 2 };
+      throw new Error('Submission should stop at the active cohort check: ' + sql);
+    };
+    db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
+    db.transaction = async () => { throw new Error('Incomplete submissions must not start a write transaction'); };
+    const res = responseRecorder();
+    await resultController.saveResults({
+      schoolId: 1,
+      session: { staff: { id: 7, role: 'Admin' } },
+      body: {
+        class_id: '10', subject_id: '20', term: '3rd Term', session: '2025/2026',
+        status: 'submitted',
+        results: [{ student_id: 101, ca1: 10, ca2: 10, exam: 50 }]
+      }
+    }, res);
+    assert.strictEqual(res.statusCode, 409);
+    assert.match(res.body.message, /every active student/i);
+    assert.strictEqual(writes.length, 0);
+  });
+}
+
+async function testSubmittedBlankScoresPersistAsNullAndZeroStaysZero() {
   await withMockedDb(async () => {
     const writes = [];
     const transactionClient = { transactionScoped: true };
@@ -52,7 +119,6 @@ async function testRejectsBatchWhenAnyExistingResultIsProtected() {
       return [{ student_id: 101, status: 'submitted' }];
     };
     db.transaction = async callback => callback(transactionClient);
-
     const res = responseRecorder();
     await resultController.saveResults({
       schoolId: 1,
@@ -63,88 +129,13 @@ async function testRejectsBatchWhenAnyExistingResultIsProtected() {
         results: [{ student_id: 101, ca1: '', ca2: 0, exam: '' }]
       }
     }, res);
-
     assert.strictEqual(res.statusCode, 200);
     assert.strictEqual(writes.length, 1);
-    assert.strictEqual(writes[0][1][5], null, 'An empty CA1 field must persist as NULL');
-    assert.strictEqual(writes[0][1][6], 0, 'An explicitly recorded zero must remain zero');
-    assert.strictEqual(writes[0][1][7], null, 'An empty exam field must persist as NULL');
-    assert.strictEqual(writes[0][1][8], null, 'An incomplete result must not receive a zero total');
-    assert.strictEqual(writes[0][1][9], null, 'An incomplete result must not receive a failing grade');
-  });
-}
-
-async function testSubmissionRequiresCompleteActiveCohort() {
-  await withMockedDb(async () => {
-    const writes = [];
-    db.get = async sql => {
-      if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
-      if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
-      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
-      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 2 };
-      throw new Error('Submission should stop at the active cohort check: ' + sql);
-    };
-    db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
-    db.transaction = async () => { throw new Error('Incomplete submissions must not start a write transaction'); };
-
-    const res = responseRecorder();
-    await resultController.saveResults({
-      schoolId: 1,
-      session: { staff: { id: 7, role: 'Admin' } },
-      body: {
-        class_id: '10', subject_id: '20', term: '3rd Term', session: '2025/2026',
-        status: 'submitted',
-        results: [{ student_id: 101, ca1: 10, ca2: 10, exam: 50 }]
-      }
-    }, res);
-
-    assert.strictEqual(res.statusCode, 409, 'Submission must be rejected when it omits an active student');
-    assert.match(res.body.message, /every active student/i);
-    assert.strictEqual(writes.length, 0, 'An incomplete submission must not write any result rows');
-  });
-}
-
-(async () => {
-    const writes = [];
-    const statusLookups = [];
-    db.get = async (sql, params = []) => {
-      if (sql.includes('SELECT id FROM classes WHERE id = ? AND school_id = ?')) return { id: 10 };
-      if (sql.includes('SELECT id FROM subjects WHERE id = ? AND school_id = ?')) return { id: 20 };
-      if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ? LIMIT 1')) return { id: 1 };
-      if (sql.includes('COUNT(DISTINCT se.student_id) AS total')) return { total: 2 };
-      if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
-      if (sql.includes('WHERE (') && sql.includes('EXISTS (SELECT id FROM subject_assignments')) return { ok: 1 };
-      if (sql.includes('SELECT status FROM results WHERE student_id = ? AND class_id = ?')) {
-        statusLookups.push(Number(params[0]));
-        return Number(params[0]) === 202 ? { status: 'approved' } : null;
-      }
-      throw new Error('Unexpected database lookup: ' + sql);
-    };
-    db.run = async (...args) => { writes.push(args); return { changes: 1 }; };
-    db.transaction = async callback => callback();
-
-    const res = responseRecorder();
-    await resultController.saveResults({
-      schoolId: 1,
-      session: { staff: { id: 7, role: 'Teacher' } },
-      body: {
-        class_id: '10',
-        subject_id: '20',
-        term: '3rd Term',
-        session: '2025/2026',
-        status: 'draft',
-        results: [
-          { student_id: 101, ca1: 10, ca2: 10, exam: 50 },
-          { student_id: 202, ca1: 15, ca2: 15, exam: 55 }
-        ]
-      }
-    }, res);
-
-    assert.strictEqual(res.statusCode, 409, 'A protected row anywhere in the batch must reject the batch with a conflict response');
-    assert.strictEqual(res.body.success, false);
-    assert.match(res.body.message, /approved, locked, or published/i);
-    assert.deepStrictEqual(statusLookups, [101, 202], 'Every submitted row must be checked for protected status');
-    assert.strictEqual(writes.length, 0, 'No row may be written if any submitted result is protected');
+    assert.strictEqual(writes[0][1][5], null);
+    assert.strictEqual(writes[0][1][6], 0);
+    assert.strictEqual(writes[0][1][7], null);
+    assert.strictEqual(writes[0][1][8], null);
+    assert.strictEqual(writes[0][1][9], null);
   });
 }
 

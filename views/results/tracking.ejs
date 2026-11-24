@@ -14,40 +14,46 @@
             </div>
         </header>
 
-        <section class="results-subject-overview" aria-label="Subject workflow summary">
-            <div class="results-subject-overview-heading">
-                <div>
-                    <span class="results-subject-overview-kicker">AT A GLANCE</span>
-                    <h2>Subject Summary</h2>
-                    <p>Overall progress grouped by subject across the selected session, term and section.</p>
-                </div>
-                <span class="results-subject-total"><strong><%= subjectSummaries.length %></strong> subjects</span>
+        <section class="results-class-overview" aria-label="Class workflow summary">
+            <div class="results-class-overview-heading">
+                <div><span class="results-subject-overview-kicker">AT A GLANCE</span><h2>Class-wise Result Status</h2>
+                    <p>Classes with results in progress, followed by fully published classes.</p></div>
+                <span class="results-subject-total"><strong><%= classSummaries.length %></strong> classes</span>
             </div>
-            <% if (subjectSummaries.length) { %>
-                <div class="results-subject-grid">
-                    <% subjectSummaries.forEach(subject => { %>
-                        <article class="results-subject-card">
-                            <div class="results-subject-card-top">
-                                <div class="results-subject-icon"><i class="bi bi-book-half"></i></div>
-                                <span class="results-subject-class-count"><%= subject.class_period_count %> class-periods</span>
+            <% if (classSummaries.length) { %>
+                <div class="results-class-list">
+                <% classSummaries.forEach(group => { %>
+                    <article class="results-class-card <%= group.is_published ? 'is-published' : '' %>">
+                        <header class="results-class-card-heading">
+                            <div><h3><%= group.class_name %></h3><small><%= group.section_name %> · <%= group.term %> · <%= group.session %></small></div>
+                            <% if (group.is_published) { %><span class="results-class-status is-published"><i class="bi bi-check-circle-fill"></i> Published</span>
+                            <% } else { %><span class="results-class-status">In progress</span><% } %>
+                        </header>
+                        <% if (!group.is_published) { %>
+                            <div class="results-class-subjects">
+                            <% group.subjects.forEach(subject => { %>
+                                <div class="results-class-subject">
+                                    <span><%= subject.subject_name %></span>
+                                    <% if (subject.published_count && subject.published_count === subject.expected_count) { %><b class="status-published">Published</b>
+                                    <% } else if (subject.locked_count) { %><b class="status-locked">Locked</b>
+                                    <% } else if (subject.approved_count) { %><b class="status-approved">Approved</b>
+                                    <% } else if (subject.submitted_count) { %><b class="status-submitted">Submitted</b>
+                                    <% } else if (subject.draft_count) { %><b class="status-draft">Drafted</b>
+                                    <% } else { %><b class="status-empty">—</b><% } %>
+                                </div>
+                            <% }) %>
                             </div>
-                            <h3><%= subject.subject_name %></h3>
-                            <div class="results-subject-coverage">
-                                <div><strong><%= subject.coverage %>%</strong><span><%= subject.recorded_count %> / <%= subject.expected_count %> entries</span></div>
-                                <progress class="results-tracking-progress" aria-label="<%= subject.subject_name %> coverage" value="<%= subject.coverage %>" max="100"><%= subject.coverage %>%</progress>
+                            <div class="results-class-progress"><span><%= group.recorded_count %> / <%= group.expected_count %> entries recorded</span>
+                                <span><%= group.expected_count ? Math.round(group.recorded_count/group.expected_count*100) : 0 %>%</span></div>
+                            <progress value="<%= group.expected_count ? Math.min(100,Math.round(group.recorded_count/group.expected_count*100)) : 0 %>" max="100"></progress>
+                            <div class="results-class-actions">
+                                <a class="btn btn-outline btn-sm" href="/results/manage?class_id=<%= group.class_id %>&session=<%= encodeURIComponent(group.session) %>&term=<%= encodeURIComponent(group.term) %>">Review class</a>
                             </div>
-                            <div class="results-subject-stages">
-                                <span class="is-draft"><b><%= subject.draft_count %></b> Draft</span>
-                                <span class="is-submitted"><b><%= subject.submitted_count %></b> Submitted</span>
-                                <span class="is-approved"><b><%= subject.approved_count %></b> Approved</span>
-                                <span class="is-published"><b><%= subject.published_count %></b> Published</span>
-                            </div>
-                        </article>
-                    <% }) %>
+                        <% } %>
+                    </article>
+                <% }) %>
                 </div>
-            <% } else { %>
-                <div class="results-subject-empty">No subjects match the selected filters.</div>
-            <% } %>
+            <% } else { %><div class="results-subject-empty">No classes have drafted, submitted or published results for these filters.</div><% } %>
         </section>
 
         <section class="results-tracking-summary" aria-label="Workflow summary">

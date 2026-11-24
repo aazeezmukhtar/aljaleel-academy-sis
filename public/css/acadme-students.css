@@ -260,3 +260,12 @@
 @media (prefers-reduced-motion: reduce) {
   .main-content:has(.student-mobile-cards) .student-mobile-cards tr { transition: none; }
 }
+
+
+/* Student directory cards must occupy the full content width symmetrically. */
+@media (max-width: 768px) {
+  .main-content:has(.student-mobile-cards) .student-mobile-cards { width:calc(100% + 28px) !important; max-width:none !important; margin-inline:-14px !important; padding-inline:0 !important; box-sizing:border-box; }
+  .main-content:has(.student-mobile-cards) .student-mobile-cards table,
+  .main-content:has(.student-mobile-cards) .student-mobile-cards tbody,
+  .main-content:has(.student-mobile-cards) .student-mobile-cards tr { width:100% !important; max-width:100% !important; margin-inline:0 !important; box-sizing:border-box; }
+}

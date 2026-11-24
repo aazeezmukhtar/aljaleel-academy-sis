@@ -450,3 +450,110 @@
  .results-manager-page .result-sheet-card .result-grid .row-name{font-size:11px!important;line-height:1.2;overflow-wrap:anywhere;word-break:normal}
  .results-manager-page .result-sheet-card .result-grid .score-input{width:100%!important;min-width:0!important;min-height:32px;height:32px;padding:2px 1px;font-size:13px}
 }
+
+
+/* Final mobile result-entry alignment: keep identity flexible and pin every score cell to the right. */
+@media(max-width:640px){
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="2"]{
+   display:grid!important;
+   grid-template-columns:minmax(0,1fr) 46px 46px 34px 32px!important;
+   grid-auto-flow:row!important;
+   justify-content:stretch!important;
+   align-items:center!important;
+   column-gap:3px!important;
+   width:100%!important;
+   box-sizing:border-box!important
+ }
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"]{
+   display:grid!important;
+   grid-template-columns:minmax(0,1fr) 42px 42px 42px 32px 30px!important;
+   grid-auto-flow:row!important;
+   justify-content:stretch!important;
+   align-items:center!important;
+   column-gap:3px!important;
+   width:100%!important;
+   box-sizing:border-box!important
+ }
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td{
+   display:flex!important;
+   position:relative!important;
+   grid-row:1!important;
+   min-width:0!important;
+   width:100%!important;
+   margin:0!important;
+   padding:0!important;
+   justify-self:stretch!important;
+   align-self:center!important;
+   box-sizing:border-box!important
+ }
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="Student"]{
+   grid-column:1!important;
+   justify-content:flex-start!important;
+   overflow:hidden!important
+ }
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="2"] > td[data-label="CA 1"]{grid-column:2!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="2"] > td[data-label="Exam"]{grid-column:3!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="2"] > td[data-label="Total"]{grid-column:4!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="2"] > td[data-label="Grade"]{grid-column:5!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"] > td[data-label="CA 1"]{grid-column:2!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"] > td[data-label="CA 2"]{grid-column:3!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"] > td[data-label="Exam"]{grid-column:4!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"] > td[data-label="Total"]{grid-column:5!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"] > td[data-label="Grade"]{grid-column:6!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="CA 1"],
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="CA 2"],
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="Exam"]{
+   flex-direction:column!important;
+   align-items:stretch!important;
+   justify-content:center!important;
+   gap:2px!important;
+   text-align:center!important
+ }
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="CA 1"]::before,
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="CA 2"]::before,
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="Exam"]::before{
+   position:static!important;
+   display:block!important;
+   width:100%!important;
+   height:auto!important;
+   margin:0!important;
+   padding:0!important;
+   background:transparent!important;
+   justify-content:center!important;
+   font-size:8px!important;
+   line-height:1.1!important;
+   white-space:nowrap!important
+ }
+ .results-manager-page .result-sheet-card .result-grid .row-info{display:flex!important;align-items:center!important;width:100%!important;min-width:0!important;gap:5px!important}
+ .results-manager-page .result-sheet-card .result-grid .row-info>div:first-child{display:flex!important;flex:0 0 34px!important;width:34px!important;height:40px!important}
+ .results-manager-page .result-sheet-card .result-grid .row-info>div:first-child img{display:block!important;width:100%!important;height:100%!important;object-fit:cover}
+ .results-manager-page .result-sheet-card .result-grid .row-bio{display:flex!important;flex:1 1 0!important;min-width:0!important}
+ .results-manager-page .result-sheet-card .result-grid .row-name{font-size:10px!important;line-height:1.15!important;white-space:normal!important;overflow-wrap:anywhere!important;word-break:normal!important}
+ .results-manager-page .result-sheet-card .result-grid .score-input{display:block!important;width:100%!important;min-width:0!important;max-width:100%!important;min-height:30px!important;height:30px!important;padding:2px 0!important;font-size:12px!important;box-sizing:border-box!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="Total"],
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count] > td[data-label="Grade"]{justify-content:center!important;text-align:center!important;font-size:10px!important}
+}
+
+/* Compact the Grade Sheet header's Save Draft and Submit Results controls. */
+.results-manager-page .result-sheet-header .button-stack > .btn{
+ min-height:32px!important;
+ height:32px!important;
+ padding:5px 10px!important;
+ font-size:12px!important;
+ line-height:1!important;
+ border-radius:var(--acm-radius-sm)!important
+}
+.results-manager-page .result-sheet-header .button-stack > .btn i{font-size:12px!important}
+@media(max-width:640px){
+ .results-manager-page .result-sheet-header .button-stack > .btn{min-height:30px!important;height:30px!important;padding:4px 8px!important;font-size:11px!important}
+}
+
+/* Give class and subject more readable room while keeping them on one line. */
+.results-manager-page .result-context-title{gap:6px;font-size:15px!important;letter-spacing:0!important;white-space:nowrap!important;flex-wrap:nowrap!important}
+.results-manager-page .result-context-class,.results-manager-page .result-context-subject{flex:0 0 auto;white-space:nowrap!important;overflow:visible!important;text-overflow:clip!important}
+@media(max-width:640px){
+ .results-manager-page .result-context-toolbar{grid-template-columns:minmax(0,1fr) 96px!important;gap:6px!important}
+ .results-manager-page .result-context-title{font-size:14px!important;gap:4px!important;min-width:0!important}
+ .results-manager-page .result-context-actions{width:96px!important;max-width:96px!important}
+ .results-manager-page .result-context-button{width:96px!important}
+}

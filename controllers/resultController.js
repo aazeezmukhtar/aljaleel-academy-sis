@@ -383,7 +383,7 @@ const getResultWorkflowTracking = async (req, res) => {
                 subjects: completePublished ? [] : group.subjects
                     .sort((a,b) => a.subject_name.localeCompare(b.subject_name))
             };
-        }).filter(group => group.is_published || group.subjects.length > 0)
+        }).filter(group => group.is_published || group.recorded_count > 0)
           .sort((a,b) => Number(b.is_published)-Number(a.is_published) ||
             a.section_name.localeCompare(b.section_name) || a.class_name.localeCompare(b.class_name));
         const summary = rows.reduce((totals, row) => {

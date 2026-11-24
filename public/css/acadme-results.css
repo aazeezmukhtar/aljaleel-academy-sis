@@ -591,3 +591,47 @@
  .results-tracking-page .results-subject-stages{gap:4px}
  .results-tracking-page .results-subject-stages span{padding:4px;font-size:9px}
 }
+
+
+/* Class-wise result workflow overview */
+.results-tracking-page .results-class-overview{margin-block:var(--acm-sp-16);padding:var(--acm-sp-16);border:1px solid var(--acm-border);border-radius:var(--acm-radius-lg);background:var(--acm-surface);box-shadow:var(--acm-shadow-sm)}
+.results-tracking-page .results-class-overview-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:12px}
+.results-tracking-page .results-class-overview-heading h2{margin:3px 0;font-size:var(--acm-text-lg)}
+.results-tracking-page .results-class-overview-heading p{margin:0;color:var(--acm-text-secondary);font-size:var(--acm-text-xs)}
+.results-tracking-page .results-class-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
+.results-tracking-page .results-class-card{min-width:0;padding:14px;border:1px solid var(--acm-border);border-radius:var(--acm-radius-md);background:var(--acm-bg)}
+.results-tracking-page .results-class-card.is-published{border-color:var(--acm-success);background:color-mix(in srgb,var(--acm-success) 5%,var(--acm-surface))}
+.results-tracking-page .results-class-card-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.results-tracking-page .results-class-card-heading h3{margin:0;font-size:var(--acm-text-md);font-weight:var(--acm-fw-bold)}
+.results-tracking-page .results-class-card-heading small{display:block;margin-top:3px;color:var(--acm-text-muted);font-size:10px}
+.results-tracking-page .results-class-status{flex:none;padding:4px 8px;border-radius:999px;background:var(--acm-surface);color:var(--acm-text-secondary);font-size:10px;font-weight:700}
+.results-tracking-page .results-class-status.is-published{background:var(--acm-success);color:white}
+.results-tracking-page .results-class-subjects{display:grid;gap:0}
+.results-tracking-page .results-class-subject{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--acm-border);font-size:var(--acm-text-sm)}
+.results-tracking-page .results-class-subject b{font-size:11px}
+.results-tracking-page .status-draft{color:var(--acm-warning)}
+.results-tracking-page .status-submitted{color:var(--acm-info)}
+.results-tracking-page .status-approved,.results-tracking-page .status-published{color:var(--acm-success)}
+.results-tracking-page .status-locked{color:var(--acm-text-secondary)}
+.results-tracking-page .status-empty{color:var(--acm-text-muted)}
+.results-tracking-page .results-class-progress{display:flex;justify-content:space-between;margin-top:12px;color:var(--acm-text-muted);font-size:10px}
+.results-tracking-page .results-class-card>progress{width:100%;height:6px;accent-color:var(--acm-navy)}
+.results-tracking-page .results-class-actions{display:flex;justify-content:flex-end;margin-top:10px}
+@media(max-width:640px){.results-tracking-page .results-class-overview{padding:12px}.results-tracking-page .results-class-list{grid-template-columns:1fr}.results-tracking-page .results-class-card{padding:12px}}
+/* On phones, focus on student identity and score entry; hide calculated and administrative columns. */
+@media(max-width:640px){
+ .results-manager-page .result-sheet-card .result-grid thead{display:none!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count]{display:grid!important;grid-template-columns:minmax(0,1fr) repeat(2,44px)!important;gap:4px!important;align-items:center!important;width:100%!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"]{grid-template-columns:minmax(0,1fr) repeat(3,40px)!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count]>td[data-label="#"],
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count]>td[data-label="Total"],
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count]>td[data-label="Grade"]{display:none!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count]>td[data-label="Student"]{grid-column:1!important;justify-content:flex-start!important;text-align:left!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count]>td[data-label="CA 1"]{grid-column:2!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="2"]>td[data-label="Exam"]{grid-column:3!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"]>td[data-label="CA 2"]{grid-column:3!important}
+ .results-manager-page .result-sheet-card .result-grid tbody tr[data-score-count="3"]>td[data-label="Exam"]{grid-column:4!important}
+ .results-manager-page .result-sheet-card .result-grid .row-index,.results-manager-page .result-sheet-card .result-grid .row-id{display:none!important}
+ .results-manager-page .result-sheet-card .result-grid .row-info{justify-content:flex-start!important;text-align:left!important}
+ .results-manager-page .result-sheet-card .result-grid .row-name{text-align:left!important;white-space:normal!important}
+}

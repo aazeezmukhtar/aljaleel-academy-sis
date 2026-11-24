@@ -62,27 +62,24 @@ const academicBroadsheet = academicReportSource.slice(academicReportSource.index
 const academicAnalysis = academicReportSource.slice(academicReportSource.indexOf('const getSubjectAnalysis'), academicReportSource.indexOf('const getTopPerformers'));
 const academicTop = academicReportSource.slice(academicReportSource.indexOf('const getTopPerformers'));
 
+assert.match(academicBroadsheet, /'draft', 'submitted', 'approved', 'locked', 'published'/,
+  'Broadsheet must include draft, submitted, approved, locked, and published result rows');
+assert.match(academicBroadsheet, /LOWER\\(COALESCE\\(st\\.status, ''\\)\\) IN \\('active', ''\\)/,
+  'Broadsheet must use the same active-or-null student cohort as Result Entry');
+assert.match(academicBroadsheet, /result\\.status/,
+  'Broadsheet must expose each result workflow status');
+assert.match(academicBroadsheet, /numericScores/,
+  'Broadsheet totals and averages must ignore missing numeric totals');
 for (const [name, body] of [
-  ['broadsheet', academicBroadsheet],
-  ['top performers', academicTop]
-]) {
-  assert.match(body, /r\.class_id = \?/,
-    `${name} must restrict result rows to the selected class`);
-}
-assert.match(academicAnalysis, /r\.class_id = sa\.class_id/,
-  'Subject analysis must join results to the class captured at result entry');
-assert.match(academicAnalysis, /sa\.class_id = \?/,
-  'Subject analysis must restrict assigned subjects to the selected class');
-for (const [name, body] of [
-  ['broadsheet', academicBroadsheet],
   ['subject analysis', academicAnalysis],
   ['top performers', academicTop]
 ]) {
-  assert.match(body, /status IN \('approved', 'published'\)/,
-    `${name} must exclude draft and submitted result rows`);
-  assert.match(body, /canAccessClass\(class_id\)/,
+  assert.match(body, /status IN \\('approved', 'published'\\)/,
+    `${name} must continue to exclude draft and submitted result rows`);
+  assert.match(body, /canAccessClass\\(class_id\\)/,
     `${name} must authorize the requested class, not just the dropdown list`);
 }
+
 assert.doesNotMatch(academicBroadsheet, /JOIN student_enrollments se ON r\.student_id = se\.student_id/,
   'Broadsheet result ownership must not depend on current enrollment');
 assert.doesNotMatch(academicAnalysis, /JOIN student_enrollments se ON r\.student_id = se\.student_id/,

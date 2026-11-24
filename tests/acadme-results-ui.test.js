@@ -48,4 +48,27 @@ assert.match(manager, /saveResults\('submitted'/);
 assert.match(manager, /prepareResultsOfflineBtn/);
 assert.match(manager, /resultsOfflinePreparationStatus/);
 
+
+const resultController = read('controllers/resultController.js');
+const unlockHandler = resultController.match(/const unlockResults = async \(req,res\) => \{([\s\S]*?)\n\};/);
+assert.ok(unlockHandler, 'Result unlock endpoint must exist');
+assert.match(unlockHandler[1], /LOWER\(status\) IN \('locked','published'\)/,
+  'Admin unlock must reopen both locked and published result records');
+assert.match(unlockHandler[1], /status='submitted'/,
+  'Reopened results must return to Submitted so they can be edited');
+
+assert.match(manager, /id="unlockResultsBtn"/);
+assert.match(manager, /hasReopenable/);
+assert.match(manager, /function applyWorkflowState\(state\)/,
+  'Workflow changes must update the sheet in place');
+assert.match(manager, /input\.disabled = locked/,
+  'Workflow state must immediately enable or disable score inputs');
+assert.match(manager, /applyWorkflowState\('submitted'\)/,
+  'Successful unlock must make score inputs editable without a page reload');
+assert.match(manager, /sendWorkflowAction\('/,
+  'Workflow actions must use background requests');
+const workflowClient = manager.slice(manager.indexOf('function applyWorkflowState(state)'), manager.indexOf('async function restoreSavedResultDraft()'));
+assert.doesNotMatch(workflowClient, /location\.reload\(\)/,
+  'Approve, lock, unlock and publish actions must not reload the page');
+
 console.log('AcadMe Results UI presentation checks passed.');

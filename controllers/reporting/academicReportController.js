@@ -93,7 +93,7 @@ const getBroadsheet = async (req, res) => {
             });
 
             // Sort by total score descending
-            studentsWithResults.sort((a, b) => b.total_score - a.total_score);
+            studentsWithResults.sort((a, b) => Number(b.total_score === '-' ? 0 : b.total_score) - Number(a.total_score === '-' ? 0 : a.total_score));
 
             reportData = {
                 class_name: clazz.name,

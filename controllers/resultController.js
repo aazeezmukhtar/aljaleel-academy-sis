@@ -1302,11 +1302,11 @@ const unlockResults = async (req,res) => {
     try{
         const owned=await db.get('SELECT id FROM classes WHERE id=? AND school_id=?',[class_id,schoolId]);
         if(!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
-        const info=await db.run(`UPDATE results SET status='approved'
+        const info=await db.run(`UPDATE results SET status='submitted'
             WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='locked'`,
             [class_id,subject_id,term,session]);
         if(!Number(info.changes)) return res.status(409).json({success:false,message:'No locked results found to unlock.'});
-        res.json({success:true,message:`Unlocked ${info.changes} results. They are now approved and editable only through authorized workflow actions.`});
+        res.json({success:true,message:`Unlocked ${info.changes} results. They are returned to Submitted and can be edited again.`});
     }catch(err){console.error('Unlock Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };
 

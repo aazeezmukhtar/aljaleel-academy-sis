@@ -15,6 +15,9 @@ const students = read('views/students/index.ejs');
 const fees = read('views/fees/manager.ejs');
 const portalNav = read('views/partials/student_shell_nav.ejs');
 const portalCss = read('public/css/student-portal.css');
+const studentCss = read('public/css/acadme-students.css');
+const attendanceCss = read('public/css/acadme-attendance.css');
+const resultCss = read('public/css/acadme-results.css');
 
 function check(name, fn) {
   try {
@@ -420,4 +423,13 @@ check('session-aware staff report and academic assignment templates compile', ()
   ejs.compile(academics, { filename: path.join(__dirname, '..', 'views/academics/index.ejs') });
   ejs.compile(staffProfile, { filename: path.join(__dirname, '..', 'views/staff/view.ejs') });
   ejs.compile(workloadView, { filename: path.join(__dirname, '..', 'views/reports/staff/workload.ejs') });
+});
+
+check('mobile card widths are aligned across student directory, results and attendance', () => {
+  assert.ok(css.includes('width: 100% !important;'));
+  assert.ok(!css.includes('width: 100vw !important;'));
+  assert.ok(css.includes('.dashboard-container > .main-content'));
+  assert.ok(studentCss.includes('margin-inline:-14px !important'));
+  assert.ok(attendanceCss.includes('.main-content.attendance-take-page .student-row-card'));
+  assert.ok(resultCss.includes('.main-content.results-manager-page .result-sheet-card'));
 });

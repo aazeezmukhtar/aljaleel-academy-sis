@@ -64,9 +64,9 @@ const academicTop = academicReportSource.slice(academicReportSource.indexOf('con
 
 assert.match(academicBroadsheet, /'draft', 'submitted', 'approved', 'locked', 'published'/,
   'Broadsheet must include draft, submitted, approved, locked, and published result rows');
-assert.match(academicBroadsheet, /LOWER\\(COALESCE\\(st\\.status, ''\\)\\) IN \\('active', ''\\)/,
+assert.ok(academicBroadsheet.includes("LOWER(COALESCE(st.status, '')) IN ('active', '')"),
   'Broadsheet must use the same active-or-null student cohort as Result Entry');
-assert.match(academicBroadsheet, /result\\.status/,
+assert.ok(academicBroadsheet.includes('result.status'),
   'Broadsheet must expose each result workflow status');
 assert.match(academicBroadsheet, /numericScores/,
   'Broadsheet totals and averages must ignore missing numeric totals');
@@ -74,9 +74,9 @@ for (const [name, body] of [
   ['subject analysis', academicAnalysis],
   ['top performers', academicTop]
 ]) {
-  assert.match(body, /status IN \\('approved', 'published'\\)/,
+  assert.match(body, /status IN \('approved', 'published'\)/,
     `${name} must continue to exclude draft and submitted result rows`);
-  assert.match(body, /canAccessClass\\(class_id\\)/,
+  assert.match(body, /canAccessClass\(class_id\)/,
     `${name} must authorize the requested class, not just the dropdown list`);
 }
 

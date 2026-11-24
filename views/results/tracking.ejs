@@ -59,7 +59,7 @@
                             <progress value="<%= group.expected_count ? Math.min(100,Math.round(group.recorded_count/group.expected_count*100)) : 0 %>" max="100"></progress>
                             <div class="results-class-actions">
                                 <a class="btn btn-outline btn-sm" href="/results/manage?class_id=<%= group.class_id %>&session=<%= encodeURIComponent(group.session) %>&term=<%= encodeURIComponent(group.term) %>">Review class</a>
-                                <% if (canManageWorkflow && group.subjects.length && group.subjects.every(subject => subject.expected_count > 0 && subject.recorded_count === subject.expected_count && subject.approved_count + subject.locked_count === subject.expected_count)) { %>
+                                <% if (canManageWorkflow && group.subjects.length && group.subjects.every(subject => subject.expected_count > 0 && subject.recorded_count === subject.expected_count && subject.approved_count + subject.locked_count + subject.published_count === subject.expected_count)) { %>
                                     <button type="button" class="btn btn-primary btn-sm" data-workflow-action="publish" data-class="<%= group.class_id %>" data-term="<%= group.term %>" data-session="<%= group.session %>">Publish Class</button>
                                 <% } %>
                             </div>
@@ -233,7 +233,7 @@
 document.addEventListener('click', async function(event) {
  const button=event.target.closest('[data-workflow-action]'); if(!button)return;
  const action=button.dataset.workflowAction;
- const labels={approve:'Approve all submitted results for this subject?',lock:'Lock all approved results for this subject?',unlock:'Unlock this subject and return it to approved status?',publish:'Publish every subject result for this class and period?'};
+ const labels={approve:'Approve all submitted results for this subject?',lock:'Lock all approved results for this subject?',unlock:'Unlock this subject and return it to Submitted so marks can be edited?',publish:'Publish every subject result for this class and period?'};
  if(!window.confirm(labels[action]||'Continue?'))return;
  const payload=new URLSearchParams({class_id:button.dataset.class,term:button.dataset.term,session:button.dataset.session});
  if(button.dataset.subject)payload.set('subject_id',button.dataset.subject);

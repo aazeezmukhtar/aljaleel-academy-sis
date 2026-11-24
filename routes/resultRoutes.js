@@ -31,6 +31,7 @@ router.post('/setup/section-config', resultController.saveResultConfigForSection
 router.post('/setup/grading', resultController.saveGradingSystem);
 router.post('/approve', resultController.approveResults);
 router.post('/lock', resultController.lockResults);
+router.post('/unlock', resultController.unlockResults);
 router.post('/publish-bulk', resultController.publishBulkResults);
 
 // GET /results/report/:student_id - Printable Report

@@ -342,36 +342,50 @@ const getResultWorkflowTracking = async (req, res) => {
             schoolId, selectedTerm, selectedTerm, selectedSection, selectedSection
         ]);
 
-        // Subject-level roll-up across the currently selected filters. Counts remain
-        // student-result counts, while the cards make subject coverage the primary view.
-        const subjectMap = new Map();
+        // Class-first workflow roll-up. A class is considered published only when
+        // every assigned subject has a complete published result set for this period.
+        const classMap = new Map();
         for (const row of rows) {
-            const key = String(row.subject_id);
-            if (!subjectMap.has(key)) {
-                subjectMap.set(key, {
-                    subject_id: row.subject_id,
-                    subject_name: row.subject_name,
+            const key = [row.class_id, row.session, row.term].join("|");
+            if (!classMap.has(key)) {
+                classMap.set(key, {
+                    class_id: row.class_id, class_name: row.class_name,
+                    section_id: row.section_id, section_name: row.section_name,
+                    session: row.session, term: row.term,
                     expected_count: 0, recorded_count: 0, draft_count: 0,
                     submitted_count: 0, approved_count: 0, locked_count: 0,
-                    published_count: 0, classPeriods: new Set()
+                    published_count: 0, subjects: []
                 });
             }
-            const subject = subjectMap.get(key);
-            subject.classPeriods.add(`${row.class_id}|${row.session}|${row.term}`);
-            for (const field of ['expected_count', 'recorded_count', 'draft_count',
-                'submitted_count', 'approved_count', 'locked_count', 'published_count']) {
-                subject[field] += Number(row[field] || 0);
+            const group = classMap.get(key);
+            const subject = {
+                subject_id: row.subject_id, subject_name: row.subject_name,
+                expected_count: Number(row.expected_count || 0),
+                recorded_count: Number(row.recorded_count || 0),
+                draft_count: Number(row.draft_count || 0),
+                submitted_count: Number(row.submitted_count || 0),
+                approved_count: Number(row.approved_count || 0),
+                locked_count: Number(row.locked_count || 0),
+                published_count: Number(row.published_count || 0)
+            };
+            group.subjects.push(subject);
+            for (const field of ['expected_count','recorded_count','draft_count','submitted_count','approved_count','locked_count','published_count']) {
+                group[field] += subject[field];
             }
         }
-        const subjectSummaries = [...subjectMap.values()]
-            .map(subject => ({
-                ...subject,
-                class_period_count: subject.classPeriods.size,
-                coverage: subject.expected_count
-                    ? Math.min(100, Math.round(subject.recorded_count / subject.expected_count * 100)) : 0
-            }))
-            .sort((a, b) => a.subject_name.localeCompare(b.subject_name));
-
+        const classSummaries = [...classMap.values()].map(group => {
+            const completePublished = group.subjects.length > 0 && group.subjects.every(subject =>
+                subject.expected_count > 0 && subject.published_count === subject.expected_count
+            );
+            return {
+                ...group,
+                is_published: completePublished,
+                subjects: completePublished ? [] : group.subjects
+                    .sort((a,b) => a.subject_name.localeCompare(b.subject_name))
+            };
+        }).filter(group => group.is_published || group.recorded_count > 0)
+          .sort((a,b) => Number(b.is_published)-Number(a.is_published) ||
+            a.section_name.localeCompare(b.section_name) || a.class_name.localeCompare(b.class_name));
         const summary = rows.reduce((totals, row) => {
             for (const key of ['expected_count', 'recorded_count', 'draft_count', 'submitted_count', 'approved_count', 'locked_count', 'published_count']) {
                 totals[key] += Number(row[key] || 0);
@@ -385,7 +399,8 @@ const getResultWorkflowTracking = async (req, res) => {
         res.render('results/tracking', {
             title: 'Result Workflow Tracking',
             rows,
-            subjectSummaries,
+            classSummaries,
+            canManageWorkflow: ['Admin','Examination Officer'].includes(user.role),
             summary,
             sessions,
             sections,
@@ -1241,75 +1256,89 @@ const approveResults = async (req, res) => {
     const { subject_id, class_id, term, session } = req.body;
     const user = req.session.staff;
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
-
-    if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
-
+    if (!['Admin','Examination Officer'].includes(user.role)) return res.status(403).json({ success:false, message:'Unauthorized' });
     try {
-        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
-        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class' });
-
-        const info = await db.run(`
-            UPDATE results
-            SET status = 'approved', approved_by = ?
-            WHERE class_id = ? AND subject_id = ? AND term = ? AND session = ?
-        `, [user.id, class_id, subject_id, term, session]);
-        res.json({ success: true, message: `Approved ${info.changes} results.` });
-    } catch (err) {
-        console.error('Approve Error:', err);
-        res.status(500).json({ success: false, message: 'Database Error' });
-    }
+        const owned = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
+        if (!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
+        const expected = await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
+            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
+        const pending = await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='submitted' THEN student_id END) AS submitted
+            FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
+        if (!Number(expected.total) || Number(pending.total)!==Number(expected.total) || Number(pending.submitted)!==Number(expected.total))
+            return res.status(409).json({success:false,message:'Approval requires every recorded result for this subject to be submitted.'});
+        const info = await db.run(`UPDATE results SET status='approved', approved_by=?
+            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='submitted'`,
+            [user.id,class_id,subject_id,term,session]);
+        res.json({success:true,message:`Approved ${info.changes} results.`});
+    } catch(err){ console.error('Approve Error:',err); res.status(500).json({success:false,message:'Database Error'}); }
 };
 
 const lockResults = async (req, res) => {
     const { subject_id, class_id, term, session } = req.body;
     const user = req.session.staff;
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
-
-    if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
-
+    if (!['Admin','Examination Officer'].includes(user.role)) return res.status(403).json({success:false,message:'Unauthorized'});
     try {
-        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
-        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class' });
+        const owned=await db.get('SELECT id FROM classes WHERE id=? AND school_id=?',[class_id,schoolId]);
+        if(!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
+        const expected=await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
+            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
+        const rows=await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='approved' THEN student_id END) AS approved
+            FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
+        if(!Number(expected.total) || Number(rows.total)!==Number(expected.total) || Number(rows.approved)!==Number(expected.total))
+            return res.status(409).json({success:false,message:'Only fully approved subject results can be locked.'});
+        const info=await db.run(`UPDATE results SET status='locked'
+            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='approved'`,
+            [class_id,subject_id,term,session]);
+        res.json({success:true,message:`Locked ${info.changes} results.`});
+    }catch(err){console.error('Lock Error:',err);res.status(500).json({success:false,message:'Database Error'});}
+};
 
-        const info = await db.run(`
-            UPDATE results
-            SET status = 'locked'
-            WHERE class_id = ? AND subject_id = ? AND term = ? AND session = ?
-        `, [class_id, subject_id, term, session]);
-        res.json({ success: true, message: `Locked ${info.changes} results. Editing is now disabled.` });
-    } catch (err) {
-        console.error('Lock Error:', err);
-        res.status(500).json({ success: false, message: 'Database Error' });
-    }
+const unlockResults = async (req,res) => {
+    const {subject_id,class_id,term,session}=req.body;
+    const user=req.session.staff;
+    const schoolId=req.schoolId || (req.school ? req.school.id : 1);
+    if(!['Admin','Examination Officer'].includes(user.role)) return res.status(403).json({success:false,message:'Unauthorized'});
+    try{
+        const owned=await db.get('SELECT id FROM classes WHERE id=? AND school_id=?',[class_id,schoolId]);
+        if(!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
+        const info=await db.run(`UPDATE results SET status='submitted'
+            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='locked'`,
+            [class_id,subject_id,term,session]);
+        if(!Number(info.changes)) return res.status(409).json({success:false,message:'No locked results found to unlock.'});
+        res.json({success:true,message:`Unlocked ${info.changes} results. They are returned to Submitted and can be edited again.`});
+    }catch(err){console.error('Unlock Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };
 
 const publishBulkResults = async (req, res) => {
-    const { class_id, term, session } = req.body;
-    const user = req.session.staff;
-    const schoolId = req.schoolId || (req.school ? req.school.id : 1);
-
-    if (user.role !== 'Admin' && user.role !== 'Examination Officer') return res.status(403).json({ success: false, message: 'Unauthorized' });
-
-    try {
-        if (!class_id || !term || !session) {
-            return res.status(400).json({
-                success: false,
-                message: 'Select a class, term, and session. School-wide publication is disabled until it has a separate, explicit workflow.'
-            });
+    const {class_id,term,session}=req.body;
+    const user=req.session.staff;
+    const schoolId=req.schoolId || (req.school ? req.school.id : 1);
+    if(!['Admin','Examination Officer'].includes(user.role)) return res.status(403).json({success:false,message:'Unauthorized'});
+    try{
+        if(!class_id || !term || !session) return res.status(400).json({success:false,message:'Select a class, term and session.'});
+        const owned=await db.get('SELECT id FROM classes WHERE id=? AND school_id=?',[class_id,schoolId]);
+        if(!owned) return res.status(403).json({success:false,message:'Unauthorized class'});
+        const assigned=await db.all(`SELECT DISTINCT sa.subject_id
+            FROM subject_assignments sa JOIN subjects sub ON sub.id=sa.subject_id AND sub.school_id=?
+            WHERE sa.class_id=? AND sa.session=?`,[schoolId,class_id,session]);
+        if(!assigned.length) return res.status(409).json({success:false,message:'No assigned subjects were found for this class and session.'});
+        for(const item of assigned){
+            const expected=await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total
+                FROM student_enrollments se JOIN students st ON st.id=se.student_id
+                WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
+            const state=await db.get(`SELECT COUNT(DISTINCT student_id) AS total,
+                COUNT(DISTINCT CASE WHEN LOWER(status) IN ('approved','locked','published') THEN student_id END) AS ready
+                FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,
+                [class_id,item.subject_id,term,session]);
+            if(!Number(expected.total) || Number(state.total)!==Number(expected.total) || Number(state.ready)!==Number(expected.total))
+                return res.status(409).json({success:false,message:'Publication blocked: every assigned subject must have a complete set of approved or locked results.'});
         }
-        const classCheck = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
-        if (!classCheck) return res.status(403).json({ success: false, message: 'Unauthorized class' });
-
-        const info = await db.run(`
-            UPDATE results
-            SET status = 'published', approved_by = ?
-            WHERE class_id = ? AND term = ? AND session = ?
-        `, [user.id, class_id, term, session]);
-        res.json({ success: true, message: `Successfully published ${info.changes} result entries for the selected class.` });
-    } catch (err) {
-        console.error('Bulk Publish Error:', err);
-        res.status(500).json({ success: false, message: 'Database Error' });
-    }
+        const info=await db.run(`UPDATE results SET status='published', approved_by=?
+            WHERE class_id=? AND term=? AND session=? AND LOWER(status) IN ('approved','locked')`,
+            [user.id,class_id,term,session]);
+        res.json({success:true,message:`Published ${info.changes} result entries for the class.`});
+    }catch(err){console.error('Bulk Publish Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };
 
 module.exports = {
@@ -1329,6 +1358,7 @@ module.exports = {
     saveGradingSystem,
     approveResults,
     lockResults,
+    unlockResults,
     publishBulkResults,
     getSectionResultConfig,
     getSchoolSettings

@@ -53,12 +53,23 @@ assert.match(css, /prefers-reduced-motion:reduce/);
 
 console.log('Result workflow tracking checks passed.');
 
-assert.match(controller, /const subjectMap = new Map\(\)/);
-assert.match(controller, /subjectSummaries/);
-assert.match(controller, /class_period_count/);
-assert.match(view, /Subject Summary/);
-assert.match(view, /results-subject-grid/);
-assert.match(view, /subject\.coverage/);
-assert.ok(view.indexOf('results-subject-overview') < view.indexOf('results-tracking-summary'),
-  'Subject summary must appear above entry-level summary');
-assert.match(css, /results-subject-card/);
+assert.match(controller, /const classMap = new Map\(\)/);
+assert.match(controller, /classSummaries/);
+assert.match(controller, /is_published/);
+assert.match(controller, /subjects: completePublished \? \[\]/);
+assert.match(view, /Class-wise Result Status/);
+assert.match(view, /results-class-card/);
+assert.match(view, /status-empty/);
+assert.match(view, /group\.is_published/);
+assert.ok(view.indexOf('results-class-overview') < view.indexOf('results-tracking-summary'),
+  'Class summary must appear above entry-level summary');
+assert.match(routes, /router\.post\('\/unlock', resultController\.unlockResults\)/);
+assert.match(controller, /const unlockResults = async/);
+assert.match(controller, /Only fully approved subject results can be locked/);
+assert.match(controller, /Publication blocked: every assigned subject must have a complete set/);
+assert.match(view, /data-workflow-action="publish"/);
+assert.match(view, /data-workflow-action="approve"/);
+assert.match(view, /data-workflow-action="lock"/);
+assert.match(view, /data-workflow-action="unlock"/);
+assert.match(css, /results-class-card/);
+assert.match(css, /data-label="Grade"\]\{display:none/);

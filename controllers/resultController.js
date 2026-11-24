@@ -342,6 +342,36 @@ const getResultWorkflowTracking = async (req, res) => {
             schoolId, selectedTerm, selectedTerm, selectedSection, selectedSection
         ]);
 
+        // Subject-level roll-up across the currently selected filters. Counts remain
+        // student-result counts, while the cards make subject coverage the primary view.
+        const subjectMap = new Map();
+        for (const row of rows) {
+            const key = String(row.subject_id);
+            if (!subjectMap.has(key)) {
+                subjectMap.set(key, {
+                    subject_id: row.subject_id,
+                    subject_name: row.subject_name,
+                    expected_count: 0, recorded_count: 0, draft_count: 0,
+                    submitted_count: 0, approved_count: 0, locked_count: 0,
+                    published_count: 0, classPeriods: new Set()
+                });
+            }
+            const subject = subjectMap.get(key);
+            subject.classPeriods.add(`${row.class_id}|${row.session}|${row.term}`);
+            for (const field of ['expected_count', 'recorded_count', 'draft_count',
+                'submitted_count', 'approved_count', 'locked_count', 'published_count']) {
+                subject[field] += Number(row[field] || 0);
+            }
+        }
+        const subjectSummaries = [...subjectMap.values()]
+            .map(subject => ({
+                ...subject,
+                class_period_count: subject.classPeriods.size,
+                coverage: subject.expected_count
+                    ? Math.min(100, Math.round(subject.recorded_count / subject.expected_count * 100)) : 0
+            }))
+            .sort((a, b) => a.subject_name.localeCompare(b.subject_name));
+
         const summary = rows.reduce((totals, row) => {
             for (const key of ['expected_count', 'recorded_count', 'draft_count', 'submitted_count', 'approved_count', 'locked_count', 'published_count']) {
                 totals[key] += Number(row[key] || 0);
@@ -355,6 +385,7 @@ const getResultWorkflowTracking = async (req, res) => {
         res.render('results/tracking', {
             title: 'Result Workflow Tracking',
             rows,
+            subjectSummaries,
             summary,
             sessions,
             sections,

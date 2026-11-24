@@ -55,3 +55,10 @@ console.log('AcadMe Staff Management UI presentation checks passed.');
 
 assert.match(resultCss, /flex-direction:column;align-items:stretch;gap:5px/);
 assert.match(resultCss, /justify-self:end!important;width:100%/);
+
+
+assert.match(resultCss, /grid-template-columns:minmax\\(0,1fr\\) 42px 42px 42px 32px 30px!important/);
+assert.match(resultCss, /grid-column:6!important/);
+assert.match(resultCss, /height:32px!important/);
+assert.match(resultCss, /font-size:15px!important/);
+assert.match(resultCss, /white-space:nowrap!important/);

@@ -40,6 +40,17 @@
                                     <% } else if (subject.submitted_count) { %><b class="status-submitted">Submitted</b>
                                     <% } else if (subject.draft_count) { %><b class="status-draft">Drafted</b>
                                     <% } else { %><b class="status-empty">—</b><% } %>
+                                    <% if (canManageWorkflow) { %>
+                                        <% if (subject.submitted_count && subject.submitted_count === subject.recorded_count) { %>
+                                            <button type="button" class="btn btn-outline btn-sm" data-workflow-action="approve" data-class="<%= group.class_id %>" data-subject="<%= subject.subject_id %>" data-term="<%= group.term %>" data-session="<%= group.session %>">Approve</button>
+                                        <% } %>
+                                        <% if (subject.approved_count && subject.approved_count === subject.recorded_count) { %>
+                                            <button type="button" class="btn btn-outline btn-sm" data-workflow-action="lock" data-class="<%= group.class_id %>" data-subject="<%= subject.subject_id %>" data-term="<%= group.term %>" data-session="<%= group.session %>">Lock</button>
+                                        <% } %>
+                                        <% if (subject.locked_count) { %>
+                                            <button type="button" class="btn btn-outline btn-sm" data-workflow-action="unlock" data-class="<%= group.class_id %>" data-subject="<%= subject.subject_id %>" data-term="<%= group.term %>" data-session="<%= group.session %>">Unlock</button>
+                                        <% } %>
+                                    <% } %>
                                 </div>
                             <% }) %>
                             </div>

@@ -636,11 +636,18 @@ const saveResults = async (req, res) => {
         // verification query. Pool-level calls here would escape the transaction.
         await db.transaction(async (client) => {
             for (const item of results) {
-                const { total, grade } = computeResult(item.ca1 || 0, item.ca2 || 0, item.exam || 0);
+                const scoreValue = value => value === '' || value === undefined || value === null ? null : Number(value);
+                const ca1 = scoreValue(item.ca1);
+                const ca2 = scoreValue(item.ca2);
+                const exam = scoreValue(item.exam);
+                // Missing assessments represent absence/not recorded, never an implicit zero.
+                // Keep totals and grades unset until all configured assessment fields are present.
+                const completeScores = ca1 !== null && ca2 !== null && exam !== null;
+                const computed = completeScores ? computeResult(ca1, ca2, exam) : { total: null, grade: null };
                 await db.run(sql, [
                     item.student_id, class_id, subject_id, term, session,
-                    item.ca1 || 0, item.ca2 || 0, item.exam || 0,
-                    total, grade, (item.remark || '').trim(), normalizedStatus
+                    ca1, ca2, exam, computed.total, computed.grade,
+                    (item.remark || '').trim(), normalizedStatus
                 ], client);
             }
 
@@ -1264,7 +1271,7 @@ const approveResults = async (req, res) => {
         const owned = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
         if (!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
         const expected = await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
-            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
+            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=? AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
         const pending = await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='submitted' THEN student_id END) AS submitted
             FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
         if (!Number(expected.total) || Number(pending.total)!==Number(expected.total) || Number(pending.submitted)!==Number(expected.total))
@@ -1285,7 +1292,7 @@ const lockResults = async (req, res) => {
         const owned=await db.get('SELECT id FROM classes WHERE id=? AND school_id=?',[class_id,schoolId]);
         if(!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
         const expected=await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
-            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
+            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=? AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
         const rows=await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='approved' THEN student_id END) AS approved
             FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
         if(!Number(expected.total) || Number(rows.total)!==Number(expected.total) || Number(rows.approved)!==Number(expected.total))
@@ -1330,7 +1337,7 @@ const publishBulkResults = async (req, res) => {
         for(const item of assigned){
             const expected=await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total
                 FROM student_enrollments se JOIN students st ON st.id=se.student_id
-                WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
+                WHERE se.class_id=? AND se.session=? AND st.school_id=? AND LOWER(COALESCE(st.status, '')) IN ('active', '')`,[class_id,session,schoolId]);
             const state=await db.get(`SELECT COUNT(DISTINCT student_id) AS total,
                 COUNT(DISTINCT CASE WHEN LOWER(status) IN ('approved','locked','published') THEN student_id END) AS ready
                 FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,

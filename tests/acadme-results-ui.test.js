@@ -78,13 +78,13 @@ assert.match(resultController, /Every role must reopen protected records before 
   'Administrators must not bypass the result publication lock when saving scores');
 assert.match(resultController, /LOWER\(COALESCE\(results\.status, 'draft'\)\) NOT IN \('approved', 'locked', 'published'\)/,
   'The result upsert must not overwrite a protected row during a concurrent workflow transition');
-assert.match(manager, /placeholder="<%= String\\(s\\.status \\|\\| ''\\)\\.toLowerCase\\(\\) === 'submitted'/,
+assert.ok(manager.includes("placeholder=\"<%= String(s.status || '').toLowerCase() === 'submitted'"),
   'Submitted blank assessment fields must visibly show a dash without coercing them to zero');
-assert.match(manager, /const complete = requiredInputs\\.every\\(input => input\\.value !== ''\\)/,
+assert.ok(manager.includes("const complete = requiredInputs.every(input => input.value !== '')"),
   'Incomplete assessment rows must not receive a calculated total or grade');
-assert.match(resultController, /const scoreValue = value => value === '' \\|\\| value === undefined \\|\\| value === null \\? null : Number\\(value\\)/,
+assert.ok(resultController.includes("const scoreValue = value => value === '' || value === undefined || value === null ? null : Number(value)"),
   'Blank assessment fields must be stored as NULL while an explicit zero remains numeric');
-assert.match(resultController, /LOWER\\(COALESCE\\(st\\.status, ''\\)\\) IN \\('active', ''\\)/,
+assert.ok(resultController.includes("LOWER(COALESCE(st.status, '')) IN ('active', '')"),
   'Approval, locking and publishing must count only the Result Entry active cohort');
 assert.match(manager, /canManageResultWorkflow/);
 assert.match(manager, /Reopen Approved/,

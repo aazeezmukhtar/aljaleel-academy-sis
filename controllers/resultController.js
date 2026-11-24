@@ -524,7 +524,7 @@ const getResultManager = async (req, res) => {
             school: settings,
             resultConfig,
             grading,
-            canManageResultWorkflow: user.role === 'Admin'
+            canManageResultWorkflow: ['Admin', 'Examination Officer'].includes(user.role)
         });
     } catch (err) {
         console.error('Result Manager Error:', err);
@@ -605,19 +605,20 @@ const saveResults = async (req, res) => {
             `, [user.id, class_id, subject_id, user.id, class_id, class_id, subject_id, class_id, user.id, class_id, subject_id]);
             if (!hasAccess) return res.status(403).json({ success: false, message: 'Unauthorized' });
 
-            // Check every submitted student's existing row before any write. A batch
-            // must not overwrite a protected row just because the first row is editable.
-            for (const studentId of submittedStudentIds) {
-                const existing = await db.get(
-                    'SELECT status FROM results WHERE student_id = ? AND class_id = ? AND subject_id = ? AND term = ? AND session = ?',
-                    [studentId, class_id, subject_id, term, session]
-                );
-                if (existing && ['locked', 'published', 'approved'].includes(String(existing.status || '').toLowerCase())) {
-                    return res.status(403).json({
-                        success: false,
-                        message: 'At least one submitted result is approved, locked, or published and cannot be edited. No results were saved.'
-                    });
-                }
+        }
+
+        // Every role must reopen protected records before editing. Admin privileges
+        // bypass teaching-assignment checks, not the result publication lock.
+        for (const studentId of submittedStudentIds) {
+            const existing = await db.get(
+                'SELECT status FROM results WHERE student_id = ? AND class_id = ? AND subject_id = ? AND term = ? AND session = ?',
+                [studentId, class_id, subject_id, term, session]
+            );
+            if (existing && ['locked', 'published', 'approved'].includes(String(existing.status || '').trim().toLowerCase())) {
+                return res.status(409).json({
+                    success: false,
+                    message: 'At least one result is approved, locked, or published. An administrator must reopen the subject before any scores can be changed. No results were saved.'
+                });
             }
         }
 
@@ -628,6 +629,7 @@ const saveResults = async (req, res) => {
             ca1=excluded.ca1, ca2=excluded.ca2, exam=excluded.exam, 
             total=excluded.total, grade=excluded.grade, 
             teacher_remark=excluded.teacher_remark, status=excluded.status
+            WHERE LOWER(COALESCE(results.status, 'draft')) NOT IN ('approved', 'locked', 'published')
         `;
 
         // Use the transaction-scoped PostgreSQL client for every write and the
@@ -1304,10 +1306,11 @@ const unlockResults = async (req,res) => {
         const owned=await db.get('SELECT id FROM classes WHERE id=? AND school_id=?',[class_id,schoolId]);
         if(!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
         const info=await db.run(`UPDATE results SET status='submitted'
-            WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='locked'`,
+            WHERE class_id=? AND subject_id=? AND term=? AND session=?
+              AND LOWER(status) IN ('approved','locked','published')`,
             [class_id,subject_id,term,session]);
-        if(!Number(info.changes)) return res.status(409).json({success:false,message:'No locked results found to unlock.'});
-        res.json({success:true,message:`Unlocked ${info.changes} results. They are returned to Submitted and can be edited again.`});
+        if(!Number(info.changes)) return res.status(409).json({success:false,message:'No approved, locked or published results found to reopen.'});
+        res.json({success:true,message:`Reopened ${info.changes} results. They are returned to Submitted and can be edited again.`,updatedCount:Number(info.changes),status:'submitted'});
     }catch(err){console.error('Unlock Error:',err);res.status(500).json({success:false,message:'Database Error'});}
 };
 

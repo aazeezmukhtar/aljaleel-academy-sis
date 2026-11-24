@@ -41,10 +41,10 @@
                                     <% } else if (subject.draft_count) { %><b class="status-draft">Drafted</b>
                                     <% } else { %><b class="status-empty">—</b><% } %>
                                     <% if (canManageWorkflow) { %>
-                                        <% if (subject.submitted_count && subject.submitted_count === subject.recorded_count) { %>
+                                        <% if (subject.submitted_count && subject.submitted_count === subject.recorded_count && subject.recorded_count === subject.expected_count) { %>
                                             <button type="button" class="btn btn-outline btn-sm" data-workflow-action="approve" data-class="<%= group.class_id %>" data-subject="<%= subject.subject_id %>" data-term="<%= group.term %>" data-session="<%= group.session %>">Approve</button>
                                         <% } %>
-                                        <% if (subject.approved_count && subject.approved_count === subject.recorded_count) { %>
+                                        <% if (subject.approved_count && subject.approved_count === subject.recorded_count && subject.recorded_count === subject.expected_count) { %>
                                             <button type="button" class="btn btn-outline btn-sm" data-workflow-action="lock" data-class="<%= group.class_id %>" data-subject="<%= subject.subject_id %>" data-term="<%= group.term %>" data-session="<%= group.session %>">Lock</button>
                                         <% } %>
                                         <% if (subject.locked_count) { %>
@@ -225,7 +225,7 @@
                 </div>
             <% } %>
         </section>
-        <p class="results-tracking-note"><i class="bi bi-info-circle"></i> Counts reflect the latest saved result status. This page does not change, approve or publish results. Locked entries are shown separately and are not counted as published.</p>
+        <p class="results-tracking-note"><i class="bi bi-info-circle"></i> Counts reflect the latest saved result status. Approval, locking and publication actions are restricted to Admin and Examination Officer roles. Publication requires complete approved results for every assigned subject.</p>
     </main>
 </div>
 

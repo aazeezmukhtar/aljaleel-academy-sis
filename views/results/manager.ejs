@@ -146,7 +146,7 @@
                             const normalizedStatuses = studentStatuses.map(status => String(status || 'draft').toLowerCase());
                             const allSubmitted = students.length > 0 && normalizedStatuses.every(status => status === 'submitted');
                             const allApproved = students.length > 0 && normalizedStatuses.every(status => status === 'approved');
-                            const hasReopenable = normalizedStatuses.some(status => status === 'locked' || status === 'published');
+                            const hasReopenable = normalizedStatuses.some(status => ['approved', 'locked', 'published'].includes(status));
                             const allPublished = students.length > 0 && normalizedStatuses.every(status => status === 'published');
                         %>
                         <section class="card result-workflow-admin-panel" aria-label="Administrator result workflow controls">
@@ -208,7 +208,7 @@
                                 <tbody>
                                     <% students.forEach((s, index)=> { %>
                                         <% 
-                                            const isLocked = s.status === 'locked' || s.status === 'published' || s.status === 'approved';
+                                            const isLocked = ['locked', 'published', 'approved'].includes(String(s.status || '').toLowerCase());
                                         %>
                                         <tr data-student="<%= s.id %>" data-score-count="<%= resultConfig.ca_count != 1 ? 3 : 2 %>">
                                             <td data-label="#">
@@ -861,8 +861,8 @@
             const publish = document.getElementById('publishResultsBtn');
             if (approve) approve.disabled = normalized !== 'submitted';
             if (lock) lock.disabled = normalized !== 'approved';
-            if (unlock) unlock.disabled = !['locked', 'published'].includes(normalized);
-            if (unlock) unlock.textContent = normalized === 'published' ? 'Reopen Published' : 'Unlock Subject';
+            if (unlock) unlock.disabled = !['approved', 'locked', 'published'].includes(normalized);
+            if (unlock) unlock.textContent = normalized === 'published' ? 'Reopen Published' : (normalized === 'approved' ? 'Reopen Approved' : 'Unlock Subject');
             if (publish) publish.disabled = normalized === 'published';
             const feedback = document.getElementById('resultWorkflowFeedback');
             if (feedback) feedback.textContent = locked ? 'This sheet is read-only. An administrator can reopen it to resume editing.' : 'This sheet is editable. Save a draft or submit the results when ready.';

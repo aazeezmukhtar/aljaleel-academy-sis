@@ -52,7 +52,7 @@ assert.match(manager, /resultsOfflinePreparationStatus/);
 const resultController = read('controllers/resultController.js');
 const unlockHandler = resultController.match(/const unlockResults = async \(req,res\) => \{([\s\S]*?)\n\};/);
 assert.ok(unlockHandler, 'Result unlock endpoint must exist');
-assert.match(unlockHandler[1], /LOWER\(status\) IN \('locked','published'\)/,
+assert.match(unlockHandler[1], /LOWER\(status\) IN \('approved','locked','published'\)/,
   'Admin unlock must reopen both locked and published result records');
 assert.match(unlockHandler[1], /status='submitted'/,
   'Reopened results must return to Submitted so they can be edited');
@@ -72,3 +72,12 @@ assert.doesNotMatch(workflowClient, /location\.reload\(\)/,
   'Approve, lock, unlock and publish actions must not reload the page');
 
 console.log('AcadMe Results UI presentation checks passed.');
+
+
+assert.match(resultController, /Every role must reopen protected records before editing/,
+  'Administrators must not bypass the result publication lock when saving scores');
+assert.match(resultController, /LOWER\(COALESCE\(results\.status, 'draft'\)\) NOT IN \('approved', 'locked', 'published'\)/,
+  'The result upsert must not overwrite a protected row during a concurrent workflow transition');
+assert.match(manager, /canManageResultWorkflow/);
+assert.match(manager, /Reopen Approved/,
+  'Approved results must also be reopenable from the manager');

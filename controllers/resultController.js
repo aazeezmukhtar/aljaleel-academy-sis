@@ -342,36 +342,51 @@ const getResultWorkflowTracking = async (req, res) => {
             schoolId, selectedTerm, selectedTerm, selectedSection, selectedSection
         ]);
 
-        // Subject-level roll-up across the currently selected filters. Counts remain
-        // student-result counts, while the cards make subject coverage the primary view.
-        const subjectMap = new Map();
+        // Class-first workflow roll-up. A class is considered published only when
+        // every assigned subject has a complete published result set for this period.
+        const classMap = new Map();
         for (const row of rows) {
-            const key = String(row.subject_id);
-            if (!subjectMap.has(key)) {
-                subjectMap.set(key, {
-                    subject_id: row.subject_id,
-                    subject_name: row.subject_name,
+            const key = [row.class_id, row.session, row.term].join("|");
+            if (!classMap.has(key)) {
+                classMap.set(key, {
+                    class_id: row.class_id, class_name: row.class_name,
+                    section_id: row.section_id, section_name: row.section_name,
+                    session: row.session, term: row.term,
                     expected_count: 0, recorded_count: 0, draft_count: 0,
                     submitted_count: 0, approved_count: 0, locked_count: 0,
-                    published_count: 0, classPeriods: new Set()
+                    published_count: 0, subjects: []
                 });
             }
-            const subject = subjectMap.get(key);
-            subject.classPeriods.add(`${row.class_id}|${row.session}|${row.term}`);
-            for (const field of ['expected_count', 'recorded_count', 'draft_count',
-                'submitted_count', 'approved_count', 'locked_count', 'published_count']) {
-                subject[field] += Number(row[field] || 0);
+            const group = classMap.get(key);
+            const subject = {
+                subject_id: row.subject_id, subject_name: row.subject_name,
+                expected_count: Number(row.expected_count || 0),
+                recorded_count: Number(row.recorded_count || 0),
+                draft_count: Number(row.draft_count || 0),
+                submitted_count: Number(row.submitted_count || 0),
+                approved_count: Number(row.approved_count || 0),
+                locked_count: Number(row.locked_count || 0),
+                published_count: Number(row.published_count || 0)
+            };
+            group.subjects.push(subject);
+            for (const field of ['expected_count','recorded_count','draft_count','submitted_count','approved_count','locked_count','published_count']) {
+                group[field] += subject[field];
             }
         }
-        const subjectSummaries = [...subjectMap.values()]
-            .map(subject => ({
-                ...subject,
-                class_period_count: subject.classPeriods.size,
-                coverage: subject.expected_count
-                    ? Math.min(100, Math.round(subject.recorded_count / subject.expected_count * 100)) : 0
-            }))
-            .sort((a, b) => a.subject_name.localeCompare(b.subject_name));
-
+        const classSummaries = [...classMap.values()].map(group => {
+            const completePublished = group.subjects.length > 0 && group.subjects.every(subject =>
+                subject.expected_count > 0 && subject.published_count === subject.expected_count
+            );
+            return {
+                ...group,
+                is_published: completePublished,
+                subjects: completePublished ? [] : group.subjects
+                    .filter(subject => subject.draft_count || subject.submitted_count || subject.approved_count || subject.locked_count || subject.published_count)
+                    .sort((a,b) => a.subject_name.localeCompare(b.subject_name))
+            };
+        }).filter(group => group.is_published || group.subjects.length > 0)
+          .sort((a,b) => Number(b.is_published)-Number(a.is_published) ||
+            a.section_name.localeCompare(b.section_name) || a.class_name.localeCompare(b.class_name));
         const summary = rows.reduce((totals, row) => {
             for (const key of ['expected_count', 'recorded_count', 'draft_count', 'submitted_count', 'approved_count', 'locked_count', 'published_count']) {
                 totals[key] += Number(row[key] || 0);
@@ -385,7 +400,7 @@ const getResultWorkflowTracking = async (req, res) => {
         res.render('results/tracking', {
             title: 'Result Workflow Tracking',
             rows,
-            subjectSummaries,
+            classSummaries,
             summary,
             sessions,
             sections,

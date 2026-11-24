@@ -82,9 +82,9 @@
                                                 </span></div>
                                         </th>
                                         <% }) %>
-                                            <th class="summary-col">Subjects Sat</th>
-                                            <th class="summary-col">Total (Published)</th>
-                                            <th class="summary-col">Avg (Published)</th>
+                                            <th class="summary-col">Subjects Recorded</th>
+                                            <th class="summary-col">Total (Scored)</th>
+                                            <th class="summary-col">Avg (Scored)</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -98,8 +98,11 @@
                                         </td>
                                         <% subjects.forEach(sub=> { %>
                                             <% const result=student.results[sub.id]; %>
-                                                <td class="<%= result ? (result.total < 40 ? 'fail' : '') : 'empty' %>">
-                                                    <%= result ? result.total : '-' %>
+                                                <td class="<%= result ? (result.total !== null && result.total !== undefined && Number(result.total) < 40 ? 'fail' : '') : 'empty' %>">
+                                                    <% if (result) { %>
+                                                        <strong><%= result.total === null || result.total === undefined ? '-' : result.total %></strong>
+                                                        <small class="broadsheet-result-status"><%= result.status %></small>
+                                                    <% } else { %>-<% } %>
                                                 </td>
                                                 <% }) %>
                                                     <td class="summary-col"><strong>

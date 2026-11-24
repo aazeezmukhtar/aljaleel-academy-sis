@@ -152,7 +152,7 @@
                         <section class="card result-workflow-admin-panel" aria-label="Administrator result workflow controls">
                             <div>
                                 <h3 style="margin:0 0 4px;">Result Workflow</h3>
-                                <p class="text-muted" style="margin:0;">Administrator controls for <strong><%= selClass %> · <%= selSubj %></strong>. Changes apply to this subject and academic period.</p>
+                                <p class="text-muted" style="margin:0;">Administrator controls for <strong><%= classes.find(c => String(c.id) === String(filters.class_id))?.name || 'Selected Class' %> · <%= subjects.find(s => String(s.id) === String(filters.subject_id))?.name || 'Selected Subject' %></strong>. Changes apply to this subject and academic period.</p>
                             </div>
                             <div class="result-workflow-admin-actions">
                                 <button type="button" class="btn btn-outline" onclick="updateStatus('approve')" <%= allSubmitted ? '' : 'disabled' %>>Approve Subject</button>

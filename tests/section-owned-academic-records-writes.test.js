@@ -33,6 +33,7 @@ async function testResultWriteOwnsSelectedClass() {
       if (sql.includes('SELECT id FROM subject_assignments WHERE class_id = ? AND subject_id = ? AND session = ?')) return { id: 1 };
       if (sql.includes('FROM student_enrollments se') && sql.includes('s.school_id = ?')) return { student_id: Number(params[0]) };
       if (sql.includes('SELECT id FROM students WHERE id = ? AND school_id = ?')) return { id: Number(params[0]) };
+      if (sql.includes('SELECT status FROM results WHERE student_id = ? AND class_id = ?')) return null;
       throw new Error('Unexpected lookup: ' + sql);
     };
     db.run = async (...args) => { writes.push(args); return { changes: 1 }; };

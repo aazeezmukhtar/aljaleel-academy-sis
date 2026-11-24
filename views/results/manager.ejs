@@ -238,7 +238,7 @@
                                                 <input type="number" class="form-control score-input ca1"
                                                     aria-label="CA 1 score for <%= s.first_name %> <%= s.last_name %>"
                                                     aria-invalid="false"
-                                                    value="<%= s.ca1 %>" min="0" max="<%= resultConfig.ca1_max || 20 %>"
+                                                    value="<%= s.ca1 ?? '' %>" placeholder="<%= String(s.status || '').toLowerCase() === 'submitted' && (s.ca1 === null || s.ca1 === undefined) ? '-' : '' %>" min="0" max="<%= resultConfig.ca1_max || 20 %>"
                                                     <%= isLocked ? 'disabled' : '' %>>
                                             </td>
                                             <% if (resultConfig.ca_count !=1) { %>
@@ -246,7 +246,7 @@
                                                     <input type="number" class="form-control score-input ca2"
                                                         aria-label="CA 2 score for <%= s.first_name %> <%= s.last_name %>"
                                                         aria-invalid="false"
-                                                        value="<%= s.ca2 %>" min="0" max="<%= resultConfig.ca2_max || 20 %>"
+                                                        value="<%= s.ca2 ?? '' %>" placeholder="<%= String(s.status || '').toLowerCase() === 'submitted' && (s.ca2 === null || s.ca2 === undefined) ? '-' : '' %>" min="0" max="<%= resultConfig.ca2_max || 20 %>"
                                                         <%= isLocked ? 'disabled' : '' %>>
                                                 </td>
                                                 <% } else { %>
@@ -256,7 +256,7 @@
                                                             <input type="number" class="form-control score-input exam"
                                                                 aria-label="Exam score for <%= s.first_name %> <%= s.last_name %>"
                                                                 aria-invalid="false"
-                                                                value="<%= s.exam %>" min="0"
+                                                                value="<%= s.exam ?? '' %>" placeholder="<%= String(s.status || '').toLowerCase() === 'submitted' && (s.exam === null || s.exam === undefined) ? '-' : '' %>" min="0"
                                                                 max="<%= resultConfig.exam_max || 60 %>"
                                                                 <%= isLocked ? 'disabled' : '' %>>
                                                         </td>

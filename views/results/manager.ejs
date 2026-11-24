@@ -240,6 +240,7 @@
                                                     aria-invalid="false"
                                                     value="<%= s.ca1 ?? '' %>" placeholder="<%= s.status === 'submitted' && s.ca1 == null ? '-' : '' %>" min="0" max="<%= resultConfig.ca1_max || 20 %>"
                                                     <%= isLocked ? 'disabled' : '' %>>
+                                                <small class="score-empty-indicator" aria-hidden="true" <%= s.status === 'submitted' && s.ca1 == null ? '' : 'hidden' %>>-</small>
                                             </td>
                                             <% if (resultConfig.ca_count !=1) { %>
                                                 <td data-label="CA 2">
@@ -248,6 +249,7 @@
                                                         aria-invalid="false"
                                                         value="<%= s.ca2 ?? '' %>" placeholder="<%= s.status === 'submitted' && s.ca2 == null ? '-' : '' %>" min="0" max="<%= resultConfig.ca2_max || 20 %>"
                                                         <%= isLocked ? 'disabled' : '' %>>
+                                                    <small class="score-empty-indicator" aria-hidden="true" <%= s.status === 'submitted' && s.ca2 == null ? '' : 'hidden' %>>-</small>
                                                 </td>
                                                 <% } else { %>
                                                     <input type="hidden" class="form-control score-input ca2" value="">
@@ -259,6 +261,7 @@
                                                                 value="<%= s.exam ?? '' %>" placeholder="<%= s.status === 'submitted' && s.exam == null ? '-' : '' %>" min="0"
                                                                 max="<%= resultConfig.exam_max || 60 %>"
                                                                 <%= isLocked ? 'disabled' : '' %>>
+                                                            <small class="score-empty-indicator" aria-hidden="true" <%= s.status === 'submitted' && s.exam == null ? '' : 'hidden' %>>-</small>
                                                         </td>
                                                         <td data-label="Total" class="total fw-bold"><%= s.total ?? '-' %></td>
                                                         <td data-label="Grade" class="grade fw-bold" data-grade="<%= s.grade || '' %>"><%= s.grade || '-' %></td>
@@ -611,6 +614,8 @@
                     const row = e.target.closest('tr');
                     calculateRow(row);
                     validateInput(e.target);
+                    const marker = e.target.parentElement.querySelector('.score-empty-indicator');
+                    if (marker) marker.hidden = e.target.value.trim() !== '';
                 }
             });
 

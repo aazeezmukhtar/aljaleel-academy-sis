@@ -68,7 +68,7 @@ async function testRejectsBatchWhenAnyExistingResultIsProtected() {
       }
     }, res);
 
-    assert.strictEqual(res.statusCode, 403, 'A protected row anywhere in the batch must reject the batch');
+    assert.strictEqual(res.statusCode, 409, 'A protected row anywhere in the batch must reject the batch with a conflict response');
     assert.strictEqual(res.body.success, false);
     assert.match(res.body.message, /approved, locked, or published/i);
     assert.deepStrictEqual(statusLookups, [101, 202], 'Every submitted row must be checked for protected status');

@@ -326,6 +326,7 @@ const getResultWorkflowTracking = async (req, res) => {
                 ON se.class_id = c.id AND se.session = a.session
             LEFT JOIN students enrolled
                 ON enrolled.id = se.student_id AND enrolled.school_id = c.school_id
+                AND LOWER(COALESCE(enrolled.status, '')) IN ('active', '')
             LEFT JOIN results r
                 ON r.student_id = enrolled.id
                 AND r.class_id = c.id

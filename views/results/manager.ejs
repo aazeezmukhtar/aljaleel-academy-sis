@@ -141,6 +141,28 @@
                     <% const studentStatuses = students.map(student => student.status || null); %>
                     <% const visibleStatuses = [...new Set(studentStatuses.filter(Boolean))]; %>
                     <% const sheetStatus = visibleStatuses.length === 0 ? 'New / Draft' : (visibleStatuses.length === 1 && studentStatuses.every(status => status === visibleStatuses[0]) ? visibleStatuses[0] : 'Mixed / Incomplete'); %>
+                    <% if (canManageResultWorkflow) { %>
+                        <%
+                            const normalizedStatuses = studentStatuses.map(status => String(status || 'draft').toLowerCase());
+                            const allSubmitted = students.length > 0 && normalizedStatuses.every(status => status === 'submitted');
+                            const allApproved = students.length > 0 && normalizedStatuses.every(status => status === 'approved');
+                            const hasLocked = normalizedStatuses.some(status => status === 'locked');
+                            const allPublished = students.length > 0 && normalizedStatuses.every(status => status === 'published');
+                        %>
+                        <section class="card result-workflow-admin-panel" aria-label="Administrator result workflow controls">
+                            <div>
+                                <h3 style="margin:0 0 4px;">Result Workflow</h3>
+                                <p class="text-muted" style="margin:0;">Administrator controls for <strong><%= selClass %> · <%= selSubj %></strong>. Changes apply to this subject and academic period.</p>
+                            </div>
+                            <div class="result-workflow-admin-actions">
+                                <button type="button" class="btn btn-outline" onclick="updateStatus('approve')" <%= allSubmitted ? '' : 'disabled' %>>Approve Subject</button>
+                                <button type="button" class="btn btn-outline" onclick="updateStatus('lock')" <%= allApproved ? '' : 'disabled' %>>Lock Subject</button>
+                                <button type="button" class="btn btn-outline" onclick="updateStatus('unlock')" <%= hasLocked ? '' : 'disabled' %>>Unlock Subject</button>
+                                <button type="button" class="btn btn-primary" onclick="publishCurrentClass()" <%= allPublished ? 'disabled' : '' %>>Publish Class</button>
+                            </div>
+                            <small class="text-muted">Approval requires every student to be submitted; locking requires approval. Class publication checks every assigned subject before publishing.</small>
+                        </section>
+                    <% } %>
                     <div class="card result-sheet-card">
                         <div class="result-sheet-header"
                             style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -826,6 +848,27 @@
         }
 
         document.addEventListener('DOMContentLoaded', restoreSavedResultDraft);
+
+        async function publishCurrentClass() {
+            const payload = {
+                term: document.querySelector('[name="term"]').value,
+                session: document.querySelector('[name="session"]').value,
+                class_id: document.querySelector('[name="class_id"]').value
+            };
+            if (!confirm('Publish all eligible results for this class and academic period? The server will verify every assigned subject before publishing.')) return;
+            try {
+                const res = await fetch('/results/publish-bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                alert(data.message || (data.success ? 'Class published.' : 'Publication was not completed.'));
+                if (data.success) location.reload();
+            } catch (err) {
+                alert('Publication action failed. Please check your connection and try again.');
+            }
+        }
 
         async function updateStatus(type) {
             if (!confirm(`Are you sure you want to ${type.toUpperCase()} these results?`)) return;

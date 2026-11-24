@@ -637,3 +637,13 @@
 }
 
 .results-tracking-page .results-class-subject{flex-wrap:wrap}.results-tracking-page .results-class-subject button{min-height:26px;padding:3px 7px;font-size:10px}.results-tracking-page .results-class-actions{gap:8px;flex-wrap:wrap}
+
+
+/* Administrator workflow controls on the result-entry sheet */
+.result-workflow-admin-panel { display:flex; flex-direction:column; gap:12px; margin-bottom:18px; }
+.result-workflow-admin-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.result-workflow-admin-actions button:disabled { opacity:.45; cursor:not-allowed; }
+@media (max-width:640px) {
+  .result-workflow-admin-actions { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .result-workflow-admin-actions button { width:100%; min-width:0; }
+}

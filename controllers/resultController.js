@@ -523,7 +523,8 @@ const getResultManager = async (req, res) => {
             filters: { class_id, subject_id, term: activeTerm, session: activeSession },
             school: settings,
             resultConfig,
-            grading
+            grading,
+            canManageResultWorkflow: user.role === 'Admin'
         });
     } catch (err) {
         console.error('Result Manager Error:', err);

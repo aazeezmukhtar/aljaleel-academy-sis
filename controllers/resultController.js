@@ -1260,9 +1260,11 @@ const approveResults = async (req, res) => {
     try {
         const owned = await db.get('SELECT id FROM classes WHERE id = ? AND school_id = ?', [class_id, schoolId]);
         if (!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
-        const pending = await db.get(`SELECT COUNT(*) AS total, COUNT(CASE WHEN LOWER(status)='submitted' THEN 1 END) AS submitted
+        const expected = await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
+            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
+        const pending = await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='submitted' THEN student_id END) AS submitted
             FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
-        if (!pending || Number(pending.total)!==Number(pending.submitted) || !Number(pending.total))
+        if (!Number(expected.total) || Number(pending.total)!==Number(expected.total) || Number(pending.submitted)!==Number(expected.total))
             return res.status(409).json({success:false,message:'Approval requires every recorded result for this subject to be submitted.'});
         const info = await db.run(`UPDATE results SET status='approved', approved_by=?
             WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='submitted'`,
@@ -1279,9 +1281,11 @@ const lockResults = async (req, res) => {
     try {
         const owned=await db.get('SELECT id FROM classes WHERE id=? AND school_id=?',[class_id,schoolId]);
         if(!owned || !subject_id || !term || !session) return res.status(400).json({success:false,message:'Invalid class, subject or academic period.'});
-        const rows=await db.get(`SELECT COUNT(*) AS total, COUNT(CASE WHEN LOWER(status)='approved' THEN 1 END) AS approved
+        const expected=await db.get(`SELECT COUNT(DISTINCT se.student_id) AS total FROM student_enrollments se
+            JOIN students st ON st.id=se.student_id WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
+        const rows=await db.get(`SELECT COUNT(DISTINCT student_id) AS total, COUNT(DISTINCT CASE WHEN LOWER(status)='approved' THEN student_id END) AS approved
             FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,[class_id,subject_id,term,session]);
-        if(!rows || !Number(rows.total) || Number(rows.total)!==Number(rows.approved))
+        if(!Number(expected.total) || Number(rows.total)!==Number(expected.total) || Number(rows.approved)!==Number(expected.total))
             return res.status(409).json({success:false,message:'Only fully approved subject results can be locked.'});
         const info=await db.run(`UPDATE results SET status='locked'
             WHERE class_id=? AND subject_id=? AND term=? AND session=? AND LOWER(status)='approved'`,
@@ -1324,7 +1328,7 @@ const publishBulkResults = async (req, res) => {
                 FROM student_enrollments se JOIN students st ON st.id=se.student_id
                 WHERE se.class_id=? AND se.session=? AND st.school_id=?`,[class_id,session,schoolId]);
             const state=await db.get(`SELECT COUNT(DISTINCT student_id) AS total,
-                COUNT(DISTINCT CASE WHEN LOWER(status) IN ('approved','locked') THEN student_id END) AS ready
+                COUNT(DISTINCT CASE WHEN LOWER(status) IN ('approved','locked','published') THEN student_id END) AS ready
                 FROM results WHERE class_id=? AND subject_id=? AND term=? AND session=?`,
                 [class_id,item.subject_id,term,session]);
             if(!Number(expected.total) || Number(state.total)!==Number(expected.total) || Number(state.ready)!==Number(expected.total))

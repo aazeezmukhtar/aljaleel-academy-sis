@@ -381,7 +381,6 @@ const getResultWorkflowTracking = async (req, res) => {
                 ...group,
                 is_published: completePublished,
                 subjects: completePublished ? [] : group.subjects
-                    .filter(subject => subject.draft_count || subject.submitted_count || subject.approved_count || subject.locked_count || subject.published_count)
                     .sort((a,b) => a.subject_name.localeCompare(b.subject_name))
             };
         }).filter(group => group.is_published || group.subjects.length > 0)

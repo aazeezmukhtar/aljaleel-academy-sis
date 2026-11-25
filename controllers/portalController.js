@@ -40,12 +40,12 @@ exports.getDashboard = async (req, res) => {
     // Keep the portal's result summaries separate for every class/section.
     // A student may be enrolled in both Academy and Tahfeez in one session.
     const results = await db.all(`
-        SELECT r.class_id, c.name AS class_name, r.session, r.term,
+        SELECT r.class_id, c.name AS class_name, c.section_id, r.session, r.term,
                COUNT(*) AS subjects_taken, AVG(r.total) AS average_score
         FROM results r
         LEFT JOIN classes c ON c.id = r.class_id
         WHERE r.student_id = ? AND r.status IN ('approved', 'published')
-        GROUP BY r.class_id, c.name, r.session, r.term
+        GROUP BY r.class_id, c.name, c.section_id, r.session, r.term
         ORDER BY r.session DESC, c.name, r.term DESC
     `, [studentId]);
 
@@ -121,6 +121,62 @@ exports.getDashboard = async (req, res) => {
         current_term: ec.section_term || school.current_term || '1st Term'
     }));
 
+    // Section-owned dashboard performance: rank only against students in the
+    // same class, section, session and term. No Academy/Tahfeez aggregation.
+    const dashboardSectionStats = [];
+    for (const section of sectionInfo) {
+        if (!section.class_id || !section.section_id) continue;
+        const cohortRows = await db.all(`
+            SELECT r.student_id, AVG(r.total) AS average_score,
+                   COUNT(DISTINCT r.subject_id) AS subjects_taken
+            FROM results r
+            JOIN students st ON st.id = r.student_id
+            WHERE r.class_id = ? AND r.session = ? AND r.term = ?
+              AND r.status IN ('approved', 'published')
+              AND r.total IS NOT NULL
+              AND LOWER(COALESCE(st.status, '')) IN ('active', '')
+            GROUP BY r.student_id
+            ORDER BY AVG(r.total) DESC, r.student_id ASC
+        `, [section.class_id, section.current_session, section.current_term]);
+        const ownIndex = (cohortRows || []).findIndex(row => Number(row.student_id) === Number(studentId));
+        const ownRow = ownIndex >= 0 ? cohortRows[ownIndex] : null;
+        const classAverage = cohortRows && cohortRows.length
+            ? cohortRows.reduce((sum, row) => sum + Number(row.average_score || 0), 0) / cohortRows.length
+            : null;
+        let subjectInsights = [];
+        if (ownRow) {
+            subjectInsights = await db.all(`
+                SELECT r.subject_id, sub.name AS subject_name,
+                       AVG(CASE WHEN r.student_id = ? THEN r.total END) AS student_average,
+                       AVG(r.total) AS class_average
+                FROM results r
+                LEFT JOIN subjects sub ON sub.id = r.subject_id
+                JOIN students st ON st.id = r.student_id
+                WHERE r.class_id = ? AND r.session = ? AND r.term = ?
+                  AND r.status IN ('approved', 'published')
+                  AND r.total IS NOT NULL
+                  AND LOWER(COALESCE(st.status, '')) IN ('active', '')
+                GROUP BY r.subject_id, sub.name
+                HAVING AVG(CASE WHEN r.student_id = ? THEN r.total END) IS NOT NULL
+                ORDER BY (AVG(CASE WHEN r.student_id = ? THEN r.total END) - AVG(r.total)) DESC
+            `, [studentId, section.class_id, section.current_session, section.current_term, studentId, studentId]);
+        }
+        dashboardSectionStats.push({
+            sectionId: Number(section.section_id),
+            sectionName: section.section_name || 'Section',
+            classId: Number(section.class_id),
+            className: section.class_name,
+            session: section.current_session,
+            term: section.current_term,
+            classSize: cohortRows ? cohortRows.length : 0,
+            position: ownIndex >= 0 ? ownIndex + 1 : null,
+            studentAverage: ownRow ? Number(ownRow.average_score) : null,
+            classAverage: classAverage === null ? null : Number(classAverage),
+            subjectsTaken: ownRow ? Number(ownRow.subjects_taken || 0) : 0,
+            subjectInsights: subjectInsights || []
+        });
+    }
+
     // Use the same submitted-register eligibility and status-credit rules as the
     // dedicated attendance page. Keep each section separate: Academy and Tahfeez
     // must never be blended into one dashboard percentage.
@@ -166,6 +222,7 @@ exports.getDashboard = async (req, res) => {
         sectionInfo,
         enrolledClasses,
         attendanceSummaries,
+        dashboardSectionStats,
         currentTerm: activeTerm,
         currentSession: activeSession,
         error: req.query.error

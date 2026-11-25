@@ -169,3 +169,15 @@ check('student hamburger sidebar includes direct academic links and existing stu
   assert.match(nav, /href="\/portal\/profile"/);
   assert.match(nav, /href="\/auth\/student-logout"/);
 });
+
+check('student dashboard compares position and average with the previous published term and renders signed trend arrows', () => {
+  assert.match(portalController, /const previousPeriod = await db\.get/);
+  assert.match(portalController, /positionTrend = previousPosition - \(ownIndex \+ 1\)/);
+  assert.match(portalController, /averageTrend = previousAverage !== null && ownRow/);
+  assert.match(portalController, /previousPosition,/);
+  assert.match(portalController, /previousAverage,/);
+  const dashboard = read('views/portal/index.ejs');
+  assert.match(dashboard, /section\.positionTrend > 0 \? 'up' : section\.positionTrend < 0 \? 'down'/);
+  assert.match(dashboard, /section\.averageTrend\.toFixed\(1\)/);
+  assert.match(dashboard, /acm-stat-trend/);
+});

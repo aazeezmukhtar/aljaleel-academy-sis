@@ -1,27 +1,15 @@
-<% 
-    const hour = new Date().getHours();
-    let greeting = 'Good evening';
-    if (hour < 12) greeting = 'Good morning';
-    else if (hour < 18) greeting = 'Good afternoon';
-    const studentName = student.first_name || (student.name ? student.name.split(' ')[0] : 'Student');
-%>
-<header class="acm-shell-header">
-    <div class="acm-header-greeting">
-        <h1 class="acm-greeting-title"><%= greeting %>, <%= studentName %></h1>
-        <p class="acm-greeting-meta">
-            <% if (typeof sectionInfo !== 'undefined' && sectionInfo && sectionInfo.length > 1) { %>
-                <%= sectionInfo.map(s => (s.section_name ? s.section_name + ': ' : '') + s.class_name).join(' · ') %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
-            <% } else { %>
-                <%= student.class_name || 'Unassigned' %> &middot; <%= currentTerm %> &middot; <%= currentSession %>
-            <% } %>
-        </p>
-    </div>
-    <div class="acm-header-actions">
-        <a href="/portal/notifications" class="acm-icon-btn" aria-label="Notifications<%= individualMessagesCount > 0 ? ', ' + individualMessagesCount + ' unread' : '' %>">
-            <i class="bi bi-bell" aria-hidden="true"></i>
-            <% if (individualMessagesCount > 0) { %>
-                <span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span>
-            <% } %>
-        </a>
-    </div>
+<header class="acm-student-topbar">
+  <button type="button" class="acm-student-menu" onclick="toggleStudentSidebar()" aria-label="Open navigation menu" aria-controls="student-sidebar" aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i></button>
+  <a class="acm-student-brand" href="/portal"><span class="acm-student-brand-mark"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></span><span>Al-Jaleel<br>Academy</span></a>
+  <a href="/portal/notifications" class="acm-student-notification" aria-label="Notifications"><i class="bi bi-bell" aria-hidden="true"></i><% if (typeof individualMessagesCount !== "undefined" && individualMessagesCount > 0) { %><span class="acm-badge"><%= individualMessagesCount > 9 ? "9+" : individualMessagesCount %></span><% } %></a>
 </header>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const sidebar = document.querySelector(".acm-sidebar"); const trigger = document.querySelector(".acm-student-menu");
+  if (!sidebar || !trigger) return; sidebar.id = "student-sidebar";
+  const overlay = document.createElement("button"); overlay.type = "button"; overlay.className = "acm-student-sidebar-overlay"; overlay.setAttribute("aria-label", "Close navigation menu"); document.body.appendChild(overlay);
+  const setOpen = (open) => { sidebar.classList.toggle("is-open", open); overlay.classList.toggle("is-open", open); trigger.setAttribute("aria-expanded", String(open)); trigger.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu"); document.body.classList.toggle("acm-student-menu-open", open); };
+  window.toggleStudentSidebar = () => setOpen(!sidebar.classList.contains("is-open")); trigger.addEventListener("click", window.toggleStudentSidebar); overlay.addEventListener("click", () => setOpen(false));
+  sidebar.querySelectorAll("a").forEach(link => link.addEventListener("click", () => setOpen(false))); document.addEventListener("keydown", event => { if (event.key === "Escape") setOpen(false); });
+});
+</script>

@@ -1,0 +1,22 @@
+.acm-student-topbar{display:flex;align-items:center;gap:14px;padding:14px 18px;background:var(--acm-surface);position:sticky;top:0;z-index:1000;border-bottom:1px solid var(--acm-border)}
+.acm-student-menu,.acm-student-notification{width:52px;height:52px;flex:0 0 52px;border:0;border-radius:16px;background:#fff;color:var(--acm-text-primary);display:grid;place-items:center;box-shadow:0 2px 8px rgba(15,23,42,.07);font-size:1.35rem;text-decoration:none;position:relative}
+.acm-student-brand{display:flex;align-items:center;gap:10px;color:var(--acm-text-primary);font-size:1rem;font-weight:800;line-height:1.25;text-decoration:none;flex:1}
+.acm-student-brand-mark{width:38px;height:38px;border-radius:12px;background:var(--school-primary,#001C2C);color:#fff;display:grid;place-items:center}
+.acm-student-notification .acm-badge{top:7px;right:7px}
+.acm-student-welcome{display:flex;align-items:center;gap:16px;margin:10px 0 22px;padding:4px 0}
+.acm-student-avatar{width:104px;height:104px;flex:0 0 104px;border-radius:20px;border:2px solid #fff;background:#e2e8f0;box-shadow:0 1px 4px rgba(15,23,42,.12);display:grid;place-items:center;color:#94a3b8;font-size:2.6rem}
+.acm-student-welcome-copy{min-width:0}.acm-student-eyebrow{display:block;color:var(--school-primary,#001C2C);font-weight:800;font-size:.78rem;letter-spacing:.1em;margin-bottom:4px}
+.acm-student-welcome h1{font-size:clamp(1.3rem,4vw,1.8rem);line-height:1.2;letter-spacing:-.04em;margin:0;color:var(--acm-text-primary);font-weight:800}
+.acm-student-welcome-copy>p{margin:6px 0;color:var(--acm-text-secondary);font-size:.9rem}
+.acm-student-context{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}.acm-student-context span{display:inline-flex;align-items:center;gap:6px;background:#e8eaff;color:var(--school-primary,#3730a3);border-radius:999px;padding:6px 10px;font-size:.75rem;font-weight:700}
+.acm-portal-shell{background:#f3f5fa}.acm-main-content{max-width:1440px}
+.acm-section-title{font-size:1rem;text-transform:none;letter-spacing:-.02em;color:var(--acm-text-primary)}
+.acm-card,.acm-quick-card,.acm-announcement-card,.acm-attention-card{border-radius:20px}.acm-quick-card{padding:18px;min-height:142px}
+.acm-quick-title{font-size:.82rem}.acm-quick-value{font-size:1.65rem;letter-spacing:-.04em}.acm-quick-card .acm-card-action{margin-top:auto}
+.acm-announcement-card{background:#fff;border-color:var(--acm-border);box-shadow:var(--acm-shadow-xs)}.acm-dashboard-grid>div{gap:20px!important}
+.acm-student-sidebar-overlay{display:none}
+@media(min-width:1024px){.acm-student-topbar{display:none}.acm-sidebar{z-index:1001}.acm-main-content{padding:28px 34px}.acm-student-welcome{margin-top:0}}
+@media(max-width:1023px){.acm-sidebar{display:flex;position:fixed;top:0;bottom:0;left:0;width:min(290px,86vw);z-index:1102;transform:translateX(-105%);transition:transform .22s ease;box-shadow:0 12px 35px rgba(15,23,42,.18)}.acm-sidebar.is-open{transform:translateX(0)}.acm-student-sidebar-overlay{position:fixed;inset:0;z-index:1101;background:rgba(15,23,42,.42);border:0;display:none}.acm-student-sidebar-overlay.is-open{display:block}.acm-student-menu-open{overflow:hidden}.acm-bottom-nav{z-index:1000}}
+@media(max-width:600px){.acm-student-topbar{padding:12px 16px;gap:12px}.acm-student-menu,.acm-student-notification{width:52px;height:52px;flex-basis:52px}.acm-student-welcome{gap:14px;margin:8px 0 18px}.acm-student-avatar{width:96px;height:96px;flex-basis:96px}.acm-main-content{padding:14px;padding-bottom:calc(92px + env(safe-area-inset-bottom))}.acm-dashboard-grid{display:flex;flex-direction:column}.acm-dashboard-grid>div{width:100%}.acm-quick-grid{gap:12px}}
+@media(max-width:380px){.acm-student-avatar{width:78px;height:78px;flex-basis:78px;font-size:2rem}.acm-student-welcome h1{font-size:1.22rem}.acm-student-context span{font-size:.68rem}}
+@media(prefers-reduced-motion:reduce){.acm-sidebar{transition:none}}

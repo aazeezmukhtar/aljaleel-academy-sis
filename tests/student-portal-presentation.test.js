@@ -140,3 +140,32 @@ check('student, staff and admin mobile headers use the same single-line school-n
   assert.match(sharedHeader, /school\.school_name/);
   assert.match(sharedHeader, /currentSchool\.school_name/);
 });
+
+check('student dashboard uses the latest published result period and shows no more than five subjects', () => {
+  const dashboard = read('views/portal/index.ejs');
+  assert.match(portalController, /SELECT r\.session, r\.term[\s\S]*?r\.status IN \('approved', 'published'\)/);
+  assert.match(portalController, /resultSession: latestPeriod\.session/);
+  assert.match(portalController, /resultTerm: latestPeriod\.term/);
+  assert.match(dashboard, /sectionSummary\.resultSession/);
+  assert.match(dashboard, /sectionSummary\.resultTerm/);
+  assert.match(dashboard, /sectionResults\.slice\(0, 5\)/);
+  assert.match(dashboard, /result\.subject_name/);
+});
+check('student dashboard displays the stored student portrait and compact greeting without duplicate full name or term', () => {
+  const dashboard = read('views/portal/index.ejs');
+  assert.match(portalController, /SELECT passport_photo_path FROM students/);
+  assert.match(dashboard, /student\.passport_photo_path/);
+  assert.doesNotMatch(dashboard, /studentFullName/);
+  assert.doesNotMatch(dashboard, /student\.name \|\| \[student\.first_name/);
+  assert.match(referenceCss, /\.acm-student-avatar img/);
+  assert.match(referenceCss, /white-space:nowrap/);
+});
+check('student hamburger sidebar includes direct academic links and existing student destinations', () => {
+  assert.match(nav, /href="\/portal\/academics\/results"/);
+  assert.match(nav, /href="\/portal\/academics\/subjects"/);
+  assert.match(nav, /href="\/portal\/attendance"/);
+  assert.match(nav, /href="\/portal\/notifications"/);
+  assert.match(nav, /href="\/portal\/calendar"/);
+  assert.match(nav, /href="\/portal\/profile"/);
+  assert.match(nav, /href="\/auth\/student-logout"/);
+});

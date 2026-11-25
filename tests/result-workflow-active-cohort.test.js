@@ -35,8 +35,9 @@ for (const [name, body] of [['approval', approval], ['locking', locking], ['publ
 assert.match(manager, /CA_COUNT:/);
 assert.match(manager, /value="<%= s\.ca1 \?\? '' %>"/);
 assert.match(manager, /value="<%= s\.exam \?\? '' %>"/);
-assert.match(manager, /const complete = rawCa1 !== '' && rawExam !== ''/);
-assert.match(manager, /if \(!complete\)[\\s\\S]*totalCell\.textContent = '-'/);
+assert.match(manager, /const availableScores = \[rawCa1/);
+assert.match(manager, /availableScores\.length === 0/);
+assert.match(manager, /availableScores\.reduce/);
 
 const broadsheetHandler = reportController.slice(reportController.indexOf('const getBroadsheet'), reportController.indexOf('const getSubjectAnalysis'));
 assert.match(broadsheetHandler, /'draft', 'submitted', 'approved', 'locked', 'published'/);

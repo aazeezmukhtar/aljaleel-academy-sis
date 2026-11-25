@@ -146,9 +146,18 @@ check('student dashboard uses the latest published result period and shows no mo
   assert.match(portalController, /SELECT r\.session, r\.term[\s\S]*?r\.status IN \('approved', 'published'\)/);
   assert.match(portalController, /resultSession: latestPeriod\.session/);
   assert.match(portalController, /resultTerm: latestPeriod\.term/);
+  // Latest published period lookup is scoped to the student and class, not
+  // the currently active term; this preserves the prior term until publication.
+  const latestPeriodQuery = portalController.slice(
+    portalController.indexOf('const latestPeriod = await db.get'),
+    portalController.indexOf('const latestPeriod = await db.get') + 900
+  );
+  assert.match(latestPeriodQuery, /r\.status IN \('approved', 'published'\)/);
+  assert.doesNotMatch(latestPeriodQuery, /current_term|activeTerm|section\.term/);
   assert.match(dashboard, /sectionSummary\.resultSession/);
   assert.match(dashboard, /sectionSummary\.resultTerm/);
   assert.match(dashboard, /sectionResults\.slice\(0, 5\)/);
+  assert.match(dashboard, /<div class="acm-term-chip"[\s\S]*?section\.session[\s\S]*?section\.term/);
   assert.match(dashboard, /result\.subject_name/);
 });
 check('student dashboard displays the stored student portrait and compact greeting without duplicate full name or term', () => {

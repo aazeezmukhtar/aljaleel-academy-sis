@@ -3,7 +3,7 @@
 .acm-dashboard-section{display:flex;flex-direction:column;gap:14px}
 .acm-dashboard-section[hidden]{display:none!important}
 .acm-section-switcher{display:flex;gap:4px;padding:4px;margin:0 0 12px;border-radius:16px;background:#e2e8f0}
-.acm-section-switch{flex:1;min-height:44px;border:0;border-radius:13px;background:transparent;color:#475569;font:600 .82rem inherit;cursor:pointer}
+.acm-section-switch{flex:1;min-height:44px;border:0;border-radius:13px;background:transparent;color:#475569;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer}
 .acm-section-switch.is-active{background:#fff;color:#3730a3;box-shadow:0 1px 4px rgba(15,23,42,.08)}
 .acm-section-switch:focus-visible{outline:3px solid #fbbf24;outline-offset:2px}
 .acm-term-chip{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:#e5e9ff;color:#3730a3;font-size:.72rem;font-weight:700}

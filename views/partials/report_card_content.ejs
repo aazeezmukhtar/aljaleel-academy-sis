@@ -131,7 +131,7 @@
                             <%= row.exam !== null && row.exam !== undefined && row.exam !== '' ? row.exam : '-' %>
                         </td>
                         <td class="rc-td-center rc-td-bold">
-                            <%= row.total %>
+                            <%= row.total !== null && row.total !== undefined ? row.total : '-' %>
                         </td>
                         <td class="rc-td-center">
                             <%= getOrdinal(row.subject_rank || 1) %>

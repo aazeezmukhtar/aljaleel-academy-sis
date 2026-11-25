@@ -67,11 +67,15 @@
                     </a>
                     <div class="acm-student-stat-card">
                         <span class="acm-stat-icon acm-stat-amber"><i class="bi bi-award"></i></span>
-                        <strong><%= section.position ? section.position + (section.position === 1 ? 'st' : section.position === 2 ? 'nd' : section.position === 3 ? 'rd' : 'th') : '—' %></strong><small>Class position · <%= sectionSummary && sectionSummary.resultTerm ? sectionSummary.resultTerm : 'No published result' %></small>
+                        <strong><%= section.position ? section.position + (section.position === 1 ? 'st' : section.position === 2 ? 'nd' : section.position === 3 ? 'rd' : 'th') : '—' %></strong>
+                        <% if (section.positionTrend !== null && section.positionTrend !== undefined) { %><span class="acm-stat-trend <%= section.positionTrend > 0 ? 'is-up' : section.positionTrend < 0 ? 'is-down' : 'is-flat' %>"><i class="bi bi-arrow-<%= section.positionTrend > 0 ? 'up' : section.positionTrend < 0 ? 'down' : 'right' %>"></i><%= section.positionTrend > 0 ? '+' : '' %><%= section.positionTrend %></span><% } %>
+                        <small>Class position · <%= sectionSummary && sectionSummary.resultTerm ? sectionSummary.resultTerm : 'No published result' %></small>
                     </div>
                     <div class="acm-student-stat-card">
                         <span class="acm-stat-icon acm-stat-pink"><i class="bi bi-bar-chart"></i></span>
-                        <strong><%= section.studentAverage !== null ? section.studentAverage.toFixed(1) + '%' : '—' %></strong><small>Class average · <%= sectionSummary && sectionSummary.resultTerm ? sectionSummary.resultTerm : 'No published result' %></small>
+                        <strong><%= section.studentAverage !== null ? section.studentAverage.toFixed(1) + '%' : '—' %></strong>
+                        <% if (section.averageTrend !== null && section.averageTrend !== undefined) { %><span class="acm-stat-trend <%= section.averageTrend > 0 ? 'is-up' : section.averageTrend < 0 ? 'is-down' : 'is-flat' %>"><i class="bi bi-arrow-<%= section.averageTrend > 0 ? 'up' : section.averageTrend < 0 ? 'down' : 'right' %>"></i><%= section.averageTrend > 0 ? '+' : '' %><%= section.averageTrend.toFixed(1) %>%</span><% } %>
+                        <small>Class average · <%= sectionSummary && sectionSummary.resultTerm ? sectionSummary.resultTerm : 'No published result' %></small>
                     </div>
                 </div>
 

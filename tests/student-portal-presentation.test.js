@@ -107,7 +107,7 @@ check('student identity and section-owned academic context remain represented in
   const dashboard = read('views/portal/index.ejs');
   const profile = read('views/portal/profile.ejs');
   const academicResults = read('views/portal/academics/results.ejs');
-  assert.match(dashboard, /sectionInfo/);
+  assert.match(dashboard, /dashboardSectionStats/);
   assert.match(profile, /sectionInfo/);
   assert.match(academicResults, /selectedClassId/);
   assert.match(academicResults, /selectedClass\.section_name/);

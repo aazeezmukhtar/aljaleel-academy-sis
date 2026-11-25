@@ -655,10 +655,7 @@ const saveResults = async (req, res) => {
             if ([ca1, ca2, exam].some(value => Number.isNaN(value))) {
                 return null;
             }
-            const complete = ca1 !== null && exam !== null && (caCount === 1 || ca2 !== null);
-            const computed = complete
-                ? computeResult(ca1, caCount === 1 ? 0 : ca2, exam)
-                : { total: null, grade: null };
+            const computed = computeResult(ca1, caCount === 1 ? null : ca2, exam);
             return { ...item, ca1, ca2, exam, total: computed.total, grade: computed.grade };
         });
         if (normalizedScores.some(item => item === null)) {

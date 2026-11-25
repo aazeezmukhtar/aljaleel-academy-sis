@@ -650,10 +650,11 @@
             const rawCa1 = ca1El ? ca1El.value.trim() : '';
             const rawCa2 = ca2El ? ca2El.value.trim() : '';
             const rawExam = examEl ? examEl.value.trim() : '';
-            const complete = rawCa1 !== '' && rawExam !== '' && (CONFIG.CA_COUNT === 1 || rawCa2 !== '');
             const totalCell = row.querySelector('.total');
             const gradeCell = row.querySelector('.grade');
-            if (!complete) {
+            const availableScores = [rawCa1, ...(CONFIG.CA_COUNT === 1 ? [] : [rawCa2]), rawExam]
+                .filter(value => value !== '');
+            if (availableScores.length === 0) {
                 if (totalCell) totalCell.textContent = '-';
                 if (gradeCell) {
                     gradeCell.textContent = '-';
@@ -662,11 +663,8 @@
                 return;
             }
 
-            const ca1 = Number(rawCa1);
-            const ca2 = CONFIG.CA_COUNT === 1 ? 0 : Number(rawCa2);
-            const exam = Number(rawExam);
-            const numTotal = ca1 + ca2 + exam;
-            const cleanTotal = Number.isInteger(numTotal) ? numTotal : parseFloat(numTotal.toFixed(1));
+            const rawTotal = availableScores.reduce((sum, value) => sum + Number(value), 0);
+            const cleanTotal = Number.isInteger(rawTotal) ? rawTotal : parseFloat(rawTotal.toFixed(1));
             if (totalCell) totalCell.textContent = cleanTotal;
 
             // Determine Grade & apply color attribute

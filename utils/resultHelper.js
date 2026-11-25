@@ -1,9 +1,7 @@
 /**
- * Computes the total score and assigns a grade based on the scale.
- * @param {number} ca1 - Continuous Assessment 1
- * @param {number} ca2 - Continuous Assessment 2
- * @param {number} exam - Examination Score
- * @returns {object} { total, grade }
+ * Computes a result from the assessment marks that are actually present.
+ * Blank/null assessments are excluded from display and contribute no points.
+ * A result with no recorded assessment marks remains ungraded.
  */
 const getGrade = (total) => {
     if (total >= 70) return 'A';
@@ -14,11 +12,17 @@ const getGrade = (total) => {
     return 'F';
 };
 
-const computeResult = (ca1 = 0, ca2 = 0, exam = 0) => {
-    const total = (parseFloat(ca1) || 0) + (parseFloat(ca2) || 0) + (parseFloat(exam) || 0);
-    const grade = getGrade(total);
-    return { total, grade };
+const computeResult = (...scores) => {
+    const available = scores
+        .filter(value => value !== null && value !== undefined && !(typeof value === 'string' && value.trim() === ''))
+        .map(value => Number(value))
+        .filter(Number.isFinite);
+
+    if (available.length === 0) return { total: null, grade: null };
+
+    const rawTotal = available.reduce((sum, value) => sum + value, 0);
+    const total = Number.isInteger(rawTotal) ? rawTotal : Number(rawTotal.toFixed(1));
+    return { total, grade: getGrade(total) };
 };
 
 module.exports = { computeResult, getGrade };
-

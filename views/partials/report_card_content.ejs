@@ -7,8 +7,9 @@
     return 'Fail';
     };
     var grandTotal = 0;
-    var subjectCount = results.length;
-    results.forEach(function(r) { grandTotal += (r.total || 0); });
+    var scoredResults = results.filter(function(r) { return r.total !== null && r.total !== undefined && r.total !== ''; });
+    var subjectCount = scoredResults.length;
+    scoredResults.forEach(function(r) { grandTotal += Number(r.total); });
     var avg = subjectCount > 0 ? grandTotal / subjectCount : 0;
     var maxPoints = subjectCount * 100;
     var overallGrade = 'F';
@@ -123,11 +124,11 @@
                         </td>
                         <% for(let i = 1; i <= (typeof caCount !== 'undefined' ? caCount : 2); i++) { %>
                         <td class="rc-td-center">
-                            <%= row['ca' + i] || 0 %>
+                            <%= row['ca' + i] !== null && row['ca' + i] !== undefined && row['ca' + i] !== '' ? row['ca' + i] : '-' %>
                         </td>
                         <% } %>
                         <td class="rc-td-center">
-                            <%= row.exam || 0 %>
+                            <%= row.exam !== null && row.exam !== undefined && row.exam !== '' ? row.exam : '-' %>
                         </td>
                         <td class="rc-td-center rc-td-bold">
                             <%= row.total %>
@@ -136,7 +137,7 @@
                             <%= getOrdinal(row.subject_rank || 1) %>
                         </td>
                         <td class="rc-td-remark">
-                            <%= getGradeRemark(row.total) %>
+                            <%= row.total !== null && row.total !== undefined ? getGradeRemark(row.total) : '-' %>
                         </td>
                     </tr>
                     <% }); %>

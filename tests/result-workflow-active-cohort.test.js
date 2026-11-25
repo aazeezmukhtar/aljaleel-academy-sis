@@ -17,10 +17,10 @@ assert.match(save, /normalizedStatus === 'submitted'[\\s\\S]*activeStudentIds\.s
   'Submission must contain exactly the active student cohort');
 assert.match(save, /const scoreValue = value => value === ''[\\s\\S]*?\? null/,
   'Blank score components must persist as NULL, not zero');
-assert.match(save, /computeResult\\(ca1, caCount === 1 \? 0 : ca2, exam\\)/,
-  'A total must be calculated only from complete configured assessment components');
-assert.match(save, /total: null, grade: null/,
-  'Incomplete or fully absent assessment rows must not receive a zero total or failing grade');
+assert.match(save, /computeResult/,
+  'Result saving must use the shared partial-assessment calculation helper');
+assert.match(save, /computeResult\\(ca1, caCount === 1 \\? null : ca2, exam\\)/,
+  'Blank configured assessments must be ignored while available marks are totalled');
 
 const approval = controller.slice(controller.indexOf('const approveResults'), controller.indexOf('const lockResults'));
 const locking = controller.slice(controller.indexOf('const lockResults'), controller.indexOf('const unlockResults'));
@@ -35,8 +35,9 @@ for (const [name, body] of [['approval', approval], ['locking', locking], ['publ
 assert.match(manager, /CA_COUNT:/);
 assert.match(manager, /value="<%= s\.ca1 \?\? '' %>"/);
 assert.match(manager, /value="<%= s\.exam \?\? '' %>"/);
-assert.match(manager, /const complete = rawCa1 !== '' && rawExam !== ''/);
-assert.match(manager, /if \(!complete\)[\\s\\S]*totalCell\.textContent = '-'/);
+assert.match(manager, /const availableScores = \[rawCa1/);
+assert.match(manager, /availableScores\.length === 0/);
+assert.match(manager, /availableScores\.reduce/);
 
 const broadsheetHandler = reportController.slice(reportController.indexOf('const getBroadsheet'), reportController.indexOf('const getSubjectAnalysis'));
 assert.match(broadsheetHandler, /'draft', 'submitted', 'approved', 'locked', 'published'/);

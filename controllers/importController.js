@@ -117,6 +117,9 @@ const processImport = async (req, res) => {
 
         const errors = [];
         const resultsToSave = [];
+        const resultController = require('./resultController');
+        const resultConfig = await resultController.getSectionResultConfig(Number(class_id), schoolId);
+        const caCount = Number(resultConfig.ca_count || 2) > 1 ? 2 : 1;
         const baseSubject = await db.get('SELECT id FROM subjects WHERE id = ? AND school_id = ?', [subject_id, schoolId]);
         if (!baseSubject) {
             if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
@@ -127,9 +130,14 @@ const processImport = async (req, res) => {
             const row = data[i];
             const admissionNo = row['student_id'] || row['Admission Number'] || row['ADMISSION NUMBER'];
             const subjectName = row['subject'] || row['SUBJECT'];
-            const ca1 = parseFloat(row['ca1'] || row['CA1'] || 0);
-            const ca2 = parseFloat(row['ca2'] || row['CA2'] || 0);
-            const exam = parseFloat(row['exam'] || row['Exam'] || row['EXAM'] || 0);
+            const parseMark = value => {
+                if (value === undefined || value === null || String(value).trim() === '') return null;
+                const parsed = Number(value);
+                return Number.isFinite(parsed) ? parsed : NaN;
+            };
+            const ca1 = parseMark(row['ca1'] ?? row['CA1']);
+            const ca2 = parseMark(row['ca2'] ?? row['CA2']);
+            const exam = parseMark(row['exam'] ?? row['Exam'] ?? row['EXAM']);
 
             if (!admissionNo) {
                 errors.push(`Row ${i + 2}: Student ID is missing.`);
@@ -183,11 +191,16 @@ const processImport = async (req, res) => {
                 continue;
             }
 
-            const { total, grade } = computeResult(ca1, ca2, exam);
+            if ([ca1, caCount === 1 ? null : ca2, exam].some(value => Number.isNaN(value))) {
+                errors.push(`Row ${i + 2}: Assessment marks must be numbers or left blank.`);
+                continue;
+            }
+            const normalizedCa2 = caCount === 1 ? null : ca2;
+            const { total, grade } = computeResult(ca1, normalizedCa2, exam);
             resultsToSave.push({
                 student_id: student.id,
                 subject_id: activeSubjectId,
-                ca1, ca2, exam, total, grade
+                ca1, ca2: normalizedCa2, exam, total, grade
             });
         }
 
@@ -212,11 +225,11 @@ const processImport = async (req, res) => {
                     Number(item.subject_id),
                     String(term),
                     String(session),
-                    Number(item.ca1) || 0,
-                    Number(item.ca2) || 0,
-                    Number(item.exam) || 0,
-                    Number(item.total) || 0,
-                    String(item.grade || '')
+                    item.ca1,
+                    item.ca2,
+                    item.exam,
+                    item.total,
+                    item.grade
                 ], txClient);
             }
         });

@@ -6,7 +6,7 @@
     return 'Fail';
     };
     var grandTotal = 0;
-    var subjectCount = subjects.length;
+    var subjectCount = 0;
     var termAverages = {'1st Term': 0, '2nd Term': 0, '3rd Term': 0};
     var termCounts = {'1st Term': 0, '2nd Term': 0, '3rd Term': 0};
 
@@ -22,9 +22,12 @@
                 termsPresent++;
             }
         });
-        var subjAvg = termsPresent > 0 ? subjTotal / termsPresent : 0;
+        var subjAvg = termsPresent > 0 ? subjTotal / termsPresent : null;
         s.avg = subjAvg;
-        grandTotal += subjAvg; 
+        if (subjAvg !== null) {
+            grandTotal += subjAvg;
+            subjectCount++;
+        } 
     });
 
     var overallAvg = subjectCount > 0 ? grandTotal / subjectCount : 0;
@@ -125,8 +128,8 @@
                             <td class="rc-td-center"><%= row.terms['1st Term'] !== undefined && row.terms['1st Term'] !== null ? row.terms['1st Term'] : '-' %></td>
                             <td class="rc-td-center"><%= row.terms['2nd Term'] !== undefined && row.terms['2nd Term'] !== null ? row.terms['2nd Term'] : '-' %></td>
                             <td class="rc-td-center"><%= row.terms['3rd Term'] !== undefined && row.terms['3rd Term'] !== null ? row.terms['3rd Term'] : '-' %></td>
-                            <td class="rc-td-center rc-td-bold"><%= row.avg.toFixed(1) %></td>
-                            <td class="rc-td-remark"><%= getGradeRemark(row.avg) %></td>
+                            <td class="rc-td-center rc-td-bold"><%= row.avg !== null ? row.avg.toFixed(1) : '-' %></td>
+                            <td class="rc-td-remark"><%= row.avg !== null ? getGradeRemark(row.avg) : '-' %></td>
                         </tr>
                     <% }); %>
                 </tbody>

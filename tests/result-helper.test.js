@@ -26,7 +26,10 @@ for (const item of cases) {
 assert.deepStrictEqual(computeResult(20, 20, 60), { total: 100, grade: 'A' });
 assert.deepStrictEqual(computeResult('15', '15', '40'), { total: 70, grade: 'A' });
 assert.deepStrictEqual(computeResult(0, 0, 0), { total: 0, grade: 'F' });
-assert.deepStrictEqual(computeResult(undefined, null, ''), { total: 0, grade: 'F' });
+assert.deepStrictEqual(computeResult(30, null, 40), { total: 70, grade: 'A' });
+assert.deepStrictEqual(computeResult(30, '', null), { total: 30, grade: 'E' });
+assert.deepStrictEqual(computeResult(null, 40, undefined), { total: 40, grade: 'D' });
+assert.deepStrictEqual(computeResult(undefined, null, ''), { total: null, grade: null });
 assert.deepStrictEqual(computeResult('invalid', 10, 20), { total: 30, grade: 'E' });
 
 console.log('Result helper unit tests passed (grade boundaries and score input handling).');

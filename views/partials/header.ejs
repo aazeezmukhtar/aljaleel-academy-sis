@@ -83,7 +83,7 @@
         <button type="button" class="mobile-hamburger" onclick="toggleSidebar()" style="cursor:pointer;" aria-label="Open navigation menu" aria-controls="main-sidebar" aria-expanded="false">
             <i class="bi bi-list"></i>
         </button>
-        <span class="mobile-topbar-title"><%= title.includes('Dashboard') ? 'AcadMe' : title %></span>
+        <span class="mobile-topbar-title"><%= title.includes('Dashboard') ? ((typeof school !== 'undefined' && school && school.school_name) || (typeof currentSchool !== 'undefined' && currentSchool && currentSchool.school_name) || 'AcadMe') : title %></span>
         <div class="mobile-topbar-actions">
             <% if (typeof user !== 'undefined' && user) { %>
             <div class="notification-bell-container" role="button" tabindex="0" aria-label="Open notifications" aria-haspopup="true" aria-expanded="false" onkeydown="if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleNotificationDropdown(event); }" onclick="toggleNotificationDropdown(event)" style="position:relative;">

@@ -1,0 +1,66 @@
+/* Student dashboard — reference-led compact mobile-first layout */
+.acm-student-dashboard{display:block;max-width:1180px;margin:0 auto}
+.acm-dashboard-section{display:flex;flex-direction:column;gap:14px}
+.acm-dashboard-section[hidden]{display:none!important}
+.acm-section-switcher{display:flex;gap:4px;padding:4px;margin:0 0 12px;border-radius:16px;background:#e2e8f0}
+.acm-section-switch{flex:1;min-height:44px;border:0;border-radius:13px;background:transparent;color:#475569;font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer}
+.acm-section-switch.is-active{background:#fff;color:#3730a3;box-shadow:0 1px 4px rgba(15,23,42,.08)}
+.acm-section-switch:focus-visible{outline:3px solid #fbbf24;outline-offset:2px}
+.acm-term-chip{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:#e5e9ff;color:#3730a3;font-size:.72rem;font-weight:700}
+.acm-attendance-feature{min-height:144px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 24px;border-radius:24px;background:#4338ca;color:#fff;text-decoration:none;position:relative;overflow:hidden}
+.acm-attendance-feature>div:first-child{display:flex;flex-direction:column;align-items:flex-start;min-width:0}
+.acm-attendance-feature span{font-size:.78rem;font-weight:700;color:rgba(255,255,255,.86)}
+.acm-attendance-feature strong{font-size:2.55rem;line-height:1.05;letter-spacing:-.06em;margin:7px 0 10px}
+.acm-attendance-feature small{display:inline-flex;padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.2);font-size:.72rem;font-weight:700}
+.acm-attendance-ring{width:88px;height:88px;flex:0 0 88px;border-radius:50%;background:conic-gradient(#fbbf24 var(--attendance-rate),rgba(255,255,255,.2) 0);display:grid;place-items:center;transform:rotate(-35deg)}
+.acm-attendance-ring span{width:68px;height:68px;border-radius:50%;background:#4338ca}
+.acm-student-stat-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.acm-student-stat-card{min-width:0;min-height:132px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;padding:16px;border-radius:21px;background:#fff;color:#111827;text-decoration:none;box-shadow:0 2px 5px rgba(20,35,65,.045)}
+.acm-stat-icon{width:42px;height:42px;display:grid;place-items:center;border-radius:15px;font-size:1.1rem;margin-bottom:11px}
+.acm-stat-indigo{background:#e3e8ff;color:#4f46e5}.acm-stat-green{background:#d9f7ec;color:#00866a}.acm-stat-amber{background:#fff2d6;color:#c45a00}.acm-stat-pink{background:#fce2ef;color:#c2185b}
+.acm-student-stat-card strong{font-size:1.45rem;line-height:1.1;letter-spacing:-.045em;font-weight:800;overflow-wrap:anywhere}
+.acm-student-stat-card small{margin-top:4px;color:#71819c;font-size:.72rem;line-height:1.3}
+.acm-smart-analysis{display:flex;align-items:center;gap:12px;padding:16px;border-radius:21px;background:#fff;box-shadow:0 2px 5px rgba(20,35,65,.045)}
+.acm-smart-analysis>div{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.acm-smart-analysis span{font-size:.9rem;font-weight:800;color:#71819c}
+.acm-smart-analysis strong{font-size:.78rem;line-height:1.45;color:#172033}
+.acm-smart-analysis small{font-size:.7rem;line-height:1.35;color:#71819c}
+.acm-smart-analysis>i{color:#94a3b8;font-size:.8rem}
+.acm-dashboard-results,.acm-dashboard-announcements{padding:18px;border-radius:22px;background:#fff;box-shadow:0 2px 5px rgba(20,35,65,.045)}
+.acm-dashboard-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.acm-dashboard-section-heading h2{margin:0;color:#172033;font-size:.98rem;font-weight:800}
+.acm-dashboard-section-heading>a{color:#4338ca;font-size:.76rem;font-weight:700;text-decoration:none}
+.acm-dashboard-result-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid #e1e7f1;text-decoration:none;color:#172033}
+.acm-dashboard-result-row>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.acm-dashboard-result-row strong{font-size:.84rem}
+.acm-dashboard-result-row small{font-size:.7rem;color:#71819c}
+.acm-dashboard-result-row>b{display:flex;flex-direction:column;align-items:flex-end;color:#3730a3;font-size:1.05rem}
+.acm-dashboard-empty,.acm-dashboard-empty-card{font-size:.78rem;color:#71819c;line-height:1.5}
+.acm-dashboard-empty-card{padding:18px;border-radius:18px;background:#fff}
+.acm-dashboard-announcements{margin:18px auto 0;max-width:1180px;border-top:4px solid #6366f1}
+.acm-dashboard-announcement{display:block;margin-top:12px;padding:15px;border:1px solid #e1e7f1;border-radius:18px;background:#f8fafc;text-decoration:none;color:#172033}
+.acm-announcement-date{display:flex;justify-content:space-between;gap:8px;margin-bottom:9px;color:#71819c;font-size:.7rem}
+.acm-announcement-date span{padding:4px 9px;border-radius:99px;background:#dbeafe;color:#1d4ed8;font-weight:800}
+.acm-dashboard-announcement>strong{display:block;font-size:.86rem;line-height:1.35}
+.acm-dashboard-announcement p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin:8px 0;color:#64748b;font-size:.76rem;line-height:1.5}
+.acm-dashboard-announcement>b{color:#4338ca;font-size:.76rem}
+@media(min-width:768px){
+ .acm-dashboard-section{gap:18px}
+ .acm-attendance-feature{min-height:170px;padding:28px 32px}
+ .acm-attendance-feature strong{font-size:3rem}
+ .acm-attendance-ring{width:104px;height:104px;flex-basis:104px}
+ .acm-attendance-ring span{width:80px;height:80px}
+ .acm-student-stat-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+ .acm-student-stat-card{min-height:150px;padding:18px}
+ .acm-smart-analysis,.acm-dashboard-results,.acm-dashboard-announcements{padding:22px}
+}
+@media(max-width:380px){
+ .acm-attendance-feature{min-height:126px;padding:17px;border-radius:20px}
+ .acm-attendance-feature strong{font-size:2.15rem}
+ .acm-attendance-ring{width:72px;height:72px;flex-basis:72px}
+ .acm-attendance-ring span{width:56px;height:56px}
+ .acm-student-stat-card{min-height:120px;padding:13px;border-radius:18px}
+ .acm-student-stat-card strong{font-size:1.25rem}
+ .acm-dashboard-results,.acm-dashboard-announcements{padding:15px}
+}
+@media(prefers-reduced-motion:reduce){.acm-section-switch{transition:none}}

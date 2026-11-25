@@ -10,6 +10,10 @@ const routes = read('routes/portalRoutes.js');
 const head = read('views/partials/student_shell_head.ejs');
 const nav = read('views/partials/student_shell_nav.ejs');
 const modernCss = read('public/css/student-portal-modern.css');
+const referenceCss = read('public/css/student-dashboard-reference.css');
+const sharedHeader = read('views/partials/header.ejs');
+const studentHeader = read('views/partials/student_shell_header.ejs');
+const portalController = read('controllers/portalController.js');
 
 const templates = [
   'views/portal/index.ejs',
@@ -103,9 +107,36 @@ check('student identity and section-owned academic context remain represented in
   const dashboard = read('views/portal/index.ejs');
   const profile = read('views/portal/profile.ejs');
   const academicResults = read('views/portal/academics/results.ejs');
-  assert.match(dashboard, /sectionInfo/);
+  assert.match(dashboard, /dashboardSectionStats/);
   assert.match(profile, /sectionInfo/);
   assert.match(academicResults, /selectedClassId/);
   assert.match(academicResults, /selectedClass\.section_name/);
 });
 
+
+check('student dashboard matches the reference composition and only offers Academy/Tahfeez switching for dual-section students', () => {
+  const dashboard = read('views/portal/index.ejs');
+  assert.match(dashboard, /acm-attendance-feature/);
+  assert.match(dashboard, /acm-student-stat-grid/);
+  assert.match(dashboard, /acm-smart-analysis/);
+  assert.match(dashboard, /acm-dashboard-results/);
+  assert.match(dashboard, /acm-dashboard-announcements/);
+  assert.match(dashboard, /sectionNames\.includes\('academy'\).*sectionNames\.includes\('tahfeez'\)/);
+  assert.match(dashboard, /data-section-switch/);
+  assert.match(portalController, /dashboardSectionStats/);
+  assert.match(portalController, /r\.class_id = \? AND r\.session = \? AND r\.term = \?/);
+  assert.match(portalController, /JOIN classes c ON c\.id = r\.class_id/);
+});
+check('student dashboard keeps performance data section-owned and compact typography is loaded', () => {
+  assert.match(portalController, /section_id, r\.session, r\.term/);
+  assert.match(portalController, /sectionId: Number\(section\.section_id\)/);
+  assert.match(referenceCss, /\.acm-attendance-feature/);
+  assert.match(referenceCss, /\.acm-student-stat-grid/);
+  assert.match(referenceCss, /@media\(max-width:380px\)/);
+});
+check('student, staff and admin mobile headers use the same single-line school-name treatment', () => {
+  assert.match(studentHeader, /mobile-topbar-title/);
+  assert.match(studentHeader, /school\.school_name/);
+  assert.match(sharedHeader, /school\.school_name/);
+  assert.match(sharedHeader, /currentSchool\.school_name/);
+});

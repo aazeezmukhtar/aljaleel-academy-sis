@@ -1,188 +1,147 @@
 <!DOCTYPE html>
 <html lang="en" dir="ltr">
-<head>
-    <%- include('../partials/student_shell_head') %>
-</head>
+<head><%- include('../partials/student_shell_head') %></head>
 <body>
-
 <div class="acm-portal-shell">
-    
     <%- include('../partials/student_shell_nav') %>
-    
     <main class="acm-main-content portal-home-page">
         <%- include('../partials/student_shell_header') %>
-<% const hour = new Date().getHours(); let greeting = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening'); %>
-<% const studentName = student.first_name || (student.name ? student.name.split(' ')[0] : 'Student'); %>
-<% const studentFullName = student.name || [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Student'; %>
-<% const studentContext = (typeof sectionInfo !== 'undefined' && sectionInfo && sectionInfo.length > 1) ? sectionInfo.map(s => (s.section_name ? s.section_name + ': ' : '') + s.class_name).join(' · ') : (student.class_name || 'Unassigned'); %>
-<section class="acm-student-welcome"><div class="acm-student-avatar" aria-hidden="true"><i class="bi bi-person"></i></div><div class="acm-student-welcome-copy"><span class="acm-student-eyebrow">STUDENT</span><h1><%= greeting %>, <%= studentName %></h1><p><%= studentFullName %></p><div class="acm-student-context"><span><i class="bi bi-mortarboard"></i><%= studentContext %></span><span><i class="bi bi-calendar3"></i><%= currentSession %> · <%= currentTerm %></span></div></div></section>
-
-        <div class="acm-dashboard-grid">
-            
-            <!-- Left Column / Primary Content -->
-            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-20);">
-                
-                <!-- Section 1: Report Cards -->
-                <section class="acm-section">
-                    <h2 class="acm-section-title">Report Cards</h2>
-                    <% if (results && results.length > 0) { %>
-                        <div class="acm-card" style="gap: var(--acm-sp-16);">
-                            <% results.forEach((result, index) => { %>
-                                <div style="<% if(index > 0) { %>border-top: 1px solid var(--acm-border); padding-top: var(--acm-sp-16);<% } %>">
-                                    <div style="margin-bottom: var(--acm-sp-8);">
-                                        <strong style="display: block; font-size: var(--acm-text-md); color: var(--acm-text-primary);">
-                                            <%= result.class_name || 'Unassigned legacy record' %> — <%= result.term %>
-                                        </strong>
-                                        <span style="font-size: var(--acm-text-sm); color: var(--acm-text-secondary);">
-                                            <%= result.session %> · <%= result.subjects_taken %> subjects
-                                        </span>
-                                    </div>
-                                    <% if (result.class_id) { %>
-                                        <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap;">
-                                            <a href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_id=<%= result.class_id %>" target="_blank" class="acm-card-action" style="background: var(--acm-bg); padding: 6px 12px; border-radius: var(--acm-radius-sm); border: 1px solid var(--acm-border); text-decoration: none;">
-                                                <i class="bi bi-file-text" aria-hidden="true"></i><span>View Termly Report</span>
-                                            </a>
-                                            <a href="/portal/results/cumulative?session=<%= encodeURIComponent(result.session) %>&class_id=<%= result.class_id %>" target="_blank" class="acm-card-action" style="background: var(--school-primary, var(--acm-navy)); color: #fff; padding: 6px 12px; border-radius: var(--acm-radius-sm); text-decoration: none;">
-                                                <i class="bi bi-bar-chart-fill" aria-hidden="true"></i><span style="color: #fff;">Cumulative Report</span>
-                                            </a>
-                                        </div>
-                                    <% } else { %>
-                                        <span class="text-muted">This older record has no verified class assignment and cannot be opened as a class report.</span>
-                                    <% } %>
-                                </div>
-                            <% }) %>
-                        </div>
-                    <% } else { %>
-                        <div class="acm-card"><p class="acm-empty-state">No reports published yet.</p></div>
-                    <% } %>
-                </section>
-
-                <!-- Section 2: Quick Status Grid -->
-                <section class="acm-section">
-                    <h2 class="acm-section-title">Quick Status</h2>
-                    <div class="acm-quick-grid">
-                        
-                        <!-- Attendance -->
-                        <a href="/portal/attendance" class="acm-quick-card acm-card-link">
-                            <h3 class="acm-quick-title">Attendance</h3>
-                            <% if (attendanceSummaries && attendanceSummaries.length) { %>
-                                <% if (attendanceSummaries.length === 1) { %>
-                                    <div class="acm-quick-value"><%= attendanceSummaries[0].attendanceRate === null ? '--' : attendanceSummaries[0].attendanceRate + '%' %></div>
-                                    <div class="acm-quick-meta"><%= attendanceSummaries[0].sectionName %> · <%= attendanceSummaries[0].attendedDays %> of <%= attendanceSummaries[0].totalDays %> days</div>
-                                <% } else { %>
-                                    <div style="display:flex;flex-direction:column;gap:8px;margin:8px 0;">
-                                        <% attendanceSummaries.forEach(summary => { %>
-                                            <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
-                                                <span style="font-size:.82rem;color:var(--acm-text-muted);"><%= summary.sectionName %></span>
-                                                <strong style="font-size:1.1rem;"><%= summary.attendanceRate === null ? '--' : summary.attendanceRate + '%' %></strong>
-                                            </div>
-                                        <% }); %>
-                                    </div>
-                                <% } %>
-                            <% } else { %>
-                                <div class="acm-quick-value">--</div>
-                            <% } %>
-                            <div class="acm-card-action">
-                                <span>View</span>
-                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                            </div>
-                        </a>
-
-                        <!-- Results -->
-                        <a href="/portal/academics" class="acm-quick-card acm-card-link">
-                            <h3 class="acm-quick-title">Academics</h3>
-                            <div class="acm-quick-value"><%= results && results.length > 0 ? results[0].subjects_taken + ' Subjects' : '--' %></div>
-                            <div class="acm-card-action">
-                                <span>View</span>
-                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                            </div>
-                        </a>
-
-                        <!-- Class Board -->
-                        <a href="/portal/academics/class-board" class="acm-quick-card acm-card-link acm-quick-card--full">
-                            <div class="acm-quick-content">
-                                <h3 class="acm-quick-title">Class Board</h3>
-                                <div class="acm-quick-value"><%= classPosts && classPosts.length > 0 ? classPosts.length + ' recent items' : 'No new items' %></div>
-                            </div>
-                            <div class="acm-card-action">
-                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
-                            </div>
-                        </a>
-                    </div>
-                </section>
-                
+        <%
+            const hour = new Date().getHours();
+            const greeting = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
+            const studentName = student.first_name || (student.name ? student.name.split(' ')[0] : 'Student');
+            const studentFullName = student.name || [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Student';
+            const sections = Array.isArray(dashboardSectionStats) ? dashboardSectionStats : [];
+            const sectionNames = sections.map(s => String(s.sectionName || '').trim().toLowerCase());
+            const hasDualSections = sections.length === 2 && sectionNames.includes('academy') && sectionNames.includes('tahfeez') && new Set(sections.map(s => Number(s.sectionId))).size === 2;
+            const defaultSection = sections[0] || null;
+            const defaultSectionId = defaultSection ? String(defaultSection.sectionId) : '';
+            const latestInsight = defaultSection && defaultSection.subjectInsights ? defaultSection.subjectInsights : [];
+            const strongerSubjects = latestInsight.filter(s => Number(s.student_average) > Number(s.class_average)).slice(0, 2);
+            const weakerSubjects = latestInsight.filter(s => Number(s.student_average) < Number(s.class_average)).slice(-2);
+        %>
+        <section class="acm-student-welcome">
+            <div class="acm-student-avatar" aria-hidden="true"><i class="bi bi-person"></i></div>
+            <div class="acm-student-welcome-copy">
+                <span class="acm-student-eyebrow">STUDENT</span>
+                <h1><%= greeting %>, <%= studentName %></h1>
+                <p><%= studentFullName %></p>
+                <div class="acm-student-context">
+                    <span><i class="bi bi-calendar3"></i><%= defaultSection ? defaultSection.session + ' · ' + defaultSection.term : currentSession + ' · ' + currentTerm %></span>
+                </div>
             </div>
+        </section>
 
-            <!-- Right Column / Secondary Content -->
-            <div style="display: flex; flex-direction: column; gap: var(--acm-sp-20);">
-                
-                <!-- Section 4: Needs Your Attention (Conditional) -->
-                <% if ((results && results.length > 0) || (classPosts && classPosts.length > 0)) { %>
-                <section class="acm-section">
-                    <h2 class="acm-section-title">Needs Your Attention</h2>
-                    <div style="display: flex; flex-direction: column; gap: var(--acm-sp-12);">
-                        <% if (results && results.length > 0) { 
-                            const latestResult = results[0];
-                        %>
-                        <div class="acm-attention-card">
-                            <i class="bi bi-file-earmark-check acm-attention-icon" aria-hidden="true"></i>
-                            <div class="acm-attention-content">
-                                <p class="acm-attention-text">Your <%= latestResult.class_name || 'unassigned legacy' %> — <%= latestResult.term %> report is available.</p>
-                                <div style="display: flex; gap: var(--acm-sp-8); flex-wrap: wrap; margin-top: var(--acm-sp-4);">
-                                    <% if (latestResult.class_id) { %>
-                                        <a href="/portal/results/termly?session=<%= encodeURIComponent(latestResult.session) %>&term=<%= encodeURIComponent(latestResult.term) %>&class_id=<%= latestResult.class_id %>" target="_blank" class="acm-attention-action">View Class Report &rarr;</a>
-                                    <% } else { %>
-                                        <span class="text-muted">Class ownership has not been verified for this legacy record.</span>
-                                    <% } %>
-                                </div>
-                            </div>
-                        </div>
-                        <% } %>
-
-                        <% if (classPosts && classPosts.length > 0) { %>
-                        <div class="acm-attention-card">
-                            <i class="bi bi-journal-text acm-attention-icon" aria-hidden="true"></i>
-                            <div class="acm-attention-content">
-                                <p class="acm-attention-text"><%= classPosts.length %> new class board <%= classPosts.length === 1 ? 'post' : 'posts' %>.</p>
-                                <a href="/portal/academics/class-board" class="acm-attention-action">View Class Board &rarr;</a>
-                            </div>
-                        </div>
-                        <% } %>
-                    </div>
-                </section>
-                <% } %>
-
-                <!-- Section 5: Announcements (Conditional) -->
-                <% if (announcements && announcements.length > 0) { 
-                    const latestAnn = announcements[0];
-                    const date = new Date(latestAnn.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                %>
-                <section class="acm-section">
-                    <h2 class="acm-section-title">Announcement</h2>
-                    <div class="acm-announcement-card">
-                        <div class="acm-announcement-meta">
-                            <span><%= date %></span>
-                            <% if (latestAnn.priority === 'High') { %>
-                                <span>&middot;</span>
-                                <span style="color: var(--acm-error); font-weight: var(--acm-fw-bold);">Important</span>
-                            <% } %>
-                        </div>
-                        <h3 class="acm-announcement-title"><%= latestAnn.title %></h3>
-                        <div class="acm-card-action" style="margin-top: var(--acm-sp-12); display: flex; justify-content: space-between; align-items: center;">
-                            <a href="/portal/announcement/<%= latestAnn.id %>" style="color: var(--school-primary, var(--acm-navy)); font-weight: var(--acm-fw-semibold); text-decoration: none;">Read more &rarr;</a>
-                            <a href="/portal/notifications" style="font-size: var(--acm-text-xs); color: var(--acm-text-secondary); text-decoration: none;">All updates &rarr;</a>
-                        </div>
-                    </div>
-                </section>
-                <% } %>
-                
-            </div>
-            
+        <% if (hasDualSections) { %>
+        <div class="acm-section-switcher" role="group" aria-label="Choose school section">
+            <% sections.forEach((section, index) => { %>
+            <button type="button" class="acm-section-switch <%= index === 0 ? 'is-active' : '' %>" data-section-switch="<%= section.sectionId %>" aria-pressed="<%= index === 0 ? 'true' : 'false' %>"><%= section.sectionName %></button>
+            <% }); %>
         </div>
+        <% } %>
+
+        <div class="acm-student-dashboard" id="studentDashboard" data-default-section="<%= defaultSectionId %>">
+            <% sections.forEach((section, index) => {
+                const attendance = (attendanceSummaries || []).find(a => Number(a.sectionId) === Number(section.sectionId));
+                const sectionResults = (results || []).filter(r => Number(r.section_id) === Number(section.sectionId));
+                const latestResult = sectionResults[0] || null;
+                const insights = section.subjectInsights || [];
+                const stronger = insights.filter(s => Number(s.student_average) > Number(s.class_average)).slice(0, 2);
+                const weaker = insights.filter(s => Number(s.student_average) < Number(s.class_average)).slice(-2);
+                const analysisParts = [];
+                if (stronger.length) analysisParts.push('You are doing well in ' + stronger.map(s => s.subject_name).join(' and '));
+                if (weaker.length) analysisParts.push('focus on improving ' + weaker.map(s => s.subject_name).join(' and '));
+            %>
+            <section class="acm-dashboard-section" data-section-panel="<%= section.sectionId %>" <%= index === 0 ? '' : 'hidden' %>>
+                <div class="acm-term-chip"><i class="bi bi-calendar3"></i><%= section.session %> · <%= section.term %></div>
+
+                <a href="/portal/attendance" class="acm-attendance-feature">
+                    <div><span>Attendance · <%= section.sectionName %></span>
+                        <strong><%= attendance && attendance.attendanceRate !== null ? attendance.attendanceRate + '%' : '--' %></strong>
+                        <small>View attendance</small>
+                    </div>
+                    <div class="acm-attendance-ring" style="--attendance-rate:<%= attendance && attendance.attendanceRate !== null ? attendance.attendanceRate : 0 %>%"><span></span></div>
+                </a>
+
+                <div class="acm-student-stat-grid">
+                    <a href="/portal/academics" class="acm-student-stat-card">
+                        <span class="acm-stat-icon acm-stat-indigo"><i class="bi bi-door-open"></i></span>
+                        <strong><%= section.className || '—' %></strong><small>Class · <%= section.sectionName %></small>
+                    </a>
+                    <a href="/portal/academics/subjects" class="acm-student-stat-card">
+                        <span class="acm-stat-icon acm-stat-green"><i class="bi bi-book"></i></span>
+                        <strong><%= section.subjectsTaken || (latestResult ? latestResult.subjects_taken : '—') %></strong><small>My subjects</small>
+                    </a>
+                    <div class="acm-student-stat-card">
+                        <span class="acm-stat-icon acm-stat-amber"><i class="bi bi-award"></i></span>
+                        <strong><%= section.position ? section.position + (section.position === 1 ? 'st' : section.position === 2 ? 'nd' : section.position === 3 ? 'rd' : 'th') : '—' %></strong><small>Latest class position<%= section.classSize ? ' of ' + section.classSize : '' %></small>
+                    </div>
+                    <div class="acm-student-stat-card">
+                        <span class="acm-stat-icon acm-stat-pink"><i class="bi bi-bar-chart"></i></span>
+                        <strong><%= section.studentAverage !== null ? section.studentAverage.toFixed(1) + '%' : '—' %></strong><small>Latest class average</small>
+                    </div>
+                </div>
+
+                <article class="acm-smart-analysis">
+                    <div><span>Smart Analysis</span>
+                        <strong><%= analysisParts.length ? analysisParts.join('; ') + '.' : 'Your academic insights will appear when published subject results are available.' %></strong>
+                        <% if (section.studentAverage !== null && section.classAverage !== null) { %>
+                        <small><%= Math.abs(section.studentAverage - section.classAverage).toFixed(1) %> marks <%= section.studentAverage >= section.classAverage ? 'above' : 'below' %> the class average.</small>
+                        <% } %>
+                    </div>
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </article>
+
+                <section class="acm-dashboard-results">
+                    <div class="acm-dashboard-section-heading"><h2>Results · <%= section.sectionName %></h2><a href="/portal/academics/results">View all</a></div>
+                    <% if (sectionResults.length) { %>
+                        <% sectionResults.slice(0, 3).forEach(result => { %>
+                        <a class="acm-dashboard-result-row" href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_id=<%= result.class_id %>">
+                            <div><strong><%= result.term %></strong><small><%= result.session %> · <%= result.subjects_taken %> subjects</small></div>
+                            <b><%= result.average_score !== null && result.average_score !== undefined ? Number(result.average_score).toFixed(1) : '—' %><small>/100</small></b>
+                        </a>
+                        <% }); %>
+                    <% } else { %><p class="acm-dashboard-empty">No results published for this section yet.</p><% } %>
+                </section>
+            </section>
+            <% }); %>
+            <% if (!sections.length) { %>
+            <section class="acm-dashboard-section">
+                <div class="acm-term-chip"><i class="bi bi-calendar3"></i><%= currentSession %> · <%= currentTerm %></div>
+                <div class="acm-dashboard-empty-card">Your current class and section performance will appear here when your enrolment and published results are available.</div>
+            </section>
+            <% } %>
+        </div>
+
+        <section class="acm-dashboard-announcements">
+            <div class="acm-dashboard-section-heading"><h2>Announcements</h2><a href="/portal/notifications">View all</a></div>
+            <% if (announcements && announcements.length) { %>
+                <% announcements.slice(0, 3).forEach(post => { %>
+                <a class="acm-dashboard-announcement" href="/portal/announcement/<%= post.id %>">
+                    <div class="acm-announcement-date"><%= new Date(post.created_at).toLocaleDateString('en-GB') %><% if (post.priority === 'High') { %><span>IMPORTANT</span><% } %></div>
+                    <strong><%= post.title %></strong>
+                    <p><%= post.content %></p><b>Read more</b>
+                </a>
+                <% }); %>
+            <% } else { %><p class="acm-dashboard-empty">No announcements at the moment.</p><% } %>
+        </section>
     </main>
 </div>
-
 <%- include('../partials/student_shell_footer') %>
-
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const switches = Array.from(document.querySelectorAll('[data-section-switch]'));
+    const panels = Array.from(document.querySelectorAll('[data-section-panel]'));
+    switches.forEach(button => button.addEventListener('click', () => {
+        const sectionId = button.dataset.sectionSwitch;
+        switches.forEach(item => {
+            const active = item === button;
+            item.classList.toggle('is-active', active);
+            item.setAttribute('aria-pressed', String(active));
+        });
+        panels.forEach(panel => { panel.hidden = panel.dataset.sectionPanel !== sectionId; });
+    }));
+});
+</script>
 </body>
 </html>

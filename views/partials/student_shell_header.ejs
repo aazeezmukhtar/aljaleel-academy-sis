@@ -1,7 +1,7 @@
-<header class="acm-student-topbar">
-  <button type="button" class="acm-student-menu" onclick="toggleStudentSidebar()" aria-label="Open navigation menu" aria-controls="student-sidebar" aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i></button>
-  <a class="acm-student-brand" href="/portal"><span class="acm-student-brand-mark"><i class="bi bi-mortarboard-fill" aria-hidden="true"></i></span><span>Al-Jaleel<br>Academy</span></a>
-  <a href="/portal/notifications" class="acm-student-notification" aria-label="Notifications"><i class="bi bi-bell" aria-hidden="true"></i><% if (typeof individualMessagesCount !== "undefined" && individualMessagesCount > 0) { %><span class="acm-badge"><%= individualMessagesCount > 9 ? "9+" : individualMessagesCount %></span><% } %></a>
+<header class="mobile-topbar acm-student-topbar" id="student-mobile-topbar">
+  <button type="button" class="mobile-hamburger acm-student-menu" onclick="toggleStudentSidebar()" aria-label="Open navigation menu" aria-controls="student-sidebar" aria-expanded="false"><i class="bi bi-list" aria-hidden="true"></i></button>
+  <span class="mobile-topbar-title acm-student-brand"><%= (typeof school !== 'undefined' && school && school.school_name) ? school.school_name : 'Al-Jaleel Academy' %></span>
+  <div class="mobile-topbar-actions"><a href="/portal/notifications" class="acm-student-notification" aria-label="Notifications"><i class="bi bi-bell" aria-hidden="true"></i><% if (typeof individualMessagesCount !== 'undefined' && individualMessagesCount > 0) { %><span class="acm-badge"><%= individualMessagesCount > 9 ? '9+' : individualMessagesCount %></span><% } %></a></div>
 </header>
 <script>
 document.addEventListener("DOMContentLoaded", () => {

@@ -488,3 +488,8 @@
         padding-top: 84px !important;
     }
 }
+
+/* Unified school-name header across staff and admin portals */
+@media(max-width:991px){
+ .mobile-topbar .mobile-topbar-title{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(.82rem,3.5vw,1.02rem)!important;line-height:1.15!important;font-weight:800!important;letter-spacing:-.025em!important}
+}

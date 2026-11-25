@@ -172,6 +172,46 @@ exports.getDashboard = async (req, res) => {
         const classAverage = cohortRows && cohortRows.length
             ? cohortRows.reduce((sum, row) => sum + Number(row.average_score || 0), 0) / cohortRows.length
             : null;
+
+        // Compare with the immediately preceding published term for this student
+        // in this same class. A positive position change means the rank improved.
+        const previousPeriod = await db.get(`
+            SELECT r.session, r.term
+            FROM results r
+            WHERE r.student_id = ? AND r.class_id = ?
+              AND r.status IN ('approved', 'published')
+              AND r.total IS NOT NULL
+              AND NOT (r.session = ? AND r.term = ?)
+            GROUP BY r.session, r.term
+            ORDER BY r.session DESC,
+                     CASE LOWER(r.term)
+                       WHEN '3rd term' THEN 3 WHEN '2nd term' THEN 2 WHEN '1st term' THEN 1 ELSE 0
+                     END DESC
+            LIMIT 1
+        `, [studentId, section.class_id, latestPeriod.session, latestPeriod.term]);
+        let previousPosition = null;
+        let previousAverage = null;
+        if (previousPeriod) {
+            const previousCohort = await db.all(`
+                SELECT r.student_id, AVG(r.total) AS average_score
+                FROM results r
+                JOIN students st ON st.id = r.student_id
+                WHERE r.class_id = ? AND r.session = ? AND r.term = ?
+                  AND r.status IN ('approved', 'published') AND r.total IS NOT NULL
+                  AND LOWER(COALESCE(st.status, '')) IN ('active', '')
+                GROUP BY r.student_id
+                ORDER BY AVG(r.total) DESC, r.student_id ASC
+            `, [section.class_id, previousPeriod.session, previousPeriod.term]);
+            const previousIndex = (previousCohort || []).findIndex(row => Number(row.student_id) === Number(studentId));
+            if (previousIndex >= 0) {
+                previousPosition = previousIndex + 1;
+                previousAverage = Number(previousCohort[previousIndex].average_score);
+            }
+        }
+        const positionTrend = previousPosition !== null && ownIndex >= 0
+            ? previousPosition - (ownIndex + 1) : null;
+        const averageTrend = previousAverage !== null && ownRow
+            ? Number(ownRow.average_score) - previousAverage : null;
         let subjectInsights = [];
         if (ownRow) {
             subjectInsights = await db.all(`
@@ -196,7 +236,11 @@ exports.getDashboard = async (req, res) => {
             resultSession: latestPeriod.session, resultTerm: latestPeriod.term,
             classSize: cohortRows ? cohortRows.length : 0,
             position: ownIndex >= 0 ? ownIndex + 1 : null,
+            positionTrend,
+            previousPosition,
             studentAverage: ownRow ? Number(ownRow.average_score) : null,
+            averageTrend,
+            previousAverage,
             classAverage: classAverage === null ? null : Number(classAverage),
             subjectsTaken: ownRow ? Number(ownRow.subjects_taken || 0) : 0,
             subjectInsights: subjectInsights || []

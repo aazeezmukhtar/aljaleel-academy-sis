@@ -12,7 +12,8 @@
             const studentName = student.first_name || (student.name ? student.name.split(' ')[0] : 'Student');
             const studentFullName = student.name || [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Student';
             const sections = Array.isArray(dashboardSectionStats) ? dashboardSectionStats : [];
-            const hasDualSections = sections.length === 2 && new Set(sections.map(s => Number(s.sectionId))).size === 2;
+            const sectionNames = sections.map(s => String(s.sectionName || '').trim().toLowerCase());
+            const hasDualSections = sections.length === 2 && sectionNames.includes('academy') && sectionNames.includes('tahfeez') && new Set(sections.map(s => Number(s.sectionId))).size === 2;
             const defaultSection = sections[0] || null;
             const defaultSectionId = defaultSection ? String(defaultSection.sectionId) : '';
             const latestInsight = defaultSection && defaultSection.subjectInsights ? defaultSection.subjectInsights : [];

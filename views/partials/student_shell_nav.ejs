@@ -53,6 +53,12 @@
             <i class="bi <%= currentPath.startsWith('/portal/academics') ? 'bi-journal-bookmark-fill' : 'bi-journal-bookmark' %>" aria-hidden="true"></i>
             <span>Academics</span>
         </a>
+        <a href="/portal/academics/results" class="acm-sidebar-item <%= currentPath.includes('/results') ? 'is-active' : '' %>" <%= currentPath.includes('/results') ? 'aria-current="page"' : '' %>>
+            <i class="bi bi-award" aria-hidden="true"></i><span>Results</span>
+        </a>
+        <a href="/portal/academics/subjects" class="acm-sidebar-item <%= currentPath.includes('/subjects') ? 'is-active' : '' %>" <%= currentPath.includes('/subjects') ? 'aria-current="page"' : '' %>>
+            <i class="bi bi-book" aria-hidden="true"></i><span>My Subjects</span>
+        </a>
         <a href="/portal/attendance" class="acm-sidebar-item <%= currentPath.startsWith('/portal/attendance') ? 'is-active' : '' %>" <%= currentPath.startsWith('/portal/attendance') ? 'aria-current="page"' : '' %>>
             <i class="bi <%= currentPath.startsWith('/portal/attendance') ? 'bi-calendar-check-fill' : 'bi-calendar-check' %>" aria-hidden="true"></i>
             <span>Attendance</span>

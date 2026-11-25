@@ -10,25 +10,17 @@
             const hour = new Date().getHours();
             const greeting = hour < 12 ? 'Good morning' : (hour < 18 ? 'Good afternoon' : 'Good evening');
             const studentName = student.first_name || (student.name ? student.name.split(' ')[0] : 'Student');
-            const studentFullName = student.name || [student.first_name, student.last_name].filter(Boolean).join(' ') || 'Student';
             const sections = Array.isArray(dashboardSectionStats) ? dashboardSectionStats : [];
             const sectionNames = sections.map(s => String(s.sectionName || '').trim().toLowerCase());
             const hasDualSections = sections.length === 2 && sectionNames.includes('academy') && sectionNames.includes('tahfeez') && new Set(sections.map(s => Number(s.sectionId))).size === 2;
             const defaultSection = sections[0] || null;
             const defaultSectionId = defaultSection ? String(defaultSection.sectionId) : '';
-            const latestInsight = defaultSection && defaultSection.subjectInsights ? defaultSection.subjectInsights : [];
-            const strongerSubjects = latestInsight.filter(s => Number(s.student_average) > Number(s.class_average)).slice(0, 2);
-            const weakerSubjects = latestInsight.filter(s => Number(s.student_average) < Number(s.class_average)).slice(-2);
         %>
         <section class="acm-student-welcome">
-            <div class="acm-student-avatar" aria-hidden="true"><i class="bi bi-person"></i></div>
+            <div class="acm-student-avatar"><% if (student.passport_photo_path) { %><img src="<%= student.passport_photo_path %>" alt="Student profile photo" onerror="this.hidden=true;this.nextElementSibling.hidden=false;"><i class="bi bi-person" hidden></i><% } else { %><i class="bi bi-person"></i><% } %></div>
             <div class="acm-student-welcome-copy">
                 <span class="acm-student-eyebrow">STUDENT</span>
                 <h1><%= greeting %>, <%= studentName %></h1>
-                <p><%= studentFullName %></p>
-                <div class="acm-student-context">
-                    <span><i class="bi bi-calendar3"></i><%= defaultSection ? defaultSection.session + ' · ' + defaultSection.term : currentSession + ' · ' + currentTerm %></span>
-                </div>
             </div>
         </section>
 
@@ -43,7 +35,8 @@
         <div class="acm-student-dashboard" id="studentDashboard" data-default-section="<%= defaultSectionId %>">
             <% sections.forEach((section, index) => {
                 const attendance = (attendanceSummaries || []).find(a => Number(a.sectionId) === Number(section.sectionId));
-                const sectionResults = (results || []).filter(r => Number(r.section_id) === Number(section.sectionId));
+                const sectionSummary = (dashboardSectionStats || []).find(s => Number(s.sectionId) === Number(section.sectionId));
+                const sectionResults = (results || []).filter(r => Number(r.section_id) === Number(section.sectionId) && Number(r.class_id) === Number(section.class_id) && sectionSummary && r.session === sectionSummary.resultSession && r.term === sectionSummary.resultTerm);
                 const latestResult = sectionResults[0] || null;
                 const insights = section.subjectInsights || [];
                 const stronger = insights.filter(s => Number(s.student_average) > Number(s.class_average)).slice(0, 2);
@@ -74,11 +67,11 @@
                     </a>
                     <div class="acm-student-stat-card">
                         <span class="acm-stat-icon acm-stat-amber"><i class="bi bi-award"></i></span>
-                        <strong><%= section.position ? section.position + (section.position === 1 ? 'st' : section.position === 2 ? 'nd' : section.position === 3 ? 'rd' : 'th') : '—' %></strong><small>Latest class position<%= section.classSize ? ' of ' + section.classSize : '' %></small>
+                        <strong><%= section.position ? section.position + (section.position === 1 ? 'st' : section.position === 2 ? 'nd' : section.position === 3 ? 'rd' : 'th') : '—' %></strong><small>Class position · <%= sectionSummary && sectionSummary.resultTerm ? sectionSummary.resultTerm : 'No published result' %></small>
                     </div>
                     <div class="acm-student-stat-card">
                         <span class="acm-stat-icon acm-stat-pink"><i class="bi bi-bar-chart"></i></span>
-                        <strong><%= section.studentAverage !== null ? section.studentAverage.toFixed(1) + '%' : '—' %></strong><small>Latest class average</small>
+                        <strong><%= section.studentAverage !== null ? section.studentAverage.toFixed(1) + '%' : '—' %></strong><small>Class average · <%= sectionSummary && sectionSummary.resultTerm ? sectionSummary.resultTerm : 'No published result' %></small>
                     </div>
                 </div>
 
@@ -94,14 +87,15 @@
 
                 <section class="acm-dashboard-results">
                     <div class="acm-dashboard-section-heading"><h2>Results · <%= section.sectionName %></h2><a href="/portal/academics/results">View all</a></div>
+                    <% if (sectionSummary && sectionSummary.resultTerm) { %><p class="acm-dashboard-result-period"><%= sectionSummary.resultTerm %> · <%= sectionSummary.resultSession %></p><% } %>
                     <% if (sectionResults.length) { %>
-                        <% sectionResults.slice(0, 3).forEach(result => { %>
-                        <a class="acm-dashboard-result-row" href="/portal/results/termly?term=<%= encodeURIComponent(result.term) %>&session=<%= encodeURIComponent(result.session) %>&class_id=<%= result.class_id %>">
-                            <div><strong><%= result.term %></strong><small><%= result.session %> · <%= result.subjects_taken %> subjects</small></div>
-                            <b><%= result.average_score !== null && result.average_score !== undefined ? Number(result.average_score).toFixed(1) : '—' %><small>/100</small></b>
-                        </a>
+                        <% sectionResults.slice(0, 5).forEach(result => { %>
+                        <div class="acm-dashboard-result-row">
+                            <div><strong><%= result.subject_name || 'Subject' %></strong><small>CA <%= result.ca1 !== null && result.ca1 !== undefined ? result.ca1 : '—' %> · Exam <%= result.exam !== null && result.exam !== undefined ? result.exam : '—' %></small></div>
+                            <b><%= result.total !== null && result.total !== undefined ? Number(result.total).toFixed(0) : '—' %><small>/100</small></b>
+                        </div>
                         <% }); %>
-                    <% } else { %><p class="acm-dashboard-empty">No results published for this section yet.</p><% } %>
+                    <% } else { %><p class="acm-dashboard-empty">No published subject results for this section yet.</p><% } %>
                 </section>
             </section>
             <% }); %>

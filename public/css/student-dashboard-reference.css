@@ -76,3 +76,9 @@
 .acm-dashboard-result-row{cursor:default}
 .acm-dashboard-result-row>b{font-size:1rem}
 @media(max-width:380px){.acm-student-welcome h1{font-size:1rem}.acm-student-avatar{width:70px;height:70px;flex-basis:70px}}
+
+.acm-stat-trend{display:inline-flex;align-items:center;gap:3px;margin-top:5px;font-size:.78rem;font-weight:800;line-height:1.1}
+.acm-stat-trend.is-up{color:#00866a}
+.acm-stat-trend.is-down{color:#d11a58}
+.acm-stat-trend.is-flat{color:#71819c}
+.acm-stat-trend i{font-size:.95rem}

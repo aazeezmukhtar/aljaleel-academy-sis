@@ -37,16 +37,19 @@ exports.getDashboard = async (req, res) => {
     const ctx = await getStudentContext(studentId, school, schoolId);
     const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount, sectionIds } = ctx;
 
-    // Keep the portal's result summaries separate for every class/section.
-    // A student may be enrolled in both Academy and Tahfeez in one session.
+    // Published subject results, kept separate by class and section.
     const results = await db.all(`
         SELECT r.class_id, c.name AS class_name, c.section_id, r.session, r.term,
-               COUNT(*) AS subjects_taken, AVG(r.total) AS average_score
+               r.subject_id, sub.name AS subject_name, r.ca1, r.ca2, r.exam, r.total, r.grade
         FROM results r
         LEFT JOIN classes c ON c.id = r.class_id
+        LEFT JOIN subjects sub ON sub.id = r.subject_id
         WHERE r.student_id = ? AND r.status IN ('approved', 'published')
-        GROUP BY r.class_id, c.name, c.section_id, r.session, r.term
-        ORDER BY r.session DESC, c.name, r.term DESC
+        ORDER BY r.session DESC,
+                 CASE LOWER(r.term)
+                   WHEN '3rd term' THEN 3 WHEN '2nd term' THEN 2 WHEN '1st term' THEN 1 ELSE 0
+                 END DESC,
+                 r.id DESC
     `, [studentId]);
 
     // Fetch fee payments
@@ -121,23 +124,47 @@ exports.getDashboard = async (req, res) => {
         current_term: ec.section_term || school.current_term || '1st Term'
     }));
 
-    // Section-owned dashboard performance: rank only against students in the
-    // same class, section, session and term. No Academy/Tahfeez aggregation.
+    // Use each class's latest published result period, not the current active term.
+    // For example, while the school is in 3rd Term, 2nd Term remains the latest
+    // position/average until 3rd Term results are actually published.
     const dashboardSectionStats = [];
+    const dashboardResultPeriods = [];
     for (const section of sectionInfo) {
         if (!section.class_id || !section.section_id) continue;
+        const latestPeriod = await db.get(`
+            SELECT r.session, r.term
+            FROM results r
+            WHERE r.student_id = ? AND r.class_id = ?
+              AND r.status IN ('approved', 'published')
+              AND r.total IS NOT NULL
+            ORDER BY r.session DESC,
+                     CASE LOWER(r.term)
+                       WHEN '3rd term' THEN 3 WHEN '2nd term' THEN 2 WHEN '1st term' THEN 1 ELSE 0
+                     END DESC,
+                     MAX(r.updated_at) DESC
+            LIMIT 1
+        `, [studentId, section.class_id]);
+        if (!latestPeriod) {
+            dashboardSectionStats.push({
+                sectionId: Number(section.section_id), sectionName: section.section_name || 'Section',
+                classId: Number(section.class_id), className: section.class_name,
+                session: section.current_session, term: section.current_term,
+                resultSession: null, resultTerm: null, classSize: 0, position: null,
+                studentAverage: null, classAverage: null, subjectsTaken: 0, subjectInsights: []
+            });
+            continue;
+        }
         const cohortRows = await db.all(`
             SELECT r.student_id, AVG(r.total) AS average_score,
                    COUNT(DISTINCT r.subject_id) AS subjects_taken
             FROM results r
             JOIN students st ON st.id = r.student_id
             WHERE r.class_id = ? AND r.session = ? AND r.term = ?
-              AND r.status IN ('approved', 'published')
-              AND r.total IS NOT NULL
+              AND r.status IN ('approved', 'published') AND r.total IS NOT NULL
               AND LOWER(COALESCE(st.status, '')) IN ('active', '')
             GROUP BY r.student_id
             ORDER BY AVG(r.total) DESC, r.student_id ASC
-        `, [section.class_id, section.current_session, section.current_term]);
+        `, [section.class_id, latestPeriod.session, latestPeriod.term]);
         const ownIndex = (cohortRows || []).findIndex(row => Number(row.student_id) === Number(studentId));
         const ownRow = ownIndex >= 0 ? cohortRows[ownIndex] : null;
         const classAverage = cohortRows && cohortRows.length
@@ -153,21 +180,18 @@ exports.getDashboard = async (req, res) => {
                 LEFT JOIN subjects sub ON sub.id = r.subject_id
                 JOIN students st ON st.id = r.student_id
                 WHERE r.class_id = ? AND r.session = ? AND r.term = ?
-                  AND r.status IN ('approved', 'published')
-                  AND r.total IS NOT NULL
+                  AND r.status IN ('approved', 'published') AND r.total IS NOT NULL
                   AND LOWER(COALESCE(st.status, '')) IN ('active', '')
                 GROUP BY r.subject_id, sub.name
                 HAVING AVG(CASE WHEN r.student_id = ? THEN r.total END) IS NOT NULL
                 ORDER BY (AVG(CASE WHEN r.student_id = ? THEN r.total END) - AVG(r.total)) DESC
-            `, [studentId, section.class_id, section.current_session, section.current_term, studentId, studentId]);
+            `, [studentId, section.class_id, latestPeriod.session, latestPeriod.term, studentId, studentId]);
         }
         dashboardSectionStats.push({
-            sectionId: Number(section.section_id),
-            sectionName: section.section_name || 'Section',
-            classId: Number(section.class_id),
-            className: section.class_name,
-            session: section.current_session,
-            term: section.current_term,
+            sectionId: Number(section.section_id), sectionName: section.section_name || 'Section',
+            classId: Number(section.class_id), className: section.class_name,
+            session: section.current_session, term: section.current_term,
+            resultSession: latestPeriod.session, resultTerm: latestPeriod.term,
             classSize: cohortRows ? cohortRows.length : 0,
             position: ownIndex >= 0 ? ownIndex + 1 : null,
             studentAverage: ownRow ? Number(ownRow.average_score) : null,

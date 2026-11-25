@@ -36,6 +36,8 @@ exports.getDashboard = async (req, res) => {
     const school = await getSettings(schoolId);
     const ctx = await getStudentContext(studentId, school, schoolId);
     const { studentObj, enrolledClasses, enrolledClassIds, activeSession, activeTerm, individualMessagesCount, sectionIds } = ctx;
+    const studentPhoto = await db.get('SELECT passport_photo_path FROM students WHERE id = ? AND school_id = ?', [studentId, schoolId]);
+    if (studentObj && studentPhoto) studentObj.passport_photo_path = studentPhoto.passport_photo_path || null;
 
     // Published subject results, kept separate by class and section.
     const results = await db.all(`
@@ -141,7 +143,7 @@ exports.getDashboard = async (req, res) => {
                      CASE LOWER(r.term)
                        WHEN '3rd term' THEN 3 WHEN '2nd term' THEN 2 WHEN '1st term' THEN 1 ELSE 0
                      END DESC,
-                     MAX(r.updated_at) DESC
+                     r.id DESC
             LIMIT 1
         `, [studentId, section.class_id]);
         if (!latestPeriod) {

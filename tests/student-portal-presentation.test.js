@@ -159,6 +159,8 @@ check('student dashboard uses the latest published result period and shows no mo
   assert.match(dashboard, /sectionResults\.slice\(0, 5\)/);
   assert.match(dashboard, /<div class="acm-term-chip"[\s\S]*?section\.session[\s\S]*?section\.term/);
   assert.match(dashboard, /result\.subject_name/);
+  assert.match(dashboard, /Number\(r\.class_id\) === Number\(section\.classId\)/);
+  assert.doesNotMatch(dashboard, /Number\(r\.class_id\) === Number\(section\.class_id\)/);
 });
 check('student dashboard displays the stored student portrait and compact greeting without duplicate full name or term', () => {
   const dashboard = read('views/portal/index.ejs');

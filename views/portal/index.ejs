@@ -36,7 +36,7 @@
             <% sections.forEach((section, index) => {
                 const attendance = (attendanceSummaries || []).find(a => Number(a.sectionId) === Number(section.sectionId));
                 const sectionSummary = (dashboardSectionStats || []).find(s => Number(s.sectionId) === Number(section.sectionId));
-                const sectionResults = (results || []).filter(r => Number(r.section_id) === Number(section.sectionId) && Number(r.class_id) === Number(section.class_id) && sectionSummary && r.session === sectionSummary.resultSession && r.term === sectionSummary.resultTerm);
+                const sectionResults = (results || []).filter(r => Number(r.section_id) === Number(section.sectionId) && Number(r.class_id) === Number(section.classId) && sectionSummary && r.session === sectionSummary.resultSession && r.term === sectionSummary.resultTerm);
                 const latestResult = sectionResults[0] || null;
                 const insights = section.subjectInsights || [];
                 const stronger = insights.filter(s => Number(s.student_average) > Number(s.class_average)).slice(0, 2);

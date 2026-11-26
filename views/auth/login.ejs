@@ -12,7 +12,8 @@
 </head>
 <body>
 <main class="acm-login-page acm-role-login-page" role="main">
-<header class="acm-login-hero"><div class="acm-login-mark" aria-hidden="true"><i class="bi bi-mortarboard"></i></div><p class="acm-portal-label">Staff Portal</p><h1 class="acm-school-name"><%= (typeof school !== 'undefined' && school && school.school_name) ? school.school_name : 'AcadMe' %></h1></header>
+<% const configuredLoginLogo = (typeof school !== 'undefined' && school && school.school_logo) ? String(school.school_logo).trim() : ''; const loginLogoSrc = configuredLoginLogo ? ((configuredLoginLogo.startsWith('/') || configuredLoginLogo.startsWith('http')) ? configuredLoginLogo : '/uploads/' + configuredLoginLogo) : ''; %>
+<header class="acm-login-hero"><div class="acm-login-mark" aria-label="<%= school && school.school_name ? school.school_name : 'School' %> logo"><% if (loginLogoSrc) { %><img src="<%= loginLogoSrc %>" alt="<%= school && school.school_name ? school.school_name : 'School' %> logo" class="acm-login-school-logo"><% } else { %><i class="bi bi-mortarboard" aria-hidden="true"></i><% } %></div><p class="acm-portal-label">Staff Portal</p><h1 class="acm-school-name"><%= (typeof school !== 'undefined' && school && school.school_name) ? school.school_name : 'AcadMe' %></h1></header>
 <section class="acm-login-card" aria-label="Staff login form">
 <nav class="acm-role-switch" aria-label="Choose portal"><a href="/auth/student-login">Student</a><a class="is-active" href="/auth/login" aria-current="page">Staff</a></nav>
 <div class="acm-welcome"><h2 class="acm-welcome-heading">Welcome back</h2><p class="acm-welcome-sub">Enter your credentials to access the system.</p></div>

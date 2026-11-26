@@ -33,3 +33,48 @@
 @media(max-width:600px){.acm-role-login-page{padding:clamp(36px,7vh,64px) 20px max(22px,env(safe-area-inset-bottom))}.acm-role-login-page:before{height:510px;border-radius:0 0 48% 48%/0 0 10% 10%}.acm-login-hero{margin-bottom:clamp(58px,8vh,72px)}.acm-role-login-page .acm-login-card{padding:44px 40px 48px;border-radius:56px}.acm-role-switch{margin-bottom:48px}.acm-role-switch a{min-height:88px;font-size:1.2rem}.acm-role-login-page .acm-welcome{margin-bottom:34px}.acm-role-login-page .acm-form-group{margin-bottom:34px}.acm-role-login-page .acm-input{height:112px;font-size:1.25rem;padding-left:104px}.acm-role-login-page .acm-btn{min-height:108px}}
 @media(max-width:390px){.acm-role-login-page{padding-left:14px;padding-right:14px}.acm-role-login-page .acm-login-card{padding:30px 22px 34px;border-radius:42px}.acm-role-switch{margin-bottom:34px}.acm-role-switch a{min-height:70px}.acm-role-login-page .acm-input{height:82px;padding-left:68px;border-radius:22px;font-size:1rem}.acm-role-login-page .acm-input::placeholder{font-size:1rem}.acm-role-login-page .acm-field-icon{left:24px;font-size:1.55rem}.acm-role-login-page .acm-toggle-pwd{right:12px;font-size:1.55rem}.acm-role-login-page .acm-input--password{padding-right:64px}.acm-role-login-page .acm-btn{min-height:82px;border-radius:24px;font-size:1.1rem}}
 @media(prefers-reduced-motion:reduce){.acm-role-switch a,.acm-role-login-page .acm-input,.acm-role-login-page .acm-btn{transition:none}}
+
+/* Compact sizing refinement: preserve the reference hierarchy without oversized controls. */
+.acm-role-login-page{padding:32px 18px max(20px,env(safe-area-inset-bottom))}
+.acm-role-login-page:before{height:390px;border-radius:0 0 48% 48%/0 0 10% 10%}
+.acm-login-hero{width:min(100%,560px);margin-bottom:44px}
+.acm-login-mark{width:88px;height:88px;border-radius:26px;font-size:2.55rem;margin-bottom:18px}
+.acm-role-login-page .acm-portal-label{font-size:.9rem;letter-spacing:.11em;margin-bottom:8px}
+.acm-role-login-page .acm-school-name{font-size:clamp(1.45rem,4vw,2rem);line-height:1.2}
+.acm-role-login-page .acm-login-card{width:min(100%,560px);padding:28px 28px 30px;border-radius:36px}
+.acm-role-switch{padding:5px;gap:4px;border-radius:22px;margin-bottom:30px}
+.acm-role-switch a{min-height:56px;border-radius:17px;font-size:1rem}
+.acm-role-login-page .acm-welcome{margin-bottom:24px}
+.acm-role-login-page .acm-welcome-heading{font-size:1.75rem;margin-bottom:5px}
+.acm-role-login-page .acm-welcome-sub{font-size:1rem;line-height:1.45}
+.acm-role-login-page .acm-form-group{margin-bottom:22px}
+.acm-role-login-page .acm-label{font-size:.98rem;margin-bottom:9px}
+.acm-role-login-page .acm-input{height:68px;min-height:0;border-width:2px;border-radius:18px;padding:0 18px 0 62px;font-size:1rem}
+.acm-role-login-page .acm-input::placeholder{font-size:1rem}
+.acm-role-login-page .acm-input--password{padding-right:58px}
+.acm-role-login-page .acm-field-icon{left:22px;font-size:1.35rem}
+.acm-role-login-page .acm-toggle-pwd{right:12px;width:40px;height:40px;font-size:1.35rem}
+.acm-role-login-page .acm-btn{min-height:68px;border-radius:20px;font-size:1rem;gap:12px;margin-top:4px}
+.acm-role-login-page .acm-forgot{margin:18px 0 0;font-size:.9rem}
+.acm-role-login-page .acm-page-footer{padding-top:30px;font-size:.92rem}
+@media(max-width:600px){
+ .acm-role-login-page{padding:28px 16px max(18px,env(safe-area-inset-bottom))}
+ .acm-role-login-page:before{height:360px}
+ .acm-login-hero{margin-bottom:42px}
+ .acm-role-login-page .acm-login-card{padding:26px 24px 28px;border-radius:34px}
+ .acm-role-switch{margin-bottom:28px}
+ .acm-role-switch a{min-height:54px;font-size:.98rem}
+ .acm-role-login-page .acm-input{height:66px;padding-left:60px}
+ .acm-role-login-page .acm-btn{min-height:66px}
+}
+@media(max-width:390px){
+ .acm-role-login-page{padding-left:12px;padding-right:12px}
+ .acm-role-login-page .acm-login-card{padding:22px 18px 24px;border-radius:30px}
+ .acm-role-login-page .acm-school-name{font-size:1.4rem}
+ .acm-login-mark{width:80px;height:80px;font-size:2.3rem}
+ .acm-role-login-page .acm-input{height:62px;padding-left:54px}
+ .acm-role-login-page .acm-field-icon{left:18px;font-size:1.2rem}
+ .acm-role-login-page .acm-input--password{padding-right:54px}
+ .acm-role-login-page .acm-btn{min-height:62px;font-size:.95rem}
+}
+@media(min-width:900px){.acm-role-login-page:before{height:410px}}

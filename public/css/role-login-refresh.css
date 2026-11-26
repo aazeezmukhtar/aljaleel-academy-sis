@@ -78,3 +78,7 @@
  .acm-role-login-page .acm-btn{min-height:62px;font-size:.95rem}
 }
 @media(min-width:900px){.acm-role-login-page:before{height:410px}}
+
+/* Render the school's configured identity mark without replacing it with a generic icon. */
+.acm-role-login-page .acm-login-school-logo{display:block;width:100%;height:100%;max-width:100%;max-height:100%;object-fit:contain;padding:12px;box-sizing:border-box;border-radius:inherit}
+.acm-role-login-page .acm-login-mark:has(.acm-login-school-logo){overflow:hidden;background:#fff}

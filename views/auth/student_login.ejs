@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/css/acadme-tokens.css">
     <!-- Login page styles -->
     <link rel="stylesheet" href="/css/portal-login.css">
-    <link rel="stylesheet" href="/css/role-login-refresh.css?v=1">
+    <link rel="stylesheet" href="/css/role-login-refresh.css?v=3">
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <!-- Google Fonts — Plus Jakarta Sans (Latin + extended; Arabic via system fallback) -->
@@ -54,7 +54,8 @@
 <body>
 
 <main class="acm-login-page acm-role-login-page" role="main">
-    <header class="acm-login-hero"><div class="acm-login-mark" aria-hidden="true"><i class="bi bi-mortarboard"></i></div><p class="acm-portal-label">Student Portal</p><h1 class="acm-school-name"><%= (typeof school !== "undefined" && school && school.school_name) ? school.school_name : "AcadMe" %></h1></header>
+    <% const configuredLoginLogo = (typeof school !== 'undefined' && school && school.school_logo) ? String(school.school_logo).trim() : ''; const loginLogoSrc = configuredLoginLogo ? ((configuredLoginLogo.startsWith('/') || configuredLoginLogo.startsWith('http')) ? configuredLoginLogo : '/uploads/' + configuredLoginLogo) : ''; %>
+<header class="acm-login-hero"><div class="acm-login-mark" aria-label="<%= school && school.school_name ? school.school_name : 'School' %> logo"><% if (loginLogoSrc) { %><img src="<%= loginLogoSrc %>" alt="<%= school && school.school_name ? school.school_name : 'School' %> logo" class="acm-login-school-logo"><% } else { %><i class="bi bi-mortarboard" aria-hidden="true"></i><% } %></div><p class="acm-portal-label">Student Portal</p><h1 class="acm-school-name"><%= (typeof school !== 'undefined' && school && school.school_name) ? school.school_name : 'AcadMe' %></h1></header>
     <div class="acm-login-card" aria-label="Student login form">
         <nav class="acm-role-switch" aria-label="Choose portal"><a class="is-active" href="/auth/student-login" aria-current="page">Student</a><a href="/auth/login">Staff</a></nav>
 

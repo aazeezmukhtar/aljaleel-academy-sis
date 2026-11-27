@@ -1,7 +1,6 @@
 /* Bidirectional text support across staff/admin and student portal. */
 .acm-bidi-content,
 [dir="auto"].acm-bidi-content {
-  direction: auto;
   text-align: start;
   unicode-bidi: plaintext;
   overflow-wrap: anywhere;

@@ -55,7 +55,7 @@
 
                 <div class="form-group" style="margin-top: 20px;">
                     <label>Content</label>
-                    <textarea name="content" dir="auto" class="form-control" rows="8" placeholder="Write your announcement message here..." required></textarea>
+                    <%- include('../partials/rich_text_editor', { fieldName: 'content', placeholder: 'Write your announcement message here...' }) %>
                 </div>
 
                 <div class="form-group" style="margin-top: 20px;">

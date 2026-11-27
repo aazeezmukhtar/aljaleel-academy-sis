@@ -1,4 +1,5 @@
 const db = require('../utils/db');
+const { plainTextRichText } = require('../utils/richText');
 const bcrypt = require('bcryptjs');
 const { uploadFile } = require('../utils/storageHelper');
 const { createAttendanceAnalyticsService } = require('../services/attendanceAnalyticsService');
@@ -1039,7 +1040,7 @@ exports.getNotifications = async (req, res) => {
                 category: 'announcement',
                 type: a.type || 'Announcement',
                 title: a.title,
-                message: a.content ? a.content.substring(0, 140) + (a.content.length > 140 ? '...' : '') : '',
+                message: a.content ? plainTextRichText(a.content).substring(0, 140) + (plainTextRichText(a.content).length > 140 ? '...' : '') : '',
                 priority: a.priority,
                 created_at: a.created_at,
                 relativeTime: formatRelativeTime(a.created_at),
@@ -1088,7 +1089,7 @@ exports.getNotifications = async (req, res) => {
                 category: isAssignment ? 'assignment' : 'academic',
                 type: cp.post_type,
                 title: cp.title,
-                message: cp.content ? cp.content.substring(0, 140) + (cp.content.length > 140 ? '...' : '') : '',
+                message: cp.content ? plainTextRichText(cp.content).substring(0, 140) + (plainTextRichText(cp.content).length > 140 ? '...' : '') : '',
                 tag: cp.subject_name || `${cp.first_name} ${cp.last_name}`,
                 created_at: cp.created_at,
                 relativeTime: formatRelativeTime(cp.created_at),

@@ -1,0 +1,21 @@
+<link rel="stylesheet" href="/css/acadme-rich-text-editor.css?v=1">
+<script src="/js/acadme-rich-text-editor.js?v=1" defer></script>
+<div class="acm-rich-editor" data-rich-editor>
+    <div class="acm-rich-toolbar" role="toolbar" aria-label="Text formatting">
+        <button type="button" class="acm-rich-tool" data-command="bold" aria-label="Bold" title="Bold"><strong>B</strong></button>
+        <button type="button" class="acm-rich-tool" data-command="italic" aria-label="Italic" title="Italic"><em>I</em></button>
+        <button type="button" class="acm-rich-tool" data-command="underline" aria-label="Underline" title="Underline"><u>U</u></button>
+        <span class="acm-rich-tool-divider" aria-hidden="true"></span>
+        <button type="button" class="acm-rich-tool" data-command="insertUnorderedList" aria-label="Bulleted list" title="Bulleted list"><i class="bi bi-list-ul" aria-hidden="true"></i></button>
+        <button type="button" class="acm-rich-tool" data-command="insertOrderedList" aria-label="Numbered list" title="Numbered list"><i class="bi bi-list-ol" aria-hidden="true"></i></button>
+        <span class="acm-rich-tool-divider" aria-hidden="true"></span>
+        <button type="button" class="acm-rich-tool" data-command="justifyLeft" aria-label="Align left" title="Align left"><i class="bi bi-text-left" aria-hidden="true"></i></button>
+        <button type="button" class="acm-rich-tool" data-command="justifyCenter" aria-label="Align centre" title="Align centre"><i class="bi bi-text-center" aria-hidden="true"></i></button>
+        <button type="button" class="acm-rich-tool" data-command="justifyRight" aria-label="Align right" title="Align right"><i class="bi bi-text-right" aria-hidden="true"></i></button>
+    </div>
+    <div class="acm-rich-editable" contenteditable="true" role="textbox" aria-multiline="true"
+         aria-label="Formatted content" aria-required="true" dir="auto"
+         data-rich-editable data-placeholder="<%= placeholder || 'Write your content here...' %>"></div>
+    <textarea name="<%= fieldName || 'content' %>" hidden data-rich-value></textarea>
+    <p class="acm-rich-help">Select text to format it. Arabic and English paragraphs adjust direction automatically.</p>
+</div>

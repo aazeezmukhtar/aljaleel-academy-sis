@@ -1,5 +1,6 @@
 const db = require('../utils/db');
 const { uploadFile } = require('../utils/storageHelper');
+const { sanitizeRichText } = require('../utils/richText');
 
 exports.getIndex = async (req, res) => {
     const schoolId = req.schoolId || (req.school ? req.school.id : 1);
@@ -39,7 +40,7 @@ exports.storeAnnouncement = async (req, res) => {
             schoolId,
             title, 
             slug, 
-            content, 
+            sanitizeRichText(content), 
             target_role || 'All', 
             image_path, 
             is_published === '1' ? 1 : 0,

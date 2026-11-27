@@ -30,37 +30,37 @@
     /* ----------------------------------------------------------
        BRAND — AcadMe Product Identity
        ---------------------------------------------------------- */
-    --acm-navy:   #001C2C;   /* Primary brand dark               */
-    --acm-yellow: #FBBA00;   /* Primary brand accent             */
+    --acm-navy: #4338ca;   /* Indigo primary */   /* Primary brand dark               */
+    --acm-yellow: #fbbf24; /* Amber accent */   /* Primary brand accent             */
 
     /* ----------------------------------------------------------
        NEUTRAL SCALE
        ---------------------------------------------------------- */
-    --acm-bg:            #F7F8FA;  /* Page background               */
+    --acm-bg: #f4f6fb;  /* Page background               */
     --acm-surface:       #FFFFFF;  /* Card / panel surface          */
-    --acm-text-primary:  #17212B;  /* Headings, labels, body        */
-    --acm-text-secondary:#66717C;  /* Secondary body text           */
-    --acm-text-muted:    #98A1AA;  /* Placeholder, helper text      */
-    --acm-border:        #E7EAED;  /* Input borders, dividers       */
-    --acm-border-focus:  #001C2C;  /* Focus ring border colour      */
+    --acm-text-primary: #0f172a;  /* Headings, labels, body        */
+    --acm-text-secondary: #475569;  /* Secondary body text           */
+    --acm-text-muted: #64748b;  /* Placeholder, helper text      */
+    --acm-border: #e2e8f0;  /* Input borders, dividers       */
+    --acm-border-focus: #4338ca;  /* Focus ring border colour      */
 
     /* ----------------------------------------------------------
        SEMANTIC COLOURS
        ---------------------------------------------------------- */
-    --acm-success:        #198754;
-    --acm-success-bg:     #E9F5EE;
+    --acm-success: #047857;
+    --acm-success-bg: #d9f7ea;
     --acm-success-border: #B6D9C4;
 
-    --acm-warning:        #D98200;
-    --acm-warning-bg:     #FFF8E6;
+    --acm-warning: #b45309;
+    --acm-warning-bg: #fff3d6;
     --acm-warning-border: #F5D98A;
 
-    --acm-error:          #C93636;
-    --acm-error-bg:       #FDECEC;
+    --acm-error: #b91c1c;
+    --acm-error-bg: #fde2e2;
     --acm-error-border:   #F0BABA;
 
-    --acm-info:           #246B9C;
-    --acm-info-bg:        #E8F2F9;
+    --acm-info: #1e40af;
+    --acm-info-bg: #dbeafe;
     --acm-info-border:    #AACCDE;
 
     /* ----------------------------------------------------------
@@ -69,8 +69,8 @@
        Plus Jakarta Sans: Latin + extended Latin
        Noto Sans Arabic or system-ui as Arabic fallback.
        ---------------------------------------------------------- */
-    --acm-font-body:    'Plus Jakarta Sans', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
-    --acm-font-heading: 'Plus Jakarta Sans', 'Noto Sans Arabic', system-ui, -apple-system, sans-serif;
+    --acm-font-body: 'Outfit', system-ui, sans-serif;
+    --acm-font-heading: 'Outfit', system-ui, sans-serif;
 
     /* Size scale */
     --acm-text-xs:   0.75rem;    /*  12px */
@@ -165,8 +165,43 @@
        --acm-bp-xl:   1280px  Desktop
        --acm-bp-2xl:  1440px  Wide desktop
        ---------------------------------------------------------- */
-}
 
+    /* Public theme aliases shared with older and newer UI layers. */
+    --indigo-600: #4338ca;
+    --indigo-500: #4f46e5;
+    --indigo-700: #3730a3;
+    --indigo-900: #312e81;
+    --indigo-100: #e0e7ff;
+    --amber-400: #fbbf24;
+    --amber-300: #fcd34d;
+    --on-amber: #1e1b4b;
+    --bg: #f4f6fb;
+    --card: #ffffff;
+    --input-bg: #f8fafc;
+    --divider: #e2e8f0;
+    --input-border: #cbd5e1;
+    --text-muted: #64748b;
+    --text-body: #475569;
+    --text-strong: #0f172a;
+    --green: #047857;
+    --green-tint: #d9f7ea;
+    --success: #10b981;
+    --orange: #b45309;
+    --orange-tint: #fff3d6;
+    --pink: #be185d;
+    --pink-tint: #fde4f0;
+    --blue: #1e40af;
+    --blue-tint: #dbeafe;
+    --blue-action: #2563eb;
+    --red: #b91c1c;
+    --red-tint: #fde2e2;
+    --alert: #ef4444;
+    --font: 'Outfit', system-ui, sans-serif;
+    --radius-card: 22px;
+    --radius-field: 14px;
+    --shadow-card: 0 1px 3px rgba(15, 23, 42, .06);
+
+}
 /*
  * RTL NOTE
  * --------

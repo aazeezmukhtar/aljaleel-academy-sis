@@ -1,0 +1,45 @@
+/* AcadMe global indigo/amber theme. Loaded last in staff/admin and student shells. */
+:root{
+ --school-primary:#4338ca!important;--school-secondary:#fbbf24!important;
+ --primary:#4338ca;--primary-raw:#4338ca;--secondary:#fbbf24;--secondary-raw:#fbbf24;
+ --primary-glow:rgba(67,56,202,.22);
+ --bg-body:#f4f6fb;--bg-surface:#fff;--bg-glass:rgba(255,255,255,.94);--border-subtle:#e2e8f0;
+ --text-primary:#0f172a;--text-secondary:#475569;--text-muted:#64748b;--text-on-primary:#fff;
+ --success:#10b981;--warning:#b45309;--danger:#ef4444;--info:#1e40af;
+ --shadow-sm:0 1px 3px rgba(15,23,42,.06);--shadow-md:0 4px 12px rgba(15,23,42,.08);
+ --shadow-lg:0 8px 24px rgba(15,23,42,.09);--shadow-xl:0 14px 32px rgba(15,23,42,.1);
+ --radius-sm:8px;--radius-md:14px;--radius-lg:22px;--radius-xl:22px;
+}
+html,body{background:#f4f6fb;color:#0f172a;font-family:'Outfit',system-ui,sans-serif}
+body{--acm-bg:#f4f6fb}
+h1,h2,h3,h4,h5,h6{font-family:'Outfit',system-ui,sans-serif;color:#0f172a}
+a{color:inherit}
+.sidebar{background:linear-gradient(165deg,#312e81,#3730a3)}
+.sidebar nav a.active,.mobile-toggle,.btn-primary,.btn-primary:hover,.acm-btn-primary,.acm-btn-primary:hover,
+button.btn-primary,input.btn-primary{background:#4338ca;border-color:#4338ca;color:#fff}
+.sidebar nav a.active{box-shadow:0 3px 10px rgba(67,56,202,.22)}
+.sidebar nav a:focus-visible,.main-content a:focus-visible,.main-content button:focus-visible,
+.main-content input:focus-visible,.main-content select:focus-visible,.main-content textarea:focus-visible{
+ outline-color:#fbbf24
+}
+input:not([type=checkbox]):not([type=radio]),select,textarea,
+.acm-input,.form-control{background-color:#f8fafc;border-color:#cbd5e1;color:#0f172a}
+input:focus,select:focus,textarea:focus,.form-control:focus,.acm-input:focus{
+ border-color:#4338ca;box-shadow:0 0 0 2px rgba(67,56,202,.12)
+}
+.card,.stat-card,.acm-card,.acm-panel{background:#fff;border-color:#e2e8f0;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+.table thead th,.data-table th{background:#f4f6fb;color:#64748b;border-color:#e2e8f0}
+hr,.divider,.acm-divider{border-color:#e2e8f0}
+.badge-primary,.bg-primary{background-color:#4338ca!important;color:#fff!important}
+.text-primary{color:#4338ca!important}
+.text-muted,.text-secondary{color:#64748b}
+.alert-success,.bg-success-subtle{background:#d9f7ea;color:#047857}
+.alert-warning,.bg-warning-subtle{background:#fff3d6;color:#b45309}
+.alert-danger,.bg-danger-subtle{background:#fde2e2;color:#b91c1c}
+.alert-info,.bg-info-subtle{background:#dbeafe;color:#1e40af}
+.btn-warning,.bg-warning{background:#fbbf24;border-color:#fbbf24;color:#1e1b4b}
+.btn-warning:hover{background:#fcd34d;border-color:#fcd34d;color:#1e1b4b}
+.acm-status-success{color:#047857;background:#d9f7ea;border-color:#a7f3d0}
+.acm-status-warning{color:#b45309;background:#fff3d6;border-color:#fcd34d}
+.acm-status-error{color:#b91c1c;background:#fde2e2;border-color:#fecaca}
+.acm-status-info{color:#1e40af;background:#dbeafe;border-color:#bfdbfe}

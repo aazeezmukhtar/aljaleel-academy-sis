@@ -51,7 +51,7 @@
                 <% } %>
             </div>
 
-            <h1 class="acm-detail-title"><%= post.title %></h1>
+            <h1 class="acm-detail-title acm-bidi-content" dir="auto"><%= post.title %></h1>
             
             <div class="acm-detail-meta">
                 <span><i class="bi bi-person" aria-hidden="true"></i> Posted by <%= post.first_name %> <%= post.last_name %></span>
@@ -63,7 +63,7 @@
                 <% } %>
             </div>
 
-            <div class="acm-detail-body">
+            <div class="acm-detail-body acm-bidi-content" dir="auto">
                 <%- post.content ? post.content.replace(/\n/g, '<br>') : '' %>
             </div>
 

@@ -76,7 +76,7 @@
                     <i class="bi <%= post.post_type === 'Assignment' ? 'bi-pencil-square' : 'bi-megaphone' %>" aria-hidden="true"></i>
                 </div>
                 <div class="acm-post-body">
-                    <p class="acm-post-title"><%= post.title %></p>
+                    <p class="acm-post-title acm-bidi-content" dir="auto"><%= post.title %></p>
                     <div class="acm-post-meta">
                         <% if (post.subject_name) { %><span><%= post.subject_name %></span><% } %>
                         <% if (post.first_name) { %><span><%= post.first_name %> <%= post.last_name %></span><% } %>

@@ -23,15 +23,15 @@ assert.equal(plainTextRichText('<p>One</p><ul><li>Two</li></ul>'), 'One Two');
 
 const editorJs = read('public/js/acadme-rich-text-editor.js');
 assert.doesNotThrow(() => new vm.Script(editorJs, { filename: 'acadme-rich-text-editor.js' }));
+const partial = read('views/partials/rich_text_editor.ejs');
 for (const command of ['bold', 'italic', 'underline', 'insertUnorderedList', 'insertOrderedList', 'justifyLeft', 'justifyCenter', 'justifyRight']) {
-    assert.ok(editorJs.includes(command), 'Missing editor command: ' + command);
+    assert.ok(partial.includes('data-command="' + command + '"'), 'Missing editor command: ' + command);
 }
 assert.match(editorJs, /cleanNode/);
 assert.match(editorJs, /applyDirection/);
 const css = read('public/css/acadme-rich-text-editor.css');
 assert.match(css, /@media\(max-width:600px\)/);
 assert.match(css, /:dir\(rtl\)/);
-const partial = read('views/partials/rich_text_editor.ejs');
 assert.match(partial, /contenteditable="true"/);
 assert.match(partial, /data-rich-value/);
 for (const file of ['views/announcements/form.ejs', 'views/staff/board.ejs', 'views/partials/rich_text_editor.ejs',

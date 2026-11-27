@@ -34,7 +34,7 @@ function safeAttributes(tag, rawAttributes) {
 }
 
 function sanitizeRichText(input) {
-    const source = String(input == null ? '' : input).replace(/<(script|style|iframe|object|svg|math)\\b[^>]*>[\\s\\S]*?<\\/\\1\\s*>/gi, '');
+    const source = String(input == null ? '' : input).replace(/<(script|style|iframe|object|svg|math)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '');
     if (!source) return '';
     const tokenPattern = /<!--[^]*?-->|<\/?([a-z][a-z0-9]*)([^<>]*)>/gi;
     const stack = [];

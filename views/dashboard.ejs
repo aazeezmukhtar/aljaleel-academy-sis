@@ -242,7 +242,7 @@
                                                 <% } %>
                                             </div>
                                             <h4 class="post-title" style="margin: 0 0 8px; font-size: 1rem; color: #1e293b; transition: color 0.2s;"><%= post.title %></h4>
-                                            <p class="line-clamp-2 post-content" style="margin: 0; font-size: 0.85rem; color: #64748b; line-height: 1.5;"><%= post.content %></p>
+                                            <p class="line-clamp-2 post-content" style="margin: 0; font-size: 0.85rem; color: #64748b; line-height: 1.5;"><%= plainTextRichText(post.content) %></p>
                                             <% if(post.type === 'Event' && post.event_date) { %>
                                                 <p style="margin-top: 10px; font-size: 0.75rem; color: #ef4444; font-weight: 600;">
                                                     <i class="bi bi-clock-fill"></i> Scheduled: <%= new Date(post.event_date).toLocaleDateString() %>

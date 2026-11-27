@@ -114,7 +114,7 @@
                 <a class="acm-dashboard-announcement" href="/portal/announcement/<%= post.id %>">
                     <div class="acm-announcement-date"><%= new Date(post.created_at).toLocaleDateString('en-GB') %><% if (post.priority === 'High') { %><span>IMPORTANT</span><% } %></div>
                     <strong><%= post.title %></strong>
-                    <p><%= post.content %></p><b>Read more</b>
+                    <p><%= plainTextRichText(post.content) %></p><b>Read more</b>
                 </a>
                 <% }); %>
             <% } else { %><p class="acm-dashboard-empty">No announcements at the moment.</p><% } %>

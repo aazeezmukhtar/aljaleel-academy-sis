@@ -178,3 +178,7 @@
   .acm-role-login-page .acm-btn,
   .acm-role-login-page .acm-login-submit{height:50px;min-height:50px}
 }
+
+/* The indigo hero shape must bleed to the viewport edges, independent of page gutters. */
+.acm-role-login-page{width:100%;max-width:none;margin:0;box-sizing:border-box}
+.acm-role-login-page:before{left:50%;right:auto;width:100vw;transform:translateX(-50%)}

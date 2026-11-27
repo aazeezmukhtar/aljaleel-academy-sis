@@ -7,7 +7,7 @@
         <header class="content-header">
             <div>
                 <a href="javascript:history.back()" style="color: var(--primary); text-decoration: none; font-weight: 600;">&larr; Back</a>
-                <h1 style="margin-top: 10px;"><%= announcement.title %></h1>
+                <h1 class="acm-bidi-content" dir="auto" style="margin-top: 10px;"><%= announcement.title %></h1>
                 <p class="text-muted">Posted on <%= new Date(announcement.created_at).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></p>
             </div>
             <% if (user && user.role === 'Admin') { %>
@@ -31,7 +31,7 @@
                 <% } %>
             </div>
 
-            <div class="announcement-content" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-primary);">
+            <div class="announcement-content acm-bidi-content" dir="auto" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-primary);">
                 <%- announcement.content.replace(/\n/g, '<br>') %>
             </div>
 

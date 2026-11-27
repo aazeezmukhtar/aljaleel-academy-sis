@@ -107,6 +107,8 @@ jobs:
         run: node tests/promotion-preview-rendering.test.js
       - name: Run AcadMe authentication UI regression checks
         run: npm run test:acadme-auth-ui
+      - name: Run rich-text editor and sanitization checks
+        run: npm run test:rich-text-editor
       - name: Remove disposable SQLite database
         if: always()
         run: rm -f .test-database.sqlite .test-database.sqlite-shm .test-database.sqlite-wal

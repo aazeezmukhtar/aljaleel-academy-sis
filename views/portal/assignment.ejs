@@ -64,7 +64,7 @@
             </div>
 
             <div class="acm-detail-body acm-bidi-content" dir="auto">
-                <%- post.content ? post.content.replace(/\n/g, '<br>') : '' %>
+                <%- renderRichText(post.content) %>
             </div>
 
             <% if (post.attachment_path) { %>

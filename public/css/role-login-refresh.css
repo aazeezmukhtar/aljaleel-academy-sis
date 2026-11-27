@@ -178,3 +178,12 @@
   .acm-role-login-page .acm-btn,
   .acm-role-login-page .acm-login-submit{height:50px;min-height:50px}
 }
+
+
+/* Keep the indigo hero fill flush with both viewport edges. */
+.acm-role-login-page:before{
+  left:50%;
+  right:auto;
+  width:100vw;
+  transform:translateX(-50%);
+}

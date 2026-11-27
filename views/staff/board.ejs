@@ -69,9 +69,9 @@
                     </div>
                     <div class="mb-3">
                         <label>Title</label>
-                        <input type="text" name="title" class="form-control" required placeholder="e.g. Read Chapter 4">
+                        <input type="text" name="title" dir="auto" class="form-control" required placeholder="e.g. Read Chapter 4">
                     </div>
-                        <textarea name="content" class="form-control" rows="4" required></textarea>
+                        <textarea name="content" dir="auto" class="form-control" rows="4" required></textarea>
                     </div>
                     <div class="mb-3">
                         <label>Attachment (Optional)</label>
@@ -99,7 +99,7 @@
                                         <% } else { %>
                                             <span class="badge bg-info">Announcement</span>
                                         <% } %>
-                                        <%= post.title %> 
+                                        <span class="acm-bidi-content" dir="auto"><%= post.title %></span> 
                                         <span class="text-muted" style="font-size: 0.85rem;">
                                             (To: <%= post.class_name %><%= post.subject_name ? ' - ' + post.subject_name : '' %>
                                             <% if(post.student_fname) { %>
@@ -110,7 +110,7 @@
                                     </h5>
                                     <small><%= new Date(post.created_at).toLocaleDateString() %></small>
                                 </div>
-                                <p class="mb-1 mt-2" style="white-space: pre-wrap;"><%= post.content %></p>
+                                <p class="mb-1 mt-2 acm-bidi-content" dir="auto" style="white-space: pre-wrap;"><%= post.content %></p>
                                 <% if(post.post_type === 'Assignment' && post.due_date) { %>
                                     <small class="text-danger">Due Date: <%= new Date(post.due_date).toLocaleDateString() %></small>
                                 <% } %>

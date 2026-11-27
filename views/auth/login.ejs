@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#4338ca"><link rel="apple-touch-icon" href="/img/logo-512.png">
 <link rel="stylesheet" href="/css/pwa-prompt.css"><script src="/js/pwa-installer.js" defer></script>
-</head>
+<link rel="stylesheet" href="/css/acadme-bidi.css?v=1.0">\n<script src="/js/acadme-bidi.js?v=1.0" defer></script>\n</head>
 <body>
 <main class="acm-login-page acm-role-login-page" role="main">
 <% const configuredLoginLogo = (typeof school !== 'undefined' && school && school.school_logo) ? String(school.school_logo).trim() : ''; const loginLogoSrc = configuredLoginLogo ? ((configuredLoginLogo.startsWith('/') || configuredLoginLogo.startsWith('http')) ? configuredLoginLogo : '/uploads/' + configuredLoginLogo) : ''; %>
@@ -20,12 +20,12 @@
 <% if (error) { %><div class="acm-alert acm-alert--error" role="alert" aria-live="polite"><i class="bi bi-exclamation-circle-fill" aria-hidden="true"></i><span><%= error %></span></div><% } %>
 <form action="/auth/login" method="POST" class="acm-staff-login-form" autocomplete="on">
 <div class="acm-form-group"><label class="acm-label" for="staff_id">Staff ID</label><div class="acm-input-wrap"><i class="bi bi-person-badge acm-field-icon" aria-hidden="true"></i><input class="acm-input acm-input--with-leading-icon" type="text" id="staff_id" name="staff_id" placeholder="e.g. admin" required autocomplete="username" autocapitalize="none" spellcheck="false"></div></div>
-<div class="acm-form-group"><label class="acm-label" for="password">Password</label><div class="acm-input-wrap"><i class="bi bi-key acm-field-icon" aria-hidden="true"></i><input class="acm-input acm-input--password acm-input--with-leading-icon" type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password"><button type="button" class="acm-toggle-pwd" id="toggle-pwd-btn" aria-label="Show password" aria-controls="password" aria-pressed="false"><i class="bi bi-eye" id="pwd-eye" aria-hidden="true"></i></button></div></div>
+<div class="acm-form-group"><label class="acm-label" for="password">Password</label><div class="acm-input-wrap"><i class="bi bi-key acm-field-icon" aria-hidden="true"></i><input class="acm-input acm-input--password acm-input--with-leading-icon" type="password" id="password" name="password" placeholder="Enter your password" required autocomplete="current-password"><button type="button" class="acm-toggle-pwd" id="toggle-pwd-btn" aria-label="Show password" aria-controls="password" aria-pressed="false"><i class="bi bi-eye" id="toggle-pwd-icon" aria-hidden="true"></i></button></div></div>
 <button type="submit" class="acm-btn acm-btn--primary acm-login-submit" id="login-btn"><span class="acm-spinner" id="login-spinner" aria-hidden="true"></span><span id="login-btn-text">Log in</span><i class="bi bi-arrow-right" aria-hidden="true"></i></button>
 </form>
 </section><p class="acm-page-footer">Powered by <strong>AcadMe</strong></p>
 </main>
 <script>
-(function(){var input=document.getElementById('password'),button=document.getElementById('toggle-pwd-btn'),icon=document.getElementById('pwd-eye');button.addEventListener('click',function(){var show=input.type==='password';input.type=show?'text':'password';icon.className=show?'bi bi-eye-slash':'bi bi-eye';button.setAttribute('aria-label',show?'Hide password':'Show password');button.setAttribute('aria-pressed',String(show));});}());
+(function(){var input=document.getElementById('password'),button=document.getElementById('toggle-pwd-btn'),icon=document.getElementById('toggle-pwd-icon');button.addEventListener('click',function(){var show=input.type==='password';input.type=show?'text':'password';icon.className=show?'bi bi-eye-slash':'bi bi-eye';button.setAttribute('aria-label',show?'Hide password':'Show password');button.setAttribute('aria-pressed',String(show));});}());
 </script>
 </body></html>

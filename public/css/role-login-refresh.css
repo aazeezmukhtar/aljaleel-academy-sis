@@ -117,3 +117,49 @@
  .acm-role-login-page .acm-login-card{padding:16px 18px 18px;border-radius:20px}
  .acm-login-mark{width:72px;height:72px}
 }
+
+
+/* Shared, authoritative control geometry for both login portals. */
+.acm-role-login-page .acm-input-wrap{position:relative;display:block;width:100%;min-width:0}
+.acm-role-login-page .acm-input,
+.acm-role-login-page .acm-input.acm-input--password,
+.acm-role-login-page .acm-input.acm-input--with-leading-icon{
+ display:block!important;width:100%!important;height:46px!important;min-height:46px!important;max-height:46px!important;
+ box-sizing:border-box!important;padding:0 46px 0 48px!important;
+ border:1px solid #cbd5e1!important;border-radius:14px!important;background:#f8fafc!important;
+ font:400 14px/1.2 'Outfit',system-ui,sans-serif!important;color:#0f172a!important;
+}
+.acm-role-login-page .acm-input::placeholder{font:400 13px/1.2 'Outfit',system-ui,sans-serif!important;color:#94a3b8}
+.acm-role-login-page .acm-field-icon{
+ position:absolute!important;left:15px!important;top:50%!important;transform:translateY(-50%)!important;
+ z-index:2!important;display:block!important;font-size:16px!important;line-height:1!important;
+ color:#64748b!important;pointer-events:none!important
+}
+.acm-role-login-page .acm-toggle-pwd{
+ position:absolute!important;right:6px!important;top:50%!important;transform:translateY(-50%)!important;
+ z-index:3!important;width:34px!important;height:34px!important;min-height:34px!important;
+ display:grid!important;place-items:center!important;padding:0!important;margin:0!important;
+ border:0!important;border-radius:9px!important;background:transparent!important;
+ color:#64748b!important;font-size:16px!important;line-height:1!important;cursor:pointer
+}
+.acm-role-login-page .acm-toggle-pwd i{display:block!important;line-height:1!important}
+.acm-role-login-page .acm-form-group{margin-bottom:12px!important}
+.acm-role-login-page .acm-label{display:block!important;margin:0 0 5px!important;font-size:12px!important;line-height:16px!important}
+.acm-role-login-page .acm-btn,
+.acm-role-login-page button.acm-btn,
+.acm-role-login-page .acm-login-submit{
+ display:flex!important;width:100%!important;height:46px!important;min-height:46px!important;max-height:46px!important;
+ box-sizing:border-box!important;align-items:center!important;justify-content:center!important;gap:9px!important;
+ margin:5px 0 0!important;padding:0 14px!important;border:0!important;border-radius:14px!important;
+ background:#4338ca!important;color:#fff!important;
+ font:700 14px/1.2 'Outfit',system-ui,sans-serif!important;text-decoration:none!important;
+ box-shadow:none!important;cursor:pointer
+}
+.acm-role-login-page .acm-btn:hover:not(:disabled),
+.acm-role-login-page .acm-login-submit:hover:not(:disabled){background:#3730a3!important}
+.acm-role-login-page .acm-btn:disabled{opacity:.7;cursor:wait}
+.acm-role-login-page .acm-input:focus{border-color:#4338ca!important;outline:0!important;box-shadow:0 0 0 2px rgba(67,56,202,.12)!important}
+.acm-role-login-page .acm-login-card{padding-top:16px!important;padding-bottom:18px!important}
+.acm-role-login-page .acm-role-switch{margin-bottom:16px!important}
+.acm-role-login-page .acm-welcome{margin-bottom:14px!important}
+.acm-role-login-page .acm-page-footer{padding-top:16px!important}

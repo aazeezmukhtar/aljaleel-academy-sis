@@ -32,7 +32,7 @@
             </div>
 
             <div class="announcement-content acm-bidi-content" dir="auto" style="font-size: 1.1rem; line-height: 1.8; color: var(--text-primary);">
-                <%- announcement.content.replace(/\n/g, '<br>') %>
+                <%- renderRichText(announcement.content) %>
             </div>
 
             <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">

@@ -4,8 +4,8 @@
   "description": "School Information System for Al-Jaleel Academy",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#6366f1",
+  "background_color": "#f4f6fb",
+  "theme_color": "#4338ca",
   "icons": [
     {
       "src": "/img/logo-512.png",

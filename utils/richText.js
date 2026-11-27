@@ -70,8 +70,8 @@ function sanitizeRichText(input) {
 
 function plainTextRichText(input) {
     return sanitizeRichText(input)
-        .replace(/<br\\s*\\/?\\s*>/gi, ' ')
-        .replace(/<\\/(?:p|div|li)>/gi, ' ')
+        .replace(/<br\s*\/?\s*>/gi, ' ')
+        .replace(/<\/(?:p|div|li)>/gi, ' ')
         .replace(/<[^>]*>/g, ' ')
         .replace(/&nbsp;/gi, ' ')
         .replace(/&amp;/gi, '&')
@@ -79,7 +79,7 @@ function plainTextRichText(input) {
         .replace(/&gt;/gi, '>')
         .replace(/&quot;/gi, '"')
         .replace(/&#39;/gi, "'")
-        .replace(/\\s+/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
 }
 

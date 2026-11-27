@@ -17,6 +17,7 @@ const { resolveSessionSecret } = require('./utils/sessionSecret');
 const { isAuthenticated, injectUser, isAnyAuthenticated } = require('./middleware/authMiddleware');
 
 const app = express();
+app.locals.renderRichText = require('./utils/richText').sanitizeRichText;
 const PORT = process.env.PORT || 3000;
 
 // View Engine

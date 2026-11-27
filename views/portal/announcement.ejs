@@ -53,7 +53,7 @@
             <% } %>
 
             <div class="acm-detail-body acm-bidi-content" dir="auto">
-                <%- announcement.content ? announcement.content.replace(/\n/g, '<br>') : '' %>
+                <%- renderRichText(announcement.content) %>
             </div>
         </article>
 

@@ -1,0 +1,13 @@
+/* Shared bidirectional text support for staff/admin and student experiences. */
+.acm-bidi-content,
+[dir="auto"].acm-bidi-content {
+  text-align: start;
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+}
+.acm-bidi-content:dir(rtl) { direction: rtl; text-align: right; }
+.acm-bidi-content:dir(ltr) { direction: ltr; text-align: left; }
+textarea,
+input[type="text"],
+input[type="search"],
+[contenteditable="true"] { unicode-bidi: plaintext; }

@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const ejs = require('ejs');
-const { sanitizeRichText } = require('../utils/richText');
+const { sanitizeRichText, plainTextRichText } = require('../utils/richText');
 const read = file => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 
 assert.equal(
@@ -19,6 +19,7 @@ assert.equal(
 assert.equal(sanitizeRichText('<script>alert(1)</script><img src=x onerror=alert(1)>Safe'), 'Safe');
 assert.equal(sanitizeRichText('<p><strong>Unclosed'), '<p><strong>Unclosed</strong></p>');
 assert.equal(sanitizeRichText(''), '');
+assert.equal(plainTextRichText('<p>One</p><ul><li>Two</li></ul>'), 'One Two');
 
 const editorJs = read('public/js/acadme-rich-text-editor.js');
 assert.doesNotThrow(() => new vm.Script(editorJs, { filename: 'acadme-rich-text-editor.js' }));

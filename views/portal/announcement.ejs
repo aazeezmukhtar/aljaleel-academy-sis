@@ -39,7 +39,7 @@
                 <% } %>
             </div>
 
-            <h1 class="acm-detail-title"><%= announcement.title %></h1>
+            <h1 class="acm-detail-title acm-bidi-content" dir="auto"><%= announcement.title %></h1>
             
             <div class="acm-detail-meta">
                 <span><i class="bi bi-calendar3" aria-hidden="true"></i> Published on <%= new Date(announcement.created_at).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></span>
@@ -52,7 +52,7 @@
                 <img src="<%= announcement.image_path && (announcement.image_path.startsWith('http') || announcement.image_path.startsWith('/')) ? announcement.image_path : '/uploads/' + announcement.image_path %>" alt="Announcement Media" class="acm-detail-img">
             <% } %>
 
-            <div class="acm-detail-body">
+            <div class="acm-detail-body acm-bidi-content" dir="auto">
                 <%- announcement.content ? announcement.content.replace(/\n/g, '<br>') : '' %>
             </div>
         </article>

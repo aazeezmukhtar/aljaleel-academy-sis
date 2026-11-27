@@ -42,7 +42,7 @@ assert.match(read('views/announcements/form.ejs'), /name="content" dir="auto"/);
 const studentLogin = read('views/auth/student_login.ejs');
 const staffLogin = read('views/auth/login.ejs');
 assert.match(studentLogin, /id="toggle-pwd-icon"/);
-assert.match(staffLogin, /id="toggle-pwd-icon"/);
+assert.match(staffLogin, /id="toggle-pwd-icon"/);\nassert.match(staffLogin, /portal-login\.css/);\nassert.match(staffLogin, /role-login-refresh\.css\?v=7/);
 assert.match(staffLogin, /getElementById\('toggle-pwd-icon'\)/);
 assert.match(read('public/css/role-login-refresh.css'), /width:100vw/);
 console.log('AcadMe bidirectional text and login polish checks passed.');

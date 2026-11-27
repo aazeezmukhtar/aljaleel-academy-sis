@@ -68,4 +68,19 @@ function sanitizeRichText(input) {
     return output;
 }
 
-module.exports = { sanitizeRichText };
+function plainTextRichText(input) {
+    return sanitizeRichText(input)
+        .replace(/<br\\s*\\/?\\s*>/gi, ' ')
+        .replace(/<\\/(?:p|div|li)>/gi, ' ')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&amp;/gi, '&')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&quot;/gi, '"')
+        .replace(/&#39;/gi, "'")
+        .replace(/\\s+/g, ' ')
+        .trim();
+}
+
+module.exports = { sanitizeRichText, plainTextRichText };

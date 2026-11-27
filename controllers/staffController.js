@@ -1,6 +1,7 @@
 const db = require('../utils/db');
 const bcrypt = require('bcryptjs');
 const { uploadFile } = require('../utils/storageHelper');
+const { sanitizeRichText } = require('../utils/richText');
 const { getCurrentSession } = require('../utils/sessionHelper');
 
 // GET /staff - Show all staff members
@@ -343,7 +344,7 @@ const postClassBoard = async (req, res) => {
     const normalizedStudentId = student_id && student_id.trim() !== '' ? parseInt(student_id, 10) : null;
     try {
         await db.run('INSERT INTO class_posts (class_id, teacher_id, subject_id, student_id, post_type, title, content, due_date, attachment_path) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
-            [class_id, user.id, subject_id || null, normalizedStudentId, post_type, title, content, due_date || null, attachment]);
+            [class_id, user.id, subject_id || null, normalizedStudentId, post_type, title, sanitizeRichText(content), due_date || null, attachment]);
         res.redirect('/staff/board?success=Post added successfully');
     } catch (err) {
         console.error('postClassBoard Error:', err);

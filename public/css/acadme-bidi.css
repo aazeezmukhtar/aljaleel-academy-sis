@@ -1,0 +1,25 @@
+/* Bidirectional text support across staff/admin and student portal. */
+.acm-bidi-content,
+[dir="auto"].acm-bidi-content {
+  direction: auto;
+  text-align: start;
+  unicode-bidi: plaintext;
+  overflow-wrap: anywhere;
+}
+textarea,
+input[type="text"],
+input[type="search"],
+[contenteditable="true"] {
+  unicode-bidi: plaintext;
+}
+:dir(rtl) {
+  text-align: start;
+}
+[dir="rtl"] .acm-bidi-content {
+  direction: rtl;
+  text-align: right;
+}
+[dir="ltr"] .acm-bidi-content {
+  direction: ltr;
+  text-align: left;
+}

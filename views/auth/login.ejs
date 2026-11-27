@@ -9,7 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link rel="manifest" href="/manifest.json"><meta name="theme-color" content="#4338ca"><link rel="apple-touch-icon" href="/img/logo-512.png">
 <link rel="stylesheet" href="/css/pwa-prompt.css"><script src="/js/pwa-installer.js" defer></script>
-<link rel="stylesheet" href="/css/acadme-bidi.css?v=1.0">\n<script src="/js/acadme-bidi.js?v=1.0" defer></script>\n</head>
+<link rel="stylesheet" href="/css/acadme-bidi.css?v=1.0">
+<script src="/js/acadme-bidi.js?v=1.0" defer></script>
+</head>
 <body>
 <main class="acm-login-page acm-role-login-page" role="main">
 <% const configuredLoginLogo = (typeof school !== 'undefined' && school && school.school_logo) ? String(school.school_logo).trim() : ''; const loginLogoSrc = configuredLoginLogo ? ((configuredLoginLogo.startsWith('/') || configuredLoginLogo.startsWith('http')) ? configuredLoginLogo : '/uploads/' + configuredLoginLogo) : ''; %>

@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="/css/student-dashboard-reference.css?v=1.0">
 <link rel="stylesheet" href="/css/acadme-calendar.css?v=1.0">
 <link rel="stylesheet" href="/css/acadme-student-portal.css?v=1.0">
+<link rel="stylesheet" href="/css/acadme-indigo-amber-theme.css?v=1.0">
 <!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <!-- Google Fonts -->
@@ -23,19 +24,12 @@
 
 <!-- PWA -->
 <link rel="manifest" href="/manifest.json">
-<meta name="theme-color" content="#001C2C">
+<meta name="theme-color" content="#4338ca">
 <link rel="apple-touch-icon" href="/img/logo-512.png">
 <link rel="stylesheet" href="/css/pwa-prompt.css">
 <script src="/js/pwa-installer.js" defer></script>
 <script src="/js/image-optimizer.js" defer></script>
 
-<% 
-    const schoolPrimary   = (typeof school !== 'undefined' && school && school.primary_color)   ? school.primary_color   : '#001C2C';
-    const schoolSecondary = (typeof school !== 'undefined' && school && school.secondary_color) ? school.secondary_color : '#FBBA00';
-%>
 <style>
-    :root {
-        --school-primary:   <%= schoolPrimary %>;
-        --school-secondary: <%= schoolSecondary %>;
-    }
+:root { --school-primary: #4338ca; --school-secondary: #fbbf24; }
 </style>
